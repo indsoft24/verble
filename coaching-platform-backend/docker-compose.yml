@@ -1,0 +1,81 @@
+services:
+  # MongoDB Database
+  mongo:
+    image: mongo:latest
+    container_name: verble-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+    environment:
+      - MONGO_INITDB_DATABASE=verble
+    networks:
+      - verble-network
+    restart: unless-stopped
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/verble --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:latest
+    container_name: verble-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - verble-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: verble-backend
+    ports:
+      - "5001:5000"  # Changed to 5001 to avoid conflict with local backend
+    volumes:
+      - ./src:/usr/src/app/src
+      - ./uploads:/usr/src/app/uploads
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGODB_URI_DOCKER=mongodb://mongo:27017/verble
+      - REDIS_URL=redis://redis:6379
+      # Load other env vars from .env file
+      - DOCKER_ENV=true
+    env_file:
+      - .env
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - verble-network
+    restart: unless-stopped
+    command: npm run dev
+
+volumes:
+  mongo-data:
+    driver: local
+  mongo-config:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  verble-network:
+    driver: bridge

@@ -1,0 +1,64 @@
+# coaching-platform-frontend/.gitignore
+
+# Node.js / Vite / React
+node_modules/
+dist/
+.vite/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json # If using yarn.lock primarily, or vice-versa
+# yarn.lock       # If using package-lock.json primarily
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+coaching-platform-frontend\package-lock.json
+# .env.development (if you want to commit a template but not local values)
+# .env.production (if you want to commit a template but not local values)
+
+# IDEs and editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Build files for some tools
+.eslintcache
+.stylelintcache
+.swc/
+
+# Logs
+logs/
+*.log
+
+# Development documentation and guide files
+# Ignore all markdown files except README.md
+*.md
+!README.md
+
+# Ignore guide files (any extension with guide in name, case-insensitive)
+*[Gg]uide*
+*[Ii]nstructions*
+*[Rr]eference*
+*[Ss]ummary*
+*[Ss]olution*
+*[Qq]uick*
+
+# Ignore specific development documentation patterns
+**/ANDROID_*
+**/COMPLETE_*
+**/GOOGLE_*
+**/MULTI_*
+**/OAUTH_*
+**/PRODUCTION_*
+**/TOPIC_*
+**/SOLUTION_*
+# Allow .env.example to be committed
+!.env.example

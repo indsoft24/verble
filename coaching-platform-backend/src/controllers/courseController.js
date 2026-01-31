@@ -1,0 +1,494 @@
+import Course from '../models/Course.js';
+import Module from '../models/Module.js'; 
+import User from '../models/User.js';
+import SubscriptionPlan from '../models/SubscriptionPlan.js';
+import ExamCategory from '../models/ExamCategory.js';
+import mongoose from 'mongoose';
+import asyncHandler from 'express-async-handler';
+import { getCache, setCache, generateCacheKey, CACHE_TTL } from '../utils/cacheHelper.js';
+
+
+/**
+ * @desc    Get a list of featured published courses for the homepage
+ * @route   GET /api/courses/featured
+ * @access  Public
+ */
+
+export const getFeaturedCourses = async (req, res, next) => {
+    try {
+        const cacheKey = 'courses:featured';
+
+        // Try to get from cache first
+        const cached = await getCache(cacheKey);
+        if (cached) {
+            return res.status(200).json(cached);
+        }
+
+        const courses = await Course.find({ isPublished: true })
+            .limit(6)
+            .populate('examCategory', 'name slug') 
+            .select('title description image createdAt updatedAt _id examCategory') 
+            .sort({ createdAt: -1 })
+            .lean(); // Use lean for better performance
+
+        const response = {
+            status: 'success',
+            results: courses.length,
+            data: {
+                courses,
+            },
+        };
+
+        // Cache the response
+        await setCache(cacheKey, response, CACHE_TTL.MEDIUM);
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error("USER GET ALL PUBLISHED COURSES ERROR:", error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch published courses.'
+        });
+    }
+};
+
+
+/**
+ * @desc    Get courses the current user is subscribed to.
+ * @route   GET /api/courses/my-courses
+ * @access  Private
+ */
+export const getMyCourses = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user._id;
+        
+        // Get user with subscriptions
+        const user = await User.findById(userId).select('subscriptions');
+
+        if (!user) {
+            return res.status(404).json({ 
+                status: 'fail', 
+                message: 'User not found.' 
+            });
+        }
+
+        const now = new Date();
+
+        // Filter active subscriptions
+        const activeSubscriptions = user.subscriptions.filter(sub =>
+            sub.status === 'active' &&
+            new Date(sub.startDate) <= now &&
+            new Date(sub.endDate) >= now
+        );
+
+        if (activeSubscriptions.length > 0) {
+            // Extract plan IDs from active subscriptions
+            const activePlanIds = activeSubscriptions.map(sub => sub.planId);
+            
+            // Fetch subscription plans to get course IDs
+            const plans = await SubscriptionPlan.find({ 
+                _id: { $in: activePlanIds },
+                isActive: true 
+            }).select('course name');
+            
+            // Extract unique course IDs from plans
+            const courseIds = [...new Set(plans.map(plan => plan.course).filter(Boolean))];
+            
+            if (courseIds.length > 0) {
+                // Fetch courses using the course IDs
+                const myCourses = await Course.find({ 
+                    _id: { $in: courseIds }, 
+                    isPublished: true 
+                })
+                .populate('examCategory', 'name slug')
+                .select('title description image examCategory createdAt updatedAt')
+                .sort({ title: 'asc' });
+
+                return res.status(200).json({
+                    status: 'success',
+                    results: myCourses.length,
+                    data: { 
+                        courses: myCourses, 
+                        context: 'subscribed',
+                        subscriptionCount: activeSubscriptions.length
+                    },
+                });
+            }
+        }
+
+        res.status(200).json({
+            status: 'success',
+            results: 0,
+            data: { 
+                courses: [], 
+                context: 'no_subscription',
+                subscriptionCount: 0
+            },
+        });
+
+    } catch (error) {
+        console.error("GET MY COURSES ERROR:", error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: 'Failed to fetch user courses.' 
+        });
+    }
+});
+
+
+/**
+ * @desc    Get all published courses for users, with search and pagination
+ * @route   GET /api/courses
+ * @access  Private (Logged-in users)
+ */
+export const getAllPublishedCourses = async (req, res, next) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const searchTerm = req.query.search ? String(req.query.search).trim() : null;
+        const topic = req.query.topic ? String(req.query.topic).trim().toUpperCase() : null;
+        
+        // Generate cache key
+        const cacheKey = generateCacheKey('courses:list', { 
+            page, 
+            limit, 
+            search: searchTerm || '',
+            topic: topic || ''
+        });
+
+        // Try to get from cache first
+        const cached = await getCache(cacheKey);
+        if (cached) {
+            return res.status(200).json(cached);
+        }
+
+        const queryConditions = { isPublished: true };
+
+        // Filter by topic if provided (direct slug matching)
+        if (topic) {
+            const categorySlug = topic.toLowerCase().replace(/\s+/g, '-');
+            const examCategory = await ExamCategory.findOne({ slug: categorySlug });
+            
+            if (examCategory) {
+                // Use examCategory filter
+                queryConditions.examCategory = examCategory._id;
+            }
+            // If category not found, topic filter is ignored (show all courses)
+        }
+
+        // Add search term filter
+        if (searchTerm) {
+            const regex = new RegExp(searchTerm.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"), "i");
+            queryConditions.$or = [{ title: regex }, { description: regex }];
+        }
+
+        // Parallel queries for better performance
+        const [totalCourses, courses] = await Promise.all([
+            Course.countDocuments(queryConditions),
+            Course.find(queryConditions)
+                .populate('examCategory', 'name slug')
+                .select('_id title description image createdAt updatedAt examCategory')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean() // Use lean for better performance
+        ]);
+
+        const totalPages = Math.ceil(totalCourses / limit);
+
+        const response = {
+            status: 'success',
+            results: courses.length,
+            totalResults: totalCourses,
+            currentPage: page,
+            totalPages: totalPages,
+            data: {
+                courses,
+            },
+        };
+
+        // Cache the response
+        await setCache(cacheKey, response, CACHE_TTL.MEDIUM);
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error("USER GET ALL PUBLISHED COURSES ERROR:", error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch published courses.'
+        });
+    }
+};
+
+/**
+ * @desc    Get a single published course by ID, including its published modules (for users)
+ * @route   GET /api/courses/:courseId
+ * @access  Private (Logged-in users)
+ */
+export const getPublishedCourseById = async (req, res, next) => {
+    try {
+        const { courseId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
+            return res.status(400).json({ status: 'fail', message: 'Invalid course ID format.' });
+        }
+
+        // Generate cache key
+        const cacheKey = `course:detail:${courseId}`;
+
+        // Try to get from cache first
+        const cached = await getCache(cacheKey);
+        if (cached) {
+            return res.status(200).json(cached);
+        }
+
+        // Parallel queries for better performance
+        const [course, modules] = await Promise.all([
+            Course.findOne({ _id: courseId, isPublished: true })
+                .populate('examCategory', 'name slug')
+                .select('title description image createdAt updatedAt _id examCategory')
+                .lean(),
+            Module.find({ course: courseId }) 
+                .select('title description image subscriptionPlans order createdAt _id')
+                .populate('subscriptionPlans', 'name price currency')
+                .sort({ order: 1, createdAt: 1 })
+                .lean()
+        ]);
+
+        if (!course) {
+            return res.status(404).json({ status: 'fail', message: 'Published course not found.' });
+        }
+
+        const response = {
+            status: 'success',
+            data: {
+                course,
+                modules, 
+            },
+        };
+
+        // Cache the response
+        await setCache(cacheKey, response, CACHE_TTL.MEDIUM);
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error("USER GET PUBLISHED COURSE BY ID ERROR:", error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ status: 'fail', message: 'Invalid course ID format.' });
+        }
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch course details.'
+        });
+    }
+};
+
+/**
+ * @desc    Get a list of UPSC published courses for the homepage
+ *          (title or description contains 'upsc', case-insensitive)
+ * @route   GET /api/courses/upsc
+ * @access  Public
+ */
+export const getFeaturedUPSCourses = async (req, res, next) => {
+    try {
+        const upscRegex = /upsc/i;
+
+        const courses = await Course.find({
+            isPublished: true,
+            $or: [
+                { title: { $regex: upscRegex } },
+                { description: { $regex: upscRegex } }
+            ]
+        })
+        .populate('examCategory', 'name slug') 
+        .select('title description image createdAt updatedAt _id examCategory')
+        .sort({ createdAt: -1 })
+        .limit(6);
+
+        res.status(200).json({
+            status: 'success',
+            results: courses.length,
+            data: {
+                courses,
+            },
+        });
+    } catch (error) {
+        console.error("USER GET FEATURED UPSC COURSES ERROR:", error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch UPSC courses.'
+        });
+    }
+};
+
+/**
+ * @desc    Get a list of Law published courses for the homepage
+ *          (title or description contains 'law', case-insensitive)
+ * @route   GET /api/courses/law
+ * @access  Public
+ */
+export const getFeaturedLawCourses = async (req, res, next) => {
+    try {
+        const lawRegex = /law/i;
+
+        const courses = await Course.find({
+            isPublished: true,
+            $or: [
+                { title: { $regex: lawRegex } },
+                { description: { $regex: lawRegex } }
+            ]
+        })
+        .populate('examCategory', 'name slug') 
+        .select('title description image createdAt updatedAt _id examCategory')
+        .sort({ createdAt: -1 })
+        .limit(6);
+
+        res.status(200).json({
+            status: 'success',
+            results: courses.length,
+            data: {
+                courses,
+            },
+        });
+    } catch (error) {
+        console.error("USER GET FEATURED LAW COURSES ERROR:", error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch Law courses.'
+        });
+    }
+};
+
+/**
+ * @desc    Get paginated list of Law courses (using examCategory filter)
+ * @route   GET /api/courses/law-list
+ * @access  Public
+ */
+export const getLawCoursesList = async (req, res, next) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const searchTerm = req.query.search ? String(req.query.search).trim() : null;
+
+        const lawCategory = await ExamCategory.findOne({ slug: 'law-entrance' });
+        
+        let queryConditions = { isPublished: true };
+        
+        if (lawCategory) {
+            queryConditions.examCategory = lawCategory._id;
+        } else {
+            // Fallback to regex matching if category not found
+            const lawRegex = /law/i;
+            queryConditions.$or = [
+                { title: { $regex: lawRegex } },
+                { description: { $regex: lawRegex } }
+            ];
+        }
+
+        if (searchTerm) {
+            const regex = new RegExp(searchTerm.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"), "i");
+            if (queryConditions.$or) {
+                queryConditions.$or.push({ title: regex }, { description: regex });
+            } else {
+                queryConditions.$or = [{ title: regex }, { description: regex }];
+            }
+        }
+
+        const totalCourses = await Course.countDocuments(queryConditions);
+        const totalPages = Math.ceil(totalCourses / limit);
+
+        const courses = await Course.find(queryConditions)
+            .populate('examCategory', 'name slug')
+            .select('_id title description image createdAt updatedAt examCategory')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.status(200).json({
+            status: 'success',
+            results: courses.length,
+            totalResults: totalCourses,
+            currentPage: page,
+            totalPages: totalPages,
+            data: {
+                courses,
+            },
+        });
+    } catch (error) {
+        console.error("USER GET LAW COURSES LIST ERROR:", error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch Law courses list.'
+        });
+    }
+};
+
+/**
+ * @desc    Get paginated list of UPSC courses (using examCategory filter)
+ * @route   GET /api/courses/upsc-list
+ * @access  Public
+ */
+export const getUpscCoursesList = async (req, res, next) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const searchTerm = req.query.search ? String(req.query.search).trim() : null;
+
+        const upscCategory = await ExamCategory.findOne({ slug: 'upsc-civil-services' });
+        
+        let queryConditions = { isPublished: true };
+        
+        if (upscCategory) {
+            queryConditions.examCategory = upscCategory._id;
+        } else {
+            // Fallback to regex matching if category not found
+            const upscRegex = /upsc/i;
+            queryConditions.$or = [
+                { title: { $regex: upscRegex } },
+                { description: { $regex: upscRegex } }
+            ];
+        }
+
+        if (searchTerm) {
+            const regex = new RegExp(searchTerm.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"), "i");
+            if (queryConditions.$or) {
+                queryConditions.$or.push({ title: regex }, { description: regex });
+            } else {
+                queryConditions.$or = [{ title: regex }, { description: regex }];
+            }
+        }
+
+        const totalCourses = await Course.countDocuments(queryConditions);
+        const totalPages = Math.ceil(totalCourses / limit);
+
+        const courses = await Course.find(queryConditions)
+            .populate('examCategory', 'name slug')
+            .select('_id title description image createdAt updatedAt examCategory')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.status(200).json({
+            status: 'success',
+            results: courses.length,
+            totalResults: totalCourses,
+            currentPage: page,
+            totalPages: totalPages,
+            data: {
+                courses,
+            },
+        });
+    } catch (error) {
+        console.error("USER GET UPSC COURSES LIST ERROR:", error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch UPSC courses list.'
+        });
+    }
+};
+
+
+

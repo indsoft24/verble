@@ -1,0 +1,302 @@
+English learning app description
+The intent
+Intent is to motivate the users by instilling confidence and by grooming their personality. The demand of knowing English is growing rapidly. However, the friends in India need a lot local work to be done to improve their English. With English, becoming more popular and demanding, people are left with no choice, but to learn English as much as they can. I understand, the people living in urban cities are encouraged and empowered enough by the teachers and parents to learn English, however, from rural territories, still need some work to be done. 
+My intent is to educated as many people as much. I can buy, sparing time out of my available schedule.
+In the era of internet and now, AI, there is almost no limit in the amount of information available. People do have access to internet, Instagram, GenAI tools like ChatGPT Gemini, and many other such platforms. However, there is so much of the information that it becomes almost impossible to keep Trek of it, pursue and retain the memory. Because we consume so much on daily basis. This is too far the English learning platforms as well and for any learning platform for that matter. There is no structure, there is no format, there is no tracking, and there is no support if you’re doing anything wrong. 
+In today’s time, you can’t just say ‘let it be’, because not knowing English is costing you as much that you can’t even calculate. You’re missing on opportunities, you’re missing and confidence, and eventually start under estimating your potential. You just can’t afford to tell someone that you’re not competent enough because you lack the command in English.
+With the help of this course, we are helping you achieve what you’re true potential is. Whether you are job seeker or a student or a housewife, a small business owner for someone who is aspiring to go to different country. Our course makes you 0 to hero in a attract approach and in structured manner.
+
+The Concept
+	•	App has the unrestricted content as well as the premium content, which is available on making a payment.
+	•	Unrestricted content is bifurcated into Free, Bronze, Silver
+	•	By default, only free content is unlocked, bronze and silver are locked.
+	•	User accesses the free content for 30 days in a row without skipping, then they’ll be promoted to access the bronze content.
+	•	If in last 30 days, user attempted the free content for 70% of the days they will be presented with the bronze content.
+	•	User then access the bronze content for another 60 days before they are promoted to the silver content.
+	•	If in last 60 days, user attempted the free content for 70% of the days they will be presented with the bronze content.
+	•	Once they unlock the silver content, they can continue to access the free content for 90 days.
+	•	After 90 days based on the daily access of the app and the free content, they will be rewarded another 90 days.
+	•	If in last 90 days, user attempted the free content for 70% of the days they will be presented with the bronze content.
+	•	
+	•	Paid content is bifurcated into Gold, full course, Bonus content
+	•	With Gold subscription, they can get access to the gold content for 01 year. 
+	•	Gold subscription also opens the free, bronze, silver content.
+	•	Full course is the main highlight of the course.
+	•	With full course, they get access to everything plus Gold plus bonus content
+	•	They get access to the full course and the remaining content for one year.
+	•	After one year, they continue to have the access to the full course, while the other sections from free to gold will get locked, and they will have to buy gold separately as per the above model.
+	•	Full course is actually a complete package of full structured, level wise English learning journey.
+	•	The full course is divided into multiple modules
+	•	Each module has multiple videos. By default, only one video is unlocked while others are locked. Each video need to be completed in order to unlock the next video in the same module. 
+	•	Some users can mark videos complete manually as they may feel they understand the topic already.
+	•	Each module has puzzles/quiz.
+	•	By default, only first module unlocked. User completes the module along with the puzzle with passing marks to unlock the next module. 70% score is the passing mark to unlock the next module.
+	•	At the end of all the modules and all the puzzles, users has the option to appear for the certificate assessment that includes 150-200 questions. This includes the subjective as well as objective questions.
+	•	After scoring 70% in the final assessment, they get the E certificate.
+	•	All the content type has have an identification colour as well as an icon.
+	•	I am able to manage the cost of the various content from backend, and that should directly reflect on the front end.
+	•	I am able to manage most of the things from the dedicated backend less than the database so that I don’t have to get the Code updated on the front and every now and then.
+	•	Updating the front and case of the app is composing and require a lot of logistical arrangement, and not just the technical efforts.
+	•	The app also has the help section. In this section, I am able to add various guidelines, and supporting document for and users to refer. For example, how to create a Gmail account, how to access particular section in the, how to register on ChatGPT/Gemini. 
+	•	This is basically the help section where people can just go and find the self help. 
+	•	I have also provided the link of this page (help section) on the main landing pages of different modules and member of sections.
+	•	This is like a blog section, where I’m able to publish any new help by simply creating a page or updating a page from backend.
+Default assumptions
+	•	All the screens have the logo and name of the application.
+	•	Some of the screens have the name of the user reflecting wherever possible.
+	•	There is a mechanism to highlight user status, progress, and their achievements on the screen.
+	•	Screen recording for the main screen, where the videos are played is protected from screen recording, and screen capture.
+	•	The daily activity of the user on various membership levels, as per the challenge is tracked.
+	•	The completion level of puzzles, modules in the in the course is tracked.
+	•	Users are sent daily notifications about daily puzzle or daily tasks/ challenges.
+
+
+
+App Screens
+	•	Install
+	•	Users are able to download the app from App Store on iOS and play store on android.
+	•	Pre-load screen
+	•	As soon as user opens, the app show dynamic animation about success, learning, skills, learning, opportunities etc. 
+	•	The screen will also have a centre stage button saying ‘welcome back to the world of opportunities’. 
+	•	The above screen and message  changes on daily basis. And should reflect uniquely from the backend from backend using a list / library store / bucket.
+	•	If the user is signed in already, they are taken to E. Else they are taken to C.
+	•	Pre-sign-in screen
+	•	The screen appears if the user has not signed in or not registered.
+	•	The background image/animation remains same as B.1.
+	•	The message will be ’come on, let’s jump in to learn’
+	•	Sign in / register
+	•	Sign screen asks the Name and Mobile number only.
+	•	On providing mobile number, an OTP sent.
+	•	User enter the OTP on the screen.
+	•	If the user is already not created, a user is created with the mobile number at the backend.
+	•	Mobile number works as the unique identify
+	•	Home screen is presented.
+	•	If the user is already created, system reads the username and logs onto the home screen with the user specific details.
+	•	Once the user has logged in, they should remain logged in without having to ask to enter the mobile number and name once again.
+	•	However, whenever user open the app the B is always presented.
+	•	Home Screen
+	•	Home screen display the logo, membership level and welcoming the user message on Top.
+	•	It also displays the status of the 30 days and 60 days challenge, respectively with the membership level. 
+	•	The above status would also show how many days completed out of the 30 days challenge and how many days are remaining to motivate the user
+	•	A progress bar also shows the days left in order to complete the 30 days or 60 days challenge, respectively.
+	•	The home screen also shows the unlocked levels as active and unlocked levels as inactive.
+	•	Free membership
+	•	By default, free level /membership is activated / unlocked. That is why it appear as active clickable section.
+	•	Other sections have the placeholders, but would be inactive or locked.
+	•	Other sections can be clicked, however, only to see a pop up message with the details of bronze level, Silver level, gold level, and full course.
+	•	For example, when bronze is clicked users are prompted that they need to complete the free 30 days challenge in order to unlock bronze. As well as what all is covered in bronze to keep the excitement and engagement on.
+	•	Similarly, if silver is collect, users are prompted that they need to complete 30 days free challenge as well as 60 days. Bronze challenge to unlock the Silver. They also get to see what is included in the silver so that their enthusiasm to complete the challenge remains.
+	•	Similarly, if Gold is clicked, users are prompted that they need to purchase gold along with all the benefits of Gold offers.
+	•	And when user clicks on full course, they would get to see the details of the entire course along with the benefits, what it brings to them when it is purchased by them at the cost mentioned.
+	•	Free section contains two activities. I have explained the pages and functionality later in the document.
+	•	Word of the day
+	•	The phrase of the day
+	•	Bronze membership
+	•	After 30 days of daily engagement in the free membership, the bronze membership is unlocked
+	•	Bronze membership unlock following to additional activities. I have explained the activities later in this document.
+	•	One minute read
+	•	Daily essentials
+	•	Silver membership
+	•	After 60 days of daily engagement in the bronze membership, the silver membership is unlocked.
+	•	Once the silver membership is unlocked, following activities would be unlocked
+	•	Practical conversations
+	•	Daily puzzle / select correct sentence
+	•	Correct use of grammar
+	•	Gold membership
+	•	Gold Membership unlocks only by paying an amount.
+	•	Once the gold membership is unlocked, following activities appears in addition to the above activities/membership/levels. I have explained the details about these activities later in the document.
+	•	Explain the scene/situation
+	•	Famous speeches and conversations
+	•	Lyrics of the songs
+	•	Curated Instagram feeds
+	•	Professional conversations
+	•	Full course, membership
+	•	When the full course is purchased by paying an amount everything above becomes accessible along with the content of the main course.
+	•	The main course button on the main screen/home screen, which was inactive until now becomes active. User scan, click and navigate to the course content.
+	•	I have explained the details of the full course, the structure and the flow later in this document.
+	•	Home screen also shows the offers running, webinar scheduled, end, who has joined the full course recently (just the name and location/ city).
+	•	Home screen show, leaders board for free challenges as well as paid challenges.
+
+	•	Free membership: Word of the day
+	•	Content to consume
+	•	The screen shows the daily word to improve the vocabulary of the students
+	•	The word refreshes every morning 9 AM
+	•	The screen shows the word number 
+	•	Following information related to the word would be displayed
+	•	Pronunciation of word in English
+	•	Pronunciation of word in Hindi
+	•	Speaker icon for reading aloud the word
+	•	Part of speech like adjective were noun, etc
+	•	Meaning of the word in English as well as Hindi
+	•	A sentence made from the word in English as well as in Hindi. English sentence would have a speaker icon to read the sentence aloud
+	•	Two synonyms and two antonyms
+	•	A button at the bottom to look at the phrase of the day as well
+	•	Two buttons to see previous word, and when clicked on the previous Word the button for moving to the next word. 
+	•	Back button to go back to the home screen.
+	•	Content For interactivity
+	•	A clearly visible button for people to submit the five sentences using the word of the day. They can only submit sentences for the word of the day, not for the word of the previous day.
+	•	Users can submit minimum two sentences and maximum five sentences using the word of the day.
+	•	Once submitted, user gets the status of their sentence, whether those were right or wrong.
+	•	Every correct sentence, earns them 10 points.
+	•	The response summary for every user is submitted/saved in the backend database from where I can pull the data to see the overall correct and incorrect responses so that I can prepare the content for my weekly classes/webinar. A similar response and summary is created for any other puzzle or interaction activity in the entire application.
+	•	Free membership: Phrase of the day
+	•	Content to consume
+	•	Similar to the word of the day, the page has the phrase number
+	•	Freeze in the bold letters
+	•	Hindi meaning of the phrase and English meaning of the phrase
+	•	Speaker icon to read the phrase aloud
+	•	Example using the phrase with the speaker icon to read the example aloud
+	•	Hindi translation of the phrase
+	•	A button at the bottom to look at the word of the day as well
+	•	Two buttons to see previous phrase, and when clicked on the previous phrase the button for moving to the next phrase. 
+	•	Back button to go back to the home screen.
+
+	•	Content for interactivity
+	•	A clearly visible button for people to submit the five sentences using the phrase of the day. They can only submit sentences for the phrase of the day, not for the phrase of the previous day.
+	•	Users can submit minimum two sentences and maximum five sentences using the phrase of the day.
+	•	Once submitted, user gets the status of their sentence, whether those were right or wrong.
+	•	Every correct sentence, earns them 10 points.
+	•	The response summary for every user is submitted/saved in the backend database from where I can pull the data to see the overall correct and incorrect responses so that I can prepare the content for my weekly classes/webinar. A similar response and summary is created for any other puzzle or interaction activity in the entire application.
+	•	Bronze content: one minute read, daily
+	•	Content to consume
+	•	The page has the read number
+	•	Page has the title of the article, along with the speaker icon to read the title
+	•	Page has the story or content to read, along with the speaker icon to read the story or article.
+	•	Hindi translation of the story or article sentence by sentence.
+	•	Important #5 keywords from the story along with their Hindi meaning.
+	•	Moral of the story in English as well as Hindi along with the Speaker icon to read it aloud.
+	•	To see previous story/articles, when on previous button to see the next story/article.
+	•	Aur to go back to home screen.
+	•	Content for interactivity
+	•	Users have given a section to summarise story in their own words in no More Than five sentences.
+	•	Every submission of the story gets 10 points
+	•	Every correct sentence in the story gets 02 points. 
+	•	Users can submit the summary only for the one minute read of the day and not for the previous reads.
+	•	Bronze content: Weekly essentials vocabulary
+	•	Content to consume
+	•	This page has the vocabulary set number.
+	•	Theme of the vocabulary, example kitchen, dining, military, School, etc.
+	•	The page has 10 to 15 vocabulary related to the title above.
+	•	Each vocabulary item has the pronunciation in Hindi as well as Hindi meaning/translation
+	•	Speech has the previous button as well as next button and back button that takes the user back to the home.
+	•	Content for interactivity
+	•	A clearly visible button for people to submit the one sentences using any five vocabulary word. They can only submit sentences for the 5 vocab words of the week, not for the word of the previous week.
+	•	Users can submit minimum two sentences and maximum five sentences using the word of the day.
+	•	Once submitted, user gets the status of their sentence, whether those were right or wrong.
+	•	Every correct sentence, earns them 10 points.
+	•	I am able to feed the new content from backend.
+	•	The response summary for every user is submitted/saved in the backend database from where I can pull the data to see the overall correct and incorrect responses so that I can prepare the content for my weekly classes/webinar. A similar response and summary is created for any other puzzle or interaction activity in the entire application.
+
+	•	Silver content: practical conversations
+	•	Content to consume
+	•	This page has a list of practical conversations that take place on Daily basis. For example, when you are at a restaurant , when you are in the school, when you are at the airport, when you’re accessing you lounge, etc.
+	•	This is going to be a growing list, however, in the beginning will be providing 20 to 25, such conversation topics.
+	•	When a topic of conversation is clicked, a new page open that has the title on top, the meaning of the conversation title in Hindi, and then the entire conversation at the bottom.
+	•	This page shows the conversation in the dialogue format… like we have in WhatsApp. Because it is a conversation, people responding with appear in the WhatsApp conversation format.
+	•	The speech has a button called talk, when that button is pressed response, which is already fed into the system would appear in the conversation format.
+	•	User is also able to see the hindi meaning of this conversation by clicking a button or bye, touching the conversation bubble.
+	•	Once the conversation is finish, user can click on finish button to go back to the list of team list of conversation topics.
+	•	When they’re back on the main page, back button on the page would allow them to go back to home screen.
+	•	Content for interactivity
+	•	Xx
+	•	Xx
+	•	Need your suggestion?
+	•	Silver content: Daily puzzle > Spot the correct sentence
+	•	Content to consume: None
+	•	Content for interactivity
+	•	This is the puzzles space where you just get to Misha select the correct sentence out of three listed sentences.
+	•	Every day, five questions would be displayed.
+	•	Users can only see the puzzle of the day. They cannot go back to the previous puzzle.
+	•	Every correct answer gives them 10 point.
+	•	Result received in the dashboard that they can view for themselves.
+	•	Results would be also displayed in the leaderboard
+	•	Silver content: daily puzzle> correct use of grammar
+	•	Content to consume: none
+	•	Content for interactivity
+	•	This is a Puzzle space, in which user has supposed to fill the blank with the correct use of the verb.
+	•	List five such questions on daily basis.
+	•	Each question has three options to choose the correct answer.
+	•	Every correct answer  give them 10 points.
+	•	Reasons are received in the backend database and available on their dashboard.
+	•	Gold content: explain the scene/situation
+	•	Content to consume
+	•	This page has the same number on top
+	•	Then the image or GIF containing the scene or the situation
+	•	The scene is explained in couple of lines over 2 to 3 paragraphs.
+	•	The English explanation has the speaker icon that would read the scene aloud.
+	•	Next is the Hindi summary of the scene or the situation
+	•	Page then has the five keywords and their Hindi translation.
+	•	The page would have the previous of the next button to navigate through the various scene and situations
+	•	Content for interactivity: 
+	•	Users can type the scene in their own language in a box given and click on submit.
+	•	Every submission will get 10 points
+	•	Every correct sentence will get 2 points each
+	•	The score is saved in the back database, which is later than used for user dashboard and leaderboard
+	•	Bonus content: famous speeches
+	•	Content to consume
+	•	The page has the title example speech by Priyanka Chopra, speech number, eye frame from YouTube, transcript of the content, keywords from the video and their meaning, key phrases, and their meaning.
+	•	Ways to navigate to the previous and the next speech.
+	•	Content for interactive
+	•	Users can type the speech in their own language in a box given and click on submit.
+	•	Every submission will get 10 points
+	•	Every correct sentence will get 2 points each
+	•	The score is saved in the back database, which is later than used for user dashboard and leaderboard
+	•	Bonus content: song lyrics
+	•	Content to consume
+	•	This speech has the lyrics number,
+	•	Play that only please, the audio
+	•	Lyrics in English
+	•	Important words and phrases from the lyrics, along with your meaning
+	•	Buttons to navigate to the previous with the next lyrics
+	•	Back to back to home
+	•	Content to interact: please suggest
+	•	Bonus content : curated Instagram feeds
+	•	Content to consume
+	•	One page has three posts next to each other vertically
+	•	Each post has the credits at the bottom
+	•	These are the links to the post not to be channels not the handles
+	•	Buttons to navigate previous,  next, back to home.
+	•	Content for interactivity: none
+	•	Gold content: professional conversations
+	•	Content to consume
+	•	The page has the list of all the conversations that we are fed from the backend.
+	•	Example convention at airport, conversation in this school, conversation in the park.
+	•	User can click on any conversation to open that conversation in the full page.
+	•	Conversation is correct on the next page. Use to see the topic name, conversation itself (to be picked from the backend field as is a better way, if you are able to suggest).
+	•	Next conversation, page and list other related conversations.. for example, if this conversation is related to airport, at the bottom user sees all the conversations tagged as airport.
+	•	Button on the page to go back to the list of the conversations.
+	•	And the main conversation speech has the back button to go back to the home.
+	•	Content for interactive: Please suggest
+	•	Gold content: Ready to use AI Prompts
+	•	Content to consume 
+	•	The page has the list of all the topics, conversation, types, professions.
+	•	All the prompts are gripped into above topics. 
+	•	User skin click on any topic and expand a list of the AI prompts within that group/topic.
+	•	With the help of copy icon/button, users are able to copy the prompt from the expanded list, and use that prompted ChatGPT for Gemini.
+	•	Button on the page to go back to the list of the conversations.
+	•	Content for interactivity: please suggest
+
+	•	Full Course: the section becomes activated or unlocked when it is purchased at regular prize shown on portal / app, or have signed up for the full course through the seminar by purchasing at the discounted price.
+	•	One click a welcome screen open with Jerry animations about study development, success, growth, etcetera. When the home screen tapped to go to the main goal, uses food to see the main content as listed below.
+	•	Modules list page
+	•	The speech has all the modules listed in the vertical order
+	•	Every module has a model number, name of the model, description of the module
+	•	All the modules are unlocked, except the first one. 
+	•	Users can unlock the next module only by completing the previous module in the sequence you’ll order.
+	•	Need to mention that the at the bottom page has the back button to go back to the dashboard.
+	•	Module page
+	•	The page has the name of the model
+	•	All the video content related to this module is listed vertically.
+	•	All the videos are locked, except the first one. 
+	•	Users are required to complete the videos in the sequence to unlock Next videos.
+	•	The bottom of the beach has module test button, which uses can click to appear for the body assessment. However, this would appear locked unless on the videos are completed.
+	•	The page has the back button to go back to the module list page.
+	•	Videos page:
+	•	The page has name of audio on top
+	•	The page has the name of video
+	•	Page has the video player, uses only get an option to play, pause, and fast forward.
+	•	User scan manually mark the video complete by using the button ’mark complete’. The feature will be used for if the user is aware of the content already.
+	•	Page has the list of all the other videos at the bottom of this page.
+	•	Once this video is marked, complete, the other video listed at the bottom of the speech becomes active automatically.
+
+

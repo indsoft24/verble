@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/verble-logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Verble - English Learning Platform" />
+    
+    <!-- DNS Prefetch & Preconnect for External Resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" as="style" />
+    
+    <!-- Font Stylesheet -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      />
+    </noscript>
+    
+    <title>Verble</title>
+    
+    <!-- Prefetch Razorpay (load after page load) -->
+    <link rel="prefetch" href="https://checkout.razorpay.com/v1/checkout.js" as="script" />
+    <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+  </head>
+  <body>
+    <!-- <div id="security-overlay">
+      <div>
+        <h1>Security Alert</h1>
+        <p>
+          For security reasons, developer tools, screen recording, and
+          screenshots are not permitted on this site.
+        </p>
+        <p>
+          Please close any debugging tools and disable screen capture software
+          to continue.
+        </p>
+      </div>
+    </div> -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+     <!-- <script>
+      (function () {
+        const overlay = document.getElementById("security-overlay");
+        let isDevToolsOpen = false;
+
+        function showSecurityOverlay() {
+          overlay.style.display = "flex";
+        }
+
+        function infiniteDebugger() {
+          try {
+            debugger;
+          } catch (e) {}
+          requestAnimationFrame(infiniteDebugger);
+        }
+
+        function checkDevTools() {
+          const threshold = 160;
+          const widthDifference = window.outerWidth - window.innerWidth;
+          const heightDifference = window.outerHeight - window.innerHeight;
+
+          if (widthDifference > threshold || heightDifference > threshold) {
+            if (!isDevToolsOpen) {
+              showSecurityOverlay();
+              isDevToolsOpen = true;
+            }
+          } else {
+            isDevToolsOpen = false;
+          }
+        }
+
+        document.addEventListener("contextmenu", function (e) {
+          e.preventDefault();
+        });
+
+        document.addEventListener("keydown", function (e) {
+          if (
+            e.keyCode === 123 ||
+            (e.ctrlKey &&
+              e.shiftKey &&
+              (e.keyCode === 73 || e.keyCode === 74)) ||
+            (e.ctrlKey && e.keyCode === 85)
+          ) {
+            e.preventDefault();
+            showSecurityOverlay();
+          }
+        });
+
+        setInterval(checkDevTools, 1000);
+        requestAnimationFrame(infiniteDebugger);
+      })();
+    </script> -->
+  </body>
+</html>
