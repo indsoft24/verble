@@ -1,0 +1,2 @@
+# Ensure shell scripts always use LF (fixes "command not found" / "invalid option" on Linux/VPS)
+*.sh text eol=lf
