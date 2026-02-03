@@ -1,6 +1,6 @@
 # Verble - Single-stack deployment for VPS
-# Exposes ONE port (3000) so it won't conflict with other sites.
-# Point your reverse proxy (nginx/Caddy/Traefik) at host:3000 for this app.
+# Exposes ONE port (change below if 3000 is taken by another Docker site).
+# Point your reverse proxy (Apache/Nginx) at host:VERBLE_PORT for this app.
 
 services:
   # --- Frontend + Gateway (only service exposed to host) ---
@@ -11,7 +11,7 @@ services:
     image: verble-web
     container_name: verble-web
     ports:
-      - "3000:80"
+      - "3001:80"   # Use 3001 if 3000 is taken; update Apache proxy_pass to match
     depends_on:
       backend:
         condition: service_started
