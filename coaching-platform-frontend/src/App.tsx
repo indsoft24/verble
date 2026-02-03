@@ -18,7 +18,6 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 // --- Lazy Loaded Pages (Code Splitting) ---
 // Public Pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
-const HomePage = lazy(() => import('./pages/HomePage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const MobileLoginPage = lazy(() => import('./pages/MobileLoginPage'));
 const RegistrationPage = lazy(() => import('./pages/RegistrationPage'));
@@ -108,113 +107,113 @@ function AppContent() {
             </Box>
         );
     }
-    
+
     const dashboardPath = user?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
     return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-                {/* Only show Navbar and Footer for non-admin and non-user dashboard routes */}
-                {!location.pathname.startsWith('/admin') && 
-                 !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications'].some(path => 
+        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            {/* Only show Navbar and Footer for non-admin and non-user dashboard routes */}
+            {!location.pathname.startsWith('/admin') &&
+                !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications'].some(path =>
                     location.pathname === path || location.pathname.startsWith(path + '/')
-                 ) && <Navbar />}
+                ) && <Navbar />}
 
-                <Box component="main" sx={{ flexGrow: 1 }}>
-                    <Suspense fallback={<PageLoader />}>
-                        <Routes>
-                            {/* Public Routes */}
-                            <Route path="/" element={<LandingPage />} />
-                            <Route path="/register" element={<RegistrationPage />} />
-                            <Route path="/verify-email" element={<VerifyEmailPage />} />
-                            <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to={dashboardPath} replace />} />
-                            <Route path="/mobile-login" element={!isAuthenticated ? <MobileLoginPage /> : <Navigate to={dashboardPath} replace />} />
-                            <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
-                            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+            <Box component="main" sx={{ flexGrow: 1 }}>
+                <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                        {/* Public Routes */}
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/register" element={<RegistrationPage />} />
+                        <Route path="/verify-email" element={<VerifyEmailPage />} />
+                        <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to={dashboardPath} replace />} />
+                        <Route path="/mobile-login" element={!isAuthenticated ? <MobileLoginPage /> : <Navigate to={dashboardPath} replace />} />
+                        <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-                            {/* Blog Routes */}
-                            <Route path="/blog" element={<BlogListPage />} />
-                            <Route path="/blog/:slug" element={<BlogPostDetailPage />} />
-                            <Route path="/blog/category/:categorySlug" element={<BlogListPage />} />
-                            <Route path="/blog/tag/:tagSlug" element={<BlogListPage />} />
+                        {/* Blog Routes */}
+                        <Route path="/blog" element={<BlogListPage />} />
+                        <Route path="/blog/:slug" element={<BlogPostDetailPage />} />
+                        <Route path="/blog/category/:categorySlug" element={<BlogListPage />} />
+                        <Route path="/blog/tag/:tagSlug" element={<BlogListPage />} />
 
-                            {/* Public Course Routes */}
-                            <Route path="/courses" element={<CoursesListPage />} />
-                            <Route path="/courses/:courseId" element={<CourseDetailPage />} />
-                            
-                            {/* Public Exam Category Routes */}
-                            <Route path="/exams/:slug" element={<ExamCategoryCoursesPage />} />
+                        {/* Public Course Routes */}
+                        <Route path="/courses" element={<CoursesListPage />} />
+                        <Route path="/courses/:courseId" element={<CourseDetailPage />} />
 
-                            {/* Static Page Routes */}
-                            <Route path="/contact-us" element={<ContactUsPage />} />
-                            <Route path="/partnership" element={<PartnershipPage />} />
-                            <Route path="/business-proposal" element={<BusinessProposalPage />} />
-                            <Route path="/careers" element={<CareersPage />} />
-                            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-                            <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
-                            <Route path="/disclaimer" element={<DisclaimerPage />} />
-                            <Route path="/sitemap" element={<SiteMapPage />} />
-                            <Route path="/about-us" element={<AboutUsPage />} />
-                            <Route path="/mission-vision" element={<MissionAndVisionPage />} />
-                            <Route path="/why-join-us" element={<WhyJoinUsPage />} />
-                            <Route path='/testimonials' element={<TestimonialsPage />} />
-                            <Route path="/faqs" element={<FaqsPage />} />
-                            <Route path="/help" element={<HelpPage />} />
-                            <Route path="/webinar/:slug" element={<WebinarPage />} />
+                        {/* Public Exam Category Routes */}
+                        <Route path="/exams/:slug" element={<ExamCategoryCoursesPage />} />
 
-                            
-                            {/* Protected User Routes */}
-                            <Route element={<ProtectedRoute allowedRoles={['user', 'admin']} />}>
-                                <Route path="/dashboard" element={<UserDashboardPage />} />
-                                <Route path="/profile" element={<ProfilePage />} />
-                                <Route path="/my-courses" element={<MyCoursesPage />} />
-                                <Route path="/videos" element={<VideosListPage />} />
-                                <Route path="/videos/:videoId" element={<VideoWatchPage />} />
-                                <Route path="/subscription-plans" element={<SubscriptionPlansPage />} />
-                                <Route path="/subscription-plans/:planId" element={<SubscriptionPlanDetailPage />} />
-                                <Route path="/my-subscription" element={<MySubscriptionPage />} />
-                                <Route path="/notifications" element={<NotificationsPage />} />
-                                <Route path="/modules/:moduleId/videos" element={<ModuleVideosPage />} />
-                            </Route>
+                        {/* Static Page Routes */}
+                        <Route path="/contact-us" element={<ContactUsPage />} />
+                        <Route path="/partnership" element={<PartnershipPage />} />
+                        <Route path="/business-proposal" element={<BusinessProposalPage />} />
+                        <Route path="/careers" element={<CareersPage />} />
+                        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                        <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
+                        <Route path="/disclaimer" element={<DisclaimerPage />} />
+                        <Route path="/sitemap" element={<SiteMapPage />} />
+                        <Route path="/about-us" element={<AboutUsPage />} />
+                        <Route path="/mission-vision" element={<MissionAndVisionPage />} />
+                        <Route path="/why-join-us" element={<WhyJoinUsPage />} />
+                        <Route path='/testimonials' element={<TestimonialsPage />} />
+                        <Route path="/faqs" element={<FaqsPage />} />
+                        <Route path="/help" element={<HelpPage />} />
+                        <Route path="/webinar/:slug" element={<WebinarPage />} />
 
-                            {/* Protected Admin Routes */}
-                            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                                <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-                                <Route path="/admin/users" element={<AdminUsersListPage />} />
-                                <Route path="/admin/users/:userId/manage-subscription" element={<AdminManageUserSubscriptionPage />} />
-                                <Route path="/admin/videos" element={<AdminVideosListPage />} />
-                                <Route path="/admin/videos/new" element={<AdminCreateVideoPage />} />
-                                <Route path="/admin/videos/edit/:id" element={<AdminEditVideoPage />} />
-                                <Route path="/admin/subscription-plans" element={<AdminSubscriptionPlansListPage />} />
-                                <Route path="/admin/courses" element={<AdminCoursesListPage />} />
-                                <Route path="/admin/courses/:courseId/modules" element={<AdminManageModulesPage />} />
-                                <Route path="/admin/modules" element={<AdminModulesListPage />} />
-                                <Route path="/admin/modules/:moduleId/videos" element={<AdminModuleVideosPage />} />
-                                <Route path="/admin/blog" element={<AdminBlogListPage />} />
-                                <Route path="/admin/blog/new" element={<AdminCreateEditBlogPostPage />} />
-                                <Route path="/admin/blog/edit/:postId" element={<AdminCreateEditBlogPostPage />} />
-                                <Route path="/admin/exam-categories" element={<AdminExamCategoriesPage />} />
-                                <Route path='/admin/knowledgebase' element={<AdminKnowledgeBasePage />} />
-                                <Route path='/admin/sentence-validation' element={<AdminSentenceValidationPage />} />
-                                <Route path='/admin/daily-content' element={<AdminDailyContentPage />} />
-                            </Route>
 
-                            {/* Fallback Routes */}
-                            <Route path="/unauthorized" element={<UnauthorizedPage />} />
-                            <Route path="*" element={<NotFoundPage />} />
-                        </Routes>
-                    </Suspense>
-                </Box>
-                
-                {/* Only show Footer for non-admin and non-user dashboard routes */}
-                {!location.pathname.startsWith('/admin') && 
-                 !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications'].some(path => 
-                    location.pathname === path || location.pathname.startsWith(path + '/')
-                 ) && <Footer />}
-                <Suspense fallback={null}>
-                    <ChatbotWidget />
+                        {/* Protected User Routes */}
+                        <Route element={<ProtectedRoute allowedRoles={['user', 'admin']} />}>
+                            <Route path="/dashboard" element={<UserDashboardPage />} />
+                            <Route path="/profile" element={<ProfilePage />} />
+                            <Route path="/my-courses" element={<MyCoursesPage />} />
+                            <Route path="/videos" element={<VideosListPage />} />
+                            <Route path="/videos/:videoId" element={<VideoWatchPage />} />
+                            <Route path="/subscription-plans" element={<SubscriptionPlansPage />} />
+                            <Route path="/subscription-plans/:planId" element={<SubscriptionPlanDetailPage />} />
+                            <Route path="/my-subscription" element={<MySubscriptionPage />} />
+                            <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route path="/modules/:moduleId/videos" element={<ModuleVideosPage />} />
+                        </Route>
+
+                        {/* Protected Admin Routes */}
+                        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+                            <Route path="/admin/users" element={<AdminUsersListPage />} />
+                            <Route path="/admin/users/:userId/manage-subscription" element={<AdminManageUserSubscriptionPage />} />
+                            <Route path="/admin/videos" element={<AdminVideosListPage />} />
+                            <Route path="/admin/videos/new" element={<AdminCreateVideoPage />} />
+                            <Route path="/admin/videos/edit/:id" element={<AdminEditVideoPage />} />
+                            <Route path="/admin/subscription-plans" element={<AdminSubscriptionPlansListPage />} />
+                            <Route path="/admin/courses" element={<AdminCoursesListPage />} />
+                            <Route path="/admin/courses/:courseId/modules" element={<AdminManageModulesPage />} />
+                            <Route path="/admin/modules" element={<AdminModulesListPage />} />
+                            <Route path="/admin/modules/:moduleId/videos" element={<AdminModuleVideosPage />} />
+                            <Route path="/admin/blog" element={<AdminBlogListPage />} />
+                            <Route path="/admin/blog/new" element={<AdminCreateEditBlogPostPage />} />
+                            <Route path="/admin/blog/edit/:postId" element={<AdminCreateEditBlogPostPage />} />
+                            <Route path="/admin/exam-categories" element={<AdminExamCategoriesPage />} />
+                            <Route path='/admin/knowledgebase' element={<AdminKnowledgeBasePage />} />
+                            <Route path='/admin/sentence-validation' element={<AdminSentenceValidationPage />} />
+                            <Route path='/admin/daily-content' element={<AdminDailyContentPage />} />
+                        </Route>
+
+                        {/* Fallback Routes */}
+                        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+                        <Route path="*" element={<NotFoundPage />} />
+                    </Routes>
                 </Suspense>
             </Box>
+
+            {/* Only show Footer for non-admin and non-user dashboard routes */}
+            {!location.pathname.startsWith('/admin') &&
+                !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications'].some(path =>
+                    location.pathname === path || location.pathname.startsWith(path + '/')
+                ) && <Footer />}
+            <Suspense fallback={null}>
+                <ChatbotWidget />
+            </Suspense>
+        </Box>
     );
 }
 

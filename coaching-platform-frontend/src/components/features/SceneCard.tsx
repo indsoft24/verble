@@ -24,7 +24,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-import { parseISO } from 'date-fns';
+
 
 interface SceneCardProps {
     data: DailyContent;
@@ -46,7 +46,7 @@ const confettiFall = keyframes`
 // Simple CSS-based Confetti Effect
 const ConfettiEffect: React.FC = () => {
     const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-    
+
     return (
         <Box
             sx={{
@@ -64,7 +64,7 @@ const ConfettiEffect: React.FC = () => {
                 const duration = 2 + Math.random() * 2;
                 const delay = Math.random() * 0.5;
                 const left = Math.random() * 100;
-                
+
                 return (
                     <Box
                         key={i}
@@ -209,7 +209,7 @@ const SceneCard: React.FC<SceneCardProps> = ({ data, onContentChange }) => {
 
     const handleSubmitDescription = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!description.trim()) {
             setSubmitStatus({
                 type: 'error',
@@ -282,7 +282,7 @@ const SceneCard: React.FC<SceneCardProps> = ({ data, onContentChange }) => {
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>
-                    
+
                     <Typography
                         variant="h4"
                         component="h1"

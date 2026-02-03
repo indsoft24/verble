@@ -14,7 +14,6 @@ import {
     Chip,
     List,
     ListItem,
-    ListItemText,
     Checkbox,
     FormControlLabel,
     Grid
@@ -28,7 +27,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-import { parseISO } from 'date-fns';
+
 
 interface VocabularySetCardProps {
     data: DailyContent;
@@ -62,7 +61,7 @@ const confettiFall = keyframes`
 // Simple CSS-based Confetti Effect
 const ConfettiEffect: React.FC = () => {
     const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-    
+
     return (
         <Box
             sx={{
@@ -80,7 +79,7 @@ const ConfettiEffect: React.FC = () => {
                 const duration = 2 + Math.random() * 2;
                 const delay = Math.random() * 0.5;
                 const left = Math.random() * 100;
-                
+
                 return (
                     <Box
                         key={i}
@@ -195,14 +194,14 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
         if (!newSelected[sentenceIndex]) {
             newSelected[sentenceIndex] = new Set();
         }
-        
+
         const wordSet = newSelected[sentenceIndex];
         if (wordSet.has(vocabWord)) {
             wordSet.delete(vocabWord);
         } else {
             wordSet.add(vocabWord);
         }
-        
+
         newSelected[sentenceIndex] = new Set(wordSet);
         setSelectedVocabWords(newSelected);
 
@@ -286,9 +285,9 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
 
     const handleSubmitSentences = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         const validSentences = sentences.filter(s => s.sentence.trim() && s.vocabWordsUsed.length > 0);
-        
+
         if (validSentences.length < 2) {
             setSubmitStatus({
                 type: 'error',
@@ -387,7 +386,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>
-                    
+
                     <Typography
                         variant="h4"
                         component="h1"
@@ -409,11 +408,11 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                     </Typography>
                     <List>
                         {vocabItems.map((item: VocabItem, index: number) => (
-                            <ListItem 
-                                key={index} 
-                                sx={{ 
-                                    flexDirection: 'column', 
-                                    alignItems: 'flex-start', 
+                            <ListItem
+                                key={index}
+                                sx={{
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start',
                                     pb: 2,
                                     borderBottom: index < vocabItems.length - 1 ? '1px solid' : 'none',
                                     borderColor: 'divider'
@@ -507,7 +506,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                                     disabled={isSubmitting || !user}
                                     sx={{ mb: 2 }}
                                 />
-                                
+
                                 {/* Vocabulary word selection for this sentence */}
                                 <Box sx={{ mb: 1 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
@@ -517,7 +516,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                                         {vocabItems.map((item: VocabItem) => {
                                             const isSelected = selectedVocabWords[index]?.has(item.word.toLowerCase()) || false;
                                             return (
-                                                <Grid item xs={12} sm={6} md={4} key={item.word}>
+                                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.word}>
                                                     <FormControlLabel
                                                         control={
                                                             <Checkbox
@@ -558,7 +557,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                                 )}
                             </Box>
                         ))}
-                        
+
                         {sentences.length < 5 && (
                             <Button
                                 type="button"
@@ -570,7 +569,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                                 + Add Another Sentence
                             </Button>
                         )}
-                        
+
                         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 2 }}>
                             <Button
                                 type="submit"

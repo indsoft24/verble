@@ -25,7 +25,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
-import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
+import { getAdjacentContent } from '../../services/dailyContentService';
 import { getContentTypeConfig, type ContentType } from '../../utils/contentTypeConfig';
 
 interface DailyContent {
@@ -34,11 +34,13 @@ interface DailyContent {
     date: string;
     level: string;
     title: string;
+    sequenceNumber?: number;
     metadata: {
         text: string;
         meaning_en: string;
         meaning_hi: string;
         audio?: string;
+        partOfSpeech?: string;
         examples?: Array<{
             en: string;
             hi: string;
@@ -253,8 +255,8 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({ data, onContentChan
         }
     };
 
-    const contentType = (currentData.type === 'WORD' || currentData.type === 'PHRASE') 
-        ? (currentData.type as ContentType) 
+    const contentType = (currentData.type === 'WORD' || currentData.type === 'PHRASE')
+        ? (currentData.type as ContentType)
         : 'WORD';
     const config = getContentTypeConfig(contentType);
 
@@ -515,7 +517,7 @@ const confettiFall = keyframes`
 // Simple CSS-based Confetti Effect
 const ConfettiEffect: React.FC = () => {
     const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-    
+
     return (
         <Box
             sx={{
@@ -533,7 +535,7 @@ const ConfettiEffect: React.FC = () => {
                 const duration = 2 + Math.random() * 2;
                 const delay = Math.random() * 0.5;
                 const left = Math.random() * 100;
-                
+
                 return (
                     <Box
                         key={i}

@@ -1,5 +1,5 @@
 // src/components/features/SpeechCard.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     CardContent,
@@ -7,7 +7,6 @@ import {
     Box,
     Button,
     TextField,
-    IconButton,
     CircularProgress,
     Alert,
     Divider,
@@ -26,7 +25,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-import { parseISO } from 'date-fns';
+
 
 interface SpeechCardProps {
     data: DailyContent;
@@ -48,7 +47,7 @@ const confettiFall = keyframes`
 // Simple CSS-based Confetti Effect
 const ConfettiEffect: React.FC = () => {
     const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-    
+
     return (
         <Box
             sx={{
@@ -66,7 +65,7 @@ const ConfettiEffect: React.FC = () => {
                 const duration = 2 + Math.random() * 2;
                 const delay = Math.random() * 0.5;
                 const left = Math.random() * 100;
-                
+
                 return (
                     <Box
                         key={i}
@@ -89,20 +88,20 @@ const ConfettiEffect: React.FC = () => {
 // Helper function to extract YouTube video ID from various URL formats
 const extractYouTubeVideoId = (url: string): string | null => {
     if (!url) return null;
-    
+
     // Handle various YouTube URL formats
     const patterns = [
         /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
         /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
     ];
-    
+
     for (const pattern of patterns) {
         const match = url.match(pattern);
         if (match && match[1]) {
             return match[1];
         }
     }
-    
+
     return null;
 };
 
@@ -173,7 +172,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange }) => {
 
     const handleSubmitDescription = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!description.trim()) {
             setSubmitStatus({
                 type: 'error',
@@ -226,7 +225,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange }) => {
 
     // Extract YouTube video ID
     const youtubeVideoId = extractYouTubeVideoId(youtubeUrl);
-    const embedUrl = youtubeVideoId 
+    const embedUrl = youtubeVideoId
         ? `https://www.youtube.com/embed/${youtubeVideoId}`
         : null;
 
@@ -253,7 +252,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange }) => {
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>
-                    
+
                     <Typography
                         variant="h4"
                         component="h1"

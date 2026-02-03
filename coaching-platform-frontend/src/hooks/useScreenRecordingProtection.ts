@@ -29,7 +29,7 @@ export const useScreenRecordingProtection = (options: ScreenRecordingProtectionO
     // Method 1: Detect screen sharing/recording via getDisplayMedia
     const detectScreenSharing = useCallback(() => {
         // Check if screen sharing is active
-        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        if (navigator.mediaDevices && typeof (navigator.mediaDevices as any).getDisplayMedia === 'function') {
             // This is a heuristic - if getDisplayMedia is called, it might indicate recording
             // Note: We can't directly detect if it's active due to privacy restrictions
             // But we can monitor for suspicious patterns
@@ -52,7 +52,7 @@ export const useScreenRecordingProtection = (options: ScreenRecordingProtectionO
     const detectVideoManipulation = useCallback(() => {
         const videoElements = document.querySelectorAll('video');
         const now = Date.now();
-        
+
         // Check for suspicious video elements
         for (const video of videoElements) {
             // Check for hidden video elements (common in screen recording)
@@ -82,7 +82,7 @@ export const useScreenRecordingProtection = (options: ScreenRecordingProtectionO
         // Method 2: Check console
         const element = new Image();
         Object.defineProperty(element, 'id', {
-            get: function() {
+            get: function () {
                 devtools = true;
                 return '';
             }

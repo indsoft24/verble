@@ -22,7 +22,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-import { parseISO, subDays, addDays } from 'date-fns';
+
 
 interface PhraseOfTheDayCardProps {
     data: DailyContent;
@@ -44,7 +44,7 @@ const confettiFall = keyframes`
 // Simple CSS-based Confetti Effect
 const ConfettiEffect: React.FC = () => {
     const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-    
+
     return (
         <Box
             sx={{
@@ -62,7 +62,7 @@ const ConfettiEffect: React.FC = () => {
                 const duration = 2 + Math.random() * 2;
                 const delay = Math.random() * 0.5;
                 const left = Math.random() * 100;
-                
+
                 return (
                     <Box
                         key={i}
@@ -113,9 +113,9 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({ data, onContent
 
     const checkNavigationAvailability = async () => {
         try {
-            const currentDate = parseISO(data.date);
-            const prevDate = subDays(currentDate, 1);
-            const nextDate = addDays(currentDate, 1);
+            // const currentDate = parseISO(data.date);
+            // const prevDate = subDays(currentDate, 1);
+            // const nextDate = addDays(currentDate, 1);
 
             // Check if previous/next content exists
             const [prevContent, nextContent] = await Promise.all([
@@ -228,7 +228,7 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({ data, onContent
 
     const handleSubmitSentences = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         const validSentences = sentences.filter(s => s.trim());
         if (validSentences.length < 2) {
             setSubmitStatus({

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import UserLayout from '../components/layout/UserLayout';
 import {
     Container, Typography, Box, Grid, Paper, Button,
@@ -20,22 +20,22 @@ import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TranslateIcon from '@mui/icons-material/Translate';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-import QuizIcon from '@mui/icons-material/Quiz';
+
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
 import StarIcon from '@mui/icons-material/Star';
 import LevelUnlockDialog from '../components/features/LevelUnlockDialog';
 import WordOfTheDayCard from '../components/features/WordOfTheDayCard';
 import ConversationChat from '../components/features/ConversationChat';
 import { getTodaysDailyContent, type DailyContent } from '../services/dailyContentService';
-import { getContentTypeConfig, type ContentType } from '../utils/contentTypeConfig';
+import { getContentTypeConfig } from '../utils/contentTypeConfig';
 import { getFreeLeaderboard, getPaidLeaderboard, getMyRank, type LeaderboardEntry } from '../services/leaderboardService';
 import { getActiveOffers, type Offer } from '../services/offerService';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
 
 const UserDashboardPage: React.FC = () => {
     const { user, isLoading: authIsLoading } = useAuth();
-    const navigate = useNavigate();
-    
+
+
     // State management
     const [dailyContent, setDailyContent] = useState<DailyContent[]>([]);
     const [isLoadingContent, setIsLoadingContent] = useState(true);
@@ -120,8 +120,8 @@ const UserDashboardPage: React.FC = () => {
     // Calculate level progress
     const getLevelProgress = () => {
         const level = user.membershipLevel || 'FREE';
-        const unlockedLevels = user.unlockedLevels || ['FREE'];
-        
+        // const unlockedLevels = user.unlockedLevels || ['FREE'];
+
         if (level === 'FREE') {
             const streak = user.streaks?.free?.current || 0;
             const target = 30;
@@ -167,7 +167,7 @@ const UserDashboardPage: React.FC = () => {
     const unlockedLevels = user.unlockedLevels || ['FREE'];
 
     // Filter content by unlocked levels
-    const filteredContent = dailyContent.filter(content => 
+    const filteredContent = dailyContent.filter(content =>
         unlockedLevels.includes(content.level)
     );
 
@@ -220,7 +220,7 @@ const UserDashboardPage: React.FC = () => {
                     )}
                     {activityType === 'conversation' && selectedActivity.metadata?.dialogue && (
                         <Box sx={{ height: '80vh' }}>
-                            <ConversationChat 
+                            <ConversationChat
                                 dialogue={selectedActivity.metadata.dialogue}
                                 userSpeaker={selectedActivity.metadata.participants?.[1]}
                             />
@@ -317,7 +317,7 @@ const UserDashboardPage: React.FC = () => {
                         {levels.map((level) => {
                             const isUnlocked = unlockedLevels.includes(level.name);
                             return (
-                                <Grid item xs={6} sm={4} md={2.4} key={level.name}>
+                                <Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={level.name}>
                                     <Card
                                         sx={{
                                             height: '100%',
@@ -369,7 +369,7 @@ const UserDashboardPage: React.FC = () => {
                 ) : (
                     <Grid container spacing={3} sx={{ mb: 4 }}>
                         {/* Word of the Day */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card
                                 elevation={3}
                                 sx={{
@@ -403,7 +403,7 @@ const UserDashboardPage: React.FC = () => {
                         </Grid>
 
                         {/* Phrase of the Day */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card
                                 elevation={3}
                                 sx={{
@@ -437,7 +437,7 @@ const UserDashboardPage: React.FC = () => {
                         </Grid>
 
                         {/* One Minute Read (Bronze) */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card
                                 elevation={3}
                                 sx={{
@@ -459,9 +459,9 @@ const UserDashboardPage: React.FC = () => {
                                                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                                                     One Minute Read
                                                 </Typography>
-                                                <Chip 
-                                                    label={unlockedLevels.includes('BRONZE') ? 'BRONZE' : 'Locked'} 
-                                                    size="small" 
+                                                <Chip
+                                                    label={unlockedLevels.includes('BRONZE') ? 'BRONZE' : 'Locked'}
+                                                    size="small"
                                                     color={unlockedLevels.includes('BRONZE') ? 'warning' : 'default'}
                                                     icon={!unlockedLevels.includes('BRONZE') ? <LockIcon /> : undefined}
                                                     sx={{ mt: 0.5 }}
@@ -469,7 +469,7 @@ const UserDashboardPage: React.FC = () => {
                                             </Box>
                                         </Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            {unlockedLevels.includes('BRONZE') && storyContent 
+                                            {unlockedLevels.includes('BRONZE') && storyContent
                                                 ? 'Read a short story and improve your reading skills'
                                                 : 'Unlock Bronze level to access'}
                                         </Typography>
@@ -479,7 +479,7 @@ const UserDashboardPage: React.FC = () => {
                         </Grid>
 
                         {/* Practical Conversations (Silver) */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card
                                 elevation={3}
                                 sx={{
@@ -501,9 +501,9 @@ const UserDashboardPage: React.FC = () => {
                                                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                                                     Practical Conversations
                                                 </Typography>
-                                                <Chip 
-                                                    label={unlockedLevels.includes('SILVER') ? 'SILVER' : 'Locked'} 
-                                                    size="small" 
+                                                <Chip
+                                                    label={unlockedLevels.includes('SILVER') ? 'SILVER' : 'Locked'}
+                                                    size="small"
                                                     color={unlockedLevels.includes('SILVER') ? 'info' : 'default'}
                                                     icon={!unlockedLevels.includes('SILVER') ? <LockIcon /> : undefined}
                                                     sx={{ mt: 0.5 }}
@@ -525,7 +525,7 @@ const UserDashboardPage: React.FC = () => {
                 {/* Offers and Recent Joiners Section */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                     {/* Active Offers */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Paper elevation={2} sx={{ p: 3, borderRadius: 2, height: '100%' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 <CampaignIcon sx={{ mr: 1, color: 'primary.main' }} />
@@ -555,7 +555,7 @@ const UserDashboardPage: React.FC = () => {
                     </Grid>
 
                     {/* Recent Joiners */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Paper elevation={2} sx={{ p: 3, borderRadius: 2, height: '100%' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 <PeopleIcon sx={{ mr: 1, color: 'primary.main' }} />
@@ -576,7 +576,7 @@ const UserDashboardPage: React.FC = () => {
                                             </ListItemAvatar>
                                             <ListItemText
                                                 primary={joiner.name}
-                                                secondary={joiner.location || 'New member'}
+                                                secondary={'New member'}
                                             />
                                         </ListItem>
                                     ))}
@@ -593,7 +593,7 @@ const UserDashboardPage: React.FC = () => {
                 {/* Leaderboards Section */}
                 <Grid container spacing={3}>
                     {/* Free Challenges Leaderboard */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
@@ -635,7 +635,7 @@ const UserDashboardPage: React.FC = () => {
                     </Grid>
 
                     {/* Paid Challenges Leaderboard */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 <StarIcon sx={{ mr: 1, color: 'success.main' }} />

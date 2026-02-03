@@ -6,7 +6,6 @@ import {
     Typography,
     Box,
     Button,
-    Divider,
     Chip,
     Grid
 } from '@mui/material';
@@ -134,7 +133,7 @@ const ProfessionalConversationDetail: React.FC<ProfessionalConversationDetailPro
                     </Typography>
                     <Grid container spacing={3}>
                         {relatedConversations.map((relatedConv) => (
-                            <Grid item xs={12} sm={6} md={4} key={relatedConv._id}>
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={relatedConv._id}>
                                 <Card
                                     sx={{
                                         height: '100%',

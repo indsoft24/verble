@@ -14,7 +14,7 @@ import {
     Chip,
     CircularProgress,
     Alert,
-    Grid,
+
     Button,
     Divider,
 } from '@mui/material';
@@ -87,7 +87,7 @@ const HelpPage: React.FC = () => {
         setExpandedArticle(false); // Close any expanded article
     };
 
-    const handleArticleToggle = (articleId: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+    const handleArticleToggle = (articleId: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
         setExpandedArticle(isExpanded ? articleId : false);
     };
 

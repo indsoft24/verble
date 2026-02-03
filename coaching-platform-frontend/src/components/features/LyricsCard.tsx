@@ -22,7 +22,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-import { parseISO } from 'date-fns';
+
 
 interface LyricsCardProps {
     data: DailyContent;
@@ -42,25 +42,25 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
     useEffect(() => {
         setCurrentContent(data);
         checkNavigationAvailability();
-        
+
         // Set up audio event listeners
         const audio = audioRef.current;
         if (audio) {
             const updateTime = () => setCurrentTime(audio.currentTime);
             const updateDuration = () => setDuration(audio.duration);
             const handleEnded = () => setIsPlaying(false);
-            
+
             audio.addEventListener('timeupdate', updateTime);
             audio.addEventListener('loadedmetadata', updateDuration);
             audio.addEventListener('ended', handleEnded);
-            
+
             return () => {
                 audio.removeEventListener('timeupdate', updateTime);
                 audio.removeEventListener('loadedmetadata', updateDuration);
                 audio.removeEventListener('ended', handleEnded);
             };
         }
-        
+
         return () => {
             if (audioRef.current) {
                 audioRef.current.pause();
@@ -103,7 +103,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
                 setIsPlaying(false);
                 setCurrentTime(0);
                 setDuration(0);
-                
+
                 setCurrentContent(adjacentContent);
                 if (onContentChange) {
                     onContentChange(adjacentContent);
@@ -124,19 +124,19 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
             if (!audioUrl) {
                 return;
             }
-            
+
             const audio = new Audio(audioUrl);
             audioRef.current = audio;
-            
+
             audio.onloadedmetadata = () => {
                 setDuration(audio.duration);
             };
-            
+
             audio.onended = () => {
                 setIsPlaying(false);
                 setCurrentTime(0);
             };
-            
+
             audio.onerror = () => {
                 setIsPlaying(false);
                 console.error('Failed to load audio');
@@ -144,7 +144,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
         }
 
         const audio = audioRef.current;
-        
+
         if (isPlaying) {
             audio.pause();
             setIsPlaying(false);
@@ -206,7 +206,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>
-                    
+
                     <Typography
                         variant="h4"
                         component="h1"
@@ -258,7 +258,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
                                     <PlayArrowIcon sx={{ fontSize: 32 }} />
                                 )}
                             </IconButton>
-                            
+
                             <Box sx={{ flex: 1 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ minWidth: 45 }}>
@@ -319,10 +319,10 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
                                 overflowY: 'auto',
                             }}
                         >
-                            <Typography 
-                                variant="body1" 
-                                sx={{ 
-                                    whiteSpace: 'pre-line', 
+                            <Typography
+                                variant="body1"
+                                sx={{
+                                    whiteSpace: 'pre-line',
                                     lineHeight: 2,
                                     fontFamily: 'monospace',
                                 }}

@@ -9,13 +9,8 @@ import {
     Grid,
     Button,
     Card,
-    CardContent,
     Paper,
     Chip,
-    List,
-    ListItem,
-    ListItemIcon,
-    ListItemText,
     Accordion,
     AccordionSummary,
     AccordionDetails,
@@ -35,22 +30,16 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import StarIcon from '@mui/icons-material/Star';
 import SchoolIcon from '@mui/icons-material/School';
-import PeopleIcon from '@mui/icons-material/People';
-import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import MicIcon from '@mui/icons-material/Mic';
-import TranslateIcon from '@mui/icons-material/Translate';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-import QuizIcon from '@mui/icons-material/Quiz';
-import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
-import PersonIcon from '@mui/icons-material/Person';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import SmartphoneIcon from '@mui/icons-material/Smartphone';
+
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import SecurityIcon from '@mui/icons-material/Security';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import TranslateIcon from '@mui/icons-material/Translate';
+import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import QuizIcon from '@mui/icons-material/Quiz';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
 
 const LandingPage: React.FC = () => {
     const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
@@ -144,300 +133,415 @@ const LandingPage: React.FC = () => {
 
     return (
         <Box sx={{ bgcolor: 'background.default', overflow: 'hidden' }}>
-            {/* Hero Banner - Compact & Professional */}
+            {/* Hero Banner - Redesigned Two-Column Layout */}
             <Box sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
                 color: 'white',
-                py: { xs: 5, md: 6 },
+                pt: { xs: 8, md: 12 },
+                pb: { xs: 6, md: 10 },
                 position: 'relative',
                 overflow: 'hidden',
-                '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)',
-                    pointerEvents: 'none'
-                }
             }}>
-                <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-                    <Box sx={{ textAlign: 'center', maxWidth: '850px', mx: 'auto' }}>
-                        <Chip 
-                            label="Speak English. Live Freely." 
-                            sx={{ 
-                                mb: 3, 
-                                bgcolor: 'rgba(255,255,255,0.2)', 
-                                color: 'white', 
-                                fontSize: '0.9rem',
-                                fontWeight: 'bold',
-                                px: 2,
-                                py: 0.5
-                            }} 
-                        />
-                        <Typography 
-                            variant="h2" 
-                            component="h1" 
-                            sx={{ 
-                                fontWeight: 800, 
-                                mb: 2, 
-                                fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                                lineHeight: 1.2
-                            }}
-                        >
-                            Embrace English
-                        </Typography>
-                        <Typography 
-                            variant="h5" 
-                            sx={{ 
-                                mb: 3, 
-                                fontWeight: 600, 
-                                fontSize: { xs: '1.2rem', md: '1.5rem' },
-                                opacity: 0.95,
-                                lineHeight: 1.4
-                            }}
-                        >
-                            Master Survival English for Real Life Exposure
-                        </Typography>
-                        <Stack 
-                            direction={{ xs: 'column', sm: 'row' }} 
-                            spacing={1.5} 
-                            justifyContent="center" 
-                            sx={{ mb: 4, flexWrap: 'wrap' }}
-                        >
-                            <Chip 
-                                icon={<AutoAwesomeIcon />} 
-                                label="AI Companion (English & Hindi)" 
-                                sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white' }} 
-                            />
-                            <Chip 
-                                icon={<MicIcon />} 
-                                label="Bol kar seekhen" 
-                                sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white' }} 
-                            />
-                            <Chip 
-                                icon={<WorkspacePremiumIcon />} 
-                                label="15+ Years Expert" 
-                                sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white' }} 
-                            />
-                        </Stack>
-                        <Button
-                            onClick={handleStartFreeModule}
-                            variant="contained"
-                            size="large"
-                            endIcon={<ArrowForwardIcon />}
-                            sx={{
-                                bgcolor: 'white',
-                                color: 'primary.main',
-                                px: 5,
-                                py: 1.5,
-                                fontSize: '1.1rem',
-                                fontWeight: 'bold',
-                                borderRadius: '50px',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                                '&:hover': { 
-                                    bgcolor: 'grey.100', 
-                                    transform: 'translateY(-2px)',
-                                    boxShadow: '0 12px 32px rgba(0,0,0,0.3)'
-                                },
-                                transition: 'all 0.3s ease'
-                            }}
-                        >
-                            Start Free Module Now
-                        </Button>
-                        <Typography variant="body2" sx={{ mt: 2, opacity: 0.9 }}>
-                            No credit card required • 30 days to fluency
-                        </Typography>
-                    </Box>
-                </Container>
-            </Box>
+                {/* Decorative background elements */}
+                <Box sx={{
+                    position: 'absolute',
+                    top: -100,
+                    right: -100,
+                    width: 400,
+                    height: 400,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
+                    filter: 'blur(50px)',
+                }} />
 
-            {/* Trust Indicators - Compact */}
-            <Box sx={{ py: 3, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Container maxWidth="lg">
-                    <Grid container spacing={3} justifyContent="center" alignItems="center">
-                        <Grid item xs={6} sm={3}>
-                            <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>10,000+</Typography>
-                                <Typography variant="body2" color="text.secondary">Active Learners</Typography>
+                    <Grid container spacing={{ xs: 4, md: 6 }} alignItems="center">
+                        <Grid size={{ xs: 12, md: 7 }}>
+                            <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+                                <Chip
+                                    label="Next-Gen AI English Learning"
+                                    sx={{
+                                        mb: 3,
+                                        bgcolor: 'rgba(99, 102, 241, 0.2)',
+                                        color: '#818cf8',
+                                        fontSize: '0.9rem',
+                                        fontWeight: 700,
+                                        px: 2,
+                                        border: '1px solid rgba(99, 102, 241, 0.3)'
+                                    }}
+                                />
+                                <Typography
+                                    variant="h2"
+                                    component="h1"
+                                    sx={{
+                                        fontWeight: 900,
+                                        mb: 2,
+                                        fontSize: { xs: '2.2rem', sm: '3rem', md: '4rem' },
+                                        lineHeight: 1.1,
+                                        letterSpacing: '-0.02em',
+                                        background: 'linear-gradient(to right, #fff, #94a3b8)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent'
+                                    }}
+                                >
+                                    Speak English fluently with AI.
+                                </Typography>
+                                <Typography
+                                    variant="h5"
+                                    sx={{
+                                        mb: 4,
+                                        fontWeight: 400,
+                                        fontSize: { xs: '1.1rem', md: '1.35rem' },
+                                        color: '#94a3b8',
+                                        lineHeight: 1.6,
+                                        maxWidth: '600px',
+                                        mx: { xs: 'auto', md: 0 }
+                                    }}
+                                >
+                                    Master real-life conversations with our AI Companion.
+                                    Zero grammar stress. Just pure, confident speaking in 30 days.
+                                </Typography>
+
+                                <Stack
+                                    direction={{ xs: 'column', sm: 'row' }}
+                                    spacing={2}
+                                    sx={{ mb: 5, justifyContent: { xs: 'center', md: 'flex-start' } }}
+                                >
+                                    <Button
+                                        onClick={handleStartFreeModule}
+                                        variant="contained"
+                                        size="large"
+                                        endIcon={<ArrowForwardIcon />}
+                                        sx={{
+                                            bgcolor: '#6366f1',
+                                            color: 'white',
+                                            px: 4,
+                                            py: 2,
+                                            fontSize: '1.1rem',
+                                            fontWeight: 700,
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)',
+                                            '&:hover': {
+                                                bgcolor: '#4f46e5',
+                                                transform: 'translateY(-2px)',
+                                            },
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        Start Free Module
+                                    </Button>
+                                    <Button
+                                        component={RouterLink}
+                                        to="/courses"
+                                        variant="outlined"
+                                        size="large"
+                                        sx={{
+                                            borderColor: 'rgba(255,255,255,0.2)',
+                                            color: 'white',
+                                            px: 4,
+                                            py: 2,
+                                            fontSize: '1.1rem',
+                                            fontWeight: 700,
+                                            borderRadius: '12px',
+                                            '&:hover': {
+                                                borderColor: 'white',
+                                                bgcolor: 'rgba(255,255,255,0.05)',
+                                            }
+                                        }}
+                                    >
+                                        Explore Courses
+                                    </Button>
+                                </Stack>
+
+                                <Stack
+                                    direction="row"
+                                    spacing={3}
+                                    sx={{ justifyContent: { xs: 'center', md: 'flex-start' } }}
+                                >
+                                    <Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 800 }}>10k+</Typography>
+                                        <Typography variant="caption" sx={{ color: '#64748b' }}>Learners</Typography>
+                                    </Box>
+                                    <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+                                    <Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 800 }}>4.9/5</Typography>
+                                        <Typography variant="caption" sx={{ color: '#64748b' }}>Rating</Typography>
+                                    </Box>
+                                    <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+                                    <Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 800 }}>AI-First</Typography>
+                                        <Typography variant="caption" sx={{ color: '#64748b' }}>Learning</Typography>
+                                    </Box>
+                                </Stack>
                             </Box>
                         </Grid>
-                        <Grid item xs={6} sm={3}>
-                            <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>50,000+</Typography>
-                                <Typography variant="body2" color="text.secondary">Students Transformed</Typography>
-                            </Box>
-                        </Grid>
-                        <Grid item xs={6} sm={3}>
-                            <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>16+</Typography>
-                                <Typography variant="body2" color="text.secondary">Years Experience</Typography>
-                            </Box>
-                        </Grid>
-                        <Grid item xs={6} sm={3}>
-                            <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>100%</Typography>
-                                <Typography variant="body2" color="text.secondary">Risk Free</Typography>
-                            </Box>
+
+                        <Grid size={{ xs: 12, md: 5 }} sx={{ display: { xs: 'none', md: 'block' } }}>
+                            <Box
+                                component="img"
+                                src="/hero-ai-avatar.png"
+                                alt="AI English Learning"
+                                sx={{
+                                    width: '100%',
+                                    maxWidth: '500px',
+                                    height: 'auto',
+                                    borderRadius: '24px',
+                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                                    transform: 'perspective(1000px) rotateY(-5deg)',
+                                    transition: 'transform 0.5s ease',
+                                    '&:hover': {
+                                        transform: 'perspective(1000px) rotateY(0deg)',
+                                    }
+                                }}
+                            />
                         </Grid>
                     </Grid>
                 </Container>
             </Box>
 
-            {/* Proven Results - Full Width 6 Column Grid */}
-            <Box sx={{ py: { xs: 4, md: 5 } }}>
-                <Container maxWidth="xl">
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-                            Proven Results
+            {/* Trust Indicators - Minimal & Premium */}
+            <Box sx={{ py: 4, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <Container maxWidth="lg">
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            textAlign: 'center',
+                            color: '#64748b',
+                            mb: 4,
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em'
+                        }}
+                    >
+                        Trusted by Learners from Top Industries
+                    </Typography>
+                    <Grid container spacing={4} justifyContent="center" alignItems="center" sx={{ opacity: 0.6, filter: 'grayscale(100%)' }}>
+                        {/* Placeholder for industry icons/logos */}
+                        <Grid size={{ xs: 4, sm: 2 }}><Typography variant="h6" sx={{ fontWeight: 900 }}>GOOGLE</Typography></Grid>
+                        <Grid size={{ xs: 4, sm: 2 }}><Typography variant="h6" sx={{ fontWeight: 900 }}>AMAZON</Typography></Grid>
+                        <Grid size={{ xs: 4, sm: 2 }}><Typography variant="h6" sx={{ fontWeight: 900 }}>TCS</Typography></Grid>
+                        <Grid size={{ xs: 4, sm: 2 }}><Typography variant="h6" sx={{ fontWeight: 900 }}>WIPRO</Typography></Grid>
+                        <Grid size={{ xs: 4, sm: 2 }}><Typography variant="h6" sx={{ fontWeight: 900 }}>INFOSYS</Typography></Grid>
+                    </Grid>
+                </Container>
+            </Box>
+
+            {/* Proven Results - Modern Featured Section */}
+            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#ffffff' }}>
+                <Container maxWidth="lg">
+                    <Box sx={{ textAlign: 'center', mb: 8 }}>
+                        <Typography
+                            variant="h3"
+                            sx={{
+                                fontWeight: 800,
+                                mb: 2,
+                                color: '#0f172a',
+                                fontSize: { xs: '2rem', md: '2.5rem' }
+                            }}
+                        >
+                            Practical Tools for Rapid Learning
                         </Typography>
-                        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: '600px', mx: 'auto' }}>
-                            Daily activities that transform your English in just 5 minutes
+                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400, maxWidth: '700px', mx: 'auto' }}>
+                            Our platform is built on proven pedagogical methods, enhanced by cutting-edge AI to make learning English natural and fast.
                         </Typography>
                     </Box>
-                    <Grid container spacing={2} sx={{ width: '100%' }}>
+                    <Grid container spacing={3}>
                         {provenResults.map((result, index) => (
-                            <Grid item xs={6} sm={4} md={2} key={index}>
-                                <Card 
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
+                                <Paper
                                     elevation={0}
-                                    sx={{ 
-                                        p: 2.5, 
-                                        borderRadius: '12px', 
-                                        textAlign: 'center', 
+                                    sx={{
+                                        p: 4,
+                                        borderRadius: '24px',
                                         height: '100%',
-                                        minHeight: '140px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        justifyContent: 'center',
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        transition: 'all 0.3s',
+                                        border: '1px solid #f1f5f9',
+                                        bgcolor: '#f8fafc',
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                         '&:hover': {
-                                            transform: 'translateY(-4px)',
-                                            boxShadow: 3,
-                                            borderColor: result.color
+                                            transform: 'translateY(-8px)',
+                                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)',
+                                            bgcolor: 'white',
+                                            borderColor: result.color,
+                                            '& .icon-box': {
+                                                bgcolor: result.color,
+                                                color: 'white',
+                                                transform: 'scale(1.1) rotate(5deg)',
+                                            }
                                         }
                                     }}
                                 >
-                                    <Box sx={{ color: result.color, mb: 1.5, fontSize: '2.5rem', display: 'flex', justifyContent: 'center' }}>{result.icon}</Box>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.9rem' }}>
+                                    <Box
+                                        className="icon-box"
+                                        sx={{
+                                            color: result.color,
+                                            mb: 3,
+                                            width: 64,
+                                            height: 64,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: '16px',
+                                            bgcolor: 'white',
+                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                            fontSize: '2rem',
+                                            transition: 'all 0.3s ease'
+                                        }}
+                                    >
+                                        {result.icon}
+                                    </Box>
+                                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5, color: '#1e293b' }}>
                                         {result.title}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                    <Typography variant="body1" sx={{ color: '#64748b', lineHeight: 1.6 }}>
                                         {result.desc}
                                     </Typography>
-                                </Card>
+                                </Paper>
                             </Grid>
                         ))}
                     </Grid>
                 </Container>
             </Box>
 
-            {/* Membership Tiers - Full Width Equal Height Cards */}
-            <Box sx={{ py: { xs: 4, md: 5 }, bgcolor: 'grey.50' }}>
-                <Container maxWidth="xl">
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-                            Choose Your Learning Path
+            {/* Membership Tiers - Strategic Learning Path */}
+            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#f1f5f9' }}>
+                <Container maxWidth="lg">
+                    <Box sx={{ textAlign: 'center', mb: 8 }}>
+                        <Typography
+                            variant="h3"
+                            sx={{
+                                fontWeight: 800,
+                                mb: 2,
+                                color: '#0f172a',
+                                fontSize: { xs: '2rem', md: '2.5rem' }
+                            }}
+                        >
+                            Your Path to English Mastery
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Start free and unlock more as you progress
+                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
+                            Choose a plan that fits your current level and goals.
                         </Typography>
                     </Box>
-                    <Grid container spacing={3} sx={{ width: '100%' }}>
-                        <Grid item xs={12} md={6}>
-                            <Card 
-                                elevation={2} 
-                                sx={{ 
-                                    p: 3.5, 
-                                    borderRadius: '16px', 
+                    <Grid container spacing={4} alignItems="stretch">
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <Card
+                                elevation={0}
+                                sx={{
+                                    p: 5,
+                                    borderRadius: '32px',
                                     height: '100%',
-                                    minHeight: '220px',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    border: '2px solid', 
-                                    borderColor: 'success.main',
-                                    bgcolor: 'white'
+                                    border: '1px solid #e2e8f0',
+                                    bgcolor: 'white',
+                                    position: 'relative',
+                                    overflow: 'hidden'
                                 }}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2.5 }}>
-                                    <CheckCircleIcon sx={{ color: 'success.main', mr: 1.5, fontSize: 28 }} />
-                                    <Typography variant="h5" sx={{ fontWeight: 700, color: 'success.main' }}>
-                                        Free Content
-                                    </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+                                    <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', mr: 2 }}>
+                                        <CheckCircleIcon sx={{ fontSize: 32 }} />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a' }}>
+                                            Foundation Path
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: '#64748b' }}>Perfect for absolute beginners</Typography>
+                                    </Box>
                                 </Box>
-                                <Stack spacing={1.5} sx={{ flex: 1 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                                        <CheckCircleIcon color="success" sx={{ fontSize: 22, mr: 1.5, mt: 0.2 }} />
-                                        <Box>
-                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>Free membership</Typography>
-                                            <Typography variant="body2" color="text.secondary">30 days commitment progression</Typography>
+                                <Stack spacing={3} sx={{ flex: 1 }}>
+                                    {[
+                                        { level: "Free Content", desc: "Basic vocabulary & daily word of the day" },
+                                        { level: "Bronze Access", desc: "Essentials & reading fluency practice" },
+                                        { level: "Silver Upgrade", desc: "Real-life conversations & advanced puzzles" }
+                                    ].map((item, idx) => (
+                                        <Box key={idx} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                                            <Box sx={{ mt: 0.5, mr: 2, color: '#22c55e' }}>
+                                                <VerifiedUserIcon sx={{ fontSize: 20 }} />
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b' }}>{item.level}</Typography>
+                                                <Typography variant="body2" sx={{ color: '#64748b' }}>{item.desc}</Typography>
+                                            </Box>
                                         </Box>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                                        <CheckCircleIcon color="success" sx={{ fontSize: 22, mr: 1.5, mt: 0.2 }} />
-                                        <Box>
-                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>Bronze membership</Typography>
-                                            <Typography variant="body2" color="text.secondary">60 days commitment progression</Typography>
-                                        </Box>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                                        <CheckCircleIcon color="success" sx={{ fontSize: 22, mr: 1.5, mt: 0.2 }} />
-                                        <Box>
-                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>Silver membership</Typography>
-                                            <Typography variant="body2" color="text.secondary">Advanced conversations & puzzles</Typography>
-                                        </Box>
-                                    </Box>
+                                    ))}
                                 </Stack>
+                                <Button
+                                    variant="outlined"
+                                    onClick={handleStartFreeModule}
+                                    sx={{
+                                        mt: 5,
+                                        py: 1.5,
+                                        borderRadius: '12px',
+                                        color: '#0f172a',
+                                        borderColor: '#e2e8f0',
+                                        fontWeight: 700,
+                                        '&:hover': { borderColor: '#0f172a', bgcolor: 'transparent' }
+                                    }}
+                                >
+                                    Start Free Foundation
+                                </Button>
                             </Card>
                         </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Card 
-                                elevation={4} 
-                                sx={{ 
-                                    p: 3.5, 
-                                    borderRadius: '16px', 
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <Card
+                                elevation={0}
+                                sx={{
+                                    p: 5,
+                                    borderRadius: '32px',
                                     height: '100%',
-                                    minHeight: '220px',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    bgcolor: 'primary.main', 
-                                    color: 'white', 
-                                    position: 'relative', 
-                                    overflow: 'hidden' 
+                                    bgcolor: '#0f172a',
+                                    color: 'white',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.3)'
                                 }}
                             >
-                                <Box sx={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.1)' }} />
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2.5, position: 'relative', zIndex: 1 }}>
-                                    <StarIcon sx={{ mr: 1.5, fontSize: 28 }} />
-                                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                                        Premium Content
-                                    </Typography>
+                                <Box sx={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%)' }} />
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, position: 'relative', zIndex: 1 }}>
+                                    <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', mr: 2 }}>
+                                        <AutoAwesomeIcon sx={{ fontSize: 32 }} />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                                            Professional Path
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ opacity: 0.7 }}>Accelerate your career growth</Typography>
+                                    </Box>
                                 </Box>
-                                <Stack spacing={1.5} sx={{ position: 'relative', zIndex: 1, flex: 1 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                                        <CheckCircleIcon sx={{ fontSize: 22, mr: 1.5, mt: 0.2 }} />
-                                        <Box>
-                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>Gold membership</Typography>
-                                            <Typography variant="body2" sx={{ opacity: 0.9 }}>₹9,999/year - All premium features</Typography>
+                                <Stack spacing={3} sx={{ position: 'relative', zIndex: 1, flex: 1 }}>
+                                    {[
+                                        { level: "Gold Membership", desc: "AI Prompts, Scene Explanations, & Professional Dialogues" },
+                                        { level: "Full Course Mastery", desc: "200+ hours of video modules & assessment quizzes" },
+                                        { level: "AI Learning Buddy", desc: "Speak or type to learn with personalized feedback" }
+                                    ].map((item, idx) => (
+                                        <Box key={idx} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                                            <Box sx={{ mt: 0.5, mr: 2, color: '#818cf8' }}>
+                                                <VerifiedUserIcon sx={{ fontSize: 20 }} />
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{item.level}</Typography>
+                                                <Typography variant="body2" sx={{ opacity: 0.7 }}>{item.desc}</Typography>
+                                            </Box>
                                         </Box>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                                        <CheckCircleIcon sx={{ fontSize: 22, mr: 1.5, mt: 0.2 }} />
-                                        <Box>
-                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>Full Course</Typography>
-                                            <Typography variant="body2" sx={{ opacity: 0.9 }}>₹20,999 lifetime - Complete mastery</Typography>
-                                        </Box>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                                        <CheckCircleIcon sx={{ fontSize: 22, mr: 1.5, mt: 0.2 }} />
-                                        <Box>
-                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>AI Dost</Typography>
-                                            <Typography variant="body2" sx={{ opacity: 0.9 }}>₹54,999/year - AI-powered learning</Typography>
-                                        </Box>
-                                    </Box>
+                                    ))}
                                 </Stack>
+                                <Button
+                                    component={RouterLink}
+                                    to="/subscription-plans"
+                                    variant="contained"
+                                    sx={{
+                                        mt: 5,
+                                        py: 2,
+                                        borderRadius: '12px',
+                                        bgcolor: '#6366f1',
+                                        fontWeight: 700,
+                                        '&:hover': { bgcolor: '#4f46e5' }
+                                    }}
+                                >
+                                    Unlock Professional Plans
+                                </Button>
                             </Card>
                         </Grid>
                     </Grid>
@@ -458,7 +562,7 @@ const LandingPage: React.FC = () => {
                     <Paper elevation={0} sx={{ p: 3, borderRadius: '16px', border: '1px solid', borderColor: 'divider' }}>
                         <Grid container spacing={2}>
                             {whoIsThisFor.map((item, index) => (
-                                <Grid item xs={12} sm={6} key={index}>
+                                <Grid size={{ xs: 12, sm: 6 }} key={index}>
                                     <Box sx={{ display: 'flex', alignItems: 'flex-start', py: 0.5 }}>
                                         <Checkbox
                                             checked={checkedItems[index] || false}
@@ -504,12 +608,12 @@ const LandingPage: React.FC = () => {
                         </Typography>
                     </Box>
                     <Grid container spacing={3} sx={{ width: '100%' }}>
-                        <Grid item xs={12} md={4}>
-                            <Card 
-                                elevation={2} 
-                                sx={{ 
-                                    p: 3, 
-                                    borderRadius: '16px', 
+                        <Grid size={{ xs: 12, md: 4 }}>
+                            <Card
+                                elevation={2}
+                                sx={{
+                                    p: 3,
+                                    borderRadius: '16px',
                                     height: '100%',
                                     minHeight: '420px',
                                     display: 'flex',
@@ -578,17 +682,17 @@ const LandingPage: React.FC = () => {
                                 </Stack>
                             </Card>
                         </Grid>
-                        <Grid item xs={12} md={4}>
-                            <Card 
-                                elevation={4} 
-                                sx={{ 
-                                    p: 3, 
-                                    borderRadius: '16px', 
+                        <Grid size={{ xs: 12, md: 4 }}>
+                            <Card
+                                elevation={4}
+                                sx={{
+                                    p: 3,
+                                    borderRadius: '16px',
                                     height: '100%',
                                     minHeight: '420px',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    bgcolor: 'primary.main', 
+                                    bgcolor: 'primary.main',
                                     color: 'white',
                                     position: 'relative',
                                     overflow: 'hidden'
@@ -659,17 +763,17 @@ const LandingPage: React.FC = () => {
                                 </Box>
                             </Card>
                         </Grid>
-                        <Grid item xs={12} md={4}>
-                            <Card 
-                                elevation={2} 
-                                sx={{ 
-                                    p: 3, 
-                                    borderRadius: '16px', 
+                        <Grid size={{ xs: 12, md: 4 }}>
+                            <Card
+                                elevation={2}
+                                sx={{
+                                    p: 3,
+                                    borderRadius: '16px',
                                     height: '100%',
                                     minHeight: '420px',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    bgcolor: 'success.main', 
+                                    bgcolor: 'success.main',
                                     color: 'white',
                                     position: 'relative',
                                     overflow: 'hidden'
@@ -719,119 +823,134 @@ const LandingPage: React.FC = () => {
                 </Container>
             </Box>
 
-            {/* Course Value Breakdown - Compact Table */}
-            <Box sx={{ py: { xs: 4, md: 5 } }}>
+            {/* Course Value Breakdown - Modern Pricing Section */}
+            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#ffffff' }}>
                 <Container maxWidth="lg">
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-                            Course Value Breakdown
+                    <Box sx={{ textAlign: 'center', mb: 6 }}>
+                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#0f172a' }}>
+                            Incredible Value, Unbeatable Price
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
+                            Invest in your future with our comprehensive learning modules.
                         </Typography>
                     </Box>
-                    <TableContainer component={Paper} elevation={2} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
-                        <Table size="small">
+                    <TableContainer component={Paper} elevation={0} sx={{ borderRadius: '24px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                        <Table>
                             <TableHead>
-                                <TableRow sx={{ bgcolor: 'primary.main' }}>
-                                    <TableCell sx={{ color: 'white', fontWeight: 700, py: 1.5 }}>Module</TableCell>
-                                    <TableCell sx={{ color: 'white', fontWeight: 700, py: 1.5 }}>Features</TableCell>
-                                    <TableCell sx={{ color: 'white', fontWeight: 700, py: 1.5 }} align="right">Value</TableCell>
+                                <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                                    <TableCell sx={{ color: '#0f172a', fontWeight: 800, py: 3, fontSize: '1rem' }}>Learning Module</TableCell>
+                                    <TableCell sx={{ color: '#0f172a', fontWeight: 800, py: 3, fontSize: '1rem' }}>Key Features Included</TableCell>
+                                    <TableCell sx={{ color: '#0f172a', fontWeight: 800, py: 3, fontSize: '1rem' }} align="right">Market Value</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {courseValueBreakdown.map((row, index) => (
-                                    <TableRow key={index} sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.50' } }}>
-                                        <TableCell sx={{ fontWeight: 600, py: 1.5 }}>{row.module}</TableCell>
-                                        <TableCell sx={{ py: 1.5, fontSize: '0.875rem' }}>{row.features}</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 600, color: 'primary.main', py: 1.5 }}>{row.value}</TableCell>
+                                    <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                        <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#1e293b' }}>{row.module}</TableCell>
+                                        <TableCell sx={{ py: 2.5, color: '#64748b' }}>{row.features}</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700, color: '#0f172a', py: 2.5 }}>{row.value}</TableCell>
                                     </TableRow>
                                 ))}
-                                <TableRow sx={{ bgcolor: 'primary.dark', color: 'white' }}>
-                                    <TableCell colSpan={2} sx={{ fontWeight: 700, py: 1.5 }}>Total Value - One Year Access + Updates</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700, py: 1.5 }}>₹45,994/-</TableCell>
+                                <TableRow sx={{ bgcolor: '#f1f5f9' }}>
+                                    <TableCell colSpan={2} sx={{ fontWeight: 800, py: 3, fontSize: '1.1rem', color: '#0f172a' }}>Total Combined Value</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 800, py: 3, fontSize: '1.1rem', color: '#0f172a' }}>₹45,994/-</TableCell>
                                 </TableRow>
-                                <TableRow sx={{ bgcolor: 'success.main', color: 'white' }}>
-                                    <TableCell colSpan={2} sx={{ fontWeight: 700, py: 1.5, fontSize: '1rem' }}>Your Price - All modules @ 78% off</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700, py: 1.5, fontSize: '1rem' }}>₹9,999/-</TableCell>
+                                <TableRow sx={{ bgcolor: '#ecfdf5' }}>
+                                    <TableCell colSpan={2} sx={{ fontWeight: 800, py: 3, fontSize: '1.2rem', color: '#059669' }}>Standard Bundle Price (78% Off)</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 800, py: 3, fontSize: '1.2rem', color: '#059669' }}>₹9,999/-</TableCell>
                                 </TableRow>
-                                <TableRow sx={{ bgcolor: 'error.main', color: 'white' }}>
-                                    <TableCell colSpan={2} sx={{ fontWeight: 700, py: 1.5, fontSize: '1.1rem' }}>🔥 Limited Time: New Year Offer</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700, py: 1.5, fontSize: '1.1rem' }}>₹3,999/-</TableCell>
+                                <TableRow sx={{ bgcolor: '#fef2f2' }}>
+                                    <TableCell colSpan={2}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <LocalFireDepartmentIcon sx={{ color: '#ef4444', mr: 1 }} />
+                                            <Typography variant="h6" sx={{ fontWeight: 900, color: '#ef4444' }}>Limited Time Special Offer</Typography>
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 900, py: 3, fontSize: '1.5rem', color: '#ef4444' }}>₹3,999/-</TableCell>
                                 </TableRow>
                             </TableBody>
                         </Table>
                     </TableContainer>
-                    <Box sx={{ mt: 3, textAlign: 'center' }}>
-                        <Paper elevation={0} sx={{ p: 3, borderRadius: '16px', bgcolor: 'success.light', border: '2px solid', borderColor: 'success.main' }}>
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="center" sx={{ mb: 2, flexWrap: 'wrap' }}>
-                                <Chip icon={<SecurityIcon />} label="7-Day Money Back" color="success" size="small" />
-                                <Chip icon={<VerifiedUserIcon />} label="No Questions Asked" color="success" size="small" />
-                                <Chip icon={<TrendingUpIcon />} label="Lifetime Updates" color="success" size="small" />
-                            </Stack>
-                            <Button
-                                component={RouterLink}
-                                to="/register"
-                                variant="contained"
-                                size="large"
-                                endIcon={<ArrowForwardIcon />}
-                                sx={{ mt: 1, px: 4, py: 1.5, borderRadius: '50px' }}
-                            >
-                                Start Free → Upgrade Silver Now
-                            </Button>
-                        </Paper>
+                    <Box sx={{ mt: 6, textAlign: 'center' }}>
+                        <Grid container spacing={3} justifyContent="center" sx={{ mb: 4 }}>
+                            {[
+                                { icon: <SecurityIcon />, text: "7-Day Refund" },
+                                { icon: <VerifiedUserIcon />, text: "Verified Content" },
+                                { icon: <TrendingUpIcon />, text: "Lifetime Updates" }
+                            ].map((item, idx) => (
+                                <Grid size="auto" key={idx}>
+                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ color: '#64748b' }}>
+                                        <Box sx={{ color: '#22c55e' }}>{item.icon}</Box>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{item.text}</Typography>
+                                    </Stack>
+                                </Grid>
+                            ))}
+                        </Grid>
+                        <Button
+                            onClick={handleStartFreeModule}
+                            variant="contained"
+                            size="large"
+                            sx={{
+                                bgcolor: '#6366f1',
+                                px: 6,
+                                py: 2,
+                                borderRadius: '16px',
+                                fontWeight: 800,
+                                fontSize: '1.1rem',
+                                boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)',
+                                '&:hover': { bgcolor: '#4f46e5' }
+                            }}
+                        >
+                            Start Learning for Free
+                        </Button>
                     </Box>
                 </Container>
             </Box>
 
-            {/* Testimonials - Full Width 3 Column Grid */}
-            <Box sx={{ py: { xs: 4, md: 5 }, bgcolor: 'grey.50' }}>
-                <Container maxWidth="xl">
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-                            Real Transformations
+            {/* Testimonials - Premium Social Proof */}
+            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#f8fafc' }}>
+                <Container maxWidth="lg">
+                    <Box sx={{ textAlign: 'center', mb: 8 }}>
+                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#0f172a' }}>
+                            Real Stories, Real Results
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Join thousands who transformed their English confidence
+                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
+                            Join 10,000+ learners who have transformed their lives with Verble.
                         </Typography>
                     </Box>
-                    <Grid container spacing={1.5} sx={{ width: '100%', justifyContent: 'center' }}>
+                    <Grid container spacing={4}>
                         {testimonials.map((testimonial, index) => (
-                            <Grid item xs={12} sm={6} md={4} key={index}>
-                                <Card 
-                                    elevation={1} 
-                                    sx={{ 
-                                        p: 1.5, 
-                                        borderRadius: '12px', 
+                            <Grid size={{ xs: 12, md: 4 }} key={index}>
+                                <Card
+                                    elevation={0}
+                                    sx={{
+                                        p: 4,
+                                        borderRadius: '24px',
                                         height: '100%',
-                                        width: '100%',
-                                        maxWidth: '320px',
-                                        mx: 'auto',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        border: '1px solid', 
-                                        borderColor: 'divider',
+                                        border: '1px solid #e2e8f0',
                                         bgcolor: 'white',
-                                        transition: 'all 0.3s',
+                                        transition: 'all 0.3s ease',
                                         '&:hover': {
-                                            transform: 'translateY(-4px)',
-                                            boxShadow: 4,
-                                            borderColor: 'primary.main'
+                                            transform: 'translateY(-5px)',
+                                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05)'
                                         }
                                     }}
                                 >
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1.5 }}>
-                                        <Avatar sx={{ bgcolor: 'primary.main', mr: 1, width: 40, height: 40, fontSize: '1rem' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                        <Avatar sx={{ bgcolor: '#6366f1', width: 56, height: 56, fontWeight: 700 }}>
                                             {testimonial.name.charAt(0)}
                                         </Avatar>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.25, fontSize: '0.875rem' }}>{testimonial.name}</Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontSize: '0.75rem' }}>{testimonial.location}</Typography>
-                                            <Box sx={{ display: 'flex', gap: 0.25 }}>
-                                                {[...Array(testimonial.rating)].map((_, i) => (
-                                                    <StarIcon key={i} sx={{ fontSize: 14, color: 'warning.main' }} />
-                                                ))}
-                                            </Box>
+                                        <Box sx={{ ml: 2 }}>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#1e293b' }}>{testimonial.name}</Typography>
+                                            <Typography variant="body2" sx={{ color: '#64748b' }}>{testimonial.location}</Typography>
                                         </Box>
                                     </Box>
-                                    <Typography variant="body2" sx={{ fontStyle: 'italic', lineHeight: 1.6, color: 'text.secondary', flex: 1, fontSize: '0.8125rem' }}>
+                                    <Box sx={{ display: 'flex', mb: 2 }}>
+                                        {[...Array(testimonial.rating)].map((_, i) => (
+                                            <StarIcon key={i} sx={{ color: '#f59e0b', fontSize: 20 }} />
+                                        ))}
+                                    </Box>
+                                    <Typography variant="body1" sx={{ color: '#475569', lineHeight: 1.7, fontStyle: 'italic' }}>
                                         "{testimonial.text}"
                                     </Typography>
                                 </Card>
@@ -841,197 +960,222 @@ const LandingPage: React.FC = () => {
                 </Container>
             </Box>
 
-            {/* Full Course Syllabus - Compact Accordion */}
-            <Box sx={{ py: { xs: 4, md: 5 } }}>
-                <Container maxWidth="lg">
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
+            {/* Course Syllabus - Modern Interactive Accordion */}
+            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#ffffff' }}>
+                <Container maxWidth="md">
+                    <Box sx={{ textAlign: 'center', mb: 8 }}>
+                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#0f172a' }}>
                             Full Course Syllabus
                         </Typography>
+                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
+                            A step-by-step roadmap to English fluency.
+                        </Typography>
                     </Box>
-                    <Paper elevation={0} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider' }}>
+                    <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '24px', overflow: 'hidden' }}>
                         {[
-                            { title: "Module 00: Introductions", items: ["Why English?", "Meet your coach", "Who this course is for?", "Our Mission"] },
-                            { title: "Module 01 (week 01-03)", items: ["Alphabets and phonetics", "Bara-khadi (in English)", "Counting", "Sequencing / Ranking", "Fractions and multiples"] },
-                            { title: "Module 01 (week 04-05)", items: ["Multiple sounds of consonants", "Silent letters", "Sounds of vowels"] },
-                            { title: "Module 02 (week 06)", items: ["Genders", "Singular and Plural", "Opposites", "Confusing words"] },
-                            { title: "Module 03-05", items: ["Noun, Pronoun, Verb", "Adjective, Adverb", "Conjunctions, Interjections, Prepositions"] },
-                            { title: "Module 06-08", items: ["Punctuations", "Articles", "Tenses", "Modals"] },
-                            { title: "Bonus", items: ["3-4 letter words", "Time expressions", "Common Vocabulary (50+ categories)", "Download PDF (Barahkhadi)"] }
+                            { title: "Module 00: Introductions", items: ["Why English?", "Meet your coach", "Our Mission"] },
+                            { title: "Module 01: Foundations (Week 01-05)", items: ["Alphabets & Phonetics", "Consonant Sounds", "Silent Letters", "Vowel Sounds"] },
+                            { title: "Module 02: Language Basics (Week 06)", items: ["Genders", "Singular/Plural", "Opposites", "Confusing Words"] },
+                            { title: "Module 03-05: Parts of Speech", items: ["Nouns & Pronouns", "Verbs & Adverbs", "Conjunctions & Prepositions"] },
+                            { title: "Module 06-08: Advanced Structures", items: ["Punctuation Mastery", "Article Usage", "Tenses & Modals"] },
+                            { title: "Bonus Resources", items: ["situational Vocabulary (50+ categories)", "Famous Speech Analysis", "PDF Downloads"] }
                         ].map((module, index) => (
-                            <Accordion key={index} sx={{ mb: 1, borderRadius: '8px', '&:before': { display: 'none' } }} elevation={0}>
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ py: 1 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{module.title}</Typography>
+                            <Accordion key={index} elevation={0} sx={{
+                                '&:not(:last-child)': { borderBottom: '1px solid #e2e8f0' },
+                                '&:before': { display: 'none' },
+                                bgcolor: 'transparent'
+                            }}>
+                                <AccordionSummary
+                                    expandIcon={<ExpandMoreIcon sx={{ color: '#6366f1' }} />}
+                                    sx={{ py: 2, '&:hover': { bgcolor: '#f8fafc' } }}
+                                >
+                                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>{module.title}</Typography>
                                 </AccordionSummary>
-                                <AccordionDetails sx={{ pt: 0 }}>
-                                    <Stack spacing={0.5}>
+                                <AccordionDetails sx={{ pb: 3, pt: 0, bgcolor: '#f8fafc' }}>
+                                    <Grid container spacing={2}>
                                         {module.items.map((item, idx) => (
-                                            <Box key={idx} sx={{ display: 'flex', alignItems: 'center' }}>
-                                                <CheckCircleIcon color="primary" sx={{ fontSize: 16, mr: 1 }} />
-                                                <Typography variant="body2">{item}</Typography>
-                                            </Box>
+                                            <Grid size={{ xs: 12, sm: 6 }} key={idx}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                    <CheckCircleIcon sx={{ color: '#22c55e', fontSize: 18, mr: 1.5 }} />
+                                                    <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>{item}</Typography>
+                                                </Box>
+                                            </Grid>
                                         ))}
-                                    </Stack>
+                                    </Grid>
                                 </AccordionDetails>
                             </Accordion>
                         ))}
-                    </Paper>
+                    </Box>
                 </Container>
             </Box>
 
-            {/* Meet Your Guide - Compact */}
-            <Box sx={{ py: { xs: 4, md: 5 }, bgcolor: 'grey.50' }}>
-                <Container maxWidth="md">
-                    <Card elevation={4} sx={{ p: 4, borderRadius: '20px', textAlign: 'center', bgcolor: 'primary.main', color: 'white', position: 'relative', overflow: 'hidden' }}>
-                        <Box sx={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.1)' }} />
-                        <Box sx={{ position: 'relative', zIndex: 1 }}>
-                            <Avatar sx={{ width: 80, height: 80, bgcolor: 'rgba(255,255,255,0.2)', mx: 'auto', mb: 2 }}>
-                                <PersonIcon sx={{ fontSize: 50 }} />
-                            </Avatar>
-                            <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-                                Meet Your Guide
-                            </Typography>
-                            <Typography variant="h6" sx={{ mb: 3, opacity: 0.95 }}>
-                                English Communication Expert
-                            </Typography>
-                            <Grid container spacing={1.5} justifyContent="center" sx={{ mt: 2 }}>
-                                <Grid item xs={6} sm={3}>
-                                    <Chip 
-                                        icon={<WorkspacePremiumIcon />} 
-                                        label="16+ Years MNC" 
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', width: '100%' }} 
-                                    />
-                                </Grid>
-                                <Grid item xs={6} sm={3}>
-                                    <Chip 
-                                        icon={<PeopleIcon />} 
-                                        label="50k+ Students" 
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', width: '100%' }} 
-                                    />
-                                </Grid>
-                                <Grid item xs={6} sm={3}>
-                                    <Chip 
-                                        icon={<SchoolIcon />} 
-                                        label="Corporate Trainer" 
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', width: '100%' }} 
-                                    />
-                                </Grid>
-                                <Grid item xs={6} sm={3}>
-                                    <Chip 
-                                        icon={<EmojiEventsIcon />} 
-                                        label="Mission-Driven" 
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', width: '100%' }} 
-                                    />
-                                </Grid>
+            {/* Meet Your Guide - Executive Profile */}
+            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#0f172a' }}>
+                <Container maxWidth="lg">
+                    <Card elevation={0} sx={{ p: { xs: 4, md: 8 }, borderRadius: '40px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', position: 'relative' }}>
+                        <Box sx={{ position: 'absolute', bottom: -50, right: -50, width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%)' }} />
+                        <Grid container spacing={6} alignItems="center">
+                            <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: 'center' }}>
+                                <Avatar
+                                    src="/coach-image.jpg" // Note: Need actual coach image or fallback
+                                    sx={{
+                                        width: 240,
+                                        height: 240,
+                                        mx: 'auto',
+                                        border: '8px solid rgba(99, 102, 241, 0.2)',
+                                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                                    }}
+                                />
+                                <Typography variant="h4" sx={{ mt: 3, fontWeight: 800, color: 'white' }}>Narendra Singh</Typography>
+                                <Typography variant="h6" sx={{ color: '#818cf8', fontWeight: 600 }}>Lead English Coach</Typography>
                             </Grid>
-                        </Box>
+                            <Grid size={{ xs: 12, md: 8 }}>
+                                <Typography variant="h3" sx={{ fontWeight: 800, mb: 3, color: 'white', lineHeight: 1.2 }}>
+                                    "I believe everyone has the potential to speak English confidently."
+                                </Typography>
+                                <Typography variant="h6" sx={{ color: '#94a3b8', fontWeight: 400, lineHeight: 1.8, mb: 4 }}>
+                                    With over 15 years of experience in language coaching, I've developed a methodology that focuses on natural acquisition rather than rote memorization. My goal is to help you break the barrier of hesitation and speak with authority.
+                                </Typography>
+                                <Stack direction="row" spacing={3}>
+                                    <Box>
+                                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white' }}>15+</Typography>
+                                        <Typography variant="body2" sx={{ color: '#64748b' }}>Years Experience</Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white' }}>50k+</Typography>
+                                        <Typography variant="body2" sx={{ color: '#64748b' }}>Students Mentored</Typography>
+                                    </Box>
+                                </Stack>
+                            </Grid>
+                        </Grid>
                     </Card>
                 </Container>
             </Box>
 
-            {/* FAQ - Compact */}
-            <Box sx={{ py: { xs: 4, md: 5 } }}>
+            {/* FAQ - Modern Clean Design */}
+            < Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#ffffff' }}>
                 <Container maxWidth="md">
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
+                    <Box sx={{ textAlign: 'center', mb: 8 }}>
+                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#0f172a' }}>
                             Frequently Asked Questions
                         </Typography>
+                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
+                            Everything you need to know about starting your journey with Verble.
+                        </Typography>
                     </Box>
-                    <Stack spacing={1}>
+                    <Stack spacing={2}>
                         {faqs.map((faq, index) => (
-                            <Accordion key={index} elevation={0} sx={{ borderRadius: '8px', border: '1px solid', borderColor: 'divider' }}>
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ py: 1.5 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{faq.question}</Typography>
+                            <Accordion
+                                key={index}
+                                elevation={0}
+                                sx={{
+                                    borderRadius: '16px !important',
+                                    border: '1px solid #e2e8f0',
+                                    '&:before': { display: 'none' },
+                                    '&.Mui-expanded': { boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }
+                                }}
+                            >
+                                <AccordionSummary
+                                    expandIcon={<ExpandMoreIcon sx={{ color: '#6366f1' }} />}
+                                    sx={{ px: 3, py: 1 }}
+                                >
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b' }}>{faq.question}</Typography>
                                 </AccordionSummary>
-                                <AccordionDetails>
-                                    <Typography variant="body2" sx={{ lineHeight: 1.7 }}>{faq.answer}</Typography>
+                                <AccordionDetails sx={{ px: 3, pb: 2 }}>
+                                    <Typography variant="body1" sx={{ lineHeight: 1.7, color: '#475569' }}>{faq.answer}</Typography>
                                 </AccordionDetails>
                             </Accordion>
                         ))}
                     </Stack>
                 </Container>
-            </Box>
+            </Box >
 
-            {/* Final CTA - Compact & Impactful */}
-            <Box sx={{ 
-                py: { xs: 5, md: 6 }, 
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+            {/* Final CTA - High Conversion Section */}
+            < Box sx={{
+                py: { xs: 10, md: 12 },
+                bgcolor: '#0f172a',
                 color: 'white',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                textAlign: 'center'
             }}>
-                <Box sx={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: 0, 
-                    right: 0, 
+                <Box sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
                     bottom: 0,
-                    background: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%)',
+                    background: 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
                     pointerEvents: 'none'
                 }} />
                 <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
-                    <Box sx={{ textAlign: 'center' }}>
-                        <LocalFireDepartmentIcon sx={{ fontSize: 50, mb: 2, opacity: 0.9 }} />
-                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, fontSize: { xs: '1.8rem', md: '2.5rem' } }}>
-                            Ready to speak English like a pro?
-                        </Typography>
-                        <Typography variant="h6" sx={{ mb: 4, opacity: 0.95, fontWeight: 500 }}>
-                            Your confident life starts with ONE click...
-                        </Typography>
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center" sx={{ mb: 2 }}>
-                            <Button
-                                onClick={handleStartFreeModule}
-                                variant="contained"
-                                size="large"
-                                sx={{
-                                    bgcolor: 'white',
-                                    color: 'primary.main',
-                                    px: 5,
-                                    py: 1.5,
-                                    fontSize: '1rem',
-                                    fontWeight: 'bold',
-                                    borderRadius: '50px',
-                                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                                    '&:hover': { 
-                                        bgcolor: 'grey.100', 
-                                        transform: 'translateY(-2px)',
-                                        boxShadow: '0 12px 32px rgba(0,0,0,0.3)'
-                                    }
-                                }}
-                            >
-                                Start Free Module
-                            </Button>
-                            <Button
-                                component={RouterLink}
-                                to="/subscription-plans"
-                                variant="outlined"
-                                size="large"
-                                sx={{
-                                    borderColor: 'white',
-                                    borderWidth: 2,
-                                    color: 'white',
-                                    px: 5,
-                                    py: 1.5,
-                                    fontSize: '1rem',
-                                    fontWeight: 'bold',
-                                    borderRadius: '50px',
-                                    '&:hover': { 
-                                        borderColor: 'white', 
-                                        bgcolor: 'rgba(255,255,255,0.1)',
-                                        borderWidth: 2
-                                    }
-                                }}
-                            >
-                                Silver: ₹2,499/year
-                            </Button>
-                        </Stack>
-                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block', mt: 2 }}>
-                            ⚡ Limited Seats - Offer Ends Soon
-                        </Typography>
-                    </Box>
+                    <LocalFireDepartmentIcon sx={{ fontSize: 64, mb: 3, color: '#f87171' }} />
+                    <Typography
+                        variant="h2"
+                        sx={{
+                            fontWeight: 900,
+                            mb: 3,
+                            fontSize: { xs: '2.5rem', md: '3.5rem' },
+                            background: 'linear-gradient(to right, #fff, #94a3b8)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent'
+                        }}
+                    >
+                        Ready to Transform Your English?
+                    </Typography>
+                    <Typography variant="h5" sx={{ mb: 6, fontWeight: 400, color: '#94a3b8', maxWidth: '600px', mx: 'auto' }}>
+                        Join 10,000+ others who are already mastering fluent English with AI. Your journey to confidence starts here.
+                    </Typography>
+                    <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={2}
+                        justifyContent="center"
+                    >
+                        <Button
+                            onClick={handleStartFreeModule}
+                            variant="contained"
+                            size="large"
+                            endIcon={<ArrowForwardIcon />}
+                            sx={{
+                                bgcolor: '#6366f1',
+                                color: 'white',
+                                px: 6,
+                                py: 2,
+                                fontSize: '1.2rem',
+                                fontWeight: 800,
+                                borderRadius: '16px',
+                                boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)',
+                                '&:hover': { bgcolor: '#4f46e5', transform: 'translateY(-2px)' },
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Start Free Module
+                        </Button>
+                        <Button
+                            component={RouterLink}
+                            to="/subscription-plans"
+                            variant="outlined"
+                            size="large"
+                            sx={{
+                                borderColor: 'rgba(255,255,255,0.2)',
+                                color: 'white',
+                                px: 6,
+                                py: 2,
+                                fontSize: '1.2rem',
+                                fontWeight: 800,
+                                borderRadius: '16px',
+                                '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.05)' }
+                            }}
+                        >
+                            View All Plans
+                        </Button>
+                    </Stack>
+                    <Typography variant="body2" sx={{ mt: 4, color: '#64748b', fontWeight: 600 }}>
+                        7-Day Money Back Guarantee • No Credit Card Required for Free Trial
+                    </Typography>
                 </Container>
-            </Box>
-        </Box>
+            </Box >
+        </Box >
     );
 };
 

@@ -15,7 +15,6 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
-    FormHelperText,
     Alert,
     CircularProgress,
     Grid,
@@ -24,7 +23,7 @@ import {
     Chip,
     IconButton,
     Paper,
-    LinearProgress
+
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -230,7 +229,7 @@ const AdminDailyContentPage: React.FC = () => {
         if (type === 'WORD' || type === 'PHRASE') {
             return (
                 <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <TextField
                             fullWidth
                             label="Word/Phrase Text"
@@ -239,7 +238,7 @@ const AdminDailyContentPage: React.FC = () => {
                             required
                         />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             label="English Meaning"
@@ -250,7 +249,7 @@ const AdminDailyContentPage: React.FC = () => {
                             rows={2}
                         />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             label="Hindi Meaning"
@@ -261,7 +260,7 @@ const AdminDailyContentPage: React.FC = () => {
                             rows={2}
                         />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             label="Audio URL (Optional)"
@@ -270,7 +269,7 @@ const AdminDailyContentPage: React.FC = () => {
                         />
                     </Grid>
                     {type === 'WORD' && (
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 label="Part of Speech (Optional)"
@@ -281,7 +280,7 @@ const AdminDailyContentPage: React.FC = () => {
                             />
                         </Grid>
                     )}
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>Examples (Optional)</Typography>
                         <Button
                             size="small"
@@ -318,7 +317,7 @@ const AdminDailyContentPage: React.FC = () => {
                             </Box>
                         ))}
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             label="Synonyms (comma-separated)"
@@ -326,7 +325,7 @@ const AdminDailyContentPage: React.FC = () => {
                             onChange={(e) => handleMetadataChange('synonyms', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
                         />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             label="Antonyms (comma-separated)"
@@ -341,7 +340,7 @@ const AdminDailyContentPage: React.FC = () => {
         if (type === 'STORY') {
             return (
                 <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <TextField
                             fullWidth
                             label="Story Title"
@@ -349,7 +348,7 @@ const AdminDailyContentPage: React.FC = () => {
                             onChange={(e) => handleMetadataChange('title', e.target.value)}
                         />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <TextField
                             fullWidth
                             label="Story Content"
@@ -360,7 +359,7 @@ const AdminDailyContentPage: React.FC = () => {
                             rows={10}
                         />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <TextField
                             fullWidth
                             label="Audio URL (Optional)"
@@ -368,7 +367,7 @@ const AdminDailyContentPage: React.FC = () => {
                             onChange={(e) => handleMetadataChange('audio', e.target.value)}
                         />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             label="Moral (English)"
@@ -378,7 +377,7 @@ const AdminDailyContentPage: React.FC = () => {
                             rows={2}
                         />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             label="Moral (Hindi)"
@@ -388,15 +387,15 @@ const AdminDailyContentPage: React.FC = () => {
                             rows={2}
                         />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>
                             Sentence Translations (Hindi) - One per line, matching story sentences
                         </Typography>
                         <TextField
                             fullWidth
                             label="Hindi Translations"
-                            value={Array.isArray(metadata.sentence_translations) 
-                                ? metadata.sentence_translations.join('\n') 
+                            value={Array.isArray(metadata.sentence_translations)
+                                ? metadata.sentence_translations.join('\n')
                                 : ''}
                             onChange={(e) => {
                                 const translations = e.target.value.split('\n').map(s => s.trim()).filter(s => s);
@@ -414,7 +413,7 @@ const AdminDailyContentPage: React.FC = () => {
         if (type === 'CONVERSATION') {
             return (
                 <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <TextField
                             fullWidth
                             label="Participants (comma-separated)"
@@ -423,7 +422,7 @@ const AdminDailyContentPage: React.FC = () => {
                             helperText="e.g., Waiter, Customer"
                         />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>Dialogue</Typography>
                         <Button
                             size="small"
@@ -496,7 +495,7 @@ const AdminDailyContentPage: React.FC = () => {
         // Default form for other types
         return (
             <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <TextField
                         fullWidth
                         label="Metadata (JSON)"
@@ -576,61 +575,61 @@ const AdminDailyContentPage: React.FC = () => {
                                             const contentType = item.type as ContentType;
                                             const config = getContentTypeConfig(contentType);
                                             const IconComponent = config.icon;
-                                            
+
                                             return (
-                                            <Grid item xs={12} md={6} lg={4} key={item._id}>
-                                                <Card
-                                                    sx={{
-                                                        border: `2px solid ${config.borderColor}`,
-                                                        backgroundColor: config.backgroundColor,
-                                                    }}
-                                                >
-                                                    <CardContent>
-                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
-                                                            <Box sx={{ flex: 1 }}>
-                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                                    <IconComponent sx={{ fontSize: 24, color: config.color }} />
-                                                                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                                                        {item.title}
-                                                                    </Typography>
+                                                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={item._id}>
+                                                    <Card
+                                                        sx={{
+                                                            border: `2px solid ${config.borderColor}`,
+                                                            backgroundColor: config.backgroundColor,
+                                                        }}
+                                                    >
+                                                        <CardContent>
+                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
+                                                                <Box sx={{ flex: 1 }}>
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                                        <IconComponent sx={{ fontSize: 24, color: config.color }} />
+                                                                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                                                            {item.title}
+                                                                        </Typography>
+                                                                    </Box>
+                                                                    <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                                                                        <Chip
+                                                                            label={item.type}
+                                                                            size="small"
+                                                                            color={config.chipColor}
+                                                                            sx={{
+                                                                                backgroundColor: config.color,
+                                                                                color: 'white',
+                                                                                fontWeight: 'bold'
+                                                                            }}
+                                                                        />
+                                                                        <Chip label={item.level} size="small" color="secondary" />
+                                                                        {!item.isActive && <Chip label="Inactive" size="small" />}
+                                                                    </Box>
                                                                 </Box>
-                                                                <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                                                                    <Chip 
-                                                                        label={item.type} 
-                                                                        size="small" 
-                                                                        color={config.chipColor}
-                                                                        sx={{ 
-                                                                            backgroundColor: config.color,
-                                                                            color: 'white',
-                                                                            fontWeight: 'bold'
-                                                                        }}
-                                                                    />
-                                                                    <Chip label={item.level} size="small" color="secondary" />
-                                                                    {!item.isActive && <Chip label="Inactive" size="small" />}
+                                                                <Box>
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        onClick={() => handleOpenDialog(item)}
+                                                                    >
+                                                                        <EditIcon />
+                                                                    </IconButton>
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="error"
+                                                                        onClick={() => setDeleteId(item._id)}
+                                                                    >
+                                                                        <DeleteIcon />
+                                                                    </IconButton>
                                                                 </Box>
                                                             </Box>
-                                                            <Box>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => handleOpenDialog(item)}
-                                                                >
-                                                                    <EditIcon />
-                                                                </IconButton>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => setDeleteId(item._id)}
-                                                                >
-                                                                    <DeleteIcon />
-                                                                </IconButton>
-                                                            </Box>
-                                                        </Box>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Created: {format(parseISO(item.createdAt), 'MMM d, yyyy')}
-                                                        </Typography>
-                                                    </CardContent>
-                                                </Card>
-                                            </Grid>
+                                                            <Typography variant="body2" color="text.secondary">
+                                                                Created: {format(parseISO(item.createdAt), 'MMM d, yyyy')}
+                                                            </Typography>
+                                                        </CardContent>
+                                                    </Card>
+                                                </Grid>
                                             );
                                         })}
                                     </Grid>
@@ -647,7 +646,7 @@ const AdminDailyContentPage: React.FC = () => {
                         {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
                         {currentContent && (
                             <Grid container spacing={2} sx={{ mt: 1 }}>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <FormControl fullWidth required>
                                         <InputLabel>Type</InputLabel>
                                         <Select
@@ -661,7 +660,7 @@ const AdminDailyContentPage: React.FC = () => {
                                         </Select>
                                     </FormControl>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <LocalizationProvider dateAdapter={AdapterDateFns}>
                                         <DatePicker
                                             label="Date"
@@ -675,7 +674,7 @@ const AdminDailyContentPage: React.FC = () => {
                                         />
                                     </LocalizationProvider>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <FormControl fullWidth required>
                                         <InputLabel>Level</InputLabel>
                                         <Select
@@ -689,7 +688,7 @@ const AdminDailyContentPage: React.FC = () => {
                                         </Select>
                                     </FormControl>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <TextField
                                         fullWidth
                                         label="Title"

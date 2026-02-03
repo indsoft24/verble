@@ -1,5 +1,5 @@
 // src/utils/contentTypeConfig.tsx
-import React from 'react';
+
 import {
     MenuBook as WordIcon,
     FormatQuote as PhraseIcon,
@@ -12,18 +12,18 @@ import {
     MusicNote as LyricsIcon,
     Instagram as FeedIcon,
 } from '@mui/icons-material';
-import { SvgIconComponent } from '@mui/icons-material';
+import type { SvgIconComponent } from '@mui/icons-material';
 
-export type ContentType = 
-    | 'WORD' 
-    | 'PHRASE' 
-    | 'STORY' 
-    | 'VOCAB_SET' 
-    | 'CONVERSATION' 
-    | 'PUZZLE' 
-    | 'SCENE' 
-    | 'SPEECH' 
-    | 'LYRICS' 
+export type ContentType =
+    | 'WORD'
+    | 'PHRASE'
+    | 'STORY'
+    | 'VOCAB_SET'
+    | 'CONVERSATION'
+    | 'PUZZLE'
+    | 'SCENE'
+    | 'SPEECH'
+    | 'LYRICS'
     | 'FEED';
 
 export interface ContentTypeConfig {

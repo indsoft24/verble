@@ -12,12 +12,9 @@ import {
     Alert,
     Divider,
     Chip,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
     List,
     ListItem,
-    ListItemText
+
 } from '@mui/material';
 import { keyframes } from '@emotion/react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
@@ -25,7 +22,7 @@ import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import SendIcon from '@mui/icons-material/Send';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
@@ -51,7 +48,7 @@ const confettiFall = keyframes`
 // Simple CSS-based Confetti Effect
 const ConfettiEffect: React.FC = () => {
     const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-    
+
     return (
         <Box
             sx={{
@@ -69,7 +66,7 @@ const ConfettiEffect: React.FC = () => {
                 const duration = 2 + Math.random() * 2;
                 const delay = Math.random() * 0.5;
                 const left = Math.random() * 100;
-                
+
                 return (
                     <Box
                         key={i}
@@ -198,9 +195,10 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange }) => {
         text: string,
         audioUrl: string | undefined,
         setIsPlaying: (playing: boolean) => void,
-        audioRef: React.MutableRefObject<HTMLAudioElement | null>
+        audioRef: React.MutableRefObject<HTMLAudioElement | null>,
+        currentlyPlaying: boolean
     ) => {
-        if (isPlaying) {
+        if (currentlyPlaying) {
             if (audioRef.current) {
                 audioRef.current.pause();
                 audioRef.current.currentTime = 0;
@@ -211,6 +209,9 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange }) => {
             setIsPlaying(false);
             return;
         }
+
+        setIsPlaying(true);
+
 
         setIsPlaying(true);
 
@@ -244,24 +245,24 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange }) => {
     const handlePlayTitle = () => {
         const title = currentContent.title || '';
         const audioUrl = currentContent.metadata?.audio;
-        playAudio(title, audioUrl, setIsPlayingTitle, titleAudioRef);
+        playAudio(title, audioUrl, setIsPlayingTitle, titleAudioRef, isPlayingTitle);
     };
 
     const handlePlayStory = () => {
         const storyText = currentContent.metadata?.text_content || '';
         const audioUrl = currentContent.metadata?.story_audio;
-        playAudio(storyText, audioUrl, setIsPlayingStory, storyAudioRef);
+        playAudio(storyText, audioUrl, setIsPlayingStory, storyAudioRef, isPlayingStory);
     };
 
     const handlePlayMoral = () => {
         const moralText = currentContent.metadata?.moral_en || '';
         const audioUrl = currentContent.metadata?.moral_audio;
-        playAudio(moralText, audioUrl, setIsPlayingMoral, moralAudioRef);
+        playAudio(moralText, audioUrl, setIsPlayingMoral, moralAudioRef, isPlayingMoral);
     };
 
     const handleSubmitSummary = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         const validSentences = sentences.filter(s => s.trim());
         if (validSentences.length < 1) {
             setSubmitStatus({
@@ -324,14 +325,14 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange }) => {
         const storyText = currentContent.metadata?.text_content || '';
         const sentences = parseStorySentences(storyText);
         const translations = currentContent.metadata?.sentence_translations || [];
-        
+
         return sentences.map((sentence, index) => ({
             en: sentence.trim(),
             hi: translations[index] || ''
         }));
     };
 
-    const storyNumber = currentContent.sequenceNumber || currentContent.metadata?.storyNumber || 
+    const storyNumber = currentContent.sequenceNumber || currentContent.metadata?.storyNumber ||
         (() => {
             const referenceDate = new Date('2024-01-01');
             const currentDate = parseISO(currentContent.date);
@@ -340,7 +341,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange }) => {
         })();
 
     const storyTitle = currentContent.title || '';
-    const storyContent = currentContent.metadata?.text_content || '';
+    // const storyContent = currentContent.metadata?.text_content || '';
     const moralEn = currentContent.metadata?.moral_en || '';
     const moralHi = currentContent.metadata?.moral_hi || '';
     const keywords = currentContent.metadata?.keywords || [];
@@ -369,7 +370,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange }) => {
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>
-                    
+
                     {/* Title with Audio */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                         <Typography

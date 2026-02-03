@@ -6,7 +6,7 @@ import { Link as RouterLink } from 'react-router-dom';
 // Icon Imports
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
 import TranslateIcon from '@mui/icons-material/Translate';
-import SchoolIcon from '@mui/icons-material/School';
+
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -21,11 +21,11 @@ import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 
 // Feature Card Component
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
-    <Paper 
-        elevation={2} 
-        sx={{ 
-            p: 3, 
-            borderRadius: '16px', 
+    <Paper
+        elevation={2}
+        sx={{
+            p: 3,
+            borderRadius: '16px',
             height: '100%',
             transition: 'transform 0.2s, box-shadow 0.2s',
             '&:hover': {
@@ -96,9 +96,9 @@ const AboutUsPage: React.FC = () => {
     return (
         <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
             {/* Hero Section */}
-            <Box sx={{ 
-                py: { xs: 6, md: 8 }, 
-                textAlign: 'center', 
+            <Box sx={{
+                py: { xs: 6, md: 8 },
+                textAlign: 'center',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
                 position: 'relative',
@@ -113,21 +113,21 @@ const AboutUsPage: React.FC = () => {
                         "Speak English. Live Freely."
                     </Typography>
                     <Typography variant="h6" sx={{ maxWidth: '800px', mx: 'auto', opacity: 0.9, lineHeight: 1.8 }}>
-                        Verble exists to break the English barrier for millions of non-native speakers in India. 
-                        We deliver simple, survival English that works in streets, offices, and weddings – 
+                        Verble exists to break the English barrier for millions of non-native speakers in India.
+                        We deliver simple, survival English that works in streets, offices, and weddings –
                         turning hesitation into confidence.
                     </Typography>
                     <Box sx={{ mt: 4 }}>
-                        <Chip 
-                            label="No Complex Grammar" 
-                            sx={{ 
-                                bgcolor: 'rgba(255,255,255,0.2)', 
-                                color: 'white', 
+                        <Chip
+                            label="No Complex Grammar"
+                            sx={{
+                                bgcolor: 'rgba(255,255,255,0.2)',
+                                color: 'white',
                                 fontSize: '1rem',
                                 p: 2,
                                 height: 'auto',
                                 fontWeight: 'bold'
-                            }} 
+                            }}
                         />
                         <Typography variant="h6" sx={{ mt: 2, fontWeight: 'bold' }}>
                             Just speak fluently in 30 days.
@@ -140,16 +140,16 @@ const AboutUsPage: React.FC = () => {
             <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: 'grey.50' }}>
                 <Container maxWidth="lg">
                     <Grid container spacing={4} alignItems="center">
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3, color: 'primary.main' }}>
                                 What is Verble?
                             </Typography>
                             <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.8, fontSize: '1.1rem' }}>
-                                Verble is your <strong>mobile-first web app</strong> for bite-sized English mastery. 
+                                Verble is your <strong>mobile-first web app</strong> for bite-sized English mastery.
                                 Free tier for basics; Bronze/Silver/Gold for advanced practice.
                             </Typography>
                             <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.8, fontSize: '1.1rem', color: 'text.secondary' }}>
-                                Built by a <strong>15 years MNC professional</strong> passionate about EdTech – 
+                                Built by a <strong>15 years MNC professional</strong> passionate about EdTech –
                                 blending AI, daily habits, and cultural scenarios.
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 3 }}>
@@ -158,13 +158,13 @@ const AboutUsPage: React.FC = () => {
                                 <Chip icon={<WorkspacePremiumIcon />} label="15 Years Experience" color="primary" />
                             </Box>
                         </Grid>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Paper elevation={3} sx={{ p: 4, borderRadius: '20px', bgcolor: 'white' }}>
                                 <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}>
                                     Our Mission
                                 </Typography>
                                 <Typography variant="body1" sx={{ lineHeight: 1.8, mb: 3 }}>
-                                    To empower millions of Indians to speak English confidently in real-life situations, 
+                                    To empower millions of Indians to speak English confidently in real-life situations,
                                     breaking down language barriers that hold them back.
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 3 }}>
@@ -192,16 +192,16 @@ const AboutUsPage: React.FC = () => {
                             Core Content & How It Helps
                         </Typography>
                         <Typography variant="h6" color="text.secondary" sx={{ maxWidth: '700px', mx: 'auto', lineHeight: 1.8 }}>
-                            Verble creates daily, actionable content tailored for beginners. 
-                            Users gain pronunciation polish, grammar intuition, and cultural fluency – 
+                            Verble creates daily, actionable content tailored for beginners.
+                            Users gain pronunciation polish, grammar intuition, and cultural fluency –
                             transforming shy speakers into pros.
                         </Typography>
                     </Box>
 
                     <Grid container spacing={3}>
                         {coreFeatures.map((feature, index) => (
-                            <Grid item xs={12} sm={6} md={4} key={index}>
-                                <FeatureCard 
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
+                                <FeatureCard
                                     icon={feature.icon}
                                     title={feature.title}
                                     description={feature.description}
@@ -226,12 +226,12 @@ const AboutUsPage: React.FC = () => {
                     </Box>
                     <Grid container spacing={2}>
                         {practicalScenarios.map((scenario, index) => (
-                            <Grid item xs={12} sm={6} md={4} key={index}>
-                                <Paper 
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
+                                <Paper
                                     elevation={0}
-                                    sx={{ 
-                                        p: 2, 
-                                        bgcolor: 'rgba(255,255,255,0.1)', 
+                                    sx={{
+                                        p: 2,
+                                        bgcolor: 'rgba(255,255,255,0.1)',
                                         borderRadius: '12px',
                                         textAlign: 'center',
                                         backdropFilter: 'blur(10px)'
@@ -258,7 +258,7 @@ const AboutUsPage: React.FC = () => {
                         </Typography>
                     </Box>
                     <Grid container spacing={4}>
-                        <Grid item xs={12} md={8} sx={{ mx: 'auto' }}>
+                        <Grid size={{ xs: 12, md: 8 }} sx={{ mx: 'auto' }}>
                             <Paper elevation={3} sx={{ p: 4, borderRadius: '20px' }}>
                                 <List>
                                     {whyVerbleWorks.map((item, index) => (
@@ -266,7 +266,7 @@ const AboutUsPage: React.FC = () => {
                                             <ListItemIcon sx={{ minWidth: '40px' }}>
                                                 <CheckCircleIcon color="success" sx={{ fontSize: 30 }} />
                                             </ListItemIcon>
-                                            <ListItemText 
+                                            <ListItemText
                                                 primary={item}
                                                 primaryTypographyProps={{
                                                     variant: 'h6',
@@ -285,11 +285,11 @@ const AboutUsPage: React.FC = () => {
             {/* Call to Action Section */}
             <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: 'grey.50' }}>
                 <Container maxWidth="md">
-                    <Paper 
+                    <Paper
                         elevation={4}
-                        sx={{ 
-                            p: { xs: 4, md: 6 }, 
-                            borderRadius: '24px', 
+                        sx={{
+                            p: { xs: 4, md: 6 },
+                            borderRadius: '24px',
                             textAlign: 'center',
                             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                             color: 'white'
@@ -301,10 +301,10 @@ const AboutUsPage: React.FC = () => {
                         <Typography variant="h6" sx={{ mb: 4, opacity: 0.95 }}>
                             Start free today and transform your English speaking confidence in just 30 days.
                         </Typography>
-                        <Button 
-                            component={RouterLink} 
-                            to="/register" 
-                            variant="contained" 
+                        <Button
+                            component={RouterLink}
+                            to="/register"
+                            variant="contained"
                             size="large"
                             endIcon={<ArrowForwardIcon />}
                             sx={{

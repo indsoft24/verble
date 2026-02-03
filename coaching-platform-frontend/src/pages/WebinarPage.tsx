@@ -61,7 +61,7 @@ const WebinarPage: React.FC = () => {
     // Mock webinar data - In production, fetch from API based on slug
     useEffect(() => {
         setIsLoading(true);
-        
+
         // Simulate API call
         setTimeout(() => {
             const webinarData: Record<string, WebinarData> = {
@@ -138,7 +138,7 @@ const WebinarPage: React.FC = () => {
     }
 
     const isUpcoming = new Date(webinar.date) > new Date();
-    const spotsRemaining = webinar.maxParticipants 
+    const spotsRemaining = webinar.maxParticipants
         ? webinar.maxParticipants - (webinar.currentParticipants || 0)
         : null;
 
@@ -158,13 +158,13 @@ const WebinarPage: React.FC = () => {
 
                 <Grid container spacing={4}>
                     {/* Main Content */}
-                    <Grid item xs={12} md={8}>
+                    <Grid size={{ xs: 12, md: 8 }}>
                         {/* Header */}
                         <Paper elevation={3} sx={{ p: 4, mb: 3, borderRadius: '16px' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                                 <VideoCallIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-                                <Chip 
-                                    label={isUpcoming ? 'Upcoming' : 'Past Event'} 
+                                <Chip
+                                    label={isUpcoming ? 'Upcoming' : 'Past Event'}
                                     color={isUpcoming ? 'primary' : 'default'}
                                     sx={{ fontWeight: 'bold' }}
                                 />
@@ -172,11 +172,11 @@ const WebinarPage: React.FC = () => {
                                     <Chip label="Recording Available" color="success" />
                                 )}
                             </Box>
-                            
+
                             <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 2 }}>
                                 {webinar.title}
                             </Typography>
-                            
+
                             <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.8, color: 'text.secondary', mb: 3 }}>
                                 {webinar.description}
                             </Typography>
@@ -188,11 +188,11 @@ const WebinarPage: React.FC = () => {
                                     <Box>
                                         <Typography variant="caption" color="text.secondary">Date</Typography>
                                         <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                                            {new Date(webinar.date).toLocaleDateString('en-IN', { 
-                                                weekday: 'long', 
-                                                year: 'numeric', 
-                                                month: 'long', 
-                                                day: 'numeric' 
+                                            {new Date(webinar.date).toLocaleDateString('en-IN', {
+                                                weekday: 'long',
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
                                             })}
                                         </Typography>
                                     </Box>
@@ -246,7 +246,7 @@ const WebinarPage: React.FC = () => {
                                         <ListItemIcon sx={{ minWidth: '40px' }}>
                                             <CheckCircleIcon color="success" />
                                         </ListItemIcon>
-                                        <ListItemText 
+                                        <ListItemText
                                             primary={topic}
                                             primaryTypographyProps={{ variant: 'body1' }}
                                         />
@@ -262,7 +262,7 @@ const WebinarPage: React.FC = () => {
                             </Typography>
                             <Grid container spacing={2}>
                                 {webinar.benefits.map((benefit, index) => (
-                                    <Grid item xs={12} sm={6} key={index}>
+                                    <Grid size={{ xs: 12, sm: 6 }} key={index}>
                                         <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
                                             <CheckCircleIcon color="primary" sx={{ mt: 0.5 }} />
                                             <Typography variant="body1">{benefit}</Typography>
@@ -274,11 +274,11 @@ const WebinarPage: React.FC = () => {
                     </Grid>
 
                     {/* Sidebar - Registration */}
-                    <Grid item xs={12} md={4}>
-                        <Paper 
-                            elevation={4} 
-                            sx={{ 
-                                p: 4, 
+                    <Grid size={{ xs: 12, md: 4 }}>
+                        <Paper
+                            elevation={4}
+                            sx={{
+                                p: 4,
                                 borderRadius: '20px',
                                 position: 'sticky',
                                 top: 100,
@@ -364,7 +364,7 @@ const WebinarPage: React.FC = () => {
                             <Divider sx={{ my: 3, bgcolor: 'rgba(255,255,255,0.3)' }} />
 
                             <Typography variant="body2" sx={{ opacity: 0.9, textAlign: 'center' }}>
-                                {webinar.registrationRequired 
+                                {webinar.registrationRequired
                                     ? 'Registration is required to attend this webinar'
                                     : 'Open to all participants'}
                             </Typography>
@@ -377,7 +377,7 @@ const WebinarPage: React.FC = () => {
                                     Why Attend?
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-                                    This webinar is designed specifically for Indian learners who want to break the English barrier. 
+                                    This webinar is designed specifically for Indian learners who want to break the English barrier.
                                     Learn practical, survival English that works in real-life situations.
                                 </Typography>
                             </CardContent>

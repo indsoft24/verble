@@ -3,7 +3,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link as RouterLink } from 'react-router-dom';
 import { getPlatformStatsAdmin, type PlatformStats, getAllUsers, type AdminUserView } from '../services/adminService';
-import { getAllDailyContentAdmin, type DailyContent } from '../services/dailyContentAdminService';
+import { getAllDailyContentAdmin } from '../services/dailyContentAdminService';
+import type { DailyContent } from '../services/dailyContentService';
 import { getActiveOffers, type Offer } from '../services/offerService';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
 import AdminLayout from '../components/layout/AdminLayout';
@@ -327,7 +328,7 @@ const AdminDashboardPage: React.FC = () => {
 
                 {/* Main Statistics Grid */}
                 <Grid container spacing={3} sx={{ mb: 6 }}>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard
                             title="Total Users"
                             value={stats.totalUsers.toLocaleString()}
@@ -335,7 +336,7 @@ const AdminDashboardPage: React.FC = () => {
                             color="linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)"
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard
                             title="Active Subscriptions"
                             value={stats.activeUserSubscriptions.toLocaleString()}
@@ -344,7 +345,7 @@ const AdminDashboardPage: React.FC = () => {
                             subtitle={`${stats.totalUsers > 0 ? Math.round((stats.activeUserSubscriptions / stats.totalUsers) * 100) : 0}% user conversion`}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard
                             title="Videos Content"
                             value={`${stats.publishedVideos}`}
@@ -353,7 +354,7 @@ const AdminDashboardPage: React.FC = () => {
                             subtitle={`${stats.totalVideos} total videos uploaded`}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard
                             title="Courses Library"
                             value={stats.publishedCourses}
@@ -392,7 +393,7 @@ const AdminDashboardPage: React.FC = () => {
                         </Box>
                     ) : (
                         <Grid container spacing={2}>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
                                     Content by Type
                                 </Typography>
@@ -429,7 +430,7 @@ const AdminDashboardPage: React.FC = () => {
                                     />
                                 </Box>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
                                     Content by Level
                                 </Typography>
@@ -440,7 +441,7 @@ const AdminDashboardPage: React.FC = () => {
                                     <Chip label={`GOLD: ${contentStats.byLevel.GOLD}`} color="success" size="small" />
                                 </Box>
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Alert
                                     severity={contentStats.total > 0 ? "info" : "warning"}
                                     sx={{ mt: 3, borderRadius: 2 }}
@@ -458,7 +459,7 @@ const AdminDashboardPage: React.FC = () => {
                 {/* Main Content Grid */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                     {/* Quick Actions */}
-                    <Grid item xs={12} md={8}>
+                    <Grid size={{ xs: 12, md: 8 }}>
                         <Paper elevation={0} sx={{ p: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
                                 <Box sx={{ bgcolor: 'secondary.50', p: 1, borderRadius: 2, mr: 2, display: 'flex' }}>
@@ -469,7 +470,7 @@ const AdminDashboardPage: React.FC = () => {
                                 </Typography>
                             </Box>
                             <Grid container spacing={2}>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <QuickActionCard
                                         title="Daily Content"
                                         description="Manage Word, Phrase, Stories, etc."
@@ -477,7 +478,7 @@ const AdminDashboardPage: React.FC = () => {
                                         icon={<ArticleIcon />}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <QuickActionCard
                                         title="Manage Videos"
                                         description="Add, edit, or delete videos"
@@ -485,7 +486,7 @@ const AdminDashboardPage: React.FC = () => {
                                         icon={<VideoLibraryIcon />}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <QuickActionCard
                                         title="Manage Users"
                                         description="View and manage user accounts"
@@ -493,7 +494,7 @@ const AdminDashboardPage: React.FC = () => {
                                         icon={<PeopleIcon />}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <QuickActionCard
                                         title="Subscription Plans"
                                         description="Manage subscription offerings"
@@ -501,7 +502,7 @@ const AdminDashboardPage: React.FC = () => {
                                         icon={<SubscriptionsIcon />}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <QuickActionCard
                                         title="Courses & Modules"
                                         description="Organize course structure"
@@ -509,7 +510,7 @@ const AdminDashboardPage: React.FC = () => {
                                         icon={<SchoolIcon />}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <QuickActionCard
                                         title="Blog Posts"
                                         description="Create and edit blog posts"
@@ -517,7 +518,7 @@ const AdminDashboardPage: React.FC = () => {
                                         icon={<ArticleIcon />}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <QuickActionCard
                                         title="Sentence Validation"
                                         description="Review user submissions"
@@ -525,7 +526,7 @@ const AdminDashboardPage: React.FC = () => {
                                         icon={<AssessmentIcon />}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <QuickActionCard
                                         title="Help Section"
                                         description="Manage help articles"
@@ -538,7 +539,7 @@ const AdminDashboardPage: React.FC = () => {
                     </Grid>
 
                     {/* Recent Activity */}
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                                 <Box sx={{ bgcolor: 'info.50', p: 1, borderRadius: 2, mr: 2, display: 'flex' }}>
@@ -643,7 +644,7 @@ const AdminDashboardPage: React.FC = () => {
                                     {recentJoiners.slice(0, 10).map((joiner, index) => (
                                         <TableRow key={index} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                                             <TableCell sx={{ fontWeight: 600, py: 1.5 }}>{joiner.name}</TableCell>
-                                            <TableCell sx={{ py: 1.5 }}>{joiner.location || 'Not Specified'}</TableCell>
+                                            <TableCell sx={{ py: 1.5 }}>{(joiner as any).location || 'Not Specified'}</TableCell>
                                             <TableCell sx={{ py: 1.5, color: 'text.secondary' }}>
                                                 {joiner.joinedAt
                                                     ? new Date(joiner.joinedAt).toLocaleDateString(undefined, { dateStyle: 'medium' })
@@ -662,7 +663,7 @@ const AdminDashboardPage: React.FC = () => {
                     System Infrastructure
                 </Typography>
                 <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Box sx={{
                             p: 3,
                             bgcolor: 'background.paper',
@@ -681,7 +682,7 @@ const AdminDashboardPage: React.FC = () => {
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>Videos Live</Typography>
                         </Box>
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Box sx={{
                             p: 3,
                             bgcolor: 'background.paper',
@@ -700,7 +701,7 @@ const AdminDashboardPage: React.FC = () => {
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>Draft Content</Typography>
                         </Box>
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Box sx={{
                             p: 3,
                             bgcolor: 'background.paper',
@@ -719,7 +720,7 @@ const AdminDashboardPage: React.FC = () => {
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>Active Cycles</Typography>
                         </Box>
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Box sx={{
                             p: 3,
                             bgcolor: 'background.paper',

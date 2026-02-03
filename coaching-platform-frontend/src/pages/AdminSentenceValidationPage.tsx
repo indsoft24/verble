@@ -6,8 +6,7 @@ import {
     Typography,
     Box,
     Paper,
-    Tabs,
-    Tab,
+
     CircularProgress,
     Alert,
     Card,
@@ -56,7 +55,7 @@ const AdminSentenceValidationPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<SubmissionType>('all');
     const [selectedStatus, setSelectedStatus] = useState<SubmissionStatus>('all');
-    const [tabValue, setTabValue] = useState(0);
+
     const [selectedSubmission, setSelectedSubmission] = useState<SentenceSubmission | null>(null);
     const [validationDialogOpen, setValidationDialogOpen] = useState(false);
     const [isValidating, setIsValidating] = useState(false);
@@ -99,12 +98,12 @@ const AdminSentenceValidationPage: React.FC = () => {
         setSelectedSubmission(submission);
         setIsCorrect(true);
         setValidationFeedback('');
-        
+
         // For story submissions, initialize sentence validations
         if (submission.submissionType === 'story' && submission.summary) {
             setStorySentenceValidations(new Array(submission.summary.length).fill(true));
         }
-        
+
         setValidationDialogOpen(true);
     };
 
@@ -162,8 +161,8 @@ const AdminSentenceValidationPage: React.FC = () => {
     };
 
     const getSubmissionTitle = (submission: SentenceSubmission) => {
-        const contentId = submission.wordId || submission.storyId || submission.vocabSetId || 
-                         submission.sceneId || submission.speechId;
+        const contentId = submission.wordId || submission.storyId || submission.vocabSetId ||
+            submission.sceneId || submission.speechId;
         return contentId?.title || 'Unknown Content';
     };
 
@@ -208,7 +207,7 @@ const AdminSentenceValidationPage: React.FC = () => {
 
                     {/* Statistics */}
                     <Grid container spacing={2} sx={{ mb: 3 }}>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Paper sx={{ p: 2, textAlign: 'center' }}>
                                 <Typography variant="h4" color="primary">
                                     {stats.total}
@@ -218,7 +217,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                 </Typography>
                             </Paper>
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.light' }}>
                                 <Typography variant="h4" color="warning.dark">
                                     {stats.pending}
@@ -228,7 +227,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                 </Typography>
                             </Paper>
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.light' }}>
                                 <Typography variant="h4" color="success.dark">
                                     {stats.correct}
@@ -238,7 +237,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                 </Typography>
                             </Paper>
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'error.light' }}>
                                 <Typography variant="h4" color="error.dark">
                                     {stats.incorrect}
@@ -253,7 +252,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                     {/* Filters */}
                     <Paper sx={{ p: 2, mb: 3 }}>
                         <Grid container spacing={2} alignItems="center">
-                            <Grid item xs={12} sm={6} md={3}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <FormControl fullWidth>
                                     <InputLabel>Submission Type</InputLabel>
                                     <Select
@@ -270,7 +269,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} sm={6} md={3}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <FormControl fullWidth>
                                     <InputLabel>Status</InputLabel>
                                     <Select
@@ -284,7 +283,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} sm={6} md={3}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <Button
                                     variant="outlined"
                                     startIcon={<RefreshIcon />}
@@ -313,45 +312,45 @@ const AdminSentenceValidationPage: React.FC = () => {
                     ) : (
                         <Grid container spacing={2}>
                             {submissions.map((submission) => {
-                                const contentType = (submission.wordId?.type || 
-                                                   submission.storyId?.type || 
-                                                   submission.vocabSetId?.type ||
-                                                   submission.sceneId?.type ||
-                                                   submission.speechId?.type) as ContentType;
+                                const contentType = (submission.wordId?.type ||
+                                    submission.storyId?.type ||
+                                    submission.vocabSetId?.type ||
+                                    submission.sceneId?.type ||
+                                    submission.speechId?.type) as ContentType;
                                 const config = contentType ? getContentTypeConfig(contentType) : null;
                                 const IconComponent = config?.icon;
 
                                 return (
-                                    <Grid item xs={12} md={6} lg={4} key={submission._id}>
+                                    <Grid size={{ xs: 12, md: 6, lg: 4 }} key={submission._id}>
                                         <Card
                                             sx={{
                                                 height: '100%',
-                                                border: submission.isCorrect === null 
-                                                    ? '2px solid orange' 
-                                                    : submission.isCorrect 
-                                                    ? '2px solid green' 
-                                                    : '2px solid red',
+                                                border: submission.isCorrect === null
+                                                    ? '2px solid orange'
+                                                    : submission.isCorrect
+                                                        ? '2px solid green'
+                                                        : '2px solid red',
                                             }}
                                         >
                                             <CardContent>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
                                                     <Box sx={{ flex: 1 }}>
                                                         {IconComponent && (
-                                                            <IconComponent 
-                                                                sx={{ 
-                                                                    fontSize: 24, 
+                                                            <IconComponent
+                                                                sx={{
+                                                                    fontSize: 24,
                                                                     color: config.color,
-                                                                    mb: 1 
-                                                                }} 
+                                                                    mb: 1
+                                                                }}
                                                             />
                                                         )}
                                                         <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
                                                             {getSubmissionTitle(submission)}
                                                         </Typography>
                                                         <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-                                                            <Chip 
-                                                                label={getSubmissionTypeLabel(submission.submissionType)} 
-                                                                size="small" 
+                                                            <Chip
+                                                                label={getSubmissionTypeLabel(submission.submissionType)}
+                                                                size="small"
                                                                 color={config?.chipColor || 'default'}
                                                             />
                                                             {getStatusChip(submission)}
@@ -385,9 +384,9 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                     <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
                                                         Submission:
                                                     </Typography>
-                                                    <Typography variant="body2" sx={{ 
-                                                        bgcolor: 'grey.100', 
-                                                        p: 1, 
+                                                    <Typography variant="body2" sx={{
+                                                        bgcolor: 'grey.100',
+                                                        p: 1,
                                                         borderRadius: 1,
                                                         whiteSpace: 'pre-wrap',
                                                         wordBreak: 'break-word'
@@ -404,7 +403,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                         <List dense>
                                                             {submission.summary.map((sentence, idx) => (
                                                                 <ListItem key={idx} sx={{ py: 0.5 }}>
-                                                                    <ListItemText 
+                                                                    <ListItemText
                                                                         primary={`${idx + 1}. ${sentence}`}
                                                                         primaryTypographyProps={{ variant: 'body2' }}
                                                                     />
@@ -418,7 +417,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                     <Box sx={{ mb: 1 }}>
                                                         <Typography variant="body2" color="text.secondary">
                                                             Points: {submission.pointsEarned}
-                                                            {submission.sentencesCorrect !== undefined && 
+                                                            {submission.sentencesCorrect !== undefined &&
                                                                 ` (${submission.sentencesCorrect} correct sentences)`}
                                                         </Typography>
                                                     </Box>
@@ -453,10 +452,10 @@ const AdminSentenceValidationPage: React.FC = () => {
                 </Box>
 
                 {/* Validation Dialog */}
-                <Dialog 
-                    open={validationDialogOpen} 
-                    onClose={handleCloseValidationDialog} 
-                    maxWidth="md" 
+                <Dialog
+                    open={validationDialogOpen}
+                    onClose={handleCloseValidationDialog}
+                    maxWidth="md"
                     fullWidth
                 >
                     <DialogTitle>
@@ -468,7 +467,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                 <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
                                     {getSubmissionTitle(selectedSubmission)}
                                 </Typography>
-                                
+
                                 <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                         User: {selectedSubmission.userId?.name} ({selectedSubmission.userId?.email})
@@ -517,9 +516,9 @@ const AdminSentenceValidationPage: React.FC = () => {
                                         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                                             Submission:
                                         </Typography>
-                                        <Typography variant="body1" sx={{ 
-                                            bgcolor: 'grey.100', 
-                                            p: 2, 
+                                        <Typography variant="body1" sx={{
+                                            bgcolor: 'grey.100',
+                                            p: 2,
                                             borderRadius: 1,
                                             whiteSpace: 'pre-wrap',
                                             wordBreak: 'break-word',

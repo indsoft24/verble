@@ -41,7 +41,7 @@ export const getDailyContent = async (date?: Date, level?: string): Promise<Dail
  * Get today's daily content for all levels
  */
 export const getTodaysDailyContent = async (): Promise<DailyContent[]> => {
-    const today = new Date();
+    // const today = new Date();
     const response = await apiClient.get<DailyContentResponse>('/daily-content/today');
     return response.data.data.content || [];
 };
@@ -58,7 +58,7 @@ export const getAdjacentContent = async (
     try {
         const currentDateObj = new Date(currentDate);
         const targetDate = new Date(currentDateObj);
-        
+
         if (direction === 'prev') {
             targetDate.setDate(targetDate.getDate() - 1);
         } else {

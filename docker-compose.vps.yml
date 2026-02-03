@@ -1,0 +1,89 @@
+# Verble - Single-stack deployment for VPS
+# Exposes ONE port (3000) so it won't conflict with other sites.
+# Point your reverse proxy (nginx/Caddy/Traefik) at host:3000 for this app.
+
+services:
+  # --- Frontend + Gateway (only service exposed to host) ---
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    image: verble-web
+    container_name: verble-web
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - verble-network
+    restart: unless-stopped
+
+  # --- Backend API (internal only) ---
+  backend:
+    build:
+      context: ./coaching-platform-backend
+      dockerfile: Dockerfile
+    image: verble-backend
+    container_name: verble-backend
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI_DOCKER: mongodb://mongo:27017/verble
+      REDIS_URL: redis://redis:6379
+      DOCKER_ENV: "true"
+    env_file:
+      - ./coaching-platform-backend/.env
+    volumes:
+      - verble-uploads:/usr/src/app/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - verble-network
+    restart: unless-stopped
+    command: npm start
+
+  # --- MongoDB (internal only - no host port to avoid conflict with existing DBs) ---
+  mongo:
+    image: mongo:7
+    container_name: verble-mongo
+    volumes:
+      - verble-mongo-data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: verble
+    networks:
+      - verble-network
+    restart: unless-stopped
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/verble --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Redis (internal only - no host port) ---
+  redis:
+    image: redis:7-alpine
+    container_name: verble-redis
+    volumes:
+      - verble-redis-data:/data
+    networks:
+      - verble-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  verble-mongo-data:
+  verble-redis-data:
+  verble-uploads:
+
+networks:
+  verble-network:
+    driver: bridge

@@ -6,7 +6,6 @@ import {
     Accordion,
     AccordionSummary,
     AccordionDetails,
-    Button,
     Card,
     CardContent,
     IconButton,
@@ -71,7 +70,7 @@ const AIPromptsSection: React.FC = () => {
             // Copy to clipboard
             await navigator.clipboard.writeText(prompt.prompt);
             setCopySuccess(`Copied: ${prompt.title}`);
-            
+
             // Increment usage count
             try {
                 await incrementPromptUsage(prompt._id);
@@ -91,7 +90,7 @@ const AIPromptsSection: React.FC = () => {
     // Filter prompts based on search term
     const filteredTopics = topics.filter(topic => {
         if (searchTerm.trim() === '') return true;
-        
+
         const prompts = promptsByTopic[topic] || [];
         return prompts.some(prompt =>
             prompt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -104,7 +103,7 @@ const AIPromptsSection: React.FC = () => {
     const getFilteredPromptsForTopic = (topic: string): AIPrompt[] => {
         const prompts = promptsByTopic[topic] || [];
         if (searchTerm.trim() === '') return prompts;
-        
+
         return prompts.filter(prompt =>
             prompt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             prompt.prompt.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,7 +135,7 @@ const AIPromptsSection: React.FC = () => {
             </Typography>
 
             <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                Explore AI prompts organized by topics. Click on any topic to expand and view prompts. 
+                Explore AI prompts organized by topics. Click on any topic to expand and view prompts.
                 Use the copy button to copy prompts for use in ChatGPT or Gemini.
             </Typography>
 

@@ -8,7 +8,7 @@ import {
     Typography, Container, CircularProgress, Tabs, Tab, Paper
 } from '@mui/material';
 import PhoneIcon from '@mui/icons-material/Phone';
-import { sendMobileOTP, verifyMobileOTP, loginWithMobile, registerWithMobile } from '../services/authService';
+import { verifyMobileOTP, loginWithMobile, registerWithMobile } from '../services/authService';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -41,9 +41,8 @@ const MobileLoginPage: React.FC = () => {
     const [resendCooldown, setResendCooldown] = useState(0);
     const [maskedMobile, setMaskedMobile] = useState('');
 
-    const { setUserContext } = useAuth();
-    const { addNotification } = useNotification();
     const { setUserContext, refreshUser } = useAuth();
+    const { addNotification } = useNotification();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -84,7 +83,7 @@ const MobileLoginPage: React.FC = () => {
             setOtpSent(true);
             setMaskedMobile(response.data.mobile);
             addNotification('OTP has been sent to your email address. Please check your inbox.', 'success');
-            
+
             // Start cooldown timer
             setResendCooldown(30);
             const cooldownInterval = setInterval(() => {
@@ -144,11 +143,11 @@ const MobileLoginPage: React.FC = () => {
 
         setIsLoading(true);
         try {
-            let response;
+
             if (tabValue === 0) {
-                response = await loginWithMobile(mobile.trim());
+                await loginWithMobile(mobile.trim());
             } else {
-                response = await registerWithMobile(mobile.trim(), name.trim());
+                await registerWithMobile(mobile.trim(), name.trim());
             }
 
             addNotification('OTP has been resent to your email address. Please check your inbox.', 'success');
@@ -224,12 +223,12 @@ const MobileLoginPage: React.FC = () => {
                                     {isLoading ? <CircularProgress size={24} /> : 'Send OTP'}
                                 </Button>
                                 <Grid container>
-                                    <Grid item xs>
+                                    <Grid size="grow">
                                         <MuiLink component={RouterLink} to="/login" variant="body2">
                                             Login with Email
                                         </MuiLink>
                                     </Grid>
-                                    <Grid item>
+                                    <Grid size="auto">
                                         <MuiLink component={RouterLink} to="/register" variant="body2">
                                             Register with Email
                                         </MuiLink>
@@ -329,12 +328,12 @@ const MobileLoginPage: React.FC = () => {
                                     {isLoading ? <CircularProgress size={24} /> : 'Send OTP'}
                                 </Button>
                                 <Grid container>
-                                    <Grid item xs>
+                                    <Grid size="grow">
                                         <MuiLink component={RouterLink} to="/login" variant="body2">
                                             Login with Email
                                         </MuiLink>
                                     </Grid>
-                                    <Grid item>
+                                    <Grid size="auto">
                                         <MuiLink component={RouterLink} to="/register" variant="body2">
                                             Register with Email
                                         </MuiLink>

@@ -14,7 +14,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-import { parseISO } from 'date-fns';
+
 
 interface InstagramFeedsCardProps {
     data: DailyContent;
@@ -102,7 +102,7 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({ data, onContent
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>
-                    
+
                     <Typography
                         variant="h4"
                         component="h1"

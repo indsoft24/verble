@@ -18,7 +18,7 @@ const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    
+
 
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
@@ -137,7 +137,7 @@ const LoginPage: React.FC = () => {
                     >
                         {isLoading ? <CircularProgress size={24} sx={{ color: 'primary.contrastText', position: 'absolute' }} /> : 'Sign In'}
                     </Button>
-                    
+
                     <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
                         <Divider sx={{ flex: 1 }} />
                         <Typography variant="body2" sx={{ mx: 2, color: 'text.secondary' }}>
@@ -145,7 +145,7 @@ const LoginPage: React.FC = () => {
                         </Typography>
                         <Divider sx={{ flex: 1 }} />
                     </Box>
-                    
+
                     <GoogleLoginButton
                         fullWidth
                         variant="outlined"
@@ -159,7 +159,7 @@ const LoginPage: React.FC = () => {
                         disabled={isLoading}
                     />
                     <Grid container>
-                        <Grid item xs={12} sx={{ textAlign: 'center', mb: 1 }}>
+                        <Grid size={{ xs: 12 }} sx={{ textAlign: 'center', mb: 1 }}>
                             <MuiLink component={RouterLink} to="/mobile-login" variant="body2" sx={{ fontWeight: 'bold' }}>
                                 Login with Mobile Number
                             </MuiLink>

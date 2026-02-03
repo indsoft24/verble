@@ -122,8 +122,8 @@ const HomePage: React.FC = () => {
     // Calculate progress for level unlock
     const getLevelProgress = () => {
         const level = user.membershipLevel || 'FREE';
-        const unlockedLevels = user.unlockedLevels || ['FREE'];
-        
+        // const unlockedLevels = user.unlockedLevels || ['FREE'];
+
         if (level === 'FREE') {
             const streak = user.streaks?.free?.current || 0;
             const target = 30;
@@ -166,7 +166,7 @@ const HomePage: React.FC = () => {
     const unlockedLevels = user.unlockedLevels || ['FREE'];
 
     // Filter content by unlocked levels
-    const filteredContent = dailyContent.filter(content => 
+    const filteredContent = dailyContent.filter(content =>
         unlockedLevels.includes(content.level)
     );
 
@@ -177,7 +177,7 @@ const HomePage: React.FC = () => {
 
     const handleActivityClick = (content: DailyContent | null, type: 'word' | 'conversation') => {
         if (!content) return;
-        
+
         // Check if level is unlocked
         if (!unlockedLevels.includes(content.level)) {
             return; // Don't open if locked
@@ -217,7 +217,7 @@ const HomePage: React.FC = () => {
                 )}
                 {activityType === 'conversation' && selectedActivity.metadata?.dialogue && (
                     <Box sx={{ height: '80vh' }}>
-                        <ConversationChat 
+                        <ConversationChat
                             dialogue={selectedActivity.metadata.dialogue}
                             userSpeaker={selectedActivity.metadata.participants?.[1]}
                         />
@@ -308,7 +308,7 @@ const HomePage: React.FC = () => {
             ) : (
                 <Grid container spacing={3}>
                     {/* Word of the Day (Free) */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Card
                             elevation={3}
                             sx={{
@@ -321,7 +321,7 @@ const HomePage: React.FC = () => {
                             }}
                         >
                             <CardActionArea
-                                onClick={() => handleActivityClick(wordContent, 'word')}
+                                onClick={() => wordContent && handleActivityClick(wordContent, 'word')}
                                 disabled={!wordContent}
                                 sx={{ height: '100%' }}
                             >
@@ -368,7 +368,7 @@ const HomePage: React.FC = () => {
                     </Grid>
 
                     {/* Story (Bronze) */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Card
                             elevation={3}
                             sx={{
@@ -391,8 +391,8 @@ const HomePage: React.FC = () => {
                                             component={getContentTypeConfig('STORY').icon}
                                             sx={{
                                                 fontSize: 40,
-                                                color: unlockedLevels.includes('BRONZE') && storyContent 
-                                                    ? getContentTypeConfig('STORY').color 
+                                                color: unlockedLevels.includes('BRONZE') && storyContent
+                                                    ? getContentTypeConfig('STORY').color
                                                     : 'text.disabled',
                                                 mr: 2
                                             }}
@@ -401,10 +401,10 @@ const HomePage: React.FC = () => {
                                             <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                                                 {getContentTypeConfig('STORY').label}
                                             </Typography>
-                                            <Chip 
-                                                label="BRONZE" 
-                                                size="small" 
-                                                color="warning" 
+                                            <Chip
+                                                label="BRONZE"
+                                                size="small"
+                                                color="warning"
                                                 sx={{ mt: 0.5, cursor: !unlockedLevels.includes('BRONZE') ? 'pointer' : 'default' }}
                                                 icon={!unlockedLevels.includes('BRONZE') ? <LockIcon /> : undefined}
                                                 onClick={(e) => {
@@ -435,7 +435,7 @@ const HomePage: React.FC = () => {
                     </Grid>
 
                     {/* Conversation (Silver) */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Card
                             elevation={3}
                             sx={{
@@ -458,8 +458,8 @@ const HomePage: React.FC = () => {
                                             component={getContentTypeConfig('CONVERSATION').icon}
                                             sx={{
                                                 fontSize: 40,
-                                                color: unlockedLevels.includes('SILVER') && conversationContent 
-                                                    ? getContentTypeConfig('CONVERSATION').color 
+                                                color: unlockedLevels.includes('SILVER') && conversationContent
+                                                    ? getContentTypeConfig('CONVERSATION').color
                                                     : 'text.disabled',
                                                 mr: 2
                                             }}
@@ -468,10 +468,10 @@ const HomePage: React.FC = () => {
                                             <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                                                 {getContentTypeConfig('CONVERSATION').label}
                                             </Typography>
-                                            <Chip 
-                                                label="SILVER" 
-                                                size="small" 
-                                                color="info" 
+                                            <Chip
+                                                label="SILVER"
+                                                size="small"
+                                                color="info"
                                                 sx={{ mt: 0.5, cursor: !unlockedLevels.includes('SILVER') ? 'pointer' : 'default' }}
                                                 icon={!unlockedLevels.includes('SILVER') ? <LockIcon /> : undefined}
                                                 onClick={(e) => {
@@ -512,7 +512,7 @@ const HomePage: React.FC = () => {
                     {['BRONZE', 'SILVER', 'GOLD', 'FULL_COURSE'].map((level) => {
                         const isUnlocked = unlockedLevels.includes(level);
                         return (
-                            <Grid item xs={12} sm={6} md={3} key={level}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={level}>
                                 <Card
                                     elevation={isUnlocked ? 3 : 1}
                                     sx={{
@@ -549,7 +549,7 @@ const HomePage: React.FC = () => {
                     </Typography>
                     <Grid container spacing={2}>
                         {offers.map((offer) => (
-                            <Grid item xs={12} sm={6} md={4} key={offer._id}>
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={offer._id}>
                                 <Card elevation={2}>
                                     {offer.imageUrl && (
                                         <Box
@@ -603,7 +603,7 @@ const HomePage: React.FC = () => {
                     <Paper elevation={2} sx={{ p: 2 }}>
                         <Grid container spacing={2}>
                             {recentJoiners.map((joiner, index) => (
-                                <Grid item xs={12} sm={6} md={4} key={index}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <SchoolIcon color="primary" />
                                         <Box>
@@ -630,7 +630,7 @@ const HomePage: React.FC = () => {
                 </Typography>
                 <Grid container spacing={3}>
                     {/* Free Challenges Leaderboard */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Paper elevation={2} sx={{ p: 3 }}>
                             <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                                 Free Challenges
@@ -663,19 +663,19 @@ const HomePage: React.FC = () => {
                                                     borderColor: isTopThree ? 'primary.light' : 'transparent',
                                                 }}
                                             >
-                                                <Typography 
-                                                    variant="body2" 
-                                                    sx={{ 
-                                                        minWidth: 40, 
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        minWidth: 40,
                                                         fontWeight: isTopThree ? 'bold' : 'normal',
                                                         color: isTopThree ? medalColors[entry.rank - 1] : 'inherit'
                                                     }}
                                                 >
                                                     #{entry.rank}
                                                 </Typography>
-                                                <Typography 
-                                                    variant="body2" 
-                                                    sx={{ 
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
                                                         flexGrow: 1,
                                                         fontWeight: isTopThree ? 'bold' : 'normal'
                                                     }}
@@ -701,7 +701,7 @@ const HomePage: React.FC = () => {
                     </Grid>
 
                     {/* Paid Challenges Leaderboard */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Paper elevation={2} sx={{ p: 3 }}>
                             <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                                 Paid Challenges
@@ -734,19 +734,19 @@ const HomePage: React.FC = () => {
                                                     borderColor: isTopThree ? 'primary.light' : 'transparent',
                                                 }}
                                             >
-                                                <Typography 
-                                                    variant="body2" 
-                                                    sx={{ 
-                                                        minWidth: 40, 
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        minWidth: 40,
                                                         fontWeight: isTopThree ? 'bold' : 'normal',
                                                         color: isTopThree ? medalColors[entry.rank - 1] : 'inherit'
                                                     }}
                                                 >
                                                     #{entry.rank}
                                                 </Typography>
-                                                <Typography 
-                                                    variant="body2" 
-                                                    sx={{ 
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
                                                         flexGrow: 1,
                                                         fontWeight: isTopThree ? 'bold' : 'normal'
                                                     }}
