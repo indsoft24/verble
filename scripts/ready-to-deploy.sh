@@ -18,5 +18,5 @@ docker compose -f docker-compose.vps.yml build
 echo ">>> Starting stack (web, backend, mongo, redis)..."
 docker compose -f docker-compose.vps.yml up -d
 
-echo ">>> Verble is running. Frontend: http://localhost:3000"
+echo ">>> Verble is running. Frontend: http://localhost:3001 (proxy this in Apache)"
 echo "    Logs: docker compose -f docker-compose.vps.yml logs -f"
