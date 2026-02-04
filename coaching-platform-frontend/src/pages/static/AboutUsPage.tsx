@@ -19,26 +19,29 @@ import PeopleIcon from '@mui/icons-material/People';
 import StarIcon from '@mui/icons-material/Star';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 
-// Feature Card Component (compact)
+// Feature Card Component
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
     <Paper
         elevation={2}
         sx={{
-            p: 2,
+            p: 3,
+            px: { xs: 2.5, sm: 3 },
             borderRadius: '12px',
             height: '100%',
+            minHeight: 140,
             transition: 'transform 0.2s, box-shadow 0.2s',
+            overflow: 'hidden',
             '&:hover': {
                 transform: 'translateY(-2px)',
                 boxShadow: 3
             }
         }}
     >
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Box sx={{ color: 'primary.main', mr: 1.25, fontSize: '2rem' }}>{icon}</Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ color: 'primary.main', mr: 1.5, fontSize: '2rem', flexShrink: 0 }}>{icon}</Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{title}</Typography>
         </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, pr: 0.5 }}>
             {description}
         </Typography>
     </Paper>
@@ -98,6 +101,7 @@ const AboutUsPage: React.FC = () => {
             {/* Hero Section */}
             <Box sx={{
                 py: { xs: 4, md: 5 },
+                px: { xs: 2, md: 3 },
                 textAlign: 'center',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
@@ -105,19 +109,19 @@ const AboutUsPage: React.FC = () => {
                 overflow: 'hidden'
             }}>
                 <Container maxWidth="md">
-                    <RecordVoiceOverIcon sx={{ fontSize: 56, mb: 1.5, opacity: 0.9 }} />
-                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 1.5 }}>
+                    <RecordVoiceOverIcon sx={{ fontSize: 56, mb: 2, opacity: 0.9 }} />
+                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 2 }}>
                         About Verble
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, opacity: 0.95 }}>
                         "Speak English. Live Freely."
                     </Typography>
-                    <Typography variant="body1" sx={{ maxWidth: '720px', mx: 'auto', opacity: 0.9, lineHeight: 1.6 }}>
+                    <Typography variant="body1" sx={{ maxWidth: '720px', mx: 'auto', opacity: 0.9, lineHeight: 1.6, mb: 1 }}>
                         Verble exists to break the English barrier for millions of non-native speakers in India.
                         We deliver simple, survival English that works in streets, offices, and weddings –
                         turning hesitation into confidence.
                     </Typography>
-                    <Box sx={{ mt: 2.5 }}>
+                    <Box sx={{ mt: 3 }}>
                         <Chip
                             label="No Complex Grammar"
                             sx={{
@@ -138,18 +142,18 @@ const AboutUsPage: React.FC = () => {
             </Box>
 
             {/* What is Verble Section */}
-            <Box sx={{ py: { xs: 4, md: 5 }, bgcolor: 'grey.50' }}>
+            <Box sx={{ py: { xs: 4, md: 5 }, px: { xs: 2, md: 0 }, bgcolor: 'grey.50' }}>
                 <Container maxWidth="lg">
-                    <Grid container spacing={2} alignItems="center">
+                    <Grid container spacing={3} alignItems="center">
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}>
                                 What is Verble?
                             </Typography>
-                            <Typography variant="body2" sx={{ mb: 1.5, lineHeight: 1.6 }}>
+                            <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.6 }}>
                                 Verble is your <strong>mobile-first web app</strong> for bite-sized English mastery.
                                 Free tier for basics; Bronze/Silver/Gold for advanced practice.
                             </Typography>
-                            <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
+                            <Typography variant="body2" sx={{ mb: 2.5, lineHeight: 1.6, color: 'text.secondary' }}>
                                 Built by a <strong>15 years MNC professional</strong> passionate about EdTech –
                                 blending AI, daily habits, and cultural scenarios.
                             </Typography>
@@ -160,15 +164,15 @@ const AboutUsPage: React.FC = () => {
                             </Box>
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
-                            <Paper elevation={3} sx={{ p: 2.5, borderRadius: '16px', bgcolor: 'white' }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1.5, color: 'primary.main' }}>
+                            <Paper elevation={3} sx={{ p: 3, borderRadius: '16px', bgcolor: 'white' }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}>
                                     Our Mission
                                 </Typography>
-                                <Typography variant="body2" sx={{ lineHeight: 1.6, mb: 2 }}>
+                                <Typography variant="body2" sx={{ lineHeight: 1.6, mb: 2.5 }}>
                                     To empower millions of Indians to speak English confidently in real-life situations,
                                     breaking down language barriers that hold them back.
                                 </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2.5 }}>
                                     <PeopleIcon sx={{ fontSize: 32, color: 'success.main' }} />
                                     <Box>
                                         <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'success.main' }}>
@@ -186,10 +190,10 @@ const AboutUsPage: React.FC = () => {
             </Box>
 
             {/* Core Content & How It Helps */}
-            <Box sx={{ py: { xs: 4, md: 5 } }}>
+            <Box sx={{ py: { xs: 4, md: 5 }, px: { xs: 2, md: 0 } }}>
                 <Container maxWidth="lg">
-                    <Box sx={{ textAlign: 'center', mb: 3 }}>
-                        <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1.5, color: 'primary.main' }}>
+                    <Box sx={{ textAlign: 'center', mb: 4 }}>
+                        <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}>
                             Core Content & How It Helps
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '640px', mx: 'auto', lineHeight: 1.6 }}>
@@ -199,7 +203,7 @@ const AboutUsPage: React.FC = () => {
                         </Typography>
                     </Box>
 
-                    <Grid container spacing={2}>
+                    <Grid container spacing={2} sx={{ mt: 0.5 }}>
                         {coreFeatures.map((feature, index) => (
                             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
                                 <FeatureCard
@@ -214,31 +218,31 @@ const AboutUsPage: React.FC = () => {
             </Box>
 
             {/* Practical Scenarios Section */}
-            <Box sx={{ py: { xs: 4, md: 5 }, bgcolor: 'primary.main', color: 'white' }}>
+            <Box sx={{ py: { xs: 4, md: 5 }, px: { xs: 2, md: 0 }, bgcolor: 'primary.main', color: 'white' }}>
                 <Container maxWidth="md">
-                    <Box sx={{ textAlign: 'center', mb: 3 }}>
-                        <TranslateIcon sx={{ fontSize: 44, mb: 1 }} />
-                        <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    <Box sx={{ textAlign: 'center', mb: 4 }}>
+                        <TranslateIcon sx={{ fontSize: 44, mb: 1.5 }} />
+                        <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1.5 }}>
                             Practical Phrases for Real Indian Life
                         </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9, mb: 2 }}>
+                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
                             Hinglish support ensures every learner succeeds.
                         </Typography>
                     </Box>
-                    <Grid container spacing={1.5}>
+                    <Grid container spacing={2}>
                         {practicalScenarios.map((scenario, index) => (
                             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
                                 <Paper
                                     elevation={0}
                                     sx={{
-                                        p: 1.5,
+                                        p: 2,
                                         bgcolor: 'rgba(255,255,255,0.1)',
-                                        borderRadius: '10px',
+                                        borderRadius: '12px',
                                         textAlign: 'center',
                                         backdropFilter: 'blur(10px)'
                                     }}
                                 >
-                                    <CheckCircleIcon sx={{ mb: 0.5, fontSize: 24 }} />
+                                    <CheckCircleIcon sx={{ mb: 1, fontSize: 26 }} />
                                     <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
                                         {scenario}
                                     </Typography>
@@ -250,21 +254,21 @@ const AboutUsPage: React.FC = () => {
             </Box>
 
             {/* Why Verble Works Section */}
-            <Box sx={{ py: { xs: 4, md: 5 } }}>
+            <Box sx={{ py: { xs: 4, md: 5 }, px: { xs: 2, md: 0 } }}>
                 <Container maxWidth="lg">
-                    <Box sx={{ textAlign: 'center', mb: 3 }}>
-                        <StarIcon sx={{ fontSize: 44, color: 'primary.main', mb: 1 }} />
+                    <Box sx={{ textAlign: 'center', mb: 4 }}>
+                        <StarIcon sx={{ fontSize: 44, color: 'primary.main', mb: 1.5 }} />
                         <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1, color: 'primary.main' }}>
                             Why Verble Works
                         </Typography>
                     </Box>
                     <Grid container spacing={2}>
                         <Grid size={{ xs: 12, md: 8 }} sx={{ mx: 'auto' }}>
-                            <Paper elevation={3} sx={{ p: 2.5, borderRadius: '16px' }}>
+                            <Paper elevation={3} sx={{ p: 3, borderRadius: '16px' }}>
                                 <List dense disablePadding>
                                     {whyVerbleWorks.map((item, index) => (
-                                        <ListItem key={index} sx={{ py: 1 }}>
-                                            <ListItemIcon sx={{ minWidth: 36 }}>
+                                        <ListItem key={index} sx={{ py: 1.25 }}>
+                                            <ListItemIcon sx={{ minWidth: 40 }}>
                                                 <CheckCircleIcon color="success" sx={{ fontSize: 24 }} />
                                             </ListItemIcon>
                                             <ListItemText
@@ -284,7 +288,7 @@ const AboutUsPage: React.FC = () => {
             </Box>
 
             {/* Call to Action Section */}
-            <Box sx={{ py: { xs: 4, md: 5 }, bgcolor: 'grey.50' }}>
+            <Box sx={{ py: { xs: 4, md: 5 }, px: { xs: 2, md: 0 }, bgcolor: 'grey.50' }}>
                 <Container maxWidth="md">
                     <Paper
                         elevation={4}
@@ -296,10 +300,10 @@ const AboutUsPage: React.FC = () => {
                             color: 'white'
                         }}
                     >
-                        <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1.5 }}>
+                        <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
                             Join the Fluency Revolution
                         </Typography>
-                        <Typography variant="body1" sx={{ mb: 3, opacity: 0.95 }}>
+                        <Typography variant="body1" sx={{ mb: 3.5, opacity: 0.95 }}>
                             Start free today and transform your English speaking confidence in just 30 days.
                         </Typography>
                         <Button
