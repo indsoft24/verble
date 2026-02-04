@@ -32,6 +32,7 @@ import { getAdjacentContent, type DailyContent } from '../../services/dailyConte
 interface VocabularySetCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
+    onSubmissionSuccess?: () => void;
 }
 
 interface VocabItem {
@@ -99,7 +100,7 @@ const ConfettiEffect: React.FC = () => {
     );
 };
 
-const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentChange }) => {
+const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
     const { user } = useAuth();
     const [sentences, setSentences] = useState<SentenceData[]>([{ sentence: '', vocabWordsUsed: [] }]);
     const [selectedVocabWords, setSelectedVocabWords] = useState<{ [key: number]: Set<string> }>({});
@@ -336,6 +337,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                 setSelectedVocabWords({});
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
+                onSubmissionSuccess?.();
             } else {
                 setSubmitStatus({
                     type: 'error',

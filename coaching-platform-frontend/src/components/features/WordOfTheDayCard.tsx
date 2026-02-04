@@ -54,6 +54,7 @@ interface DailyContent {
 interface WordOfTheDayCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
+    onSubmissionSuccess?: () => void;
 }
 
 interface TabPanelProps {
@@ -78,7 +79,7 @@ function TabPanel(props: TabPanelProps) {
     );
 }
 
-const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({ data, onContentChange }) => {
+const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
     const { user } = useAuth();
     const [tabValue, setTabValue] = useState(0);
     const [sentence, setSentence] = useState('');
@@ -242,6 +243,7 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({ data, onContentChan
                 setSentence('');
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
+                onSubmissionSuccess?.();
             } else {
                 setSubmitStatus({ type: 'error', message: response.data?.message || 'Failed to submit sentence' });
             }

@@ -27,6 +27,7 @@ import { getAdjacentContent, type DailyContent } from '../../services/dailyConte
 interface PhraseOfTheDayCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
+    onSubmissionSuccess?: () => void;
 }
 
 // Confetti animation keyframes
@@ -82,7 +83,7 @@ const ConfettiEffect: React.FC = () => {
     );
 };
 
-const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({ data, onContentChange }) => {
+const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
     const { user } = useAuth();
     const [sentences, setSentences] = useState<string[]>(['']);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -268,6 +269,7 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({ data, onContent
             setSentences(['']);
             setShowConfetti(true);
             setTimeout(() => setShowConfetti(false), 3000);
+            onSubmissionSuccess?.();
         } catch (error: any) {
             setSubmitStatus({
                 type: 'error',

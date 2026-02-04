@@ -27,6 +27,7 @@ import { type DailyContent } from '../../services/dailyContentService';
 interface PuzzleCardProps {
     data: DailyContent;
     puzzleType: 'SPOT_CORRECT_SENTENCE' | 'GRAMMAR_FILL_BLANK';
+    onSubmissionSuccess?: () => void;
 }
 
 interface Question {
@@ -94,7 +95,7 @@ const ConfettiEffect: React.FC = () => {
     );
 };
 
-const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType }) => {
+const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionSuccess }) => {
     const { user } = useAuth();
     const [answers, setAnswers] = useState<{ [key: number]: number }>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,6 +173,7 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType }) => {
                 setHasSubmitted(true);
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
+                onSubmissionSuccess?.();
             } else {
                 setSubmitStatus({
                     type: 'error',

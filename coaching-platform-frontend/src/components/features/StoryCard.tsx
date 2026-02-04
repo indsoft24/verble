@@ -31,6 +31,7 @@ import { parseISO } from 'date-fns';
 interface StoryCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
+    onSubmissionSuccess?: () => void;
 }
 
 // Confetti animation keyframes
@@ -86,7 +87,7 @@ const ConfettiEffect: React.FC = () => {
     );
 };
 
-const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange }) => {
+const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
     const { user } = useAuth();
     const [sentences, setSentences] = useState<string[]>(['']);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -297,6 +298,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange }) => {
                 setSentences(['']);
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
+                onSubmissionSuccess?.();
             } else {
                 setSubmitStatus({
                     type: 'error',

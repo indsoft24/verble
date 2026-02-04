@@ -33,7 +33,7 @@ import { getActiveOffers, type Offer } from '../services/offerService';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
 
 const UserDashboardPage: React.FC = () => {
-    const { user, isLoading: authIsLoading } = useAuth();
+    const { user, isLoading: authIsLoading, refreshUser } = useAuth();
 
 
     // State management
@@ -205,6 +205,11 @@ const UserDashboardPage: React.FC = () => {
         setActivityType(null);
     };
 
+    const refreshDashboardAfterSubmission = useCallback(async () => {
+        // Refresh points/streaks in header + leaderboard/rank cards
+        await Promise.allSettled([refreshUser(), fetchAdditionalData()]);
+    }, [refreshUser, fetchAdditionalData]);
+
     // Show activity modal if selected
     if (selectedActivity && activityType) {
         return (
@@ -216,7 +221,10 @@ const UserDashboardPage: React.FC = () => {
                         </Button>
                     </Box>
                     {activityType === 'word' && (
-                        <WordOfTheDayCard data={selectedActivity as any} />
+                        <WordOfTheDayCard
+                            data={selectedActivity as any}
+                            onSubmissionSuccess={refreshDashboardAfterSubmission}
+                        />
                     )}
                     {activityType === 'conversation' && selectedActivity.metadata?.dialogue && (
                         <Box sx={{ height: '80vh' }}>

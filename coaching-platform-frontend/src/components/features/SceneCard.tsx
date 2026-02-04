@@ -29,6 +29,7 @@ import { getAdjacentContent, type DailyContent } from '../../services/dailyConte
 interface SceneCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
+    onSubmissionSuccess?: () => void;
 }
 
 // Confetti animation keyframes
@@ -84,7 +85,7 @@ const ConfettiEffect: React.FC = () => {
     );
 };
 
-const SceneCard: React.FC<SceneCardProps> = ({ data, onContentChange }) => {
+const SceneCard: React.FC<SceneCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
     const { user } = useAuth();
     const [description, setDescription] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -235,6 +236,7 @@ const SceneCard: React.FC<SceneCardProps> = ({ data, onContentChange }) => {
                 setDescription('');
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
+                onSubmissionSuccess?.();
             } else {
                 setSubmitStatus({
                     type: 'error',

@@ -210,9 +210,13 @@ function AppContent() {
                 !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications'].some(path =>
                     location.pathname === path || location.pathname.startsWith(path + '/')
                 ) && <Footer />}
-            <Suspense fallback={null}>
-                <ChatbotWidget />
-            </Suspense>
+            {/* Chatbot: keep code, hide it from dashboards/admin */}
+            {!location.pathname.startsWith('/admin') &&
+                location.pathname !== '/dashboard' && (
+                    <Suspense fallback={null}>
+                        <ChatbotWidget />
+                    </Suspense>
+                )}
         </Box>
     );
 }
