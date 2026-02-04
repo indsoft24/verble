@@ -8,10 +8,10 @@ class GamificationService {
      * Record an activity completion for a user
      * @param {string} userId - User ID
      * @param {string} contentId - DailyContent ID
-     * @param {number} score - Score achieved (optional)
+     * @param {number} points - Points to award for this completion (optional; defaults to 10)
      * @returns {Promise<Object>} Result object with success status and updated user data
      */
-    static async recordActivity(userId, contentId, score = 0) {
+    static async recordActivity(userId, contentId, points = 10) {
         try {
             // Validate inputs
             if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(contentId)) {
@@ -56,18 +56,18 @@ class GamificationService {
 
                 // Add to existing progress
                 todayProgress.activitiesCompleted.push(contentId);
-                todayProgress.score += score;
+                todayProgress.score += points;
             } else {
                 // Create new daily progress entry
                 user.dailyProgress.push({
                     date: today,
                     activitiesCompleted: [contentId],
-                    score: score
+                    score: points
                 });
             }
 
-            // Add points (10pts per activity)
-            user.points += 10;
+            // Award points
+            user.points = (user.points || 0) + (points || 0);
 
             // Update streaks based on user's membership level
             const levelKey = this._getLevelKey(user.membershipLevel);

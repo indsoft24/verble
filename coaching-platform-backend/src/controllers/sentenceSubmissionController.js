@@ -74,14 +74,14 @@ export const submitSentence = asyncHandler(async (req, res) => {
         feedback: autoValidationResult?.feedback || undefined,
     });
 
-    // Record activity in gamification system (this will add points and update streaks)
-    // Only award points if auto-validated as correct, otherwise wait for manual validation
-    const pointsToAward = (autoValidationResult?.isCorrect === true && autoValidationResult?.confidence >= 0.8) ? 10 : 0;
-    
     try {
-        if (pointsToAward > 0) {
-            await GamificationService.recordActivity(req.user._id.toString(), wordId, pointsToAward);
-        }
+        // Record activity completion (award base points once per content per day)
+        // This keeps leaderboards/streaks functional even when AI validation is disabled.
+        const gamificationResult = await GamificationService.recordActivity(
+            req.user._id.toString(),
+            wordId,
+            10
+        );
         
         // Check for level up
         const levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
@@ -97,6 +97,7 @@ export const submitSentence = asyncHandler(async (req, res) => {
                     isCorrect: submission.isCorrect,
                     autoValidated: autoValidationResult !== null,
                 },
+                pointsAwarded: gamificationResult?.success ? 10 : 0,
                 levelUp: levelUpResult
             }
         });

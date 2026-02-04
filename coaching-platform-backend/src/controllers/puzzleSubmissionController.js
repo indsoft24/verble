@@ -107,66 +107,7 @@ export const submitPuzzle = asyncHandler(async (req, res) => {
 
     // Record activity in gamification system (points for correct answers)
     try {
-        // Get user to manually update points (since puzzles award 10 points per correct answer, not a fixed 10)
-        const User = (await import('../models/User.js')).default;
-        const user = await User.findById(req.user._id);
-        
-        if (user) {
-            // Add points for correct answers (10 points per correct answer)
-            user.points += totalPoints;
-            
-            // Update daily progress
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            let todayProgress = user.dailyProgress.find(progress => {
-                const progressDate = new Date(progress.date);
-                progressDate.setHours(0, 0, 0, 0);
-                return progressDate.getTime() === today.getTime();
-            });
-
-            if (todayProgress) {
-                if (!todayProgress.activitiesCompleted.some(id => id.toString() === puzzleId.toString())) {
-                    todayProgress.activitiesCompleted.push(puzzleId);
-                    todayProgress.score += totalPoints;
-                }
-            } else {
-                user.dailyProgress.push({
-                    date: today,
-                    activitiesCompleted: [puzzleId],
-                    score: totalPoints
-                });
-            }
-
-            // Update streaks
-            const levelKey = user.membershipLevel === 'FREE' ? 'free' : 
-                           user.membershipLevel === 'BRONZE' ? 'bronze' : 
-                           user.membershipLevel === 'SILVER' ? 'silver' : null;
-            
-            if (levelKey && user.streaks && user.streaks[levelKey]) {
-                const streak = user.streaks[levelKey];
-                const lastActive = streak.lastActive ? new Date(streak.lastActive) : null;
-                const lastActiveDate = lastActive ? new Date(lastActive.setHours(0, 0, 0, 0)) : null;
-                const todayDate = new Date(today);
-
-                if (!lastActiveDate || lastActiveDate.getTime() === todayDate.getTime()) {
-                    // Same day, no change
-                } else {
-                    const daysDiff = Math.floor((todayDate.getTime() - lastActiveDate.getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysDiff === 1) {
-                        // Consecutive day
-                        streak.current += 1;
-                        streak.max = Math.max(streak.max, streak.current);
-                    } else {
-                        // Streak broken
-                        streak.current = 1;
-                    }
-                }
-                streak.lastActive = today;
-            }
-
-            await user.save();
-        }
+        await GamificationService.recordActivity(req.user._id.toString(), puzzleId, totalPoints);
         
         // Check for level up
         const levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());

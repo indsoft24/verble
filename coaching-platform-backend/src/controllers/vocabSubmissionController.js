@@ -104,9 +104,9 @@ export const submitVocabSentences = asyncHandler(async (req, res) => {
     });
 
     // Record activity in gamification system (base points for submission)
-    // Note: Full points will be awarded after review
+    // Note: additional points can still be awarded after review if desired.
     try {
-        await GamificationService.recordActivity(req.user._id.toString(), vocabSetId, 0);
+        await GamificationService.recordActivity(req.user._id.toString(), vocabSetId, 10);
         
         // Check for level up
         const levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());

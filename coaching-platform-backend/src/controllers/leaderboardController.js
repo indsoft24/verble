@@ -11,6 +11,7 @@ export const getFreeLeaderboard = asyncHandler(async (req, res) => {
     const { limit = 100 } = req.query;
 
     const users = await User.find({
+        role: 'user',
         membershipLevel: { $in: ['FREE', 'BRONZE', 'SILVER', 'GOLD'] },
     })
         .select('name points membershipLevel')
@@ -55,6 +56,7 @@ export const getPaidLeaderboard = asyncHandler(async (req, res) => {
     const { limit = 100 } = req.query;
 
     const users = await User.find({
+        role: 'user',
         membershipLevel: 'FULL_COURSE',
     })
         .select('name points membershipLevel')
@@ -97,7 +99,7 @@ export const getPaidLeaderboard = asyncHandler(async (req, res) => {
  */
 export const getMyRank = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const user = await User.findById(userId).select('points membershipLevel');
+    const user = await User.findById(userId).select('points membershipLevel role');
 
     if (!user) {
         res.status(404);
@@ -108,8 +110,8 @@ export const getMyRank = asyncHandler(async (req, res) => {
     const leaderboardType = user.membershipLevel === 'FULL_COURSE' ? 'paid' : 'free';
     
     const query = leaderboardType === 'paid'
-        ? { membershipLevel: 'FULL_COURSE' }
-        : { membershipLevel: { $in: ['FREE', 'BRONZE', 'SILVER', 'GOLD'] } };
+        ? { role: 'user', membershipLevel: 'FULL_COURSE' }
+        : { role: 'user', membershipLevel: { $in: ['FREE', 'BRONZE', 'SILVER', 'GOLD'] } };
 
     const usersWithHigherPoints = await User.countDocuments({
         ...query,

@@ -140,7 +140,7 @@ const AboutUsPage: React.FC = () => {
             {/* What is Verble Section */}
             <Box sx={{ py: { xs: 4, md: 5 }, bgcolor: 'grey.50' }}>
                 <Container maxWidth="lg">
-                    <Grid container spacing={2} alignItems="center" sx={{ '--Grid-columnSpacing': '14px', '--Grid-rowSpacing': '14px' } as any}>
+                    <Grid container spacing={2} alignItems="center">
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}>
                                 What is Verble?
@@ -199,7 +199,7 @@ const AboutUsPage: React.FC = () => {
                         </Typography>
                     </Box>
 
-                    <Grid container spacing={2} sx={{ '--Grid-columnSpacing': '14px', '--Grid-rowSpacing': '14px' } as any}>
+                    <Grid container spacing={2}>
                         {coreFeatures.map((feature, index) => (
                             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
                                 <FeatureCard
@@ -225,7 +225,7 @@ const AboutUsPage: React.FC = () => {
                             Hinglish support ensures every learner succeeds.
                         </Typography>
                     </Box>
-                    <Grid container spacing={1.5} sx={{ '--Grid-columnSpacing': '14px', '--Grid-rowSpacing': '14px' } as any}>
+                    <Grid container spacing={1.5}>
                         {practicalScenarios.map((scenario, index) => (
                             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
                                 <Paper
@@ -258,7 +258,7 @@ const AboutUsPage: React.FC = () => {
                             Why Verble Works
                         </Typography>
                     </Box>
-                    <Grid container spacing={2} sx={{ '--Grid-columnSpacing': '14px' } as any}>
+                    <Grid container spacing={2}>
                         <Grid size={{ xs: 12, md: 8 }} sx={{ mx: 'auto' }}>
                             <Paper elevation={3} sx={{ p: 2.5, borderRadius: '16px' }}>
                                 <List dense disablePadding>
