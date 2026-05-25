@@ -1,7 +1,7 @@
 import SubscriptionPlan from '../models/SubscriptionPlan.js';
 import Course from '../models/Course.js';
 import mongoose from 'mongoose';
-import { processAndUploadToBunny, deleteFromBunny } from '../utils/bunnyUpload.js';
+import { processAndUploadImage, deleteStoredImage } from '../utils/localImageStorage.js';
 
 /**
  * @desc    Create a new subscription plan (Admin)
@@ -61,7 +61,7 @@ export const createSubscriptionPlan = async (req, res, next) => {
 
         let imageUrl;
         if (req.file) {
-            imageUrl = await processAndUploadToBunny(req.file.buffer, {
+            imageUrl = await processAndUploadImage(req.file.buffer, {
                 width: 800,
                 quality: 80,
                 pathPrefix: 'subscription_images',
@@ -242,11 +242,11 @@ export const updateSubscriptionPlanAdmin = async (req, res, next) => {
         if (req.file) {
             // Delete old image if it exists
             if (existingPlan.image) {
-                await deleteFromBunny(existingPlan.image);
+                await deleteStoredImage(existingPlan.image);
             }
 
             // Upload new image
-            fieldsToUpdate.image = await processAndUploadToBunny(req.file.buffer, {
+            fieldsToUpdate.image = await processAndUploadImage(req.file.buffer, {
                 width: 800,
                 quality: 80,
                 pathPrefix: 'subscription_images',
@@ -315,7 +315,7 @@ export const deleteSubscriptionPlanAdmin = async (req, res, next) => {
 
         // Delete plan image from Bunny if it exists
         if (plan.image) {
-            await deleteFromBunny(plan.image);
+            await deleteStoredImage(plan.image);
         }
 
         await SubscriptionPlan.findByIdAndDelete(req.params.id);

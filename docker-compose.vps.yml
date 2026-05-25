@@ -32,10 +32,14 @@ services:
       MONGODB_URI_DOCKER: mongodb://mongo:27017/verble
       REDIS_URL: redis://redis:6379
       DOCKER_ENV: "true"
+      # Stored under uploads/videos inside the bind mount above
+      VIDEO_STORAGE_ROOT: /usr/src/app/uploads/videos
     env_file:
       - ./coaching-platform-backend/.env
+    # Bind-mount a host directory so videos survive container recreation (not a Docker-only named volume).
+    # Create on host: sudo mkdir -p /var/lib/verble/media && sudo chown -R 1000:1000 /var/lib/verble/media
     volumes:
-      - verble-uploads:/usr/src/app/uploads
+      - /var/lib/verble/media:/usr/src/app/uploads
     depends_on:
       mongo:
         condition: service_healthy
@@ -82,7 +86,6 @@ services:
 volumes:
   verble-mongo-data:
   verble-redis-data:
-  verble-uploads:
 
 networks:
   verble-network:

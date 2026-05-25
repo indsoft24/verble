@@ -2,17 +2,11 @@ import express from 'express';
 import { 
     getActiveSubscriptionPlans, 
     getSubscriptionPlansForCourse, 
-    getActiveUPSCPlans,
-    getActiveLawPlans,
     getSubscriptionPlanDetails,
     getFilterOptions
 } from '../controllers/subscriptionController.js'; 
 
 const router = express.Router();
-
-router.get('/upsc', getActiveUPSCPlans);
-
-router.get('/law', getActiveLawPlans);
 
 router.get('/filter-options', getFilterOptions);
 

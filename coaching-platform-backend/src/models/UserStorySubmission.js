@@ -19,9 +19,9 @@ const userStorySubmissionSchema = new mongoose.Schema({
         required: true,
         validate: {
             validator: function(v) {
-                return v.length >= 1 && v.length <= 5;
+                return v.length >= 2 && v.length <= 5;
             },
-            message: 'Summary must contain between 1 and 5 sentences.'
+            message: 'Summary must contain between 2 and 5 sentences.'
         }
     },
     pointsEarned: {

@@ -321,10 +321,10 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, readOnly
     const file = event.target.files?.[0];
     if (file && editor) {
       try {
-        const { imageUrl: bunnyUrl } = await uploadBlogContentImage(file);
+        const { imageUrl: uploadedImageUrl } = await uploadBlogContentImage(file);
 
-        if (bunnyUrl) {
-          const url = new URL(bunnyUrl);
+        if (uploadedImageUrl) {
+          const url = new URL(uploadedImageUrl);
           const pathSegments = url.pathname.split('/');
           const fileName = pathSegments[pathSegments.length - 1];
           const secureImageUrl = `${apiBaseUrl}/blog/content-image/${fileName}`;

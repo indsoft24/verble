@@ -1,64 +1,7 @@
 import BlogPost from '../models/BlogPost.js';
-import sharp from 'sharp';
 import mongoose from 'mongoose';
 import slugify from 'slugify';
-import axios from 'axios'; 
-
-
-/**
- * A generic function to process an image buffer, resize it, convert it to WebP,
- * and upload it to a specified path in Bunny Storage.
- * @param {Buffer} fileBuffer - The image data from multer.
- * @param {object} options - Configuration for processing and uploading.
- * @returns {Promise<string>} The full public URL of the uploaded image.
- */
-const processAndUploadToBunny = async (fileBuffer, options) => {
-    const { width, quality, pathPrefix, originalName } = options;
-
-    try {
-        const processedImageBuffer = await sharp(fileBuffer)
-            .resize({ width: width, withoutEnlargement: true })
-            .webp({ quality: quality })
-            .toBuffer();
-        
-        const outputFilename = `${originalName.replace(/\.[^/.]+$/, "")}-${Date.now()}.webp`;
-        const storagePath = `${pathPrefix}/${outputFilename}`;
-        const uploadUrl = `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${storagePath}`;
-
-        await axios.put(uploadUrl, processedImageBuffer, {
-            headers: {
-                'AccessKey': process.env.BUNNY_STORAGE_ACCESS_KEY,
-                'Content-Type': 'image/webp',
-            },
-        });
-        
-        return `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${storagePath}`;
-    } catch (error) {
-        console.error(`Error processing/uploading to Bunny at path ${pathPrefix}:`, error.response?.data || error.message);
-        throw new Error(`Image upload failed for path: ${pathPrefix}.`);
-    }
-};
-
-/**
- * A generic function to delete a file from Bunny Storage given its full URL.
- * @param {string} fileUrl - The full public URL of the file to delete.
- */
-const deleteFromBunny = async (fileUrl) => {
-    if (!fileUrl || !fileUrl.startsWith('http')) return; 
-    try {
-        await axios.delete(fileUrl, {
-            headers: { 'AccessKey': process.env.BUNNY_STORAGE_ACCESS_KEY },
-        });
-        console.log(`Successfully deleted from Bunny Storage: ${fileUrl}`);
-    } catch (err) {
-        if (err.response && err.response.status === 404) {
-            console.warn(`File not found on Bunny Storage to delete: ${fileUrl}`);
-        } else {
-            console.error(`Could not delete image from Bunny Storage: ${err.message}`);
-        }
-    }
-};
-
+import { processAndUploadImage, deleteStoredImage } from '../utils/localImageStorage.js';
 
 /**
  * @desc    Upload an image for Tiptap editor content to Bunny Storage
@@ -69,7 +12,7 @@ export const uploadBlogContentImageAdmin = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ status: 'fail', message: 'No image file provided.' });
         }
-        const imageUrl = await processAndUploadToBunny(req.file.buffer, {
+        const imageUrl = await processAndUploadImage(req.file.buffer, {
             width: 800,
             quality: 75,
             pathPrefix: 'blog_content_images', 
@@ -92,7 +35,7 @@ export const createBlogPostAdmin = async (req, res) => {
 
         let featureImageUrl;
         if (req.file) {
-            featureImageUrl = await processAndUploadToBunny(req.file.buffer, {
+            featureImageUrl = await processAndUploadImage(req.file.buffer, {
                 width: 1200,
                 quality: 80,
                 pathPrefix: 'blog_images', 
@@ -135,12 +78,12 @@ export const updateBlogPostAdmin = async (req, res) => {
         let newFeatureImageUrl = postToUpdate.featureImage;
         
         if (req.file) { 
-            await deleteFromBunny(postToUpdate.featureImage); 
-            newFeatureImageUrl = await processAndUploadToBunny(req.file.buffer, {
+            await deleteStoredImage(postToUpdate.featureImage); 
+            newFeatureImageUrl = await processAndUploadImage(req.file.buffer, {
                 width: 1200, quality: 90, pathPrefix: 'blog_images', originalName: req.file.originalname,
             });
         } else if (req.body.removeFeatureImage === 'true') { 
-            await deleteFromBunny(postToUpdate.featureImage);
+            await deleteStoredImage(postToUpdate.featureImage);
             newFeatureImageUrl = ''; 
         }
 
@@ -183,7 +126,7 @@ export const deleteBlogPostAdmin = async (req, res) => {
             return res.status(404).json({ status: 'fail', message: 'Blog post not found.' });
         }
         
-        await deleteFromBunny(post.featureImage); // Delete image from Bunny Storage
+        await deleteStoredImage(post.featureImage); // Delete image from Bunny Storage
         await BlogPost.findByIdAndDelete(postId); // Delete post from DB
         
         res.status(204).send();

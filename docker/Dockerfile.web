@@ -1,12 +1,15 @@
+# syntax=docker/dockerfile:1
 # Stage 1: Build frontend (Vite/React)
+# Tip: For 1-line changes, run "npm run dev" in coaching-platform-frontend/ (HMR = instant). Use this image build only for production/CI.
 FROM node:18-alpine AS frontend-build
 WORKDIR /app
 
 COPY coaching-platform-frontend/package*.json ./
-RUN npm ci
+# Reuse npm cache when package.json changes (BuildKit; default in Docker 23+)
+RUN --mount=type=cache,target=/root/.npm \
+    npm install
 COPY coaching-platform-frontend/ ./
 
-# API calls go to same origin; nginx will proxy /api to backend
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=/api
 

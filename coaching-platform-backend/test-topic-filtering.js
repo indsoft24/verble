@@ -85,8 +85,8 @@ console.log("5. Get filter options:");
 console.log("GET /api/subscription-plans/filter-options");
 console.log("Expected: { topics: ['UPSC', 'Law'], subTopicsByTopic: { 'UPSC': ['Full UPSC course', 'Only G.S', 'Only CSAT', 'Optional'], 'Law': ['Entrance Preparation'] } }\n");
 
-console.log("6. Get UPSC plans with subTopic filter:");
-console.log("GET /api/subscription-plans/upsc?subTopic=Optional");
+console.log("6. Get plans with topic and subTopic filter:");
+console.log("GET /api/subscription-plans?topic=UPSC&subTopic=Optional");
 console.log("Expected: 1 plan (UPSC Optional Subject - History)\n");
 
 console.log("=== Frontend Usage Examples ===\n");

@@ -4,6 +4,7 @@ import UserStorySubmission from '../models/UserStorySubmission.js';
 import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
+import { isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
 
 /**
  * @desc    Submit a story summary
@@ -18,9 +19,9 @@ export const submitStorySummary = asyncHandler(async (req, res) => {
         throw new Error('Story ID and summary are required.');
     }
 
-    if (!Array.isArray(summary) || summary.length < 1 || summary.length > 5) {
+    if (!Array.isArray(summary) || summary.length < 2 || summary.length > 5) {
         res.status(400);
-        throw new Error('Summary must contain between 1 and 5 sentences.');
+        throw new Error('Summary must contain between 2 and 5 sentences.');
     }
 
     if (!mongoose.Types.ObjectId.isValid(storyId)) {
@@ -40,6 +41,11 @@ export const submitStorySummary = asyncHandler(async (req, res) => {
         throw new Error('Content is not a story.');
     }
 
+    if (!isDailyContentScheduledForLocalToday(storyContent.date)) {
+        res.status(400);
+        throw new Error('You can only submit summary for today\'s story.');
+    }
+
     // Check if user already submitted a summary for this story
     const existingSubmission = await UserStorySubmission.findOne({
         userId: req.user._id,
@@ -54,9 +60,9 @@ export const submitStorySummary = asyncHandler(async (req, res) => {
     // Trim and validate sentences
     const trimmedSummary = summary.map(s => s.trim()).filter(s => s.length > 0);
     
-    if (trimmedSummary.length < 1 || trimmedSummary.length > 5) {
+    if (trimmedSummary.length < 2 || trimmedSummary.length > 5) {
         res.status(400);
-        throw new Error('Summary must contain between 1 and 5 non-empty sentences.');
+        throw new Error('Summary must contain between 2 and 5 non-empty sentences.');
     }
 
     // Create the submission

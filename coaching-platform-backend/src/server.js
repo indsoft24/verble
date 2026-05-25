@@ -6,6 +6,7 @@ import compression from 'compression';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
+import { ensureVideoStorageDirs } from './config/videoStorageConfig.js';
 import mainApiRoutes from './routes/index.js';
 import { 
     securityHeaders, 
@@ -69,6 +70,11 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 connectDB().then(async () => {
+    try {
+        await ensureVideoStorageDirs();
+    } catch (e) {
+        console.error('[Server] Could not create video storage directories:', e.message);
+    }
     // Start daily notification scheduler after DB connection
     if (process.env.ENABLE_DAILY_NOTIFICATIONS !== 'false') {
         try {

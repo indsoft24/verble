@@ -63,6 +63,7 @@ const AdminExamCategoriesPage = lazy(() => import('./pages/AdminExamCategoriesPa
 const AdminKnowledgeBasePage = lazy(() => import('./pages/AdminKnowledgeBasePage'));
 const AdminSentenceValidationPage = lazy(() => import('./pages/AdminSentenceValidationPage'));
 const AdminDailyContentPage = lazy(() => import('./pages/AdminDailyContentPage'));
+const AdminDatabaseManagerPage = lazy(() => import('./pages/AdminDatabaseManagerPage'));
 
 // Static Pages (Low priority - lazy load)
 const ContactUsPage = lazy(() => import('./pages/static/ContactUsPage'));
@@ -196,6 +197,7 @@ function AppContent() {
                             <Route path='/admin/knowledgebase' element={<AdminKnowledgeBasePage />} />
                             <Route path='/admin/sentence-validation' element={<AdminSentenceValidationPage />} />
                             <Route path='/admin/daily-content' element={<AdminDailyContentPage />} />
+                            <Route path='/admin/database-manager' element={<AdminDatabaseManagerPage />} />
                         </Route>
 
                         {/* Fallback Routes */}

@@ -12,6 +12,14 @@ const moduleSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    timeline: {
+      type: String,
+      trim: true,
+    },
+    chapters: {
+      type: [String],
+      default: [],
+    },
     image: {
       type: String,
       trim: true,

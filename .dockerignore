@@ -1,0 +1,36 @@
+# Used when `docker compose` build context is the repo root (e.g. web service in docker-compose.vps.yml).
+# Without this, Docker sends hundreds of MB (node_modules, .git, other app) before the web Dockerfile runs.
+
+# VCS
+.git
+.github
+**/.git
+
+# Never send dependency trees — the Dockerfile runs `npm install` in the image
+**/node_modules
+**/.npm
+
+# Frontend build artifacts (fresh build in container)
+coaching-platform-frontend/dist
+coaching-platform-frontend/build
+coaching-platform-frontend/.vite
+
+# Entire backend app is not part of the web image (separate build context for backend)
+coaching-platform-backend
+
+# Logs & local env (image uses build-args / runtime proxy, not host .env for Vite)
+**/*.log
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+**/.DS_Store
+.idea
+.vscode
+**/*.swp
+
+# Optional local media (if present under repo)
+uploads
+**/uploads

@@ -243,7 +243,7 @@ export const videoSecurityHeaders = (req, res, next) => {
         // Content Security Policy for video
         res.setHeader(
             'Content-Security-Policy',
-            "default-src 'self'; media-src 'self' https://*.mediadelivery.net https://*.bunny.net https://*.b-cdn.net; script-src 'self' 'unsafe-inline'; frame-src 'self' https://*.mediadelivery.net;"
+            "default-src 'self'; media-src 'self'; script-src 'self' 'unsafe-inline'; frame-src 'self';"
         );
     }
     
@@ -262,7 +262,7 @@ export const validateVideoToken = (req, res, next) => {
     }
     
     // This middleware validates tokens passed in query params
-    // The actual token validation happens in Bunny Stream, but we can do basic checks
+    // Basic checks before serving local HLS segments
     const { token, expires } = req.query;
     
     if (!token || !expires) {

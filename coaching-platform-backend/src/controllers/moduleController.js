@@ -6,6 +6,8 @@ import mongoose from 'mongoose';
 import asyncHandler from 'express-async-handler';
 import { checkSequentialVideoAccess, getModuleCompletionCycle, getCurrentUnlockedSetIndex } from '../utils/videoAccessHelper.js';
 import { getCache, setCache, generateCacheKey, CACHE_TTL } from '../utils/cacheHelper.js';
+import { getStreamProvider } from '../utils/videoStreamProvider.js';
+import { getActiveUserTierLevel, canAccessRequiredPlansByTier } from '../utils/subscriptionTierAccess.js';
 
 /**
  * @desc    Helper function to check if a user has subscription access to a video.
@@ -25,32 +27,11 @@ const checkSubscriptionAccess = (user, video) => {
     if (!user || !user.subscriptions || user.subscriptions.length === 0) {
         return false;
     }
-
-    const now = new Date();
-    const userActivePlanIds = user.subscriptions
-        .filter(sub => sub.status === 'active' && new Date(sub.startDate) <= now && new Date(sub.endDate) >= now)
-        .map(sub => {
-            // Handle both ObjectId and string planId
-            const planId = sub.planId;
-            if (typeof planId === 'string') return planId;
-            if (planId && typeof planId === 'object' && planId._id) return planId._id.toString();
-            if (planId && typeof planId.toString === 'function') return planId.toString();
-            return String(planId);
-        });
-
-    // Handle populated requiredPlans (objects with _id) or ObjectIds
-    const videoRequiredPlanIds = video.requiredPlans.map(plan => {
-        if (typeof plan === 'string') return plan;
-        if (plan && typeof plan === 'object' && plan._id) return plan._id.toString();
-        if (plan && typeof plan.toString === 'function') return plan.toString();
-        return String(plan);
+    const userTierLevel = getActiveUserTierLevel(user.subscriptions);
+    return canAccessRequiredPlansByTier({
+        requiredPlans: video.requiredPlans,
+        userTierLevel,
     });
-    
-    const hasAccess = userActivePlanIds.some(userPlanId => videoRequiredPlanIds.includes(userPlanId));
-    
-    // Subscription access check completed
-    
-    return hasAccess;
 };
 
 
@@ -85,7 +66,7 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
         Video.find({ modules: moduleId, isPublished: true })
             .populate('requiredPlans', '_id name')
             .sort({ order: 'asc' })
-            .select('_id title description bunnyThumbnailUrl durationSeconds order bunnyVideoLibraryId bunnyVideoId videoStatus bunnyProcessingProgress isPublished uploader createdAt updatedAt bunnyStreamUrl height width associatedMaterials courses modules requiredPlans tags')
+            .select('_id title description durationSeconds order videoStatus processingProgress isPublished uploader createdAt updatedAt height width associatedMaterials courses modules requiredPlans tags streamProvider localStorageId')
             .lean()
     ]);
 
@@ -147,23 +128,23 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
         const tagsArray = convertToStringArray(video.tags);
         
         // Create a clean video object with explicit array fields
+        const thumbUrl = getStreamProvider(video) === 'local' && video.videoStatus === 'AVAILABLE' && video.localStorageId
+            ? `/api/videos/thumbnail/${video._id}`
+            : null;
         const videoObject = {
             _id: video._id?.toString(),
             title: video.title,
             description: video.description,
-            bunnyThumbnailUrl: video.bunnyThumbnailUrl,
+            thumbnailUrl: thumbUrl,
             durationSeconds: video.durationSeconds,
             order: video.order,
-            bunnyVideoLibraryId: video.bunnyVideoLibraryId,
-            bunnyVideoId: video.bunnyVideoId,
             videoStatus: video.videoStatus,
-            bunnyProcessingProgress: video.bunnyProcessingProgress,
+            processingProgress: video.processingProgress,
             isPublished: video.isPublished,
             uploader: video.uploader?.toString(),
             createdAt: video.createdAt,
             updatedAt: video.updatedAt,
             __v: video.__v,
-            bunnyStreamUrl: video.bunnyStreamUrl,
             height: video.height,
             width: video.width,
             associatedMaterials: video.associatedMaterials || [],
@@ -226,7 +207,7 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
         const cycle0Progress = watchProgressMap.get(cycle0Key);
         const cycle1Progress = watchProgressMap.get(cycle1Key);
         const totalWatchCount = (cycle0Progress?.watchCount || 0) + (cycle1Progress?.watchCount || 0);
-        const remainingWatches = Math.max(0, 2 - totalWatchCount);
+        const remainingWatches = sequentialAccess.remainingWatches;
 
         // Ensure canAccess and isLocked are explicit booleans
         const finalCanAccess = !!(sequentialAccess.canAccess && hasSubscriptionAccess);
@@ -356,16 +337,20 @@ export const getPublicModulePreview = asyncHandler(async (req, res) => {
         modules: moduleId, 
         isPublished: true 
     })
-        .select('title description bunnyThumbnailUrl durationSeconds associatedMaterials order canAccess')
+        .select('title description durationSeconds associatedMaterials order canAccess streamProvider localStorageId videoStatus')
         .sort({ order: 'asc' })
         .lean();
 
     // Sanitize videos to show only preview data
-    const publicVideos = videos.map(video => ({
+    const publicVideos = videos.map(video => {
+        const thumb = getStreamProvider(video) === 'local' && video.videoStatus === 'AVAILABLE' && video.localStorageId
+            ? `/api/videos/thumbnail/${video._id}`
+            : null;
+        return {
         _id: video._id,
         title: video.title,
         description: video.description || '',
-        thumbnailUrl: video.bunnyThumbnailUrl,
+        thumbnailUrl: thumb,
         duration: video.durationSeconds,
         order: video.order,
         canAccess: video.canAccess || false,
@@ -376,7 +361,8 @@ export const getPublicModulePreview = asyncHandler(async (req, res) => {
             fileSize: material.fileSize,
             fileType: material.fileType
         })) || []
-    }));
+    };
+    });
 
     // Convert subscriptionPlans to string IDs if they're objects
     let subscriptionPlansIds = module.subscriptionPlans;

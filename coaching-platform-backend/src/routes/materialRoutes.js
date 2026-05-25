@@ -17,7 +17,7 @@ router.use(protect);
 router.route('/:videoId/:materialId/download').get(downloadMaterial);
 
 // Route to upload a new material file for a specific video
-// The :videoId should be the bunnyVideoId
+// The :videoId should be the local MongoDB video _id
 router.route('/:videoId').post(
     upload.single('materialFile'), 
     uploadMaterial

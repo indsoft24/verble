@@ -35,6 +35,10 @@ import {
     Logout as LogoutIcon,
     RateReview as RateReviewIcon,
     CalendarToday as CalendarTodayIcon,
+    Campaign as CampaignIcon,
+    Contacts as ContactsIcon,
+    Storage as StorageIcon,
+    WorkspacePremium as WorkspacePremiumIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -66,11 +70,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
     useEffect(() => {
         const path = location.pathname;
         const sections: { name: string; paths: string[] }[] = [
-            { name: 'Content Management', paths: ['/admin/daily-content', '/admin/blog', '/admin/videos', '/admin/courses', '/admin/modules', '/admin/exam-categories'] },
+            { name: 'Content Management', paths: ['/admin/daily-content', '/admin/promo-banner', '/admin/blog', '/admin/videos', '/admin/courses', '/admin/modules', '/admin/exam-categories'] },
             { name: 'User Management', paths: ['/admin/users'] },
             { name: 'Subscriptions', paths: ['/admin/subscription-plans'] },
             { name: 'AI & Knowledge', paths: ['/admin/knowledgebase'] },
             { name: 'Validation', paths: ['/admin/sentence-validation'] },
+            { name: 'Platform Tools', paths: ['/admin/database-manager', '/admin/certification-management'] },
         ];
         const toExpand: string[] = [];
         for (const { name, paths } of sections) {
@@ -86,11 +91,25 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
         }
     }, [location.pathname]);
 
+    const dbManagerAllowedEmails = (import.meta.env.VITE_DB_MANAGER_ALLOWED_EMAILS || '')
+        .split(',')
+        .map((email: string) => email.trim().toLowerCase())
+        .filter(Boolean);
+    const canAccessDatabaseManager =
+        user?.role === 'admin' &&
+        (dbManagerAllowedEmails.length === 0 ||
+            dbManagerAllowedEmails.includes((user?.email || '').toLowerCase()));
+
     const menuItems: MenuItem[] = [
         {
             title: 'Dashboard',
             path: '/admin/dashboard',
             icon: <DashboardIcon />,
+        },
+        {
+            title: 'Leads',
+            path: '/admin/leads',
+            icon: <ContactsIcon />,
         },
         {
             title: 'Content Management',
@@ -100,6 +119,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
                     title: 'Daily Content',
                     path: '/admin/daily-content',
                     icon: <CalendarTodayIcon />,
+                },
+                {
+                    title: 'Promo Banner',
+                    path: '/admin/promo-banner',
+                    icon: <CampaignIcon />,
                 },
                 {
                     title: 'Blog Posts',
@@ -172,6 +196,24 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
                 },
             ],
         },
+        ...(canAccessDatabaseManager
+            ? [{
+                title: 'Platform Tools',
+                icon: <StorageIcon />,
+                children: [
+                    {
+                        title: 'Database Manager',
+                        path: '/admin/database-manager',
+                        icon: <StorageIcon />,
+                    },
+                    {
+                        title: 'Certification Manager',
+                        path: '/admin/certification-management',
+                        icon: <WorkspacePremiumIcon />,
+                    },
+                ],
+            }]
+            : []),
     ];
 
     const handleToggleExpand = (title: string) => {

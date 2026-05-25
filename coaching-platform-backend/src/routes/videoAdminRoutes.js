@@ -2,7 +2,7 @@
 import express from 'express';
 import {
     initiateUpload,
-    finalizeBunnyVideoAndSaveMetadata,
+    uploadLocalVideoAndTranscode,
     getAllVideos,
     getVideoById,
     updateVideo,
@@ -13,6 +13,8 @@ import {
     bulkLinkVideos
 } from '../controllers/videoAdminController.js';
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
+import multerErrorHandler from '../middleware/multerErrorHandler.js';
+import { loadLocalVideoForUpload, uploadLocalVideoFile } from '../middleware/uploadLocalVideoMiddleware.js';
 
 const router = express.Router();
 
@@ -21,7 +23,13 @@ router.use(restrictTo('admin'));
 
 router.post('/initiate-upload', initiateUpload);
 
-router.post('/finalize-bunny-upload', finalizeBunnyVideoAndSaveMetadata);
+router.post(
+    '/:id/upload-file',
+    loadLocalVideoForUpload,
+    uploadLocalVideoFile.single('video'),
+    multerErrorHandler,
+    uploadLocalVideoAndTranscode
+);
 
 router.route('/')
     .get(getAllVideos);

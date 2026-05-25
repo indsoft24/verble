@@ -5,6 +5,8 @@ export interface ModuleListItemUser {
     _id: string;
     title: string;
     description?: string;
+    timeline?: string;
+    chapters?: string[];
     image?: string;
     order: number;
     videoCount?: number; 
@@ -48,14 +50,16 @@ export interface VideoListItemForModulePage {
     _id: string;
     title: string;
     description?: string;
-    bunnyThumbnailUrl?: string; 
+    thumbnailUrl?: string;
+    /** Sort order within the module (from API). */
+    order?: number;
     durationSeconds?: number;
     tags?: string[];
     requiredPlans?: Array<string | { _id: string; name: string; }> | null;
     canAccess?: boolean;
     videoStatus?: string;
     watchCount?: number; // Number of times video has been watched in current cycle
-    remainingWatches?: number; // Remaining watches allowed (0-2)
+    remainingWatches?: number; // Remaining watches allowed (0-4)
     isLocked?: boolean; // Whether video is locked due to sequential access rules
     accessReason?: string; // Reason for access granted/denied
     completionCycle?: number; // Current completion cycle (0 or 1)

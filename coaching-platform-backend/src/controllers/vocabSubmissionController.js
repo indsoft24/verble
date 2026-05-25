@@ -4,6 +4,7 @@ import UserVocabSubmission from '../models/UserVocabSubmission.js';
 import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
+import { isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
 
 /**
  * @desc    Submit sentences using vocabulary words
@@ -38,6 +39,11 @@ export const submitVocabSentences = asyncHandler(async (req, res) => {
     if (vocabContent.type !== 'VOCAB_SET') {
         res.status(400);
         throw new Error('Content is not a vocabulary set.');
+    }
+
+    if (!isDailyContentScheduledForLocalToday(vocabContent.date)) {
+        res.status(400);
+        throw new Error('You can only submit sentences for this week\'s active vocabulary set.');
     }
 
     // Get available vocab words from the set

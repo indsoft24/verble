@@ -3,7 +3,7 @@ import Video from '../models/Video.js';
 import Module from '../models/Module.js';
 import ExamCategory from '../models/ExamCategory.js';
 import mongoose from 'mongoose';
-import { processAndUploadToBunny, deleteFromBunny } from '../utils/bunnyUpload.js';
+import { processAndUploadImage, deleteStoredImage } from '../utils/localImageStorage.js';
 
 /**
  * @desc    Create a new course (Admin)
@@ -27,7 +27,7 @@ export const createCourseAdmin = async (req, res, next) => {
 
         let imageUrl;
         if (req.file) {
-            imageUrl = await processAndUploadToBunny(req.file.buffer, {
+            imageUrl = await processAndUploadImage(req.file.buffer, {
                 width: 800,
                 quality: 80,
                 pathPrefix: 'course_images',
@@ -152,11 +152,11 @@ export const updateCourseAdmin = async (req, res, next) => {
         if (req.file) {
             // Delete old image if it exists
             if (existingCourse.image) {
-                await deleteFromBunny(existingCourse.image);
+                await deleteStoredImage(existingCourse.image);
             }
 
             // Upload new image
-            fieldsToUpdate.image = await processAndUploadToBunny(req.file.buffer, {
+            fieldsToUpdate.image = await processAndUploadImage(req.file.buffer, {
                 width: 800,
                 quality: 80,
                 pathPrefix: 'course_images',
@@ -227,7 +227,7 @@ export const deleteCourseAdmin = async (req, res, next) => {
 
         // Delete course image from Bunny if it exists
         if (course.image) {
-            await deleteFromBunny(course.image);
+            await deleteStoredImage(course.image);
         }
 
         await Video.updateMany(

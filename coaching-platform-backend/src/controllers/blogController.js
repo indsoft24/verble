@@ -1,7 +1,7 @@
 // File: src/controllers/blogController.js
 
 import BlogPost from '../models/BlogPost.js';
-import axios from 'axios';
+import { serveImageFile } from '../utils/localImageStorage.js';
 
 /**
  * @desc    Get all published blog posts (paginated)
@@ -171,25 +171,8 @@ export const getPublishedPostsByCategory = async (req, res, next) => {
  * @route   GET /api/blog/image/:imageName
  */
 export const serveBlogImage = async (req, res) => {
-    try {
-        const { imageName } = req.params;
-        const storagePath = `blog_images/${imageName}`; 
-        const downloadUrl = `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${storagePath}`;
-
-        const response = await axios({
-            method: 'get', url: downloadUrl, responseType: 'stream',
-            headers: { AccessKey: process.env.BUNNY_STORAGE_ACCESS_KEY },
-        });
-
-        res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
-        res.setHeader('Content-Type', 'image/webp');
-        response.data.pipe(res);
-
-    } catch (error) {
-        if (error.response?.status === 404) return res.status(404).json({ message: 'Image not found.' });
-        console.error("BLOG IMAGE SERVING ERROR:", error.message);
-        res.status(500).json({ message: 'Failed to serve image.' });
-    }
+    const { imageName } = req.params;
+    return serveImageFile(imageName, 'blog_images', res);
 };
 
 /**
@@ -197,23 +180,6 @@ export const serveBlogImage = async (req, res) => {
  * @route   GET /api/blog/content-image/:imageName
  */
 export const serveBlogContentImage = async (req, res) => {
-    try {
-        const { imageName } = req.params;
-        const storagePath = `blog_content_images/${imageName}`; 
-        const downloadUrl = `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${storagePath}`;
-
-        const response = await axios({
-            method: 'get', url: downloadUrl, responseType: 'stream',
-            headers: { AccessKey: process.env.BUNNY_STORAGE_ACCESS_KEY },
-        });
-
-        res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
-        res.setHeader('Content-Type', 'image/webp');
-        response.data.pipe(res);
-
-    } catch (error) {
-        if (error.response?.status === 404) return res.status(404).json({ message: 'Image not found.' });
-        console.error("BLOG CONTENT IMAGE SERVING ERROR:", error.message);
-        res.status(500).json({ message: 'Failed to serve image.' });
-    }
+    const { imageName } = req.params;
+    return serveImageFile(imageName, 'blog_content_images', res);
 };

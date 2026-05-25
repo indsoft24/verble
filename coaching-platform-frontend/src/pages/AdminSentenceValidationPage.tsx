@@ -1,16 +1,13 @@
 // src/pages/AdminSentenceValidationPage.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import AdminLayout from '../components/layout/AdminLayout';
 import {
     Container,
     Typography,
     Box,
     Paper,
-
     CircularProgress,
     Alert,
-    Card,
-    CardContent,
     Button,
     Dialog,
     DialogTitle,
@@ -26,16 +23,24 @@ import {
     Divider,
     List,
     ListItem,
-    ListItemText,
-    Checkbox,
     FormControlLabel,
+    Checkbox,
     IconButton,
     Tooltip,
+    Tabs,
+    Tab,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import EditIcon from '@mui/icons-material/Edit';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CommentIcon from '@mui/icons-material/Comment';
 import {
     getPendingSubmissions,
     getAllSubmissions,
@@ -43,18 +48,27 @@ import {
     validateStorySentences,
     type SentenceSubmission,
 } from '../services/sentenceValidationService';
-import { getContentTypeConfig, type ContentType } from '../utils/contentTypeConfig';
 import { format } from 'date-fns';
+import {
+    VALIDATION_ACTIVITY_TABS,
+    getActivityRowLabel,
+    getLinkedContentType,
+    getOriginalReferenceText,
+    getUserPhone,
+    submissionMatchesTab,
+    type ValidationTabId,
+} from '../utils/validationActivityTabs';
+import { getContentTypeConfig, type ContentType } from '../utils/contentTypeConfig';
 
-type SubmissionType = 'all' | 'sentence' | 'story' | 'vocab' | 'scene' | 'speech';
 type SubmissionStatus = 'all' | 'pending' | 'reviewed';
 
 const AdminSentenceValidationPage: React.FC = () => {
     const [submissions, setSubmissions] = useState<SentenceSubmission[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedType, setSelectedType] = useState<SubmissionType>('all');
-    const [selectedStatus, setSelectedStatus] = useState<SubmissionStatus>('all');
+    const [activeTab, setActiveTab] = useState<ValidationTabId>('sentence');
+    const [selectedStatus, setSelectedStatus] = useState<SubmissionStatus>('pending');
+    const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
     const [selectedSubmission, setSelectedSubmission] = useState<SentenceSubmission | null>(null);
     const [validationDialogOpen, setValidationDialogOpen] = useState(false);
@@ -67,43 +81,61 @@ const AdminSentenceValidationPage: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            let fetchedSubmissions: SentenceSubmission[];
+            const tab = VALIDATION_ACTIVITY_TABS.find((t) => t.id === activeTab);
+            const singleType =
+                tab && tab.submissionTypes.length === 1 ? tab.submissionTypes[0] : undefined;
+
+            let fetched: SentenceSubmission[];
             if (selectedStatus === 'pending') {
-                fetchedSubmissions = await getPendingSubmissions(
-                    selectedType === 'all' ? undefined : selectedType,
-                    100
-                );
+                fetched = await getPendingSubmissions(singleType, 500);
             } else {
-                // Use getAllSubmissions for all/reviewed status
-                fetchedSubmissions = await getAllSubmissions(
-                    selectedType === 'all' ? undefined : selectedType,
-                    selectedStatus,
-                    100
-                );
+                fetched = await getAllSubmissions(singleType, selectedStatus, 500);
             }
 
-            setSubmissions(fetchedSubmissions);
-        } catch (err: any) {
-            setError(err.message || 'Failed to load submissions.');
+            fetched.sort(
+                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+
+            setSubmissions(fetched);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to load submissions.');
         } finally {
             setIsLoading(false);
         }
-    }, [selectedType, selectedStatus]);
+    }, [activeTab, selectedStatus]);
 
     useEffect(() => {
         fetchSubmissions();
     }, [fetchSubmissions]);
 
+    const filteredSubmissions = useMemo(
+        () => submissions.filter((s) => submissionMatchesTab(s, activeTab)),
+        [submissions, activeTab]
+    );
+
+    const getSubmissionContent = (submission: SentenceSubmission) => {
+        switch (submission.submissionType) {
+            case 'sentence':
+                return submission.sentence || '';
+            case 'story':
+                return submission.summary?.join('\n') || '';
+            case 'vocab':
+                return submission.sentences?.join('\n') || '';
+            case 'scene':
+            case 'speech':
+                return submission.description || submission.sentences?.join('\n') || '';
+            default:
+                return '';
+        }
+    };
+
     const handleOpenValidationDialog = (submission: SentenceSubmission) => {
         setSelectedSubmission(submission);
         setIsCorrect(true);
         setValidationFeedback('');
-
-        // For story submissions, initialize sentence validations
         if (submission.submissionType === 'story' && submission.summary) {
             setStorySentenceValidations(new Array(submission.summary.length).fill(true));
         }
-
         setValidationDialogOpen(true);
     };
 
@@ -114,440 +146,416 @@ const AdminSentenceValidationPage: React.FC = () => {
         setStorySentenceValidations([]);
     };
 
+    const handleQuickValidate = async (submission: SentenceSubmission, correct: boolean) => {
+        if (submission.submissionType === 'story') {
+            handleOpenValidationDialog(submission);
+            return;
+        }
+        setActionLoadingId(submission._id);
+        setError(null);
+        try {
+            await validateSubmission(submission._id, { isCorrect: correct });
+            await fetchSubmissions();
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to validate submission.');
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
     const handleValidate = async () => {
         if (!selectedSubmission) return;
 
         setIsValidating(true);
         try {
             if (selectedSubmission.submissionType === 'story' && selectedSubmission.summary) {
-                // Validate story sentences individually
-                const sentenceValidations = storySentenceValidations.map((isCorrect, index) => ({
+                const sentenceValidations = storySentenceValidations.map((ok, index) => ({
                     sentenceIndex: index,
-                    isCorrect,
+                    isCorrect: ok,
                 }));
                 await validateStorySentences(selectedSubmission._id, { sentenceValidations });
             } else {
-                // Validate single submission
                 await validateSubmission(selectedSubmission._id, {
                     isCorrect,
                     feedback: validationFeedback || undefined,
                 });
             }
-
-            // Refresh submissions
             await fetchSubmissions();
             handleCloseValidationDialog();
-        } catch (err: any) {
-            setError(err.message || 'Failed to validate submission.');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to validate submission.');
         } finally {
             setIsValidating(false);
         }
     };
 
-    const getSubmissionContent = (submission: SentenceSubmission) => {
-        switch (submission.submissionType) {
-            case 'sentence':
-                return submission.sentence || '';
-            case 'story':
-                return submission.summary?.join(' ') || '';
-            case 'vocab':
-                return submission.sentences?.join(' ') || '';
-            case 'scene':
-            case 'speech':
-                return submission.description || '';
-            default:
-                return '';
-        }
-    };
-
-    const getSubmissionTitle = (submission: SentenceSubmission) => {
-        const contentId = submission.wordId || submission.storyId || submission.vocabSetId ||
-            submission.sceneId || submission.speechId;
-        return contentId?.title || 'Unknown Content';
-    };
-
-    const getSubmissionTypeLabel = (type: string) => {
-        const typeMap: Record<string, string> = {
-            sentence: 'Sentence',
-            story: 'Story Summary',
-            vocab: 'Vocabulary',
-            scene: 'Scene Description',
-            speech: 'Speech Description',
-        };
-        return typeMap[type] || type;
-    };
-
     const getStatusChip = (submission: SentenceSubmission) => {
         if (submission.isCorrect === null) {
             return <Chip label="Pending" color="warning" size="small" />;
-        } else if (submission.isCorrect === true) {
-            return <Chip label="Correct" color="success" size="small" icon={<CheckCircleIcon />} />;
-        } else {
-            return <Chip label="Incorrect" color="error" size="small" icon={<CancelIcon />} />;
         }
+        if (submission.isCorrect === true) {
+            return <Chip label="Correct" color="success" size="small" icon={<CheckCircleIcon />} />;
+        }
+        return <Chip label="Incorrect" color="error" size="small" icon={<CancelIcon />} />;
     };
 
     const stats = {
-        total: submissions.length,
-        pending: submissions.filter(s => s.isCorrect === null).length,
-        correct: submissions.filter(s => s.isCorrect === true).length,
-        incorrect: submissions.filter(s => s.isCorrect === false).length,
+        total: filteredSubmissions.length,
+        pending: filteredSubmissions.filter((s) => s.isCorrect === null).length,
+        correct: filteredSubmissions.filter((s) => s.isCorrect === true).length,
+        incorrect: filteredSubmissions.filter((s) => s.isCorrect === false).length,
     };
 
     return (
         <AdminLayout title="Sentence Validation">
-            <Container maxWidth="xl">
-                <Box sx={{ mb: 4 }}>
-                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 2 }}>
-                        Sentence Validation Dashboard
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                        Review and validate user sentence submissions
-                    </Typography>
+            <Container maxWidth="xl" sx={{ pb: 4 }}>
+                <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    Sentence Validation Dashboard
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                    Review user submissions in chronological order. Use tabs to match daily content
+                    activities.
+                </Typography>
 
-                    {/* Statistics */}
-                    <Grid container spacing={2} sx={{ mb: 3 }}>
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                    {[
+                        { label: 'Total Submissions', value: stats.total, color: 'primary.main' },
+                        { label: 'Pending Review', value: stats.pending, color: 'warning.dark' },
+                        { label: 'Correct', value: stats.correct, color: 'success.dark' },
+                        { label: 'Incorrect', value: stats.incorrect, color: 'error.dark' },
+                    ].map((stat) => (
+                        <Grid key={stat.label} size={{ xs: 6, md: 3 }}>
                             <Paper sx={{ p: 2, textAlign: 'center' }}>
-                                <Typography variant="h4" color="primary">
-                                    {stats.total}
+                                <Typography variant="h4" sx={{ color: stat.color, fontWeight: 700 }}>
+                                    {stat.value}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Total Submissions
+                                    {stat.label}
                                 </Typography>
                             </Paper>
                         </Grid>
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.light' }}>
-                                <Typography variant="h4" color="warning.dark">
-                                    {stats.pending}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Pending Review
-                                </Typography>
-                            </Paper>
+                    ))}
+                </Grid>
+
+                <Paper sx={{ mb: 2 }}>
+                    <Tabs
+                        value={activeTab}
+                        onChange={(_, v) => setActiveTab(v as ValidationTabId)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        sx={{ borderBottom: 1, borderColor: 'divider', px: 1 }}
+                    >
+                        {VALIDATION_ACTIVITY_TABS.map((tab) => (
+                            <Tab key={tab.id} label={tab.label} value={tab.id} />
+                        ))}
+                    </Tabs>
+                </Paper>
+
+                <Paper sx={{ p: 2, mb: 2 }}>
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Status</InputLabel>
+                                <Select
+                                    value={selectedStatus}
+                                    label="Status"
+                                    onChange={(e) =>
+                                        setSelectedStatus(e.target.value as SubmissionStatus)
+                                    }
+                                >
+                                    <MenuItem value="all">All</MenuItem>
+                                    <MenuItem value="pending">Pending</MenuItem>
+                                    <MenuItem value="reviewed">Reviewed</MenuItem>
+                                </Select>
+                            </FormControl>
                         </Grid>
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.light' }}>
-                                <Typography variant="h4" color="success.dark">
-                                    {stats.correct}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Correct
-                                </Typography>
-                            </Paper>
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'error.light' }}>
-                                <Typography variant="h4" color="error.dark">
-                                    {stats.incorrect}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Incorrect
-                                </Typography>
-                            </Paper>
+                        <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+                            <Button
+                                variant="outlined"
+                                startIcon={<RefreshIcon />}
+                                onClick={fetchSubmissions}
+                                fullWidth
+                            >
+                                Refresh
+                            </Button>
                         </Grid>
                     </Grid>
+                </Paper>
 
-                    {/* Filters */}
-                    <Paper sx={{ p: 2, mb: 3 }}>
-                        <Grid container spacing={2} alignItems="center">
-                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Submission Type</InputLabel>
-                                    <Select
-                                        value={selectedType}
-                                        onChange={(e) => setSelectedType(e.target.value as SubmissionType)}
-                                        label="Submission Type"
-                                    >
-                                        <MenuItem value="all">All Types</MenuItem>
-                                        <MenuItem value="sentence">Sentence</MenuItem>
-                                        <MenuItem value="story">Story</MenuItem>
-                                        <MenuItem value="vocab">Vocabulary</MenuItem>
-                                        <MenuItem value="scene">Scene</MenuItem>
-                                        <MenuItem value="speech">Speech</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Status</InputLabel>
-                                    <Select
-                                        value={selectedStatus}
-                                        onChange={(e) => setSelectedStatus(e.target.value as SubmissionStatus)}
-                                        label="Status"
-                                    >
-                                        <MenuItem value="all">All</MenuItem>
-                                        <MenuItem value="pending">Pending</MenuItem>
-                                        <MenuItem value="reviewed">Reviewed</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                <Button
-                                    variant="outlined"
-                                    startIcon={<RefreshIcon />}
-                                    onClick={fetchSubmissions}
-                                    fullWidth
-                                >
-                                    Refresh
-                                </Button>
-                            </Grid>
-                        </Grid>
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                        {error}
+                    </Alert>
+                )}
+
+                {isLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : filteredSubmissions.length === 0 ? (
+                    <Paper sx={{ p: 4, textAlign: 'center' }}>
+                        <Typography color="text.secondary">No submissions in this tab.</Typography>
                     </Paper>
+                ) : (
+                    <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 320px)' }}>
+                        <Table stickyHeader size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 700, minWidth: 160 }}>Activity</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, minWidth: 180 }}>User</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, minWidth: 220 }}>
+                                        User submission
+                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 700, minWidth: 180 }}>
+                                        Original / prompt
+                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 700, width: 150 }}>Submitted</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, width: 140 }} align="center">
+                                        Actions
+                                    </TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {filteredSubmissions.map((submission) => {
+                                    const contentType = getLinkedContentType(submission);
+                                    const config = contentType
+                                        ? getContentTypeConfig(contentType as ContentType)
+                                        : null;
+                                    const IconComponent = config?.icon;
+                                    const isPending = submission.isCorrect === null;
+                                    const busy = actionLoadingId === submission._id;
 
-                    {/* Submissions List */}
-                    {isLoading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                            <CircularProgress />
-                        </Box>
-                    ) : error ? (
-                        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
-                    ) : submissions.length === 0 ? (
-                        <Paper sx={{ p: 4, textAlign: 'center' }}>
-                            <Typography variant="body1" color="text.secondary">
-                                No submissions found.
-                            </Typography>
-                        </Paper>
-                    ) : (
-                        <Grid container spacing={2}>
-                            {submissions.map((submission) => {
-                                const contentType = (submission.wordId?.type ||
-                                    submission.storyId?.type ||
-                                    submission.vocabSetId?.type ||
-                                    submission.sceneId?.type ||
-                                    submission.speechId?.type) as ContentType;
-                                const config = contentType ? getContentTypeConfig(contentType) : null;
-                                const IconComponent = config?.icon;
-
-                                return (
-                                    <Grid size={{ xs: 12, md: 6, lg: 4 }} key={submission._id}>
-                                        <Card
+                                    return (
+                                        <TableRow
+                                            key={submission._id}
+                                            hover
                                             sx={{
-                                                height: '100%',
-                                                border: submission.isCorrect === null
-                                                    ? '2px solid orange'
-                                                    : submission.isCorrect
-                                                        ? '2px solid green'
-                                                        : '2px solid red',
+                                                bgcolor:
+                                                    submission.isCorrect === null
+                                                        ? 'warning.50'
+                                                        : submission.isCorrect
+                                                          ? 'success.50'
+                                                          : 'error.50',
                                             }}
                                         >
-                                            <CardContent>
-                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
-                                                    <Box sx={{ flex: 1 }}>
-                                                        {IconComponent && (
-                                                            <IconComponent
-                                                                sx={{
-                                                                    fontSize: 24,
-                                                                    color: config.color,
-                                                                    mb: 1
-                                                                }}
-                                                            />
-                                                        )}
-                                                        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                                            {getSubmissionTitle(submission)}
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    {IconComponent && (
+                                                        <IconComponent
+                                                            sx={{
+                                                                fontSize: 20,
+                                                                color: config?.color,
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {getActivityRowLabel(submission)}
                                                         </Typography>
-                                                        <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-                                                            <Chip
-                                                                label={getSubmissionTypeLabel(submission.submissionType)}
-                                                                size="small"
-                                                                color={config?.chipColor || 'default'}
-                                                            />
+                                                        <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
                                                             {getStatusChip(submission)}
                                                         </Box>
                                                     </Box>
-                                                    {submission.isCorrect === null && (
-                                                        <Tooltip title="Validate">
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={700}>
+                                                    {submission.userId?.name || 'Unknown'}
+                                                </Typography>
+                                                <Typography variant="body2" display="block" sx={{ mt: 0.25 }}>
+                                                    {getUserPhone(submission)}
+                                                </Typography>
+                                                {submission.userId?.email && (
+                                                    <Typography
+                                                        variant="caption"
+                                                        color="text.secondary"
+                                                        display="block"
+                                                    >
+                                                        {submission.userId.email}
+                                                    </Typography>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        whiteSpace: 'pre-wrap',
+                                                        wordBreak: 'break-word',
+                                                        maxWidth: 280,
+                                                    }}
+                                                >
+                                                    {getSubmissionContent(submission) || '—'}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                    sx={{ maxWidth: 200 }}
+                                                >
+                                                    {getOriginalReferenceText(submission)}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="caption" display="block">
+                                                    {format(
+                                                        new Date(submission.createdAt),
+                                                        'MMM d, yyyy'
+                                                    )}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {format(new Date(submission.createdAt), 'HH:mm')}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                {isPending ? (
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            gap: 0.5,
+                                                            justifyContent: 'center',
+                                                        }}
+                                                    >
+                                                        <Tooltip title="Mark correct">
+                                                            <span>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    color="success"
+                                                                    disabled={busy}
+                                                                    onClick={() =>
+                                                                        handleQuickValidate(
+                                                                            submission,
+                                                                            true
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    {busy ? (
+                                                                        <CircularProgress size={18} />
+                                                                    ) : (
+                                                                        <CheckCircleIcon fontSize="small" />
+                                                                    )}
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                        <Tooltip title="Mark incorrect">
+                                                            <span>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    color="error"
+                                                                    disabled={busy}
+                                                                    onClick={() =>
+                                                                        handleQuickValidate(
+                                                                            submission,
+                                                                            false
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <CancelIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                        <Tooltip title="Edit / story detail">
                                                             <IconButton
                                                                 size="small"
                                                                 color="primary"
-                                                                onClick={() => handleOpenValidationDialog(submission)}
+                                                                onClick={() =>
+                                                                    handleOpenValidationDialog(
+                                                                        submission
+                                                                    )
+                                                                }
                                                             >
-                                                                <EditIcon />
+                                                                <EditIcon fontSize="small" />
                                                             </IconButton>
                                                         </Tooltip>
-                                                    )}
-                                                </Box>
-
-                                                <Divider sx={{ my: 2 }} />
-
-                                                <Box sx={{ mb: 2 }}>
-                                                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                                        User:
-                                                    </Typography>
-                                                    <Typography variant="body2">
-                                                        {submission.userId?.name || 'Unknown'} ({submission.userId?.email || 'N/A'})
-                                                    </Typography>
-                                                </Box>
-
-                                                <Box sx={{ mb: 2 }}>
-                                                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                                        Submission:
-                                                    </Typography>
-                                                    <Typography variant="body2" sx={{
-                                                        bgcolor: 'grey.100',
-                                                        p: 1,
-                                                        borderRadius: 1,
-                                                        whiteSpace: 'pre-wrap',
-                                                        wordBreak: 'break-word'
-                                                    }}>
-                                                        {getSubmissionContent(submission)}
-                                                    </Typography>
-                                                </Box>
-
-                                                {submission.submissionType === 'story' && submission.summary && (
-                                                    <Box sx={{ mb: 2 }}>
-                                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                                            Sentences ({submission.summary.length}):
-                                                        </Typography>
-                                                        <List dense>
-                                                            {submission.summary.map((sentence, idx) => (
-                                                                <ListItem key={idx} sx={{ py: 0.5 }}>
-                                                                    <ListItemText
-                                                                        primary={`${idx + 1}. ${sentence}`}
-                                                                        primaryTypographyProps={{ variant: 'body2' }}
-                                                                    />
-                                                                </ListItem>
-                                                            ))}
-                                                        </List>
                                                     </Box>
+                                                ) : (
+                                                    <Tooltip title="View / add feedback">
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() =>
+                                                                handleOpenValidationDialog(submission)
+                                                            }
+                                                        >
+                                                            <CommentIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
                                                 )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
 
-                                                {submission.pointsEarned !== undefined && (
-                                                    <Box sx={{ mb: 1 }}>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Points: {submission.pointsEarned}
-                                                            {submission.sentencesCorrect !== undefined &&
-                                                                ` (${submission.sentencesCorrect} correct sentences)`}
-                                                        </Typography>
-                                                    </Box>
-                                                )}
-
-                                                {submission.feedback && (
-                                                    <Box sx={{ mb: 1 }}>
-                                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                                            Feedback:
-                                                        </Typography>
-                                                        <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                                                            {submission.feedback}
-                                                        </Typography>
-                                                    </Box>
-                                                )}
-
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Submitted: {format(new Date(submission.createdAt), 'MMM d, yyyy HH:mm')}
-                                                </Typography>
-                                                {submission.reviewedAt && (
-                                                    <Typography variant="caption" color="text.secondary" display="block">
-                                                        Reviewed: {format(new Date(submission.reviewedAt), 'MMM d, yyyy HH:mm')}
-                                                    </Typography>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                );
-                            })}
-                        </Grid>
-                    )}
-                </Box>
-
-                {/* Validation Dialog */}
                 <Dialog
                     open={validationDialogOpen}
                     onClose={handleCloseValidationDialog}
                     maxWidth="md"
                     fullWidth
                 >
-                    <DialogTitle>
-                        Validate Submission
-                    </DialogTitle>
+                    <DialogTitle>Review submission</DialogTitle>
                     <DialogContent>
                         {selectedSubmission && (
                             <Box>
-                                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
-                                    {getSubmissionTitle(selectedSubmission)}
+                                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+                                    {selectedSubmission.userId?.name} · {getUserPhone(selectedSubmission)}
                                 </Typography>
-
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                        User: {selectedSubmission.userId?.name} ({selectedSubmission.userId?.email})
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                        Type: {getSubmissionTypeLabel(selectedSubmission.submissionType)}
-                                    </Typography>
-                                </Box>
-
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    {getActivityRowLabel(selectedSubmission)} ·{' '}
+                                    {format(new Date(selectedSubmission.createdAt), 'PPp')}
+                                </Typography>
                                 <Divider sx={{ my: 2 }} />
-
-                                {selectedSubmission.submissionType === 'story' && selectedSubmission.summary ? (
-                                    <Box>
-                                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
-                                            Validate Individual Sentences:
-                                        </Typography>
-                                        <List>
-                                            {selectedSubmission.summary.map((sentence, idx) => (
-                                                <ListItem key={idx}>
-                                                    <FormControlLabel
-                                                        control={
-                                                            <Checkbox
-                                                                checked={storySentenceValidations[idx] || false}
-                                                                onChange={(e) => {
-                                                                    const newValidations = [...storySentenceValidations];
-                                                                    newValidations[idx] = e.target.checked;
-                                                                    setStorySentenceValidations(newValidations);
-                                                                }}
-                                                            />
-                                                        }
-                                                        label={
-                                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                                                                {sentence}
-                                                            </Typography>
-                                                        }
-                                                    />
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                                            Points: 10 base + {storySentenceValidations.filter(v => v).length} × 2 = {10 + (storySentenceValidations.filter(v => v).length * 2)} points
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    <Box>
-                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                                            Submission:
-                                        </Typography>
-                                        <Typography variant="body1" sx={{
-                                            bgcolor: 'grey.100',
-                                            p: 2,
-                                            borderRadius: 1,
-                                            whiteSpace: 'pre-wrap',
-                                            wordBreak: 'break-word',
-                                            mb: 2
-                                        }}>
-                                            {getSubmissionContent(selectedSubmission)}
-                                        </Typography>
-
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={isCorrect}
-                                                    onChange={(e) => setIsCorrect(e.target.checked)}
+                                {selectedSubmission.submissionType === 'story' &&
+                                selectedSubmission.summary ? (
+                                    <List dense>
+                                        {selectedSubmission.summary.map((sentence, idx) => (
+                                            <ListItem key={idx} disablePadding sx={{ mb: 1 }}>
+                                                <FormControlLabel
+                                                    control={
+                                                        <Checkbox
+                                                            checked={
+                                                                storySentenceValidations[idx] ||
+                                                                false
+                                                            }
+                                                            onChange={(e) => {
+                                                                const next = [
+                                                                    ...storySentenceValidations,
+                                                                ];
+                                                                next[idx] = e.target.checked;
+                                                                setStorySentenceValidations(next);
+                                                            }}
+                                                        />
+                                                    }
+                                                    label={
+                                                        <Typography variant="body2">
+                                                            {idx + 1}. {sentence}
+                                                        </Typography>
+                                                    }
                                                 />
-                                            }
-                                            label="Mark as correct"
-                                        />
-                                    </Box>
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                ) : (
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={isCorrect}
+                                                onChange={(e) => setIsCorrect(e.target.checked)}
+                                            />
+                                        }
+                                        label="Mark as correct"
+                                    />
                                 )}
-
                                 <TextField
                                     fullWidth
                                     multiline
                                     rows={3}
-                                    label="Feedback (Optional)"
+                                    label="Feedback (optional)"
                                     value={validationFeedback}
                                     onChange={(e) => setValidationFeedback(e.target.value)}
                                     sx={{ mt: 2 }}
-                                    placeholder="Provide feedback to the user..."
                                 />
                             </Box>
                         )}
@@ -559,11 +567,12 @@ const AdminSentenceValidationPage: React.FC = () => {
                         <Button
                             onClick={handleValidate}
                             variant="contained"
-                            color="primary"
                             disabled={isValidating}
-                            startIcon={isValidating ? <CircularProgress size={20} /> : <CheckCircleIcon />}
+                            startIcon={
+                                isValidating ? <CircularProgress size={20} /> : <CheckCircleIcon />
+                            }
                         >
-                            {isValidating ? 'Validating...' : 'Validate'}
+                            {isValidating ? 'Saving…' : 'Save review'}
                         </Button>
                     </DialogActions>
                 </Dialog>

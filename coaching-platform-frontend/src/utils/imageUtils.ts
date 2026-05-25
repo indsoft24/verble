@@ -1,5 +1,7 @@
-// Splash/placeholder image path - used as fallback when images are not available
-export const SPLASH_IMAGE_URL = '/verble-logo.svg';
+import { brandAssets } from '../assets/brandAssets';
+
+/** Mobile-style splash / placeholder when course or media images are missing. */
+export const SPLASH_IMAGE_URL = brandAssets.mobileAppLaunchSplash;
 
 /**
  * Get the splash image URL to use as fallback
@@ -7,6 +9,22 @@ export const SPLASH_IMAGE_URL = '/verble-logo.svg';
  */
 export const getSplashImageUrl = (): string => {
     return SPLASH_IMAGE_URL;
+};
+
+/** Turn `/api/...` paths from the API into absolute URLs (cross-origin safe). */
+export const resolveBackendMediaUrl = (path?: string | null): string => {
+    if (!path || path.trim() === '') {
+        return getSplashImageUrl();
+    }
+    if (path.startsWith('blob:') || path.startsWith('http')) {
+        return path;
+    }
+    const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+    if (path.startsWith('/api/')) {
+        const origin = apiBaseUrl.replace(/\/api$/, '');
+        return `${origin}${path}`;
+    }
+    return path;
 };
 
 /**

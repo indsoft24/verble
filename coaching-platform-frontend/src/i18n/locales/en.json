@@ -1,0 +1,104 @@
+{
+  "common": {
+    "language": "Language",
+    "login": "Log in",
+    "getStarted": "Get started",
+    "logout": "Log out",
+    "english": "English",
+    "hindi": "Hindi"
+  },
+  "nav": {
+    "blog": "Blog",
+    "openSettings": "Open settings"
+  },
+  "blog": {
+    "ourBlog": "Our Blog",
+    "category": "Category",
+    "loadError": "Could not load blog posts.",
+    "home": "Home"
+  },
+  "footer": {
+    "aboutUs": "About us",
+    "missionVision": "Mission & vision",
+    "whyJoinUs": "Why join us",
+    "testimonials": "Testimonials",
+    "privacyPolicy": "Privacy policy",
+    "termsAndConditions": "Terms & conditions",
+    "disclaimer": "Disclaimer",
+    "faqs": "FAQs",
+    "helpCenter": "Help center",
+    "contactUs": "Contact us",
+    "businessProposals": "Business proposals",
+    "siteMap": "Site map",
+    "tagline": "Speak with confidence.",
+    "company": "Company",
+    "connect": "Connect",
+    "legal": "Legal",
+    "copyrightBefore": "©",
+    "copyrightAfter": "Verble {{year}}. All rights reserved."
+  },
+  "languageModal": {
+    "title": "Choose your language",
+    "subtitle": "You can change this anytime from the menu.",
+    "slogan": "Learn English your way."
+  },
+  "landing": {
+    "heroChip": "AI-powered English practice",
+    "heroTitle": "Speak English with confidence",
+    "heroPoint1": "Daily speaking activities",
+    "heroPoint2": "Personalized feedback",
+    "heroPoint3": "Structured learning paths",
+    "heroPoint4": "Expert-led premium content",
+    "tryVerbleFree": "Try Verble free",
+    "watchDemo": "Watch demo",
+    "speechesCrafted": "Speeches crafted",
+    "averageRating": "Average rating",
+    "toFirstDraft": "To first draft",
+    "verbleAssistant": "Verble Assistant",
+    "craftingKeynoteOutline": "Crafting keynote outline…",
+    "liveDraft": "Live draft",
+    "yourPrompt": "Your prompt",
+    "aiGeneratedSpeech": "AI-generated speech",
+    "ctaStartFree": "Start free",
+    "ctaUpgradeSilver": "Upgrade to Silver",
+    "ctaGetStarted": "Get started",
+    "pricingChip": "Pricing",
+    "pricingTitle": "Plans for every learner",
+    "pricingSubtitle": "Start free and upgrade when you are ready.",
+    "pricingPopular": "Most popular",
+    "marqueeHeading": "Trusted by learners worldwide",
+    "marqueeItems": ["Daily practice", "Speaking feedback", "Premium courses"],
+    "finalCtaOverline": "Ready to begin?",
+    "finalCtaTitle": "Start your English journey today",
+    "finalCtaBody": "Join Verble and practice every day with guided activities.",
+    "finalCtaPrimary": "Get started free",
+    "finalCtaSecondary": "View plans",
+    "finalCtaCaption": "No credit card required for the free tier."
+  },
+  "features": {
+    "chip": "Features",
+    "heading": "Everything you need to improve",
+    "subheading": "Structured daily practice, feedback, and premium content."
+  },
+  "dashboard": {
+    "masteryPath": {
+      "title": "Your Path to Mastery",
+      "streakDays": "{{count}}-day streak",
+      "youAreHere": "You are here",
+      "challengeComplete": "Challenge complete!",
+      "dayProgress": "Day {{current}} of {{target}}",
+      "daysRemaining": "{{count}} days remaining",
+      "premiumTitle": "Premium content",
+      "expertPractice": "Expert practice",
+      "structuredLearning": "Structured learning",
+      "purchaseToUnlock": "Purchase to unlock"
+    },
+    "activities": {
+      "todayTitle": "Today's Activities",
+      "premiumTitle": "Premium content",
+      "proRibbon": "PRO",
+      "ultimateRibbon": "ULTIMATE",
+      "lockedMessage": "Upgrade to unlock"
+    }
+  }
+}

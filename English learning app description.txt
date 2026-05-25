@@ -300,3 +300,16 @@ App Screens
 	•	Once this video is marked, complete, the other video listed at the bottom of the speech becomes active automatically.
 
 
+cd /var/www/verble
+
+# View status
+docker compose -f docker-compose.vps.yml ps
+
+# View logs
+docker compose -f docker-compose.vps.yml logs -f
+
+# Stop all
+docker compose -f docker-compose.vps.yml down
+
+# Rebuild and start again
+docker compose -f docker-compose.vps.yml up -d --build

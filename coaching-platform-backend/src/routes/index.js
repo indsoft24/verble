@@ -33,9 +33,6 @@ import aiRoutes from './aiRoutes.js';
 import sitemapRoutes from './sitemapRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import webhookRoutes from './webhookRoutes.js';
-// App-specific routes removed - using generic routes instead
-// import knowledgeNationRoutes from './knowledgeNationRoutes.js';
-// import firstIasRoutes from './firstIasRoutes.js';
 import dailyQuoteRoutes from './dailyQuoteRoutes.js';
 import dailyContentRoutes from './dailyContentRoutes.js';
 import sentenceSubmissionRoutes from './sentenceSubmissionRoutes.js';
@@ -50,8 +47,12 @@ import certificateAssessmentRoutes from './certificateAssessmentRoutes.js';
 import certificateRoutes from './certificateRoutes.js';
 import leaderboardRoutes from './leaderboardRoutes.js';
 import offerRoutes from './offerRoutes.js';
+import promoBannerRoutes from './promoBannerRoutes.js';
 import recentJoinersRoutes from './recentJoinersRoutes.js';
 import sentenceValidationRoutes from './sentenceValidationRoutes.js';
+import databaseManagerRoutes from './databaseManagerRoutes.js';
+import courseCertificateRoutes from './courseCertificateRoutes.js';
+import courseCertificateAdminRoutes from './courseCertificateAdminRoutes.js';
 import { serveCourseImage, serveModuleImage, serveSubscriptionImage, serveGeneralImage, getSupportedImageTypes } from '../controllers/imageServingController.js';
 
 
@@ -63,11 +64,6 @@ router.get('/test', (req, res) => {
 router.use('/', sitemapRoutes);
 
 router.use('/webhooks', webhookRoutes);
-
-// App-specific routes removed - using generic routes instead
-// router.use('/kn', knowledgeNationRoutes);
-// router.use('/ias', firstIasRoutes);
-
 
 // Mount routes with base paths
 router.use('/auth', authRoutes); // Handles /api/auth/*
@@ -114,8 +110,12 @@ router.use('/certificate-assessment', certificateAssessmentRoutes); // Handles /
 router.use('/certificates', certificateRoutes); // Handles /api/certificates/*
 router.use('/leaderboard', leaderboardRoutes); // Handles /api/leaderboard/*
 router.use('/offers', offerRoutes); // Handles /api/offers/*
+router.use('/promo-banner', promoBannerRoutes); // Handles /api/promo-banner/*
 router.use('/recent-joiners', recentJoinersRoutes); // Handles /api/recent-joiners/*
 router.use('/validate-sentence', sentenceValidationRoutes); // Handles /api/validate-sentence/*
+router.use('/admin/database-manager', databaseManagerRoutes); // Handles /api/admin/database-manager/*
+router.use('/course-certificates', courseCertificateRoutes); // Handles /api/course-certificates/*
+router.use('/admin/certificates', courseCertificateAdminRoutes); // Handles /api/admin/certificates/*
 
 // Image serving routes - General endpoint for Android app
 router.get('/images/types', getSupportedImageTypes);

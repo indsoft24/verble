@@ -4,6 +4,7 @@ import UserSceneSubmission from '../models/UserSceneSubmission.js';
 import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
+import { isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
 
 /**
  * @desc    Submit a scene description
@@ -38,6 +39,11 @@ export const submitSceneDescription = asyncHandler(async (req, res) => {
     if (sceneContent.type !== 'SCENE') {
         res.status(400);
         throw new Error('Content is not a scene.');
+    }
+
+    if (!isDailyContentScheduledForLocalToday(sceneContent.date)) {
+        res.status(400);
+        throw new Error('Only today\'s scene can be submitted.');
     }
 
     // Check if user already submitted for this scene

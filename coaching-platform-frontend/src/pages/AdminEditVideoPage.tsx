@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import {
     Container, Typography, Alert, Box, Breadcrumbs, Link as MuiLink,
-    CircularProgress, Paper, Divider, Grid
+    CircularProgress, Paper,
 } from '@mui/material';
 
 import AdminVideoForm, { type VideoFormState } from '../components/features/video/AdminVideoForm';
@@ -161,33 +161,6 @@ const AdminEditVideoPage: React.FC = () => {
                 )}
             </Paper>
             {videoId && <AssociatedMaterials videoId={videoId} />}
-            
-            {fullVideoMetadata && (
-                <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
-                    <Typography variant="h6" component="h3" gutterBottom>Streaming Provider Details</Typography>
-                    <Divider sx={{ mb: 2 }} />
-                    <Grid container spacing={1}>
-                        <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
-                            <Typography variant="body2"><strong>Library ID:</strong> {fullVideoMetadata.bunnyVideoLibraryId || 'N/A'}</Typography>
-                        </Grid>
-                        <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
-                            <Typography variant="body2"><strong>Video ID (Bunny):</strong> {fullVideoMetadata.bunnyVideoId || 'N/A'}</Typography>
-                        </Grid>
-                        <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
-                            <Typography variant="body2"><strong>Status:</strong> {fullVideoMetadata.videoStatus || 'N/A'}</Typography>
-                        </Grid>
-                        <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
-                            <Typography variant="body2"><strong>Duration:</strong> {fullVideoMetadata.durationSeconds ? `${Math.floor(fullVideoMetadata.durationSeconds / 60)}m ${fullVideoMetadata.durationSeconds % 60}s` : 'N/A'}</Typography>
-                        </Grid>
-                        {fullVideoMetadata.bunnyThumbnailUrl && (
-                            <Grid sx={{ width: '100%' }}>
-                                <Typography variant="body2"><strong>Thumbnail:</strong></Typography>
-                                <Box component="img" sx={{ height: 120, mt: 1, borderRadius: 1 }} alt="Bunny.net Thumbnail" src={fullVideoMetadata.bunnyThumbnailUrl} />
-                            </Grid>
-                        )}
-                    </Grid>
-                </Paper>
-            )}
         </Container>
     );
 };

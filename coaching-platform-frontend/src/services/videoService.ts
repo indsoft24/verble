@@ -14,7 +14,6 @@ export interface VideoListItem {
     title: string;
     description?: string;
     thumbnailUrl?: string;
-    bunnyThumbnailUrl?: string;
     durationSeconds?: number;
     tags?: string[];
     createdAt: string;
@@ -60,7 +59,7 @@ export interface GetSingleVideoUserApiResponse {
 export interface VideoDetail extends VideoMetadata {
     canAccess?: boolean; // Add canAccess to the type
     watchCount?: number; // Number of times video has been watched in current cycle
-    remainingWatches?: number; // Remaining watches allowed (0-2)
+    remainingWatches?: number; // Remaining watches allowed (0-4)
 }
 
 interface GetVideoResponse {
@@ -90,18 +89,50 @@ export const getVideoByIdForUser = async (videoId: string): Promise<VideoDetail>
 };
 
 
+export type VideoPlayTokenData =
+    | { playbackProvider: 'local'; playlistPath: string };
+
 interface PlayTokenResponse {
     status: string;
+    data: VideoPlayTokenData;
+}
+
+interface VideoNavigationItem {
+    _id: string;
+    title: string;
+    moduleId: string;
+    moduleTitle: string;
+    durationSeconds?: number;
+    thumbnailUrl?: string | null;
+}
+
+interface GetVideoNavigationResponse {
+    status: string;
     data: {
-        token: string;
-        expires: number;
+        moduleId: string | null;
+        moduleTitle: string | null;
+        courseId: string | null;
+        courseTitle: string | null;
+        items: VideoNavigationItem[];
     };
 }
 
-export const getVideoPlayToken = async (videoId: string): Promise<PlayTokenResponse['data']> => {
+export const getVideoPlayToken = async (videoId: string): Promise<VideoPlayTokenData> => {
     try {
         const response = await apiClient.get<PlayTokenResponse>(`/videos/${videoId}/get-play-token`);
         return response.data.data;
+    } catch (error: any) {
+        throw error.response?.data || error;
+    }
+};
+
+export const getVideoNavigation = async (videoId: string): Promise<GetVideoNavigationResponse['data']> => {
+    try {
+        const response = await apiClient.get<GetVideoNavigationResponse>(`/videos/${videoId}/navigation`);
+        if (response.data?.status === 'success' && response.data.data) {
+            return response.data.data;
+        }
+        throw new Error(response.data?.status || 'Failed to fetch video navigation');
     } catch (error: any) {
         throw error.response?.data || error;
     }
@@ -136,8 +167,7 @@ export const getAllPublishedVideosUser = async (
         if (searchTerm && searchTerm.trim() !== '') {
             params.search = searchTerm.trim();
         }
-        // LAW-only endpoint
-        const response = await apiClient.get<GetAllVideosUserApiResponse>('/kn/videos', { params });
+        const response = await apiClient.get<GetAllVideosUserApiResponse>('/videos', { params });
         
         if (response.data && response.data.status === 'success' && response.data.data?.videos) {
             return {

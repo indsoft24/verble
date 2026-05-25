@@ -1,8 +1,6 @@
 import express from 'express';
-import { handleBunnyWebhook } from '../controllers/webhookController.js';
 
+// Reserved for future webhooks (e.g. payments). Video status uses local transcode jobs.
 const router = express.Router();
-
-router.post('/bunny-stream', handleBunnyWebhook);
 
 export default router;

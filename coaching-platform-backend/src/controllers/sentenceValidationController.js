@@ -282,8 +282,8 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'sentence') {
         const sentenceSubs = await UserSentenceSubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('wordId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('wordId', 'title type metadata')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
             .lean();
@@ -292,8 +292,8 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'story') {
         const storySubs = await UserStorySubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('storyId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('storyId', 'title type metadata')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
             .lean();
@@ -302,8 +302,8 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'vocab') {
         const vocabSubs = await UserVocabSubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('vocabSetId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('vocabSetId', 'title type metadata')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
             .lean();
@@ -312,8 +312,8 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'scene') {
         const sceneSubs = await UserSceneSubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('sceneId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('sceneId', 'title type metadata')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
             .lean();
@@ -322,8 +322,8 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'speech') {
         const speechSubs = await UserSpeechSubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('speechId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('speechId', 'title type metadata')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
             .lean();
@@ -364,8 +364,8 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'sentence') {
         const sentenceSubs = await UserSentenceSubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('wordId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('wordId', 'title type metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
@@ -375,8 +375,8 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'story') {
         const storySubs = await UserStorySubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('storyId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('storyId', 'title type metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
@@ -386,8 +386,8 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'vocab') {
         const vocabSubs = await UserVocabSubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('vocabSetId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('vocabSetId', 'title type metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
@@ -397,8 +397,8 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'scene') {
         const sceneSubs = await UserSceneSubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('sceneId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('sceneId', 'title type metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
@@ -408,8 +408,8 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
 
     if (!type || type === 'speech') {
         const speechSubs = await UserSpeechSubmission.find(query)
-            .populate('userId', 'name email')
-            .populate('speechId', 'title type')
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('speechId', 'title type metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })

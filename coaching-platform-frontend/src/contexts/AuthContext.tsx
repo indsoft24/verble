@@ -16,7 +16,7 @@ interface AuthContextType {
     resendOtp: (email: string) => Promise<string>;
     logout: () => Promise<void>;
     setUserContext: (userData: User | null, token?: string | null) => void;
-    refreshUser: () => Promise<void>;
+    refreshUser: (currentToken?: string | null) => Promise<void>;
     initiateGoogleLogin: () => Promise<void>;
     linkGoogleAccount: (code: string) => Promise<void>;
     unlinkGoogleAccount: () => Promise<void>;

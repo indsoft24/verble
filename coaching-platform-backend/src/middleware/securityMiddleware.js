@@ -279,10 +279,19 @@ export const errorHandler = (err, req, res, next) => {
             timestamp: new Date().toISOString(),
         });
         
-        // Default error
-        let statusCode = err?.statusCode || err?.status || 500;
+        // Status: prefer err.statusCode; else Express may already be set via res.status(4xx) before throw
+        let statusCode = err?.statusCode ?? err?.status;
+        if (statusCode == null) {
+            const rc = res.statusCode;
+            if (typeof rc === 'number' && rc >= 400 && rc < 600) {
+                statusCode = rc;
+            } else {
+                statusCode = 500;
+            }
+        }
+
         let message = sanitizeErrorMessage(err, isProduction);
-        
+
         // Handle specific error types
         if (err?.name === 'ValidationError') {
             statusCode = 400;
@@ -308,7 +317,21 @@ export const errorHandler = (err, req, res, next) => {
             statusCode = 401;
             message = 'Not authorized to access this resource.';
         }
-        
+
+        // Client errors from async handlers: res.status(4xx); throw new Error('…') — use the intended message
+        if (statusCode >= 400 && statusCode < 500 && err?.message) {
+            const curatedNames = [
+                'ValidationError',
+                'CastError',
+                'JsonWebTokenError',
+                'TokenExpiredError',
+                'UnauthorizedError',
+            ];
+            if (!curatedNames.includes(err?.name)) {
+                message = err.message;
+            }
+        }
+
         // Never expose stack traces or internal error details
         const errorResponse = {
             status: statusCode >= 500 ? 'error' : 'fail',

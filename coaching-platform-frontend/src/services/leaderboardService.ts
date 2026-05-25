@@ -3,6 +3,7 @@ import apiClient from './apiClient';
 
 export interface LeaderboardEntry {
     rank: number;
+    userId?: string;
     name: string;
     points: number;
     membershipLevel: string;

@@ -4,6 +4,7 @@ import { protect, restrictTo } from '../middleware/authMiddleware.js';
 import {
     getAllDailyContentAdmin,
     createDailyContentAdmin,
+    bulkCreateDailyContentAdmin,
     updateDailyContentAdmin,
     deleteDailyContentAdmin
 } from '../controllers/dailyContentAdminController.js';
@@ -16,6 +17,9 @@ router.use(restrictTo('admin'));
 
 // GET /api/admin/daily-content - Get all daily content
 router.get('/', getAllDailyContentAdmin);
+
+// POST /api/admin/daily-content/bulk - Bulk create (must be before /:id if ever added under POST)
+router.post('/bulk', bulkCreateDailyContentAdmin);
 
 // POST /api/admin/daily-content - Create new daily content
 router.post('/', createDailyContentAdmin);

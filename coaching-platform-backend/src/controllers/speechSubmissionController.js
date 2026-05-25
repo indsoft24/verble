@@ -4,6 +4,7 @@ import UserSpeechSubmission from '../models/UserSpeechSubmission.js';
 import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
+import { isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
 
 /**
  * @desc    Submit a speech description
@@ -38,6 +39,11 @@ export const submitSpeechDescription = asyncHandler(async (req, res) => {
     if (speechContent.type !== 'SPEECH') {
         res.status(400);
         throw new Error('Content is not a speech.');
+    }
+
+    if (!isDailyContentScheduledForLocalToday(speechContent.date)) {
+        res.status(400);
+        throw new Error('Only today\'s speech can be submitted.');
     }
 
     // Check if user already submitted for this speech

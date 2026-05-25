@@ -4,13 +4,20 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
     Container, Typography, Grid, Card, CardActionArea, CardContent, CardMedia,
-    CircularProgress, Alert, Box, Button, Paper
+    CircularProgress, Alert, Box, Button, Paper, Chip, LinearProgress, Stack
 } from '@mui/material';
 import UserLayout from '../components/layout/UserLayout';
 import parse from 'html-react-parser';
 
 // --- Import the new service function ---
 import { getMyCoursesForUser, type CourseListItemUser } from '../services/courseUserService';
+import {
+    generateCourseCertificateForMe,
+    getCourseCertificateEligibility,
+    getMyCourseCertificates,
+    type CourseCertificateEligibility,
+    type MyCourseCertificate,
+} from '../services/courseCertificateService';
 import { useAuth } from '../contexts/AuthContext'; 
 import { getImageUrl } from '../utils/imageUtils';
 import { extractId } from '../utils/idUtils'; 
@@ -20,6 +27,9 @@ const MyCoursesPage: React.FC = () => {
     const [pageContext, setPageContext] = useState<'subscribed' | 'all_courses'>('all_courses');
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [eligibilityByCourse, setEligibilityByCourse] = useState<Record<string, CourseCertificateEligibility>>({});
+    const [certificateByCourse, setCertificateByCourse] = useState<Record<string, MyCourseCertificate>>({});
+    const [generatingForCourse, setGeneratingForCourse] = useState<Record<string, boolean>>({});
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
@@ -29,8 +39,42 @@ const MyCoursesPage: React.FC = () => {
         try {
             // Call the new service function. It handles auth automatically.
             const { courses: fetchedCourses, context } = await getMyCoursesForUser();
-            setCourses(fetchedCourses || []);
+            const safeCourses = fetchedCourses || [];
+            setCourses(safeCourses);
             setPageContext(context);
+
+            if (isAuthenticated && safeCourses.length > 0) {
+                const [myCertificates, eligibilityRows] = await Promise.all([
+                    getMyCourseCertificates(),
+                    Promise.all(
+                        safeCourses.map(async (course) => {
+                            const courseId = extractId(course) || course._id;
+                            if (!courseId) return null;
+                            try {
+                                const eligibility = await getCourseCertificateEligibility(courseId);
+                                return { courseId, eligibility };
+                            } catch {
+                                return null;
+                            }
+                        })
+                    ),
+                ]);
+
+                const certMap = myCertificates.reduce<Record<string, MyCourseCertificate>>((acc, cert) => {
+                    acc[cert.course] = cert;
+                    return acc;
+                }, {});
+                setCertificateByCourse(certMap);
+
+                const eligibilityMap = eligibilityRows.reduce<Record<string, CourseCertificateEligibility>>((acc, row) => {
+                    if (row) acc[row.courseId] = row.eligibility;
+                    return acc;
+                }, {});
+                setEligibilityByCourse(eligibilityMap);
+            } else {
+                setEligibilityByCourse({});
+                setCertificateByCourse({});
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to load courses.');
         } finally {
@@ -42,6 +86,21 @@ const MyCoursesPage: React.FC = () => {
         // We use the isAuthenticated flag to re-fetch data if the user logs in or out.
         fetchCourses();
     }, [fetchCourses, isAuthenticated]);
+
+    const handleGenerateCertificate = async (courseId: string) => {
+        setGeneratingForCourse((prev) => ({ ...prev, [courseId]: true }));
+        setError(null);
+        try {
+            const certificate = await generateCourseCertificateForMe(courseId);
+            setCertificateByCourse((prev) => ({ ...prev, [courseId]: certificate }));
+            const eligibility = await getCourseCertificateEligibility(courseId);
+            setEligibilityByCourse((prev) => ({ ...prev, [courseId]: eligibility }));
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || 'Failed to generate certificate.');
+        } finally {
+            setGeneratingForCourse((prev) => ({ ...prev, [courseId]: false }));
+        }
+    };
 
     const handleCardClick = (courseId: string) => {
         // If not authenticated, redirect to login, then bring them back.
@@ -98,6 +157,9 @@ const MyCoursesPage: React.FC = () => {
                     {courses.map((course, index) => {
                         const courseId = extractId(course) || course._id;
                         if (!courseId) return null; // Skip if no valid ID
+                        const eligibility = eligibilityByCourse[courseId];
+                        const certificate = certificateByCourse[courseId];
+                        const canGenerate = Boolean(eligibility?.isEligible) && !certificate;
                         
                         return (
                         <Grid key={courseId} sx={{width: {xs: '100%', sm: '50%', md: '33%'}}}>
@@ -144,9 +206,71 @@ const MyCoursesPage: React.FC = () => {
                                         >
                                             {course.description ? parse(course.description) : 'Explore this course to unlock your potential.'}
                                         </Box>
+                                        {isAuthenticated && eligibility && (
+                                            <Box sx={{ mt: 1.5 }}>
+                                                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Completion
+                                                    </Typography>
+                                                    <Typography variant="caption" fontWeight={600}>
+                                                        {eligibility.completionPercent}%
+                                                    </Typography>
+                                                </Stack>
+                                                <LinearProgress
+                                                    variant="determinate"
+                                                    value={Math.max(0, Math.min(100, eligibility.completionPercent))}
+                                                    sx={{ height: 6, borderRadius: 6 }}
+                                                />
+                                                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                                    <Chip
+                                                        size="small"
+                                                        label={eligibility.isEligible ? 'Eligible for certificate' : 'Not eligible yet'}
+                                                        color={eligibility.isEligible ? 'success' : 'default'}
+                                                    />
+                                                    {eligibility.rule.requireAssessment && (
+                                                        <Chip size="small" label="Assessment required" color="warning" />
+                                                    )}
+                                                </Box>
+                                                {!eligibility.isEligible && eligibility.reasons?.[0] && (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+                                                        {eligibility.reasons[0]}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        )}
                                     </CardContent>
                                      <Box sx={{ p: 2, pt: 0, width: '100%', mt: 'auto' }}>
-                                        <Button variant="contained" fullWidth>View Course</Button>
+                                        <Stack spacing={1}>
+                                            <Button variant="contained" fullWidth>
+                                                View Course
+                                            </Button>
+                                            {isAuthenticated && certificate && (
+                                                <Button
+                                                    variant="outlined"
+                                                    fullWidth
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        window.open(certificate.pdfUrl, '_blank', 'noopener,noreferrer');
+                                                    }}
+                                                >
+                                                    Download Certificate
+                                                </Button>
+                                            )}
+                                            {isAuthenticated && canGenerate && (
+                                                <Button
+                                                    variant="contained"
+                                                    color="success"
+                                                    fullWidth
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleGenerateCertificate(courseId);
+                                                    }}
+                                                    disabled={Boolean(generatingForCourse[courseId])}
+                                                >
+                                                    {generatingForCourse[courseId] ? 'Generating...' : 'Generate Certificate'}
+                                                </Button>
+                                            )}
+                                        </Stack>
                                     </Box>
                                 </CardActionArea>
                             </Card>

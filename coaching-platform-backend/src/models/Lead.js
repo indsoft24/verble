@@ -29,6 +29,15 @@ const leadSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    sourceType: {
+        type: String,
+        trim: true,
+        default: 'general',
+    },
+    webinarUrl: {
+        type: String,
+        trim: true,
+    },
     
 }, {
     timestamps: true 

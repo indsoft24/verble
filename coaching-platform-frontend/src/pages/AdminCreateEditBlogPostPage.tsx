@@ -199,14 +199,14 @@ const AdminCreateEditBlogPostPage: React.FC = () => {
 
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
-    const getImageUrl = (bunnyUrl?: string) => {
-        if (!bunnyUrl) {
+    const getImageUrl = (imageUrl?: string) => {
+        if (!imageUrl) {
             return `https://placehold.co/600x400/EAEAEA/B0B0B0?text=No+Image`;
         }
 
-        if (bunnyUrl.startsWith('http')) {
+        if (imageUrl.startsWith('http')) {
             try {
-                const url = new URL(bunnyUrl);
+                const url = new URL(imageUrl);
                 const pathSegments = url.pathname.split('/');
                 const fileName = pathSegments[pathSegments.length - 1];
 
@@ -217,7 +217,7 @@ const AdminCreateEditBlogPostPage: React.FC = () => {
                 return `https://placehold.co/600x400/EAEAEA/B0B0B0?text=Invalid+Image`;
             }
         }
-        return `${apiBaseUrl.replace(/\/$/, '')}/${bunnyUrl.replace(/^\//, '')}`;
+        return `${apiBaseUrl.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
     };
 
     if (isLoading && isEditMode && !title) {

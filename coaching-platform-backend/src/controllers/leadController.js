@@ -3,7 +3,10 @@ import BlogPost from '../models/BlogPost.js';
 import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
-import axios from 'axios';
+import path from 'path';
+import fs from 'fs';
+import { createReadStream } from 'fs';
+import { getUploadsRoot } from '../config/videoStorageConfig.js';
 import asyncHandler from 'express-async-handler';
 
 const transporter = nodemailer.createTransport({
@@ -22,7 +25,7 @@ const transporter = nodemailer.createTransport({
  * @access  Public
  */
 export const submitGeneralLead = asyncHandler(async (req, res) => {
-    const { name, email, phoneNumber, interestedCourses, otherCourseInterest, sourceUrl } = req.body;
+    const { name, email, phoneNumber, interestedCourses, otherCourseInterest, sourceUrl, sourceType, webinarUrl } = req.body;
 
     if (!name || !email || !phoneNumber) {
         res.status(400);
@@ -31,7 +34,14 @@ export const submitGeneralLead = asyncHandler(async (req, res) => {
 
     // Save the lead to the database
     await Lead.create({
-        name, email, phoneNumber, interestedCourses, otherCourseInterest, sourceUrl,
+        name,
+        email,
+        phoneNumber,
+        interestedCourses,
+        otherCourseInterest,
+        sourceUrl,
+        sourceType: sourceType || 'general',
+        webinarUrl: webinarUrl || undefined,
     });
 
     // Send email notification to admin
@@ -44,6 +54,7 @@ export const submitGeneralLead = asyncHandler(async (req, res) => {
             <li><strong>Phone:</strong> ${phoneNumber}</li>
             <li><strong>Interested Courses:</strong> ${interestedCourses.join(', ') || 'None specified'}</li>
             ${otherCourseInterest ? `<li><strong>Other:</strong> ${otherCourseInterest}</li>` : ''}
+            ${webinarUrl ? `<li><strong>Webinar Link:</strong> <a href="${webinarUrl}">${webinarUrl}</a></li>` : ''}
             <li><strong>Source Page:</strong> <a href="${sourceUrl}">${sourceUrl}</a></li>
         </ul>
     `;
@@ -58,6 +69,25 @@ export const submitGeneralLead = asyncHandler(async (req, res) => {
     res.status(201).json({
         status: 'success',
         message: 'Thank you for your details! Our team will be in touch.',
+        webinarLink: webinarUrl || null,
+    });
+});
+
+/**
+ * @desc    Get recent leads for admin dashboard
+ * @route   GET /api/admin/leads
+ * @access  Private/Admin
+ */
+export const getRecentLeadsForAdmin = asyncHandler(async (req, res) => {
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 20));
+    const leads = await Lead.find({})
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+    res.status(200).json({
+        status: 'success',
+        data: { leads },
     });
 });
 
@@ -137,19 +167,17 @@ export const downloadGatedFile = asyncHandler(async (req, res) => {
         
         const { storagePath, originalFileName, fileType } = decoded;
 
-        const downloadUrl = `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${storagePath}`;
-        
-        const response = await axios({
-            method: 'get',
-            url: downloadUrl,
-            responseType: 'stream',
-            headers: { 'AccessKey': process.env.BUNNY_STORAGE_ACCESS_KEY },
-        });
+        const fullPath = path.join(getUploadsRoot(), storagePath);
+        try {
+            await fs.promises.access(fullPath, fs.constants.R_OK);
+        } catch {
+            res.status(404);
+            throw new Error('File not found on server.');
+        }
 
         res.setHeader('Content-Disposition', `attachment; filename="${originalFileName}"`);
         res.setHeader('Content-Type', fileType || 'application/octet-stream');
-        
-        response.data.pipe(res);
+        createReadStream(fullPath).pipe(res);
 
     } catch (error) {
         if (error instanceof jwt.TokenExpiredError) {

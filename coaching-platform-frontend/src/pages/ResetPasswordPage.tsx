@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Container, Box, Typography, TextField, Button,
-    CircularProgress, Paper, IconButton, InputAdornment
+    Container, Box, Typography, Button,
+    CircularProgress, Paper
 } from '@mui/material';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { resetPassword } from '../services/authService';
 import { useNotification } from '../contexts/NotificationContext';
+import PasswordTextField from '../components/common/PasswordTextField';
 
 const ResetPasswordPage: React.FC = () => {
     const { token } = useParams<{ token: string }>();
@@ -16,9 +15,6 @@ const ResetPasswordPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [passwordConfirm, setPasswordConfirm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    const [passwordVisible, setPasswordVisible] = useState(false);
-    const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
 
     
     const { addNotification } = useNotification();
@@ -53,12 +49,6 @@ const ResetPasswordPage: React.FC = () => {
         }
     };
     
-    const handleClickShowPassword = () => setPasswordVisible((show) => !show);
-    const handleClickShowConfirmPassword = () => setConfirmPasswordVisible((show) => !show);
-    const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault();
-    };
-
     return (
         <Container component="main" maxWidth="xs" sx={{ mt: 8 }}>
             <Paper elevation={6} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -67,57 +57,27 @@ const ResetPasswordPage: React.FC = () => {
                 </Typography>
 
                 <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
-                    <TextField
+                    <PasswordTextField
                         margin="normal"
                         required
                         fullWidth
                         name="password"
                         label="New Password"
-                        type={passwordVisible ? 'text' : 'password'}
                         id="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         disabled={isLoading}
-                        InputProps={{
-                            endAdornment: (
-                                <InputAdornment position="end">
-                                    <IconButton
-                                        aria-label="toggle password visibility"
-                                        onClick={handleClickShowPassword}
-                                        onMouseDown={handleMouseDownPassword}
-                                        edge="end"
-                                    >
-                                        {passwordVisible ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                </InputAdornment>
-                            ),
-                        }}
                     />
-                    <TextField
+                    <PasswordTextField
                         margin="normal"
                         required
                         fullWidth
                         name="passwordConfirm"
                         label="Confirm New Password"
-                        type={confirmPasswordVisible ? 'text' : 'password'}
                         id="passwordConfirm"
                         value={passwordConfirm}
                         onChange={(e) => setPasswordConfirm(e.target.value)}
                         disabled={isLoading}
-                        InputProps={{
-                            endAdornment: (
-                                <InputAdornment position="end">
-                                    <IconButton
-                                        aria-label="toggle confirm password visibility"
-                                        onClick={handleClickShowConfirmPassword}
-                                        onMouseDown={handleMouseDownPassword}
-                                        edge="end"
-                                    >
-                                        {confirmPasswordVisible ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                </InputAdornment>
-                            ),
-                        }}
                     />
 
 

@@ -4,6 +4,7 @@ import UserSentenceSubmission from '../models/UserSentenceSubmission.js';
 import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
 import { autoValidateSimpleSentence } from '../services/aiValidationService.js';
+import { getLocalTodayBounds, isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
 import mongoose from 'mongoose';
 
 /**
@@ -12,11 +13,11 @@ import mongoose from 'mongoose';
  * @access  Private
  */
 export const submitSentence = asyncHandler(async (req, res) => {
-    const { wordId, word, sentence } = req.body;
+    const { wordId, word, sentence, sentences } = req.body;
 
-    if (!wordId || !word || !sentence) {
+    if (!wordId || !word || (!sentence && !Array.isArray(sentences))) {
         res.status(400);
-        throw new Error('Word ID, word, and sentence are required.');
+        throw new Error('Word ID, word, and sentence data are required.');
     }
 
     if (!mongoose.Types.ObjectId.isValid(wordId)) {
@@ -36,84 +37,136 @@ export const submitSentence = asyncHandler(async (req, res) => {
         throw new Error('Content is not a word or phrase.');
     }
 
-    // Check if user already submitted this exact sentence for this word
-    const existingSubmission = await UserSentenceSubmission.findOne({
-        userId: req.user._id,
-        wordId: wordId,
-        sentence: sentence.trim()
-    });
-
-    if (existingSubmission) {
+    // Users can submit only for today's word/phrase (same local-day window as GET /daily-content/today).
+    if (!isDailyContentScheduledForLocalToday(wordContent.date)) {
         res.status(400);
-        throw new Error('You have already submitted this sentence for this word.');
+        throw new Error('You can only submit sentences for today\'s content.');
     }
 
-    // Try AI/auto validation if enabled
-    let autoValidationResult = null;
-    if (process.env.ENABLE_AI_VALIDATION === 'true' || process.env.ENABLE_AUTO_VALIDATION === 'true') {
+    const normalizedSentences = Array.isArray(sentences)
+        ? sentences.map((s) => (typeof s === 'string' ? s.trim() : '')).filter(Boolean)
+        : [String(sentence || '').trim()].filter(Boolean);
+
+    if (normalizedSentences.length < 1 || normalizedSentences.length > 5) {
+        res.status(400);
+        throw new Error('Please submit between 1 and 5 sentences.');
+    }
+
+    // Unique compound index (userId, wordId, sentence): duplicates in one request must fail here, not as a generic DB error.
+    const uniqueSentences = [...new Set(normalizedSentences)];
+    if (uniqueSentences.length !== normalizedSentences.length) {
+        res.status(400);
+        throw new Error('Each sentence must be unique. Remove duplicate lines or overlapping text.');
+    }
+
+    const isBatch = Array.isArray(sentences);
+    if (isBatch && uniqueSentences.length < 2) {
+        res.status(400);
+        throw new Error('Submit at least 2 distinct sentences after removing duplicates.');
+    }
+
+    // Cap: up to 5 sentence lines per user per word **per local calendar day** (matches "today's activity"
+    // and avoids blocking a full batch of 5 when older rows exist from previous days or partial retries).
+    const { start: dayStart, end: dayEnd } = getLocalTodayBounds();
+    const existingTodayCount = await UserSentenceSubmission.countDocuments({
+        userId: req.user._id,
+        wordId: wordId,
+        createdAt: { $gte: dayStart, $lt: dayEnd },
+    });
+    const remainingSlots = 5 - existingTodayCount;
+    if (remainingSlots <= 0) {
+        res.status(400);
+        throw new Error(
+            'You already saved 5 sentences for this word today. Come back tomorrow or use a new daily word.'
+        );
+    }
+    if (uniqueSentences.length > remainingSlots) {
+        res.status(400);
+        throw new Error(
+            `You can save ${remainingSlots} more sentence line(s) today (${existingTodayCount} already saved). ` +
+                `Remove ${uniqueSentences.length - remainingSlots} line(s) or submit fewer sentences at once.`
+        );
+    }
+
+    const existingSubmissions = await UserSentenceSubmission.find({
+        userId: req.user._id,
+        wordId: wordId,
+        sentence: { $in: uniqueSentences }
+    }).select('sentence').lean();
+
+    if (existingSubmissions.length > 0) {
+        res.status(400);
+        throw new Error('You have already submitted one or more of these sentences for this content.');
+    }
+
+    const createdSubmissions = [];
+    for (const sentenceText of uniqueSentences) {
+        // Try AI/auto validation if enabled
+        let autoValidationResult = null;
+        if (process.env.ENABLE_AI_VALIDATION === 'true' || process.env.ENABLE_AUTO_VALIDATION === 'true') {
+            try {
+                autoValidationResult = await autoValidateSimpleSentence(sentenceText, word);
+            } catch (error) {
+                console.error('[SentenceSubmission] Error in auto-validation:', error);
+            }
+        }
         try {
-            autoValidationResult = await autoValidateSimpleSentence(sentence.trim(), word);
-        } catch (error) {
-            console.error('[SentenceSubmission] Error in auto-validation:', error);
-            // Continue without auto-validation
+            const submission = await UserSentenceSubmission.create({
+                userId: req.user._id,
+                wordId: wordId,
+                word: word,
+                sentence: sentenceText,
+                isCorrect: autoValidationResult?.isCorrect === true && autoValidationResult?.confidence >= 0.8
+                    ? true
+                    : autoValidationResult?.isCorrect === false && autoValidationResult?.confidence >= 0.8
+                    ? false
+                    : null,
+                feedback: autoValidationResult?.feedback || undefined,
+            });
+            createdSubmissions.push(submission);
+        } catch (err) {
+            if (err && (err.code === 11000 || err.name === 'MongoServerError')) {
+                res.status(400);
+                throw new Error('This sentence is already saved for this word, or a duplicate line was detected.');
+            }
+            throw err;
         }
     }
 
-    // Create the submission
-    const submission = await UserSentenceSubmission.create({
-        userId: req.user._id,
-        wordId: wordId,
-        word: word,
-        sentence: sentence.trim(),
-        // Set initial validation if auto-validation succeeded with high confidence
-        isCorrect: autoValidationResult?.isCorrect === true && autoValidationResult?.confidence >= 0.8 
-            ? true 
-            : autoValidationResult?.isCorrect === false && autoValidationResult?.confidence >= 0.8
-            ? false
-            : null,
-        feedback: autoValidationResult?.feedback || undefined,
-    });
-
     try {
-        // Record activity completion (award base points once per content per day)
-        // This keeps leaderboards/streaks functional even when AI validation is disabled.
         const gamificationResult = await GamificationService.recordActivity(
             req.user._id.toString(),
             wordId,
-            10
+            uniqueSentences.length * 10
         );
         
-        // Check for level up
         const levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
         
         res.status(201).json({
             status: 'success',
-            message: 'Sentence submitted successfully!',
+            message: 'Sentence submission saved successfully!',
             data: {
-                submission: {
+                submissions: createdSubmissions.map((submission) => ({
                     _id: submission._id,
                     sentence: submission.sentence,
                     submittedAt: submission.createdAt,
                     isCorrect: submission.isCorrect,
-                    autoValidated: autoValidationResult !== null,
-                },
-                pointsAwarded: gamificationResult?.success ? 10 : 0,
+                })),
+                pointsAwarded: gamificationResult?.success ? uniqueSentences.length * 10 : 0,
                 levelUp: levelUpResult
             }
         });
     } catch (error) {
-        // Even if gamification fails, the submission is saved
         res.status(201).json({
             status: 'success',
-            message: 'Sentence submitted successfully!',
+            message: 'Sentence submission saved successfully!',
             data: {
-                submission: {
+                submissions: createdSubmissions.map((submission) => ({
                     _id: submission._id,
                     sentence: submission.sentence,
                     submittedAt: submission.createdAt,
                     isCorrect: submission.isCorrect,
-                    autoValidated: autoValidationResult !== null,
-                }
+                }))
             }
         });
     }

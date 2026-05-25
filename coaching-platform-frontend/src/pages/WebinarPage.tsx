@@ -31,6 +31,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EventIcon from '@mui/icons-material/Event';
 import { useAuth } from '../contexts/AuthContext';
+import { getActiveOffers } from '../services/offerService';
 
 interface WebinarData {
     id: string;
@@ -47,7 +48,15 @@ interface WebinarData {
     recordingAvailable: boolean;
     maxParticipants?: number;
     currentParticipants?: number;
+    linkUrl?: string;
 }
+
+const slugify = (text: string) =>
+    String(text || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-');
 
 const WebinarPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -58,53 +67,52 @@ const WebinarPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isRegistered, setIsRegistered] = useState(false);
 
-    // Mock webinar data - In production, fetch from API based on slug
     useEffect(() => {
-        setIsLoading(true);
+        const loadWebinar = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const offers = await getActiveOffers();
+                const webinarOffers = offers.filter((o) => o.type === 'WEBINAR');
 
-        // Simulate API call
-        setTimeout(() => {
-            const webinarData: Record<string, WebinarData> = {
-                'english-mastery': {
-                    id: 'english-mastery',
-                    title: 'English Mastery Tips: Speak Fluently in 30 Days',
-                    description: 'Join our exclusive webinar to learn proven strategies for mastering English speaking skills. Our expert instructor will share practical tips, common mistakes to avoid, and actionable techniques that have helped thousands of learners achieve fluency.',
-                    date: '2025-01-15',
-                    time: '7:00 PM IST',
-                    duration: '60 minutes',
-                    instructor: 'Dr. Priya Sharma',
-                    topics: [
-                        'Overcoming fear of speaking English',
-                        'Building vocabulary naturally',
-                        'Mastering pronunciation',
-                        'Common grammar mistakes and how to fix them',
-                        'Practical conversation techniques',
-                        'Cultural context in English communication'
-                    ],
-                    benefits: [
-                        'Learn from a 15+ years MNC professional',
-                        'Get personalized tips for Indian learners',
-                        'Understand Hinglish to English transition',
-                        'Access to exclusive learning resources',
-                        'Q&A session with the instructor',
-                        'Recording available for registered participants'
-                    ],
+                const selected = webinarOffers.find((offer) => {
+                    const linkSlug = offer.linkUrl?.split('/').filter(Boolean).pop();
+                    return (slug && (linkSlug === slug || slugify(offer.title) === slug));
+                }) || webinarOffers[0];
+
+                if (!selected) {
+                    setError('No active webinar found');
+                    setIsLoading(false);
+                    return;
+                }
+
+                const startDate = new Date(selected.startDate);
+                const endDate = new Date(selected.endDate);
+                const durationMs = Math.max(0, endDate.getTime() - startDate.getTime());
+                const durationMinutes = Math.round(durationMs / (1000 * 60));
+
+                setWebinar({
+                    id: selected._id,
+                    title: selected.title,
+                    description: selected.description || 'Webinar details will be shared after registration.',
+                    date: selected.startDate,
+                    time: startDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                    duration: `${durationMinutes || 60} minutes`,
+                    instructor: 'Verble Team',
+                    topics: ['Live training session', 'Q&A', 'Practical English learning'],
+                    benefits: ['Live webinar access', 'Structured guidance', 'Progress support'],
                     registrationRequired: true,
                     isLive: false,
-                    recordingAvailable: true,
-                    maxParticipants: 500,
-                    currentParticipants: 342
-                }
-            };
-
-            const webinarInfo = webinarData[slug || 'english-mastery'];
-            if (webinarInfo) {
-                setWebinar(webinarInfo);
-            } else {
-                setError('Webinar not found');
+                    recordingAvailable: false,
+                    linkUrl: selected.linkUrl,
+                });
+            } catch (e: any) {
+                setError(e?.message || 'Failed to load webinar');
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
-        }, 500);
+        };
+        loadWebinar();
     }, [slug]);
 
     const handleRegister = () => {
@@ -112,7 +120,11 @@ const WebinarPage: React.FC = () => {
             navigate('/register?redirect=/webinar/' + slug);
             return;
         }
-        // In production, call API to register
+        if (webinar?.linkUrl) {
+            window.open(webinar.linkUrl, '_blank', 'noopener,noreferrer');
+            setIsRegistered(true);
+            return;
+        }
         setIsRegistered(true);
     };
 

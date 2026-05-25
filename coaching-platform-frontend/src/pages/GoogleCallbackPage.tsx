@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 const GoogleCallbackPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { setUserContext } = useAuth();
+    const { setUserContext, refreshUser } = useAuth();
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -29,10 +29,13 @@ const GoogleCallbackPage: React.FC = () => {
                     return;
                 }
 
-                // Set the token and redirect to dashboard
                 setUserContext(null, token);
-                
-                // Redirect to dashboard after successful authentication
+                await refreshUser(token);
+                if (!localStorage.getItem('authUser')) {
+                    setError('Could not load your profile. Please try signing in again.');
+                    setIsLoading(false);
+                    return;
+                }
                 navigate('/dashboard');
             } catch (err: any) {
                 setError(err.message || 'An error occurred during Google authentication');
@@ -41,7 +44,7 @@ const GoogleCallbackPage: React.FC = () => {
         };
 
         handleGoogleCallback();
-    }, [searchParams, navigate, setUserContext]);
+    }, [searchParams, navigate, setUserContext, refreshUser]);
 
     if (isLoading) {
         return (

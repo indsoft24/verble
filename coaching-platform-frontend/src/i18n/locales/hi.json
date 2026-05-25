@@ -1,0 +1,104 @@
+{
+  "common": {
+    "language": "भाषा",
+    "login": "लॉग इन",
+    "getStarted": "शुरू करें",
+    "logout": "लॉग आउट",
+    "english": "English",
+    "hindi": "हिंदी"
+  },
+  "nav": {
+    "blog": "ब्लॉग",
+    "openSettings": "सेटिंग्स खोलें"
+  },
+  "blog": {
+    "ourBlog": "हमारा ब्लॉग",
+    "category": "श्रेणी",
+    "loadError": "ब्लॉग लोड नहीं हो सका।",
+    "home": "होम"
+  },
+  "footer": {
+    "aboutUs": "हमारे बारे में",
+    "missionVision": "मिशन और विज़न",
+    "whyJoinUs": "क्यों जुड़ें",
+    "testimonials": "प्रशंसापत्र",
+    "privacyPolicy": "गोपनीयता नीति",
+    "termsAndConditions": "नियम और शर्तें",
+    "disclaimer": "अस्वीकरण",
+    "faqs": "अक्सर पूछे जाने वाले प्रश्न",
+    "helpCenter": "सहायता केंद्र",
+    "contactUs": "संपर्क करें",
+    "businessProposals": "व्यापार प्रस्ताव",
+    "siteMap": "साइट मैप",
+    "tagline": "आत्मविश्वास से अंग्रेज़ी बोलें।",
+    "company": "कंपनी",
+    "connect": "जुड़ें",
+    "legal": "कानूनी",
+    "copyrightBefore": "©",
+    "copyrightAfter": "Verble {{year}}. सर्वाधिकार सुरक्षित।"
+  },
+  "languageModal": {
+    "title": "अपनी भाषा चुनें",
+    "subtitle": "आप इसे कभी भी मेनू से बदल सकते हैं।",
+    "slogan": "अपने तरीके से अंग्रेज़ी सीखें।"
+  },
+  "landing": {
+    "heroChip": "AI-संचालित अंग्रेज़ी अभ्यास",
+    "heroTitle": "आत्मविश्वास से अंग्रेज़ी बोलें",
+    "heroPoint1": "दैनिक बोलने की गतिविधियाँ",
+    "heroPoint2": "व्यक्तिगत प्रतिक्रिया",
+    "heroPoint3": "संरचित सीखने के मार्ग",
+    "heroPoint4": "विशेषज्ञ-नेतृत्व प्रीमियम सामग्री",
+    "tryVerbleFree": "Verble मुफ़्त आज़माएँ",
+    "watchDemo": "डेमो देखें",
+    "speechesCrafted": "भाषण तैयार",
+    "averageRating": "औसत रेटिंग",
+    "toFirstDraft": "पहले ड्राफ़्ट तक",
+    "verbleAssistant": "Verble सहायक",
+    "craftingKeynoteOutline": "कीनोट आउटलाइन तैयार…",
+    "liveDraft": "लाइव ड्राफ़्ट",
+    "yourPrompt": "आपका प्रॉम्प्ट",
+    "aiGeneratedSpeech": "AI-जनित भाषण",
+    "ctaStartFree": "मुफ़्त शुरू करें",
+    "ctaUpgradeSilver": "Silver में अपग्रेड",
+    "ctaGetStarted": "शुरू करें",
+    "pricingChip": "मूल्य",
+    "pricingTitle": "हर शिक्षार्थी के लिए योजनाएँ",
+    "pricingSubtitle": "मुफ़्त शुरू करें और तैयार होने पर अपग्रेड करें।",
+    "pricingPopular": "सबसे लोकप्रिय",
+    "marqueeHeading": "दुनिया भर के शिक्षार्थियों द्वारा विश्वसनीय",
+    "marqueeItems": ["दैनिक अभ्यास", "बोलने की प्रतिक्रिया", "प्रीमियम पाठ्यक्रम"],
+    "finalCtaOverline": "शुरू करने के लिए तैयार?",
+    "finalCtaTitle": "आज ही अपनी अंग्रेज़ी यात्रा शुरू करें",
+    "finalCtaBody": "Verble से जुड़ें और मार्गदर्शित गतिविधियों के साथ हर दिन अभ्यास करें।",
+    "finalCtaPrimary": "मुफ़्त शुरू करें",
+    "finalCtaSecondary": "योजनाएँ देखें",
+    "finalCtaCaption": "मुफ़्त स्तर के लिए क्रेडिट कार्ड की आवश्यकता नहीं।"
+  },
+  "features": {
+    "chip": "विशेषताएँ",
+    "heading": "सुधार के लिए आपको जो कुछ चाहिए",
+    "subheading": "संरचित दैनिक अभ्यास, प्रतिक्रिया और प्रीमियम सामग्री।"
+  },
+  "dashboard": {
+    "masteryPath": {
+      "title": "आपका मास्टरी मार्ग",
+      "streakDays": "{{count}}-दिन की लकीर",
+      "youAreHere": "आप यहाँ हैं",
+      "challengeComplete": "चुनौती पूर्ण!",
+      "dayProgress": "दिन {{current}} / {{target}}",
+      "daysRemaining": "{{count}} दिन शेष",
+      "premiumTitle": "प्रीमियम सामग्री",
+      "expertPractice": "विशेषज्ञ अभ्यास",
+      "structuredLearning": "संरचित सीखना",
+      "purchaseToUnlock": "अनलॉक करने के लिए खरीदें"
+    },
+    "activities": {
+      "todayTitle": "आज की गतिविधियाँ",
+      "premiumTitle": "प्रीमियम सामग्री",
+      "proRibbon": "PRO",
+      "ultimateRibbon": "ULTIMATE",
+      "lockedMessage": "अनलॉक करने के लिए अपग्रेड करें"
+    }
+  }
+}

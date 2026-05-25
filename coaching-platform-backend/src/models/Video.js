@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { getStreamProvider } from '../utils/videoStreamProvider.js';
 
 const materialSchema = new mongoose.Schema({
     label: {
@@ -44,18 +45,24 @@ const videoSchema = new mongoose.Schema({
         trim: true,
         maxlength: [2000, 'Description cannot be more than 2000 characters.'],
     },
-    bunnyVideoLibraryId: { 
-        type: String, 
-        required: [true, "Bunny Stream Video Library ID is required."],
-    },
-    bunnyVideoId: { 
-        type: String, 
-        required: [true, "Bunny Stream Video ID is required."],
-        unique: true, 
+    streamProvider: {
+        type: String,
+        enum: ['local'],
+        default: 'local',
         index: true,
     },
-    bunnyStreamUrl: { type: String, trim: true },
-    bunnyThumbnailUrl: { type: String, trim: true },
+    /** Folder name under video storage (self-hosted). */
+    localStorageId: {
+        type: String,
+        trim: true,
+        sparse: true,
+        unique: true,
+        index: true,
+    },
+    /** Original extension including dot, e.g. ".mp4" */
+    sourceFileExt: { type: String, trim: true },
+    streamUrl: { type: String, trim: true },
+    thumbnailUrl: { type: String, trim: true },
     durationSeconds: { type: Number, min: 0, default: 0 },
     width: { type: Number, min: 0 },
     height: { type: Number, min: 0 },
@@ -69,7 +76,12 @@ const videoSchema = new mongoose.Schema({
         required: true,
         index: true,
     },
-    bunnyProcessingProgress: { type: Number, default: 0, min: 0, max: 100 },
+    processingProgress: { type: Number, default: 0, min: 0, max: 100 },
+    /** Current FFmpeg / pipeline step (self-hosted). */
+    transcodeStep: { type: String, trim: true, default: '' },
+    /** Per-rendition progress for admin dashboard, e.g. { "360p": { progress, done } } */
+    transcodeVariants: { type: mongoose.Schema.Types.Mixed, default: {} },
+    processingError: { type: String, trim: true },
     courses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
     modules: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Module' }],
     order: { type: Number, default: 0 },
@@ -85,6 +97,16 @@ const videoSchema = new mongoose.Schema({
 
 }, {
     timestamps: true
+});
+
+videoSchema.pre('validate', function (next) {
+    const p = getStreamProvider(this);
+    if (p === 'local') {
+        if (!this.localStorageId || !String(this.localStorageId).trim()) {
+            return next(new Error('localStorageId is required for self-hosted videos.'));
+        }
+    }
+    next();
 });
 
 // Indexes for faster queries

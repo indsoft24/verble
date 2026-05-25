@@ -42,6 +42,26 @@ export const createDailyContentAdmin = async (payload: CreateDailyContentPayload
     return response.data.data.content as DailyContent;
 };
 
+export interface BulkCreateDailyContentResult {
+    createdCount: number;
+    failedCount: number;
+    failures: { index: number; message: string }[];
+    content?: DailyContent[];
+}
+
+/**
+ * Bulk create daily content (validated CSV on the client first).
+ */
+export const bulkCreateDailyContentAdmin = async (
+    items: CreateDailyContentPayload[]
+): Promise<BulkCreateDailyContentResult> => {
+    const response = await apiClient.post<{ status: string; data: BulkCreateDailyContentResult }>(
+        '/admin/daily-content/bulk',
+        { items }
+    );
+    return response.data.data;
+};
+
 /**
  * Update daily content
  */

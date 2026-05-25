@@ -12,6 +12,8 @@ export interface LeadSubmissionData {
     sourceUrl: string;
     postId?: string;
     attachmentId?: string;
+    sourceType?: string;
+    webinarUrl?: string;
 }
 
 // Interface for the successful API response, which includes the download token
@@ -24,6 +26,7 @@ interface GatedFileLeadResponse {
 interface ChatbotLeadResponse {
     status: string;
     message: string;
+    webinarLink?: string | null;
 }
 
 /**

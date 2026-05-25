@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
     AppBar, Box, Toolbar, Typography, Button, Container, IconButton,
     Menu, MenuItem, Tooltip, Avatar, Divider
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { NAVBAR_HEIGHT } from '../../landing/designSystem';
+import { brandAssets } from '../../assets/brandAssets';
 
 const Navbar: React.FC = () => {
+    const { t } = useTranslation();
+    const { openLanguageModal } = useLanguage();
     const { isAuthenticated, user, logout } = useAuth();
     const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
     const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
@@ -19,21 +26,19 @@ const Navbar: React.FC = () => {
 
     const dashboardPath = user?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
-    // Define navigation items
     const publicPages = [
-        { name: 'Home', path: '/' },
-        { name: 'Courses', path: '/courses' },
-        { name: 'Blog', path: '/blog' },
-        { name: 'Help', path: '/help' },
-        { name: 'About', path: '/about-us' },
-        { name: 'Contact', path: '/contact-us' },
+        { nameKey: 'nav.home', path: '/' },
+        { nameKey: 'nav.courses', path: '/courses' },
+        { nameKey: 'nav.blog', path: '/blog' },
+        { nameKey: 'nav.help', path: '/help' },
+        { nameKey: 'nav.about', path: '/about-us' },
+        { nameKey: 'nav.contact', path: '/contact-us' },
     ];
 
-    // This array correctly includes the link to the My Subscriptions page.
     const userPages = [
-        { name: 'My Dashboard', path: dashboardPath },
-        { name: 'My Subscription', path: '/my-subscription' },
-        { name: 'Profile Settings', path: '/profile' },
+        { nameKey: 'nav.myDashboard', path: dashboardPath },
+        { nameKey: 'nav.mySubscription', path: '/my-subscription' },
+        { nameKey: 'nav.profileSettings', path: '/profile' },
     ];
     
     // --- Reusable Logo Component ---
@@ -51,23 +56,32 @@ const Navbar: React.FC = () => {
         >
             <Box
                 component="img"
-                src="/verble-logo-nav.svg" 
-                alt="Verble Logo"
-                sx={{ height: 55, mr: 1 }}
+                src={brandAssets.primaryLogo}
+                alt="Verble"
+                sx={{ height: 55, mr: 1, width: 'auto', objectFit: 'contain' }}
             />
         </Box>
     );
 
     return (
-        <AppBar position="static" color="default" elevation={1} sx={{marginBottom: '5px'}}>
-            <Container maxWidth="xl">
-                <Toolbar disableGutters>
-                    {/* --- DESKTOP LOGO --- */}
-                    <Logo sx={{ display: { xs: 'none', md: 'flex' }, mr: 2 }} />
+        <AppBar
+            position="sticky"
+            color="default"
+            elevation={0}
+            sx={{
+                marginBottom: 0,
+                minHeight: NAVBAR_HEIGHT,
+                '& .MuiToolbar-root': { minHeight: NAVBAR_HEIGHT },
+            }}
+        >
+            <Container maxWidth={false} sx={{ maxWidth: 1200, px: 3 }}>
+                <Toolbar disableGutters sx={{ minHeight: `${NAVBAR_HEIGHT}px !important` }}>
+                    {/* --- DESKTOP LOGO (left) --- */}
+                    <Logo sx={{ display: { xs: 'none', md: 'flex' }, mr: 3 }} />
 
                     {/* --- MOBILE HAMBURGER MENU --- */}
                     <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
-                        <IconButton size="large" onClick={handleOpenNavMenu} color="inherit">
+                        <IconButton size="large" onClick={handleOpenNavMenu} color="inherit" aria-label="Open menu">
                             <MenuIcon />
                         </IconButton>
                         <Menu
@@ -81,8 +95,8 @@ const Navbar: React.FC = () => {
                             sx={{ display: { xs: 'block', md: 'none' } }}
                         >
                             {publicPages.map((page) => (
-                                <MenuItem key={page.name} onClick={handleCloseNavMenu} component={RouterLink} to={page.path}>
-                                    <Typography textAlign="center">{page.name}</Typography>
+                                <MenuItem key={page.nameKey} onClick={handleCloseNavMenu} component={RouterLink} to={page.path}>
+                                    <Typography textAlign="center">{t(page.nameKey)}</Typography>
                                 </MenuItem>
                             ))}
                         </Menu>
@@ -91,29 +105,77 @@ const Navbar: React.FC = () => {
                     {/* --- MOBILE LOGO --- */}
                     <Logo sx={{ display: { xs: 'flex', md: 'none' }, flexGrow: 1 }} />
 
-                    {/* --- DESKTOP MENU LINKS --- */}
-                    <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, gap: 1 }}>
+                    {/* --- DESKTOP MENU LINKS (centered, index-page style) --- */}
+                    <Box
+                        sx={{
+                            flexGrow: 1,
+                            display: { xs: 'none', md: 'flex' },
+                            gap: 3,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
                         {publicPages.map((page) => (
-                            <Button key={page.name} component={RouterLink} to={page.path} sx={{ color: 'text.primary', display: 'block' }}>
-                                {page.name}
+                            <Button
+                                key={page.nameKey}
+                                component={RouterLink}
+                                to={page.path}
+                                sx={{
+                                    color: 'text.primary',
+                                    display: 'block',
+                                    fontWeight: 500,
+                                    '&:hover': { backgroundColor: 'action.hover' },
+                                    transition: 'background-color 0.2s ease',
+                                }}
+                            >
+                                {t(page.nameKey)}
                             </Button>
                         ))}
                     </Box>
 
-                    {/* --- AUTH / USER MENU --- */}
-                    <Box sx={{ flexGrow: 0 }}>
+                    {/* --- LANGUAGE SWITCHER + AUTH / USER MENU --- */}
+                    <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Tooltip title={t('common.language')}>
+                            <Button
+                                onClick={openLanguageModal}
+                                color="inherit"
+                                size="small"
+                                startIcon={<TranslateIcon fontSize="small" />}
+                                sx={{
+                                    display: { xs: 'none', sm: 'inline-flex' },
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    borderRadius: 999,
+                                    border: '1px solid rgba(148, 163, 184, 0.6)',
+                                    px: 1.5,
+                                    minWidth: 0,
+                                }}
+                            >
+                                EN | हिंदी
+                            </Button>
+                        </Tooltip>
+                        {/* Mobile language icon */}
+                        <IconButton
+                            onClick={openLanguageModal}
+                            color="inherit"
+                            size="small"
+                            aria-label={t('common.language')}
+                            sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+                        >
+                            <TranslateIcon fontSize="small" />
+                        </IconButton>
                         {!isAuthenticated ? (
                             <Box sx={{ display: 'flex', gap: 1 }}>
                                 <Button component={RouterLink} to="/login" sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
-                                    Login
+                                    {t('common.login')}
                                 </Button>
                                 <Button variant="contained" component={RouterLink} to="/register">
-                                    Sign Up
+                                    {t('common.getStarted')}
                                 </Button>
                             </Box>
                         ) : (
                             <>
-                                <Tooltip title="Open settings">
+                                <Tooltip title={t('nav.openSettings')}>
                                     <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
                                         <Avatar alt={user?.name} src="/static/images/avatar/2.jpg" />
                                     </IconButton>
@@ -134,12 +196,12 @@ const Navbar: React.FC = () => {
                                     </Box>
                                     <Divider />
                                     {userPages.map((page) => (
-                                        <MenuItem key={page.name} onClick={handleCloseUserMenu} component={RouterLink} to={page.path}>
-                                            <Typography textAlign="center">{page.name}</Typography>
+                                        <MenuItem key={page.nameKey} onClick={handleCloseUserMenu} component={RouterLink} to={page.path}>
+                                            <Typography textAlign="center">{t(page.nameKey)}</Typography>
                                         </MenuItem>
                                     ))}
                                     <MenuItem onClick={() => { handleCloseUserMenu(); logout(); }}>
-                                        <Typography textAlign="center" color="error">Logout</Typography>
+                                        <Typography textAlign="center" color="error">{t('common.logout')}</Typography>
                                     </MenuItem>
                                 </Menu>
                             </>

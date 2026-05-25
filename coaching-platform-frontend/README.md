@@ -261,8 +261,7 @@ src/
 ├── contexts/            # React Context providers
 │   └── AuthContext.tsx  # Authentication context
 ├── hooks/               # Custom React hooks
-│   ├── useGoogleAuth.ts
-│   └── useScreenRecordingProtection.ts
+│   └── useGoogleAuth.ts
 ├── pages/               # Page components (routes)
 │   ├── LoginPage.tsx
 │   ├── HomePage.tsx
@@ -376,18 +375,7 @@ import { Box, Typography, Button, TextField } from '@mui/material';
 
 ### Custom Hooks
 
-**Screen Recording Protection:**
-```tsx
-import useScreenRecordingProtection from '../hooks/useScreenRecordingProtection';
-
-// In video player component:
-useScreenRecordingProtection({
-  onRecordingDetected: () => {
-    // Pause video
-    videoRef.current?.pause();
-  }
-});
-```
+See `src/hooks/` for project-specific hooks (e.g. `useGoogleAuth.ts`).
 
 ---
 

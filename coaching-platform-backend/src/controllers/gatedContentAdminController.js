@@ -1,21 +1,9 @@
 import BlogPost from '../models/BlogPost.js';
 import mongoose from 'mongoose';
-import axios from 'axios';
 import asyncHandler from 'express-async-handler';
-
-/**
- * Helper function to upload a file buffer to a specified path in Bunny Storage.
- */
-const uploadToBunny = async (fileBuffer, storagePath, mimeType) => {
-    const uploadUrl = `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${storagePath}`;
-    await axios.put(uploadUrl, fileBuffer, {
-        headers: {
-            'AccessKey': process.env.BUNNY_STORAGE_ACCESS_KEY,
-            'Content-Type': mimeType,
-        },
-    });
-    return storagePath; 
-};
+import fsPromises from 'fs/promises';
+import path from 'path';
+import { getUploadsRoot } from '../config/videoStorageConfig.js';
 
 /**
  * @desc    Upload a gated file and attach it to a blog post
@@ -46,9 +34,12 @@ export const uploadGatedFile = asyncHandler(async (req, res) => {
         throw new Error('Blog post not found.');
     }
 
-    const storagePath = `gated_materials/${postId}-${Date.now()}-${file.originalname}`;
-    
-    await uploadToBunny(file.buffer, storagePath, file.mimetype);
+    const safeOriginal = (file.originalname || 'file').replace(/[^\w.\-]+/g, '_');
+    const storagePath = path.posix.join('gated_materials', `${postId}-${Date.now()}-${safeOriginal}`);
+    const fullPath = path.join(getUploadsRoot(), storagePath);
+
+    await fsPromises.mkdir(path.dirname(fullPath), { recursive: true });
+    await fsPromises.writeFile(fullPath, file.buffer);
 
     const newAttachment = {
         label,

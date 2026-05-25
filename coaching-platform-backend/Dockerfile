@@ -26,9 +26,5 @@ COPY . .
 # Expose the port the app runs on (as defined in .env and server.js)
 EXPOSE 5000
 
-# Install nodemon globally for development
-RUN npm install -g nodemon
-
-# Command to run the application using nodemon for development
-# For production, you would typically use "npm start"
-CMD [ "npm", "run", "dev" ]
+# Production: run with node (use `command: npm run dev` in compose for development)
+CMD [ "npm", "start" ]

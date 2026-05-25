@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, Link as RouterLink, useSearchParams } from 'react-router-dom';
 import {
     Container, Typography, Grid, Card, CardActionArea, CardContent, CardMedia,
@@ -11,7 +12,7 @@ import BlogSidebar from '../components/features/blog/BlogSidebar';
 import { getSplashImageUrl } from '../utils/imageUtils';
 
 const BlogListPage: React.FC = () => {
-    // Get the category slug from the URL if it exists
+    const { t } = useTranslation();
     const { categorySlug } = useParams<{ categorySlug: string }>();
     
     const [posts, setPosts] = useState<BlogPostListItem[]>([]);
@@ -20,7 +21,7 @@ const BlogListPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
 
     // Add state for a dynamic page title
-    const [pageTitle, setPageTitle] = useState('Our Blog');
+    const [pageTitle, setPageTitle] = useState(t('blog.ourBlog'));
 
     const [currentPage, setCurrentPage] = useState<number>(parseInt(searchParams.get('page') || '1', 10));
     const [totalPages, setTotalPages] = useState<number>(1);
@@ -28,14 +29,14 @@ const BlogListPage: React.FC = () => {
 
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
-    const getImageUrl = (bunnyUrl?: string) => {
-        if (!bunnyUrl) {
+    const getImageUrl = (imageUrl?: string) => {
+        if (!imageUrl) {
             return getSplashImageUrl();
         }
         
-        if (bunnyUrl.startsWith('http')) {
+        if (imageUrl.startsWith('http')) {
             try {
-                const url = new URL(bunnyUrl);
+                const url = new URL(imageUrl);
                 const pathSegments = url.pathname.split('/');
                 const fileName = pathSegments[pathSegments.length - 1];
 
@@ -46,7 +47,7 @@ const BlogListPage: React.FC = () => {
                 return getSplashImageUrl();
             }
         }
-        return `${apiBaseUrl.replace(/\/$/, '')}/${bunnyUrl.replace(/^\//, '')}`;
+        return `${apiBaseUrl.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
     };
 
     // This function now handles both general listing and category-specific listing
@@ -56,10 +57,10 @@ const BlogListPage: React.FC = () => {
         try {
             let data;
             if (categorySlug) {
-                setPageTitle(`Category: ${categorySlug.replace(/-/g, ' ')}`);
+                setPageTitle(`${t('blog.category')}: ${categorySlug.replace(/-/g, ' ')}`);
                 data = await getPublishedPostsByCategoryUser(categorySlug, page, postsPerPage);
             } else {
-                setPageTitle('Our Blog');
+                setPageTitle(t('blog.ourBlog'));
                 data = await getAllPublishedBlogPostsUser(page, postsPerPage);
             }
             
@@ -67,11 +68,11 @@ const BlogListPage: React.FC = () => {
             setTotalPages(data.totalPages || 1);
             setCurrentPage(data.currentPage || page);
         } catch (err: any) {
-            setError(err.message || 'Failed to load blog posts.');
+            setError(err.message || t('blog.loadError'));
         } finally {
             setIsLoading(false);
         }
-    }, [categorySlug, postsPerPage]);
+    }, [categorySlug, postsPerPage, t]);
 
     useEffect(() => {
         const pageFromUrl = parseInt(searchParams.get('page') || '1', 10);
@@ -87,9 +88,9 @@ const BlogListPage: React.FC = () => {
         <Box sx={{ bgcolor: 'grey.50', py: 5 }}>
             <Container maxWidth="xl">
                 <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
-                    <MuiLink component={RouterLink} underline="hover" color="inherit" to="/">Home</MuiLink>
-                    <MuiLink component={RouterLink} underline="hover" color="inherit" to="/blog">Blog</MuiLink>
-                    {categorySlug && <Typography color="text.primary">Category: {categorySlug}</Typography>}
+                    <MuiLink component={RouterLink} underline="hover" color="inherit" to="/">{t('blog.home')}</MuiLink>
+                    <MuiLink component={RouterLink} underline="hover" color="inherit" to="/blog">{t('nav.blog')}</MuiLink>
+                    {categorySlug && <Typography color="text.primary">{t('blog.category')}: {categorySlug}</Typography>}
                 </Breadcrumbs>
 
                 <Typography variant="h3" component="h1" gutterBottom sx={{ textAlign: 'center', mb: 5, fontWeight: 'bold', textTransform: 'capitalize' }}>

@@ -116,11 +116,11 @@ const BlogPostDetailPage: React.FC = () => {
         return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     };
 
-    const getImageUrl = (bunnyUrl?: string) => {
-        if (!bunnyUrl) return getSplashImageUrl();
-        if (bunnyUrl.startsWith('blob:')) return bunnyUrl;
+    const getImageUrl = (imageUrl?: string) => {
+        if (!imageUrl) return getSplashImageUrl();
+        if (imageUrl.startsWith('blob:')) return imageUrl;
         try {
-            const url = new URL(bunnyUrl);
+            const url = new URL(imageUrl);
             const pathSegments = url.pathname.split('/');
             const fileName = pathSegments[pathSegments.length - 1];
             if (!fileName) return getSplashImageUrl();
@@ -129,7 +129,7 @@ const BlogPostDetailPage: React.FC = () => {
             } else if (url.pathname.includes('/blog_images/')) {
                 return `${apiBaseUrl}/blog/image/${fileName}`;
             }
-            return bunnyUrl;
+            return imageUrl;
         } catch (e) {
             return getSplashImageUrl();
         }

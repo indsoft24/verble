@@ -1,9 +1,11 @@
 // src/utils/videoAccessHelper.js
 import VideoWatchProgress from '../models/VideoWatchProgress.js';
 import Video from '../models/Video.js';
+import User from '../models/User.js';
+import { getActiveUserTierLevel, TIER_LEVEL } from './subscriptionTierAccess.js';
 
 /**
- * Calculate which set a video belongs to (sets of 3)
+ * Calculate which step a video belongs to (1 video per step)
  * @param {number} videoOrder - The order field of the video
  * @param {number} minOrder - The minimum order value in the module (for normalization)
  * @returns {number} - The set index (0-based)
@@ -12,14 +14,14 @@ import Video from '../models/Video.js';
  * the minimum order to ensure sets are calculated correctly regardless of starting order.
  * 
  * Example: If orders start at 1:
- * - Order 1, 2, 3 → Set 0
- * - Order 4, 5, 6 → Set 1
- * - Order 7, 8, 9 → Set 2
+ * - Order 1 → Step 0
+ * - Order 2 → Step 1
+ * - Order 3 → Step 2
  */
 export const getVideoSetIndex = (videoOrder, minOrder = 0) => {
     // Normalize order to 0-based by subtracting minimum order
     const normalizedOrder = videoOrder - minOrder;
-    return Math.floor(normalizedOrder / 3);
+    return normalizedOrder;
 };
 
 /**
@@ -202,11 +204,11 @@ export const getModuleCompletionCycle = async (userId, moduleId) => {
  * Check if a user can access a video based on sequential unlocking rules
  * 
  * Rules:
- * 1. Videos unlock in sets of 3
- * 2. Only ONE set is unlocked at a time
- * 3. Previous sets lock when next set unlocks
+ * 1. Videos unlock one-by-one (strict order)
+ * 2. Only ONE video step is unlocked at a time
+ * 3. Previous steps lock when next step unlocks
  * 4. After completing all sets in cycle 0, cycle 1 starts
- * 5. Maximum 2 watches per video across both cycles
+ * 5. Maximum 4 watches per video across all cycles
  * 
  * @param {string} userId - The user ID
  * @param {Object} video - The video object
@@ -216,6 +218,7 @@ export const getModuleCompletionCycle = async (userId, moduleId) => {
  * @returns {Promise<Object>} - { canAccess: boolean, reason: string, watchCount: number, remainingWatches: number }
  */
 export const checkSequentialVideoAccess = async (userId, video, moduleId, preCalculatedUnlockedSetIndex = null, preCalculatedCompletionCycle = null) => {
+    const MAX_WATCHES_PER_VIDEO = 4;
     // Validate inputs
     if (!userId || !video || !moduleId) {
         return {
@@ -233,7 +236,7 @@ export const checkSequentialVideoAccess = async (userId, video, moduleId, preCal
             canAccess: true,
             reason: 'Access granted (order field missing)',
             watchCount: 0,
-            remainingWatches: 2,
+            remainingWatches: MAX_WATCHES_PER_VIDEO,
         };
     }
 
@@ -244,6 +247,16 @@ export const checkSequentialVideoAccess = async (userId, video, moduleId, preCal
 
     // Get all videos for the module
     const videos = await getModuleVideos(moduleId);
+    if (videos.length === 0) {
+        return {
+            canAccess: false,
+            reason: 'No videos are available in this module.',
+            watchCount: 0,
+            remainingWatches: 0,
+        };
+    }
+
+    const minOrder = Math.min(...videos.map(v => v.order ?? 0));
     
     // Get watch progress for both cycles
     const cycle0Progress = await VideoWatchProgress.find({
@@ -262,69 +275,42 @@ export const checkSequentialVideoAccess = async (userId, video, moduleId, preCal
     const cycle1ProgressMap = new Map();
     cycle1Progress.forEach(p => cycle1ProgressMap.set(p.video.toString(), p));
 
-    // Check if both cycles are complete
-    const cycle0Complete = videos.every(v => {
-        const p = cycle0ProgressMap.get(v._id.toString());
-        return p && p.isCompleted;
-    });
-    const cycle1Complete = videos.every(v => {
-        const p = cycle1ProgressMap.get(v._id.toString());
-        return p && p.isCompleted;
-    });
-
     // Get watch counts for this video
     const videoCycle0 = cycle0ProgressMap.get(video._id.toString());
     const videoCycle1 = cycle1ProgressMap.get(video._id.toString());
     const totalWatchCount = (videoCycle0?.watchCount || 0) + (videoCycle1?.watchCount || 0);
 
-    // If both cycles complete AND video watched 2 times, lock permanently
-    if (cycle0Complete && cycle1Complete && totalWatchCount >= 2) {
-        return {
-            canAccess: false,
-            reason: 'Maximum watch limit reached (2 times). This video has been watched the maximum number of times.',
-            watchCount: totalWatchCount,
-            remainingWatches: 0,
-        };
-    }
-
-    // Get current unlocked set for the current cycle
-    // Use pre-calculated value if provided (for consistency and performance)
-    const unlockedSetIndex = preCalculatedUnlockedSetIndex !== null 
-        ? preCalculatedUnlockedSetIndex 
+    // Enforce sequential one-by-one unlocking.
+    const unlockedSetIndex = preCalculatedUnlockedSetIndex !== null
+        ? preCalculatedUnlockedSetIndex
         : await getCurrentUnlockedSetIndex(userId, moduleId, completionCycle);
+    const isInUnlockedSet = isVideoInUnlockedSet(video, unlockedSetIndex, minOrder);
 
-    // Find minimum order value for normalization
-    const minOrder = Math.min(...videos.map(v => v.order ?? 0));
-
-    // Check if video is in unlocked set
-    if (!isVideoInUnlockedSet(video, unlockedSetIndex, minOrder)) {
+    if (!isInUnlockedSet) {
+        const targetSet = getVideoSetIndex(video.order, minOrder) + 1;
+        const currentSet = unlockedSetIndex + 1;
         return {
             canAccess: false,
-            reason: 'Video is locked. Complete previous videos to unlock.',
+            reason: `This video is currently locked. Complete lesson ${currentSet} to unlock lesson ${targetSet}.`,
             watchCount: totalWatchCount,
-            remainingWatches: Math.max(0, 2 - totalWatchCount),
+            remainingWatches: Math.max(0, MAX_WATCHES_PER_VIDEO - totalWatchCount),
         };
     }
 
-    // Video is in unlocked set, check watch count limit
-    const remainingWatches = Math.max(0, 2 - totalWatchCount);
-
-    // If total watch count is 2 or more, lock the video
-    if (totalWatchCount >= 2) {
+    if (totalWatchCount >= MAX_WATCHES_PER_VIDEO) {
         return {
             canAccess: false,
-            reason: 'Maximum watch limit reached (2 times total). This video has been watched the maximum number of times.',
+            reason: `Maximum watch limit reached for this video (${MAX_WATCHES_PER_VIDEO} watches).`,
             watchCount: totalWatchCount,
             remainingWatches: 0,
         };
     }
 
-    // Video is unlocked and within watch limit
     return {
         canAccess: true,
         reason: 'Access granted',
         watchCount: totalWatchCount,
-        remainingWatches: remainingWatches,
+        remainingWatches: Math.max(0, MAX_WATCHES_PER_VIDEO - totalWatchCount),
     };
 };
 
@@ -334,7 +320,7 @@ export const checkSequentialVideoAccess = async (userId, video, moduleId, preCal
  * This function:
  * 1. Saves progress for ALL modules the video belongs to
  * 2. Tracks progress per user-module-video-cycle combination
- * 3. Enforces watch count limits (max 2 per video across both cycles)
+ * 3. Enforces watch count limits (max 4 per video across all cycles)
  * 4. Checks set and module completion
  * 
  * @param {string} userId - The user ID
@@ -343,6 +329,7 @@ export const checkSequentialVideoAccess = async (userId, video, moduleId, preCal
  * @returns {Promise<Object>} - Updated progress and unlock status
  */
 export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
+    const MAX_WATCHES_PER_VIDEO = 4;
     // Get the video to find all modules it belongs to
     const video = await Video.findById(videoId).select('modules').lean();
     if (!video) {
@@ -395,14 +382,11 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
         
         const totalWatchCount = allVideoProgress.reduce((sum, p) => sum + (p.watchCount || 0), 0);
         
-        // Only increment if total watch count is less than 2
-        if (totalWatchCount >= 2) {
-            // Maximum watch limit reached for this module
-            continue; // Skip this module but continue with others
+        if (totalWatchCount >= MAX_WATCHES_PER_VIDEO) {
+            throw new Error(`Maximum watch limit reached for this video (${MAX_WATCHES_PER_VIDEO} watches).`);
         }
 
         // Increment watch count for current cycle
-        const previousWatchCount = progress.watchCount;
         progress.watchCount += 1;
         progress.isCompleted = true;
         progress.lastWatchedAt = new Date();
@@ -425,7 +409,7 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
     }
 
     const { progress, totalWatchCount: finalTotalWatchCount } = requestedModuleResult;
-    const remainingWatches = Math.max(0, 2 - finalTotalWatchCount);
+    const remainingWatches = Math.max(0, MAX_WATCHES_PER_VIDEO - finalTotalWatchCount);
 
     // Check if current set is complete for the requested module
     const videos = await getModuleVideos(moduleId);

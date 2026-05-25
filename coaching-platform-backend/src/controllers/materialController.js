@@ -1,6 +1,18 @@
-import axios from 'axios';
-import Video from '../models/Video.js'; 
-import mongoose from 'mongoose'; 
+import fsPromises from 'fs/promises';
+import { createReadStream, constants as fsConstants } from 'fs';
+import path from 'path';
+import Video from '../models/Video.js';
+import mongoose from 'mongoose';
+import { getUploadsRoot } from '../config/videoStorageConfig.js';
+
+function getPublicOrigin() {
+    const raw = process.env.API_PUBLIC_ORIGIN || process.env.BASE_URL || 'http://localhost:5000';
+    return String(raw).replace(/\/$/, '');
+}
+
+function localFilePath(storagePath) {
+    return path.join(getUploadsRoot(), storagePath);
+}
 
 /**
  * @desc    Upload a material file for a specific video
@@ -27,53 +39,39 @@ export const uploadMaterial = async (req, res) => {
         return res.status(404).json({ message: 'Video not found.' });
     }
 
-    const storagePath = `materials/${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
-    const storageUrl = `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${storagePath}`;
-    const uploadUrl = `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${storagePath}`;
+    const safeName = file.originalname.replace(/\s+/g, '-');
+    const storagePath = path.posix.join('materials', `${Date.now()}-${safeName}`);
+    const fullPath = localFilePath(storagePath);
 
     try {
-        await axios.put(
-            uploadUrl,
-            file.buffer, 
-            {
-                headers: {
-                    'AccessKey': process.env.BUNNY_STORAGE_ACCESS_KEY,
-                    'Content-Type': 'application/octet-stream',
-                },
-            }
-        );
+        await fsPromises.mkdir(path.dirname(fullPath), { recursive: true });
+        await fsPromises.writeFile(fullPath, file.buffer);
 
         const newMaterial = {
             label,
             fileName: file.originalname,
-            storageUrl,
+            storageUrl: '',
             storagePath,
             fileSize: file.size,
-            fileType: file.mimetype, 
+            fileType: file.mimetype,
         };
 
         video.associatedMaterials.push(newMaterial);
         await video.save();
 
         const createdMaterial = video.associatedMaterials[video.associatedMaterials.length - 1];
+        createdMaterial.storageUrl = `${getPublicOrigin()}/api/materials/${videoId}/${createdMaterial._id}/download`;
+        await video.save();
+
+        const out = video.associatedMaterials.id(createdMaterial._id);
 
         res.status(201).json({
             status: 'success',
             message: 'Material uploaded and linked successfully.',
-            data: { material: createdMaterial },
+            data: { material: out },
         });
-
     } catch (error) {
-        console.error('--- Bunny Storage Upload Error ---');
-        console.error('Request URL:', uploadUrl);
-        if (error.response) {
-            console.error('Status:', error.response.status);
-            console.error('Headers:', error.response.headers);
-            console.error('Data:', error.response.data);
-        } else {
-            console.error('Error Message:', error.message);
-        }
-        console.error('---------------------------------');
+        console.error('Material upload error:', error.message);
         res.status(500).json({ message: 'Failed to upload material to storage.' });
     }
 };
@@ -89,7 +87,7 @@ export const deleteMaterial = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(videoId) || !mongoose.Types.ObjectId.isValid(materialId)) {
         return res.status(400).json({ message: 'Invalid ID format.' });
     }
-    
+
     const video = await Video.findById(videoId);
     if (!video) {
         return res.status(404).json({ message: 'Video not found.' });
@@ -101,39 +99,18 @@ export const deleteMaterial = async (req, res) => {
     }
 
     const storagePath = material.storagePath;
-    const deleteUrl = `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${storagePath}`;
-
     try {
-        await axios.delete(
-            deleteUrl,
-            {
-                headers: { 'AccessKey': process.env.BUNNY_STORAGE_ACCESS_KEY },
-            }
-        );
-
-        video.associatedMaterials.pull({ _id: materialId });
-        await video.save();
-        
-        res.status(200).json({ status: 'success', message: 'Material deleted successfully.' });
-
-    } catch (error) {
-        if (error.response && error.response.status === 404) {
-            console.warn(`File not found on Bunny Storage ('${storagePath}'), but proceeding to remove from DB.`);
-            video.associatedMaterials.pull({ _id: materialId });
-            await video.save();
-            return res.status(200).json({ status: 'success', message: 'Material deleted from database (was not found in storage).' });
+        if (storagePath && !String(storagePath).startsWith('http')) {
+            await fsPromises.unlink(localFilePath(storagePath)).catch(() => {});
         }
-        
-        console.error('--- Bunny Storage Delete Error ---');
-        if (error.response) {
-            console.error('Status:', error.response.status);
-            console.error('Data:', error.response.data);
-        } else {
-            console.error('Error Message:', error.message);
-        }
-        console.error('----------------------------------');
-        res.status(500).json({ message: 'Failed to delete material from storage.' });
+    } catch (e) {
+        console.warn('Could not delete material file from disk:', e.message);
     }
+
+    video.associatedMaterials.pull({ _id: materialId });
+    await video.save();
+
+    res.status(200).json({ status: 'success', message: 'Material deleted successfully.' });
 };
 
 /**
@@ -159,30 +136,25 @@ export const downloadMaterial = async (req, res) => {
             return res.status(404).json({ message: 'Material not found.' });
         }
 
-        const downloadUrl = `https://${process.env.BUNNY_STORAGE_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE_NAME}/${material.storagePath}`;
+        const sp = material.storagePath;
+        if (!sp || String(sp).startsWith('http')) {
+            return res.status(410).json({
+                message: 'This file is stored externally. Re-upload the material to use server storage.',
+            });
+        }
 
-        const response = await axios({
-            method: 'get',
-            url: downloadUrl,
-            responseType: 'stream',
-            headers: {
-                AccessKey: process.env.BUNNY_STORAGE_ACCESS_KEY,
-            },
-        });
+        const fullPath = localFilePath(sp);
+        try {
+            await fsPromises.access(fullPath, fsConstants.R_OK);
+        } catch {
+            return res.status(404).json({ message: 'File not found on server.' });
+        }
 
         res.setHeader('Content-Disposition', `attachment; filename="${material.fileName}"`);
         res.setHeader('Content-Type', material.fileType || 'application/octet-stream');
-
-        response.data.pipe(res);
-
+        createReadStream(fullPath).pipe(res);
     } catch (error) {
-        console.error('--- Bunny Storage Download Error ---');
-        if (error.response) {
-            console.error('Status:', error.response.status);
-            console.error('Data:', error.response.data);
-        } else {
-            console.error('Error Message:', error.message);
-        }
+        console.error('Material download error:', error.message);
         res.status(500).json({ message: 'Failed to download material.' });
     }
 };
@@ -196,54 +168,43 @@ export const getAllMaterials = async (req, res) => {
     try {
         const videos = await Video.find({}, 'associatedMaterials');
         let materials = [];
-        videos.forEach(video => {
-            materials = materials.concat(video.associatedMaterials.map(material => ({
-                _id: material._id,
-                label: material.label,
-                fileName: material.fileName,
-                fileSize: material.fileSize,
-                fileType: material.fileType,
-                videoId: video._id
-            })));
+        videos.forEach((video) => {
+            materials = materials.concat(
+                video.associatedMaterials.map((material) => ({
+                    ...material.toObject(),
+                    videoId: video._id,
+                }))
+            );
         });
         res.status(200).json({ status: 'success', results: materials.length, data: { materials } });
     } catch (error) {
-        console.error('--- Fetch All Materials Error ---', error);
+        console.error('GET ALL MATERIALS ERROR:', error);
         res.status(500).json({ message: 'Failed to fetch materials.' });
     }
 };
 
-
-
 /**
- * @desc    Fetch materials related to a specific video (info only, not download links)
+ * @desc    Fetch materials for a specific video
  * @route   GET /api/materials/:videoId
  * @access  Public
  */
 export const getMaterialsByVideo = async (req, res) => {
-    const { videoId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(videoId)) {
-        return res.status(400).json({ message: 'Invalid Video ID format.' });
-    }
-
     try {
-        const video = await Video.findById(videoId, 'associatedMaterials');
+        const { videoId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(videoId)) {
+            return res.status(400).json({ message: 'Invalid Video ID format.' });
+        }
+        const video = await Video.findById(videoId).select('associatedMaterials');
         if (!video) {
             return res.status(404).json({ message: 'Video not found.' });
         }
-
-        const materials = video.associatedMaterials.map(material => ({
-            _id: material._id,
-            label: material.label,
-            fileName: material.fileName,
-            fileSize: material.fileSize,
-            fileType: material.fileType,
-        }));
-
-        res.status(200).json({ status: 'success', results: materials.length, data: { materials } });
+        res.status(200).json({
+            status: 'success',
+            results: video.associatedMaterials.length,
+            data: { materials: video.associatedMaterials },
+        });
     } catch (error) {
-        console.error('--- Fetch Materials By Video Error ---', error);
-        res.status(500).json({ message: 'Failed to fetch materials.' });
+        console.error('GET MATERIALS BY VIDEO ERROR:', error);
+        res.status(500).json({ message: 'Failed to fetch materials for this video.' });
     }
 };

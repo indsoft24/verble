@@ -5,17 +5,12 @@ import Course from "../models/Course.js";
 import { createNotificationsForNewVideo } from '../utils/notificationManager.js';
 import Module from "../models/Module.js";
 import mongoose from "mongoose";
-import axios from "axios";
-import crypto from "crypto";
-
-const BUNNY_STREAM_LIBRARY_ID = process.env.BUNNY_STREAM_LIBRARY_ID;
-const BUNNY_STREAM_API_KEY = process.env.BUNNY_STREAM_API_KEY;
-
-if (!BUNNY_STREAM_LIBRARY_ID || !BUNNY_STREAM_API_KEY) {
-  console.error(
-    "CRITICAL ERROR: Bunny Stream Library ID or API Key is missing in environment variables. Video functionalities will fail."
-  );
-}
+import { randomUUID } from "crypto";
+import fs from "fs/promises";
+import path from "path";
+import { ensureVideoStorageDirs, getIncomingDir, getProcessedDir } from "../config/videoStorageConfig.js";
+import { runVideoTranscodeJob } from "../services/videoTranscodeService.js";
+import { getStreamProvider } from "../utils/videoStreamProvider.js";
 
 /**
  * @desc    Securely initiates a direct video upload.
@@ -28,215 +23,123 @@ export const initiateUpload = async (req, res) => {
     if (!title) {
         return res.status(400).json({ status: 'fail', message: 'Video title is required.' });
     }
-    if (!BUNNY_STREAM_LIBRARY_ID || !BUNNY_STREAM_API_KEY) {
-        console.error("Bunny Stream credentials not configured on server.");
-        return res.status(500).json({ status: 'error', message: 'Video service is not configured on the server.' });
-    }
 
     try {
-        const bunnyApiResponse = await axios.post(
-            `https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}/videos`,
-            { title },
-            { headers: { AccessKey: BUNNY_STREAM_API_KEY, 'Content-Type': 'application/json' } }
-        );
-        
-        const videoId = bunnyApiResponse.data.guid;
-        if (!videoId) {
-            throw new Error('Failed to get Video ID from streaming provider.');
-        }
+        await ensureVideoStorageDirs();
+        const localStorageId = randomUUID();
+
+        const coursesToSave = Array.isArray(courseIds)
+            ? courseIds.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id))
+            : [];
+        const modulesToSave = Array.isArray(moduleIds)
+            ? moduleIds.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id))
+            : [];
+        const plansToSave = Array.isArray(requiredPlans)
+            ? requiredPlans.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id))
+            : [];
 
         const newVideoData = {
-            title, description,
-            courses: courseIds || [],
-            modules: moduleIds || [],
+            title,
+            description,
+            courses: coursesToSave,
+            modules: modulesToSave,
             order: order || 0,
-            requiredPlans: requiredPlans || [],
+            requiredPlans: plansToSave,
             isPublished: isPublished || false,
-            tags: tags || [],
-            bunnyVideoLibraryId: BUNNY_STREAM_LIBRARY_ID,
-            bunnyVideoId: videoId, 
+            tags: Array.isArray(tags) ? tags.map((tag) => String(tag).trim()).filter(Boolean) : [],
+            streamProvider: 'local',
+            localStorageId,
             videoStatus: 'PENDING_UPLOAD',
+            transcodeStep: 'awaiting_upload',
+            processingProgress: 0,
+            transcodeVariants: {},
             uploader: req.user._id,
         };
+
         const newVideoInDb = await Video.create(newVideoData);
 
-        const expirationTime = Math.floor(Date.now() / 1000) + 3600; // Expires in 1 hour
-        const signature = crypto
-            .createHash('sha256')
-            .update(String(BUNNY_STREAM_LIBRARY_ID) + String(BUNNY_STREAM_API_KEY) + String(expirationTime) + String(videoId))
-            .digest('hex');
+        const populatedVideo = await Video.findById(newVideoInDb._id)
+            .populate("courses", "title _id")
+            .populate("modules", "title _id course")
+            .populate("requiredPlans", "_id name isActive");
 
         res.status(201).json({
             status: 'success',
-            message: 'Video initialized. Ready for direct upload.',
+            message: 'Video record created. Upload the file to the server.',
             data: {
-                video: newVideoInDb,
-                uploadParameters: {
-                    videoId: videoId,
-                    libraryId: BUNNY_STREAM_LIBRARY_ID,
-                    authorizationSignature: signature,
-                    authorizationExpires: expirationTime,
-                }
+                video: populatedVideo,
+                upload: {
+                    method: 'POST',
+                    fieldName: 'video',
+                    path: `/api/admin/videos/${newVideoInDb._id}/upload-file`,
+                },
             },
         });
-
     } catch (error) {
-        console.error("Error initiating video upload:", error.response?.data || error);
-        res.status(500).json({ status: 'error', message: 'Failed to initiate video upload.' });
+        console.error("Error initiating video upload:", error);
+        res.status(500).json({
+            status: 'error',
+            message: error?.message || 'Failed to initiate video upload.',
+        });
     }
 };
 
 /**
- * @desc    Admin finalizes video creation after file is uploaded to Bunny Stream by client.
- * Saves video metadata along with Bunny identifiers to the local DB.
- * @route   POST /api/admin/videos/finalize-bunny-upload
- * (Or you could reuse POST /api/admin/videos and change its logic)
- * @access  Private/Admin
+ * @route POST /api/admin/videos/:id/upload-file
  */
-export const finalizeBunnyVideoAndSaveMetadata = async (req, res, next) => {
-  const backendCallTraceId = `finalize-${Date.now()}`;
-  console.log(
-    `[VideoAdminCtrl - ${backendCallTraceId}] Received request to finalize video.`
-  );
-
-  const {
-    title,
-    description,
-    courseIds,
-    moduleIds,
-    order,
-    requiredPlans: requiredPlanIds,
-    isPublished,
-    tags,
-    bunnyVideoId,
-    bunnyVideoLibraryId,
-  } = req.body;
-
-  if (!title || !bunnyVideoId || !bunnyVideoLibraryId) {
-    return res
-      .status(400)
-      .json({
-        status: "fail",
-        message:
-          "Missing critical video information (title, bunnyVideoId, or libraryId).",
-      });
-  }
-  let videoVerifiedOnBunny = false;
-  try {
+export const uploadLocalVideoAndTranscode = async (req, res) => {
     try {
-      console.log(
-        `[VideoAdminCtrl - ${backendCallTraceId}] Verifying video ${bunnyVideoId} on Bunny Stream.`
-      );
-      const bunnyVideoDetails = await axios.get(
-        `https://video.bunnycdn.com/library/${bunnyVideoLibraryId}/videos/${bunnyVideoId}`,
-        { headers: { AccessKey: process.env.BUNNY_STREAM_API_KEY } } // Use API key from .env
-      );
-      if (
-        bunnyVideoDetails.data &&
-        bunnyVideoDetails.data.guid === bunnyVideoId
-      ) {
-        console.log(
-          `[VideoAdminCtrl - ${backendCallTraceId}] Video ${bunnyVideoId} successfully verified on Bunny Stream. Title: ${bunnyVideoDetails.data.title}`
-        );
-        videoVerifiedOnBunny = true;
-      } else {
-        console.warn(
-          `[VideoAdminCtrl - ${backendCallTraceId}] Verification with Bunny Stream returned unexpected data or ID mismatch for ${bunnyVideoId}.`
-        );
-      }
-    } catch (verifyError) {
-      console.error(
-        `[VideoAdminCtrl - ${backendCallTraceId}] Error verifying video with Bunny Stream:`,
-        verifyError.response?.data || verifyError.message
-      );
-    }
+        if (!req.file) {
+            return res.status(400).json({ status: 'fail', message: 'No video file received (field name: video).' });
+        }
+        const ext = req._localUploadExt || path.extname(req.file.originalname || "") || ".mp4";
+        const videoId = req._localUpload.videoDocId;
 
-    const coursesToSave = Array.isArray(courseIds)
-      ? courseIds
-          .filter((id) => mongoose.Types.ObjectId.isValid(id))
-          .map((id) => new mongoose.Types.ObjectId(id))
-      : [];
-    const modulesToSave = Array.isArray(moduleIds)
-      ? moduleIds
-          .filter((id) => mongoose.Types.ObjectId.isValid(id))
-          .map((id) => new mongoose.Types.ObjectId(id))
-      : [];
-    const plansToSave = Array.isArray(requiredPlanIds)
-      ? requiredPlanIds
-          .filter((id) => mongoose.Types.ObjectId.isValid(id))
-          .map((id) => new mongoose.Types.ObjectId(id))
-      : [];
-
-    const newVideoData = {
-      title,
-      description,
-      durationSeconds: 0, 
-      bunnyVideoLibraryId: BUNNY_STREAM_LIBRARY_ID,
-      bunnyVideoId: bunnyVideoId,
-      videoStatus: "UPLOADED", 
-      bunnyProcessingProgress: 0,
-      courses: coursesToSave,
-      modules: modulesToSave,
-      order: Number(order) || 0,
-      requiredPlans: plansToSave,
-      isPublished: isPublished || false,
-      tags: Array.isArray(tags)
-        ? tags.map((tag) => String(tag).trim()).filter((tag) => tag)
-        : [],
-      uploader: req.user._id,
-    };
-    Object.keys(newVideoData).forEach(
-      (key) => newVideoData[key] === undefined && delete newVideoData[key]
-    );
-
-    const newVideoInDb = await Video.create(newVideoData);
-    console.log(
-      `[VideoAdminCtrl - ${backendCallTraceId}] DB save successful. Video ID: ${newVideoInDb._id}, BunnyVideoId: ${newVideoInDb.bunnyVideoId}`
-    );
-
-    const populatedVideo = await Video.findById(newVideoInDb._id)
-      .populate("courses", "title _id")
-      .populate("modules", "title _id course")
-      .populate("requiredPlans", "_id name isActive");
-
-    res.status(201).json({
-      status: "success",
-      message: "Video metadata successfully saved after file upload.",
-      data: {
-        video: populatedVideo,
-      },
-    });
-  } catch (dbError) {
-    console.error(
-      `[VideoAdminCtrl - ${backendCallTraceId}] DB Save ERROR after Bunny upload:`,
-      dbError.stack
-    );
-    if (
-      dbError.code === 11000 &&
-      dbError.keyPattern &&
-      dbError.keyPattern.bunnyVideoId
-    ) {
-      return res
-        .status(409)
-        .json({
-          status: "fail",
-          message:
-            "This Bunny Video ID has already been registered in our system.",
+        await Video.findByIdAndUpdate(videoId, {
+            $set: {
+                sourceFileExt: ext,
+                videoStatus: "PROCESSING",
+                transcodeStep: "queued",
+                processingProgress: 0,
+                processingError: null,
+            },
         });
+
+        setImmediate(() => {
+            runVideoTranscodeJob(videoId).catch((err) => {
+                console.error(`[Transcode] Job failed for ${videoId}:`, err);
+                Video.findByIdAndUpdate(videoId, {
+                    $set: {
+                        videoStatus: "FAILED",
+                        transcodeStep: "failed",
+                        processingError: err.message || "Transcode failed",
+                    },
+                }).catch(() => {});
+            });
+        });
+
+        const populatedVideo = await Video.findById(videoId)
+            .populate("courses", "title _id")
+            .populate("modules", "title _id course")
+            .populate("requiredPlans", "_id name isActive");
+
+        const { invalidateVideoCache, invalidateModuleCache } = await import("../utils/cacheInvalidation.js");
+        await invalidateVideoCache(videoId);
+        if (populatedVideo?.modules?.length) {
+            for (const m of populatedVideo.modules) {
+                await invalidateModuleCache(typeof m === "object" && m._id ? m._id.toString() : String(m));
+            }
+        }
+
+        res.status(200).json({
+            status: "success",
+            message: "Upload received. FFmpeg transcoding started.",
+            data: { video: populatedVideo },
+        });
+    } catch (error) {
+        console.error("uploadLocalVideoAndTranscode:", error);
+        res.status(500).json({ status: "error", message: "Failed to process upload." });
     }
-    if (dbError.name === "ValidationError") {
-      const messages = Object.values(dbError.errors).map((val) => val.message);
-      return res
-        .status(400)
-        .json({ status: "fail", message: messages.join(". ") });
-    }
-    res
-      .status(500)
-      .json({
-        status: "error",
-        message: "Failed to save video metadata after successful file upload.",
-      });
-  }
 };
 
 /**
@@ -250,11 +153,13 @@ export const updateVideoStatusAdmin = async (req, res, next) => {
     videoStatus,
     processingError,
     durationSeconds,
-    bunnyStreamUrl,
-    bunnyThumbnailUrl,
+    streamUrl,
+    thumbnailUrl,
     width,
     height,
-    bunnyProcessingProgress,
+    processingProgress,
+    transcodeStep,
+    transcodeVariants,
   } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(videoId)) {
@@ -284,14 +189,16 @@ export const updateVideoStatusAdmin = async (req, res, next) => {
     if (videoStatus) fieldsToUpdate.videoStatus = videoStatus;
     if (durationSeconds !== undefined)
       fieldsToUpdate.durationSeconds = Number(durationSeconds);
-    if (bunnyStreamUrl !== undefined)
-      fieldsToUpdate.bunnyStreamUrl = bunnyStreamUrl;
-    if (bunnyThumbnailUrl !== undefined)
-      fieldsToUpdate.bunnyThumbnailUrl = bunnyThumbnailUrl;
+    if (streamUrl !== undefined)
+      fieldsToUpdate.streamUrl = streamUrl;
+    if (thumbnailUrl !== undefined)
+      fieldsToUpdate.thumbnailUrl = thumbnailUrl;
     if (width !== undefined) fieldsToUpdate.width = Number(width);
     if (height !== undefined) fieldsToUpdate.height = Number(height);
-    if (bunnyProcessingProgress !== undefined)
-      fieldsToUpdate.bunnyProcessingProgress = Number(bunnyProcessingProgress);
+    if (processingProgress !== undefined)
+      fieldsToUpdate.processingProgress = Number(processingProgress);
+    if (transcodeStep !== undefined) fieldsToUpdate.transcodeStep = String(transcodeStep);
+    if (transcodeVariants !== undefined) fieldsToUpdate.transcodeVariants = transcodeVariants;
     if (videoStatus === "FAILED" && processingError !== undefined)
       fieldsToUpdate.processingError = processingError;
     else if (videoStatus && videoStatus !== "FAILED")
@@ -347,179 +254,6 @@ export const updateVideoStatusAdmin = async (req, res, next) => {
       status: "error",
       message: "Failed to update video status/details.",
     });
-  }
-};
-
-/**
- * Creates a video placeholder on Bunny Stream and saves metadata to local DB.
- * Responds with info needed for client-side TUS upload.
- */
-export const createVideo = async (req, res, next) => {
-  const backendCallTraceId = `createVideo-${Date.now()}`;
-  console.log(
-    `[VideoAdminCtrl - ${backendCallTraceId}] ENTERED. Title: ${req.body.title}`
-  );
-
-  const {
-    title,
-    description,
-    courseIds,
-    moduleIds,
-    order,
-    requiredPlans: requiredPlanIds,
-    isPublished,
-    tags,
-  } = req.body;
-
-  if (!title) {
-    return res
-      .status(400)
-      .json({ status: "fail", message: "Video title is required." });
-  }
-  if (!BUNNY_STREAM_LIBRARY_ID || !BUNNY_STREAM_API_KEY) {
-    return res
-      .status(500)
-      .json({
-        status: "error",
-        message: "Video service (Bunny Stream) configuration error on server.",
-      });
-  }
-
-  let bunnyVideoResponseData;
-  try {
-    console.log(
-      `[VideoAdminCtrl - ${backendCallTraceId}] Calling Bunny API to create video placeholder. Title: "${title}"`
-    );
-    const bunnyApiResponse = await axios.post(
-      `https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}/videos`,
-      { title: title }, 
-      {
-        headers: {
-          AccessKey: BUNNY_STREAM_API_KEY,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    bunnyVideoResponseData = bunnyApiResponse.data;
-    if (!bunnyVideoResponseData || !bunnyVideoResponseData.guid) {
-      console.error(
-        `[VideoAdminCtrl - ${backendCallTraceId}] Failed to create video object in Bunny Stream. Response:`,
-        bunnyVideoResponseData
-      );
-      throw new Error("Failed to create video object with streaming provider.");
-    }
-    console.log(
-      `[VideoAdminCtrl - ${backendCallTraceId}] Bunny Stream video object created successfully. BunnyVideoId (GUID): ${bunnyVideoResponseData.guid}`
-    );
-  } catch (bunnyError) {
-    console.error(
-      `[VideoAdminCtrl - ${backendCallTraceId}] Error communicating with Bunny Stream API:`,
-      bunnyError.response?.data || bunnyError.message,
-      bunnyError.stack?.substring(0, 500)
-    );
-    return res.status(500).json({
-      status: "error",
-      message:
-        "Video service provider error during video placeholder creation.",
-      details: bunnyError.response?.data || bunnyError.message,
-    });
-  }
-
-  try {
-    const coursesToSave = Array.isArray(courseIds)
-      ? courseIds
-          .filter(mongoose.Types.ObjectId.isValid)
-          .map((id) => new mongoose.Types.ObjectId(id))
-      : [];
-    const modulesToSave = Array.isArray(moduleIds)
-      ? moduleIds
-          .filter(mongoose.Types.ObjectId.isValid)
-          .map((id) => new mongoose.Types.ObjectId(id))
-      : [];
-    const plansToSave = Array.isArray(requiredPlanIds)
-      ? requiredPlanIds
-          .filter(mongoose.Types.ObjectId.isValid)
-          .map((id) => new mongoose.Types.ObjectId(id))
-      : [];
-
-    const newVideoData = {
-      title,
-      description,
-      durationSeconds: 0,
-      bunnyVideoLibraryId: BUNNY_STREAM_LIBRARY_ID,
-      bunnyVideoId: bunnyVideoResponseData.guid,
-      videoStatus: "PENDING_UPLOAD",
-      bunnyProcessingProgress: 0,
-      courses: coursesToSave,
-      modules: modulesToSave,
-      order: Number(order) || 0,
-      requiredPlans: plansToSave,
-      isPublished: isPublished || false,
-      tags: Array.isArray(tags)
-        ? tags.map((tag) => String(tag).trim()).filter((tag) => tag)
-        : [],
-      uploader: req.user._id,
-    };
-    Object.keys(newVideoData).forEach(
-      (key) => newVideoData[key] === undefined && delete newVideoData[key]
-    );
-
-    const newVideoInDb = await Video.create(newVideoData);
-    console.log(
-      `[VideoAdminCtrl - ${backendCallTraceId}] DB save successful. Video ID: ${newVideoInDb._id}, BunnyVideoId: ${newVideoInDb.bunnyVideoId}`
-    );
-
-    // Invalidate cache
-    const { invalidateVideoCache, invalidateModuleCache } = await import('../utils/cacheInvalidation.js');
-    await invalidateVideoCache();
-    if (modulesToSave.length > 0) {
-        for (const moduleId of modulesToSave) {
-            await invalidateModuleCache(moduleId.toString());
-        }
-    }
-
-    const populatedVideo = await Video.findById(newVideoInDb._id)
-      .populate("courses", "title _id")
-      .populate("modules", "title _id course")
-      .populate("requiredPlans", "_id name isActive");
-
-    res.status(201).json({
-      status: "success",
-      message:
-        "Video metadata created. Ready for file upload to streaming provider.",
-      data: {
-        video: populatedVideo,
-        uploadInfo: {
-          bunnyVideoId: bunnyVideoResponseData.guid,
-          libraryId: BUNNY_STREAM_LIBRARY_ID,
-          apiKey: BUNNY_STREAM_API_KEY,
-        },
-      },
-    });
-  } catch (dbError) {
-    console.error(
-      `[VideoAdminCtrl - ${backendCallTraceId}] DB Save ERROR:`,
-      dbError.stack
-    );
-    if (bunnyVideoResponseData?.guid) {
-      console.warn(
-        `[VideoAdminCtrl - ${backendCallTraceId}] DB save failed for title "${title}". Bunny Video ID: ${bunnyVideoResponseData.guid}. Consider manual Bunny.net cleanup.`
-      );
-
-    }
-    if (dbError.name === "ValidationError") {
-      const messages = Object.values(dbError.errors).map((val) => val.message);
-      return res
-        .status(400)
-        .json({ status: "fail", message: messages.join(". ") });
-    }
-    res
-      .status(500)
-      .json({
-        status: "error",
-        message: "Failed to save video metadata after provider interaction.",
-      });
   }
 };
 
@@ -702,18 +436,6 @@ export const updateVideo = async (req, res, next) => {
         updateData.modules = moduleIds;
     }
 
-    if (updateData.title && updateData.title !== videoToUpdate.title) {
-        try {
-            await axios.post(
-                `https://video.bunnycdn.com/library/${videoToUpdate.bunnyVideoLibraryId}/videos/${videoToUpdate.bunnyVideoId}`,
-                { title: updateData.title },
-                { headers: { 'AccessKey': BUNNY_STREAM_API_KEY, 'Content-Type': 'application/json' } }
-            );
-        } catch (bunnyUpdateError) {
-            console.error("Failed to update title on Bunny Stream:", bunnyUpdateError.response?.data || bunnyUpdateError.message);
-        }
-    }
-
     const updatedVideo = await Video.findByIdAndUpdate(
       videoId,
       { $set: updateData },
@@ -772,31 +494,20 @@ export const deleteVideo = async (req, res, next) => {
         .json({ status: "fail", message: "Video not found." });
     }
 
-    if (
-      video.bunnyVideoId &&
-      video.bunnyVideoLibraryId &&
-      BUNNY_STREAM_API_KEY
-    ) {
+    if (getStreamProvider(video) === "local" && video.localStorageId) {
       try {
-        console.log(
-          `Deleting video ${video.bunnyVideoId} from Bunny Stream library ${video.bunnyVideoLibraryId}`
-        );
-        await axios.delete(
-          `https://video.bunnycdn.com/library/${video.bunnyVideoLibraryId}/videos/${video.bunnyVideoId}`,
-          { headers: { AccessKey: BUNNY_STREAM_API_KEY } }
-        );
-        console.log(
-          `Video ${video.bunnyVideoId} successfully deleted from Bunny Stream.`
-        );
-      } catch (bunnyError) {
-        console.error(
-          "Failed to delete video from Bunny Stream:",
-          bunnyError.response?.data || bunnyError.message
-        );
+        await fs.rm(getIncomingDir(video.localStorageId), { recursive: true, force: true });
+      } catch (e) {
+        console.warn("Could not remove incoming video folder:", e.message);
+      }
+      try {
+        await fs.rm(getProcessedDir(video.localStorageId), { recursive: true, force: true });
+      } catch (e) {
+        console.warn("Could not remove processed video folder:", e.message);
       }
     } else {
       console.warn(
-        `Video ${videoId} missing Bunny Stream info; cannot delete from provider. Local DB delete will proceed.`
+        `Video ${videoId} is not local storage; removing DB row only (no external CDN delete).`
       );
     }
 
@@ -962,27 +673,6 @@ export const bulkLinkVideos = async (req, res, next) => {
     });
   }
 };
-
-// @desc    Video Admin Controller
-const videoAdminController = {
-  createVideo: async (req, res) => {
-    /*  */
-  },
-  getAllVideos: async (req, res) => {
-    /*  */
-  },
-  getVideoById: async (req, res) => {
-    /*  */
-  },
-  updateVideo: async (req, res) => {
-    /*  */
-  },
-  deleteVideo: async (req, res) => {
-    /*  */
-  },
-};
-
-export default videoAdminController;
 
 /**
  * @desc    Get all videos associated with a specific module (Admin)

@@ -1,27 +1,36 @@
 // src/components/layout/Footer.tsx
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Container, Box, Typography, Grid, Link as MuiLink, IconButton } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import InstagramIcon from '@mui/icons-material/Instagram';
+import { appStoreListingUrl, brandAssets } from '../../assets/brandAssets';
 
-// A reusable component for a list of footer links
-const FooterLinkColumn = ({ title, links }: { title: string, links: { name: string, path: string }[] }) => (
-    <Grid sx={{width: {xs:'100%', sm:'33.33%', md: '22%' }}}>
-        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+const FooterLinkColumn = ({ title, links }: { title: string; links: { label: string; path: string }[] }) => (
+    <Grid size={{ xs: 6, md: 3 }}>
+        <Typography
+            variant="subtitle1"
+            gutterBottom
+            sx={{ fontWeight: 700, color: '#F8FAFC', letterSpacing: '0.01em', mb: 1.25 }}
+        >
             {title}
         </Typography>
         <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none' }}>
             {links.map((link) => (
-                <Box component="li" key={link.name} sx={{ py: 0.5 }}>
+                <Box component="li" key={link.path} sx={{ py: 0.35 }}>
                     <MuiLink
                         component={RouterLink}
                         to={link.path}
                         variant="body2"
-                        underline="hover"
-                        sx={{ color: 'inherit', opacity: 0.8, '&:hover': { opacity: 1 } }}
+                        underline="none"
+                        sx={{
+                            color: 'rgba(226,232,240,0.8)',
+                            transition: 'all 0.2s ease',
+                            '&:hover': { color: '#FFFFFF', pl: 0.5 },
+                        }}
                     >
-                        {link.name}
+                        {link.label}
                     </MuiLink>
                 </Box>
             ))}
@@ -30,70 +39,153 @@ const FooterLinkColumn = ({ title, links }: { title: string, links: { name: stri
 );
 
 const Footer: React.FC = () => {
+    const { t } = useTranslation();
+
     const companyLinks = [
-        { name: 'About Us', path: '/about-us' },
-        { name: 'Mission & Vision', path: '/mission-vision' },
-        { name: 'Why Join Us', path: '/why-join-us' },
-        { name: 'Careers', path: '/careers' },
-        { name: 'Testimonials', path: '/testimonials' },
+        { label: t('footer.aboutUs'), path: '/about-us' },
+        { label: t('footer.missionVision'), path: '/mission-vision' },
+        { label: t('footer.whyJoinUs'), path: '/why-join-us' },
+        { label: t('footer.testimonials'), path: '/testimonials' },
     ];
-    
+
     const legalLinks = [
-        { name: 'Privacy Policy', path: '/privacy-policy' },
-        { name: 'Terms & Conditions', path: '/terms-and-conditions' },
-        { name: 'Disclaimer', path: '/disclaimer' },
-        { name: "FAQ'S", path: '/faqs' },
-        { name: 'Help Center', path: '/help' },
+        { label: t('footer.privacyPolicy'), path: '/privacy-policy' },
+        { label: t('footer.termsAndConditions'), path: '/terms-and-conditions' },
+        { label: t('footer.disclaimer'), path: '/disclaimer' },
+        { label: t('footer.faqs'), path: '/faqs' },
+        { label: t('footer.helpCenter'), path: '/help' },
     ];
 
     const connectLinks = [
-        { name: 'Contact Us', path: '/contact-us' },
-        { name: 'Partnerships', path: '/partnership' },
-        { name: 'Business Proposals', path: '/business-proposal' },
-        { name: 'Site Map', path: '/sitemap' },
+        { label: t('footer.contactUs'), path: '/contact-us' },
+        { label: t('footer.businessProposals'), path: '/business-proposal' },
+        { label: t('footer.siteMap'), path: '/sitemap' },
     ];
 
     return (
         <Box
             component="footer"
             sx={{
-                bgcolor: '#212121', 
+                bgcolor: '#020617',
+                backgroundImage:
+                    'radial-gradient(circle at 15% 20%, rgba(59,130,246,0.18), transparent 40%), radial-gradient(circle at 85% 10%, rgba(14,165,233,0.15), transparent 35%)',
                 color: 'white',
-                py: { xs: 4, sm: 6 },
+                py: { xs: 3.5, md: 4.5 },
                 mt: 'auto',
+                borderTop: '1px solid rgba(148,163,184,0.18)',
             }}
         >
             <Container maxWidth="lg">
-                <Grid container spacing={4}>
-                    {/* Brand Information */}
-                    <Grid sx={{width: {xs:'100%', sm:'33.33%', md: '25%' }}}>
-                        <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>Verble</Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                            Empowering the next generation of learners through accessible, high-quality online education.
-                        </Typography>
-                        <Box sx={{ mt: 2 }}>
-                            <IconButton href="https://youtube.com/@verble" aria-label="Youtube" sx={{ color: '#f83a44' }}><YouTubeIcon /></IconButton>
-                            <IconButton href="https://www.instagram.com/verble_official" aria-label="Instagram" sx={{ color: '#f72585' }}><InstagramIcon /></IconButton>
-                        </Box>
+                <Box
+                    sx={{
+                        borderRadius: 3,
+                        border: '1px solid rgba(148,163,184,0.2)',
+                        bgcolor: 'rgba(15,23,42,0.72)',
+                        backdropFilter: 'blur(8px)',
+                        p: { xs: 2, sm: 2.25, md: 2.75 },
+                    }}
+                >
+                    <Grid container spacing={{ xs: 2.4, md: 3 }} alignItems="flex-start">
+                        <Grid size={{ xs: 12, md: 3.4 }}>
+                            <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
+                                Verble
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'rgba(226,232,240,0.82)', maxWidth: 320 }}>
+                                {t('footer.tagline')}
+                            </Typography>
+                            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                                <IconButton
+                                    href="https://youtube.com/@verble"
+                                    aria-label="Youtube"
+                                    sx={{
+                                        color: '#F8FAFC',
+                                        bgcolor: 'rgba(239,68,68,0.16)',
+                                        border: '1px solid rgba(239,68,68,0.38)',
+                                        '&:hover': { bgcolor: 'rgba(239,68,68,0.25)' },
+                                    }}
+                                >
+                                    <YouTubeIcon />
+                                </IconButton>
+                                <IconButton
+                                    href="https://www.instagram.com/verble_official"
+                                    aria-label="Instagram"
+                                    sx={{
+                                        color: '#F8FAFC',
+                                        bgcolor: 'rgba(236,72,153,0.16)',
+                                        border: '1px solid rgba(236,72,153,0.38)',
+                                        '&:hover': { bgcolor: 'rgba(236,72,153,0.25)' },
+                                    }}
+                                >
+                                    <InstagramIcon />
+                                </IconButton>
+                            </Box>
+                            <MuiLink
+                                href={appStoreListingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                    mt: 2,
+                                    display: 'inline-block',
+                                    lineHeight: 0,
+                                    borderRadius: 1,
+                                    overflow: 'hidden',
+                                    opacity: 0.95,
+                                    transition: 'opacity 0.2s ease, transform 0.2s ease',
+                                    '&:hover': { opacity: 1, transform: 'translateY(-1px)' },
+                                }}
+                                aria-label="Download on the App Store"
+                            >
+                                <Box
+                                    component="img"
+                                    src={brandAssets.appStoreIcon}
+                                    alt=""
+                                    sx={{ height: 44, width: 'auto', display: 'block', maxWidth: '100%' }}
+                                />
+                            </MuiLink>
+                        </Grid>
+
+                        <Grid size={{ xs: 12, md: 8.6 }}>
+                            <Grid
+                                container
+                                spacing={{ xs: 2.5, md: 1.5, lg: 2.5 }}
+                                justifyContent={{ xs: 'flex-start', md: 'space-around' }}
+                            >
+                                <FooterLinkColumn title={t('footer.company')} links={companyLinks} />
+                                <FooterLinkColumn title={t('footer.connect')} links={connectLinks} />
+                                <FooterLinkColumn title={t('footer.legal')} links={legalLinks} />
+                            </Grid>
+                        </Grid>
                     </Grid>
 
-                    {/* Link Columns */}
-                    
-                    <FooterLinkColumn title="Company" links={companyLinks} />
-                    <FooterLinkColumn title="Connect" links={connectLinks} />
-                    <FooterLinkColumn title="Legal" links={legalLinks} />
-
-                </Grid>
-
-                <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'grey.800', textAlign: 'center' }}>
-                    <Typography variant="body2" sx={{ opacity: 0.7 }}>
-                        {'Copyright © '}
-                        <MuiLink color="inherit" component={RouterLink} to="/">
-                            Verble
-                        </MuiLink>{' '}
-                        {new Date().getFullYear()}
-                        {'. All rights reserved.'}
-                    </Typography>
+                    <Box
+                        sx={{
+                            mt: { xs: 2.4, md: 3 },
+                            pt: { xs: 1.6, md: 2 },
+                            borderTop: '1px solid rgba(148,163,184,0.16)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            gap: 1.2,
+                        }}
+                    >
+                        <Typography variant="body2" sx={{ color: 'rgba(203,213,225,0.82)', textAlign: 'center' }}>
+                            {t('footer.copyrightBefore')}
+                            <MuiLink
+                                color="inherit"
+                                component={RouterLink}
+                                to="/"
+                                underline="hover"
+                                sx={{ mx: 0.35, fontWeight: 600 }}
+                            >
+                                Verble
+                            </MuiLink>
+                            {t('footer.copyrightAfter', { year: new Date().getFullYear() })}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'rgba(148,163,184,0.9)', textAlign: 'center' }}>
+                            Built with care for modern learners
+                        </Typography>
+                    </Box>
                 </Box>
             </Container>
         </Box>

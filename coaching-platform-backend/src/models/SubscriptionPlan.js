@@ -61,6 +61,18 @@ const subscriptionPlanSchema = new mongoose.Schema({
         index: true,
         // This will be used for subcategories like 'Full UPSC course', 'Only G.S', 'Only CSAT', 'Optional', etc.
     },
+    marketValue: {
+        type: Number,
+        min: 0,
+    },
+    displayOrder: {
+        type: Number,
+        default: 0,
+    },
+    badge: {
+        type: String,
+        trim: true,
+    },
 }, {
     timestamps: true 
 });

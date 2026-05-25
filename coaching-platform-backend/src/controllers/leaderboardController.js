@@ -32,6 +32,7 @@ export const getFreeLeaderboard = asyncHandler(async (req, res) => {
         
         return {
             rank: currentRank,
+            userId: user._id.toString(),
             name: user.name,
             points: points,
             membershipLevel: user.membershipLevel || 'FREE',
@@ -77,6 +78,7 @@ export const getPaidLeaderboard = asyncHandler(async (req, res) => {
         
         return {
             rank: currentRank,
+            userId: user._id.toString(),
             name: user.name,
             points: points,
             membershipLevel: user.membershipLevel,

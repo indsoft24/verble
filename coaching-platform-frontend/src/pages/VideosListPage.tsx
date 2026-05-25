@@ -12,7 +12,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import InputAdornment from '@mui/material/InputAdornment';
 import { useAuth } from '../contexts/AuthContext';
 import { extractId } from '../utils/idUtils';
-import { getSplashImageUrl } from '../utils/imageUtils';
+import { getSplashImageUrl, resolveBackendMediaUrl } from '../utils/imageUtils';
 
 const useDebounce = (value: string, delay: number) => {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -207,7 +207,7 @@ const VideosListPage: React.FC = () => {
                                 <Box sx={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}>
                                     <CardMedia component="img"
                                         sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                                        image={video.bunnyThumbnailUrl || video.thumbnailUrl || getSplashImageUrl()}
+                                        image={resolveBackendMediaUrl(video.thumbnailUrl)}
                                         alt={video.title}
                                         onError={(e) => { (e.target as HTMLImageElement).src = getSplashImageUrl(); }}
                                     />

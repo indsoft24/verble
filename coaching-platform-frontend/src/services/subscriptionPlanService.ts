@@ -16,6 +16,9 @@ export interface SubscriptionPlanPublic {
     isActive: boolean;
     topic?: string;
     subTopic?: string;
+    marketValue?: number;
+    displayOrder?: number;
+    badge?: string;
 }
 
 export interface GetActivePlansResponse {

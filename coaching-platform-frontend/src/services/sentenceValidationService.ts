@@ -7,31 +7,38 @@ export interface SentenceSubmission {
         _id: string;
         name: string;
         email: string;
+        phoneNumber?: string;
+        mobile?: string;
     };
     wordId?: {
         _id: string;
         title: string;
         type: string;
+        metadata?: Record<string, unknown>;
     };
     storyId?: {
         _id: string;
         title: string;
         type: string;
+        metadata?: Record<string, unknown>;
     };
     vocabSetId?: {
         _id: string;
         title: string;
         type: string;
+        metadata?: Record<string, unknown>;
     };
     sceneId?: {
         _id: string;
         title: string;
         type: string;
+        metadata?: Record<string, unknown>;
     };
     speechId?: {
         _id: string;
         title: string;
         type: string;
+        metadata?: Record<string, unknown>;
     };
     word?: string;
     sentence?: string;

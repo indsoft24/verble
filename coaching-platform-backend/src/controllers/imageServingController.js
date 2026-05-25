@@ -1,7 +1,7 @@
-import { serveImageFromBunny } from '../utils/bunnyUpload.js';
+import { serveImageFile } from '../utils/localImageStorage.js';
 
 /**
- * @desc    General image serving endpoint for Android app - serves any image type
+ * @desc    General image serving — files under uploads/images/ on disk
  * @route   GET /api/images/:type/:imageName
  * @access  Public
  * @param   {string} type - Image type (courses, modules, subscription-plans, blogs, blog-content, videos, etc.)
@@ -45,7 +45,7 @@ export const serveGeneralImage = async (req, res) => {
             return res.status(400).json({ message: 'Invalid image name format.' });
         }
 
-        await serveImageFromBunny(imageName, storagePath, res);
+        await serveImageFile(imageName, storagePath, res);
 
     } catch (error) {
         console.error("GENERAL IMAGE SERVING ERROR:", error.message);
@@ -88,13 +88,13 @@ export const getSupportedImageTypes = async (req, res) => {
 };
 
 /**
- * @desc    Securely serves a course image from Bunny Storage.
+ * @desc    Serves a course image (legacy path).
  * @route   GET /api/courses/image/:imageName
  */
 export const serveCourseImage = async (req, res) => {
     try {
         const { imageName } = req.params;
-        await serveImageFromBunny(imageName, 'course_images', res);
+        await serveImageFile(imageName, 'course_images', res);
     } catch (error) {
         console.error("COURSE IMAGE SERVING ERROR:", error.message);
         res.status(500).json({ message: 'Failed to serve course image.' });
@@ -102,13 +102,13 @@ export const serveCourseImage = async (req, res) => {
 };
 
 /**
- * @desc    Securely serves a module image from Bunny Storage.
+ * @desc    Serves a module image (legacy path).
  * @route   GET /api/modules/image/:imageName
  */
 export const serveModuleImage = async (req, res) => {
     try {
         const { imageName } = req.params;
-        await serveImageFromBunny(imageName, 'module_images', res);
+        await serveImageFile(imageName, 'module_images', res);
     } catch (error) {
         console.error("MODULE IMAGE SERVING ERROR:", error.message);
         res.status(500).json({ message: 'Failed to serve module image.' });
@@ -116,13 +116,13 @@ export const serveModuleImage = async (req, res) => {
 };
 
 /**
- * @desc    Securely serves a subscription plan image from Bunny Storage.
+ * @desc    Serves a subscription plan image (legacy path).
  * @route   GET /api/subscription-plans/image/:imageName
  */
 export const serveSubscriptionImage = async (req, res) => {
     try {
         const { imageName } = req.params;
-        await serveImageFromBunny(imageName, 'subscription_images', res);
+        await serveImageFile(imageName, 'subscription_images', res);
     } catch (error) {
         console.error("SUBSCRIPTION IMAGE SERVING ERROR:", error.message);
         res.status(500).json({ message: 'Failed to serve subscription plan image.' });

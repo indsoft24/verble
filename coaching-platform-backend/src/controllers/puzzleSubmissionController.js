@@ -4,6 +4,7 @@ import UserPuzzleSubmission from '../models/UserPuzzleSubmission.js';
 import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
+import { isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
 
 /**
  * @desc    Submit puzzle answers
@@ -43,6 +44,11 @@ export const submitPuzzle = asyncHandler(async (req, res) => {
     if (puzzleContent.type !== 'PUZZLE') {
         res.status(400);
         throw new Error('Content is not a puzzle.');
+    }
+
+    if (!isDailyContentScheduledForLocalToday(puzzleContent.date)) {
+        res.status(400);
+        throw new Error('Only today\'s puzzle can be submitted.');
     }
 
     // Get questions from metadata

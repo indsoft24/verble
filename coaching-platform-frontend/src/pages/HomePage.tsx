@@ -24,6 +24,7 @@ import CampaignIcon from '@mui/icons-material/Campaign';
 import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
 import WordOfTheDayCard from '../components/features/WordOfTheDayCard';
+import StoryCard from '../components/features/StoryCard';
 import ConversationChat from '../components/features/ConversationChat';
 import LevelUnlockDialog from '../components/features/LevelUnlockDialog';
 import { getTodaysDailyContent, type DailyContent } from '../services/dailyContentService';
@@ -39,7 +40,7 @@ const HomePage: React.FC = () => {
     const [isLoadingContent, setIsLoadingContent] = useState(true);
     const [contentError, setContentError] = useState<string | null>(null);
     const [selectedActivity, setSelectedActivity] = useState<DailyContent | null>(null);
-    const [activityType, setActivityType] = useState<'word' | 'conversation' | null>(null);
+    const [activityType, setActivityType] = useState<'word' | 'conversation' | 'story' | null>(null);
     const [levelDialogOpen, setLevelDialogOpen] = useState(false);
     const [selectedLevel, setSelectedLevel] = useState<'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE' | null>(null);
     const [offers, setOffers] = useState<Offer[]>([]);
@@ -175,7 +176,7 @@ const HomePage: React.FC = () => {
     const storyContent = filteredContent.find(c => c.type === 'STORY');
     const conversationContent = filteredContent.find(c => c.type === 'CONVERSATION');
 
-    const handleActivityClick = (content: DailyContent | null, type: 'word' | 'conversation') => {
+    const handleActivityClick = (content: DailyContent | null, type: 'word' | 'conversation' | 'story') => {
         if (!content) return;
 
         // Check if level is unlocked
@@ -198,6 +199,7 @@ const HomePage: React.FC = () => {
             case 'BRONZE': return 'warning';
             case 'SILVER': return 'info';
             case 'GOLD': return 'success';
+            case 'BONUS': return 'secondary';
             case 'FULL_COURSE': return 'primary';
             default: return 'default';
         }
@@ -214,6 +216,9 @@ const HomePage: React.FC = () => {
                 </Box>
                 {activityType === 'word' && (
                     <WordOfTheDayCard data={selectedActivity as any} />
+                )}
+                {activityType === 'story' && (
+                    <StoryCard data={selectedActivity as any} />
                 )}
                 {activityType === 'conversation' && selectedActivity.metadata?.dialogue && (
                     <Box sx={{ height: '80vh' }}>
@@ -350,7 +355,13 @@ const HomePage: React.FC = () => {
                                             <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                                                 {wordContent ? getContentTypeConfig(wordContent.type as ContentType).label : 'Word of the Day'}
                                             </Typography>
-                                            <Chip label="FREE" size="small" color="default" sx={{ mt: 0.5 }} />
+                                            <Chip
+                                                label={wordContent ? wordContent.level : 'Locked'}
+                                                size="small"
+                                                color={wordContent ? getLevelBadgeColor(wordContent.level) : 'default'}
+                                                icon={!wordContent ? <LockIcon /> : undefined}
+                                                sx={{ mt: 0.5 }}
+                                            />
                                         </Box>
                                     </Box>
                                     {wordContent ? (
@@ -367,22 +378,22 @@ const HomePage: React.FC = () => {
                         </Card>
                     </Grid>
 
-                    {/* Story (Bronze) */}
+                    {/* Story — unlock follows content level vs user unlockedLevels (see filteredContent) */}
                     <Grid size={{ xs: 12, md: 6 }}>
                         <Card
                             elevation={3}
                             sx={{
                                 height: '100%',
                                 borderRadius: 2,
-                                opacity: unlockedLevels.includes('BRONZE') && storyContent ? 1 : 0.6,
+                                opacity: storyContent ? 1 : 0.6,
                                 position: 'relative',
-                                border: storyContent && unlockedLevels.includes('BRONZE') ? `2px solid ${getContentTypeConfig('STORY').borderColor}` : 'none',
-                                backgroundColor: storyContent && unlockedLevels.includes('BRONZE') ? getContentTypeConfig('STORY').backgroundColor : 'background.paper'
+                                border: storyContent ? `2px solid ${getContentTypeConfig('STORY').borderColor}` : 'none',
+                                backgroundColor: storyContent ? getContentTypeConfig('STORY').backgroundColor : 'background.paper'
                             }}
                         >
                             <CardActionArea
-                                onClick={() => storyContent && handleActivityClick(storyContent, 'word')}
-                                disabled={!storyContent || !unlockedLevels.includes('BRONZE')}
+                                onClick={() => storyContent && handleActivityClick(storyContent, 'story')}
+                                disabled={!storyContent}
                                 sx={{ height: '100%' }}
                             >
                                 <CardContent sx={{ p: 3 }}>
@@ -391,7 +402,7 @@ const HomePage: React.FC = () => {
                                             component={getContentTypeConfig('STORY').icon}
                                             sx={{
                                                 fontSize: 40,
-                                                color: unlockedLevels.includes('BRONZE') && storyContent
+                                                color: storyContent
                                                     ? getContentTypeConfig('STORY').color
                                                     : 'text.disabled',
                                                 mr: 2
@@ -402,31 +413,21 @@ const HomePage: React.FC = () => {
                                                 {getContentTypeConfig('STORY').label}
                                             </Typography>
                                             <Chip
-                                                label="BRONZE"
+                                                label={storyContent ? storyContent.level : 'Locked'}
                                                 size="small"
-                                                color="warning"
-                                                sx={{ mt: 0.5, cursor: !unlockedLevels.includes('BRONZE') ? 'pointer' : 'default' }}
-                                                icon={!unlockedLevels.includes('BRONZE') ? <LockIcon /> : undefined}
-                                                onClick={(e) => {
-                                                    if (!unlockedLevels.includes('BRONZE')) {
-                                                        e.stopPropagation();
-                                                        handleLevelClick('BRONZE');
-                                                    }
-                                                }}
+                                                color={storyContent ? getLevelBadgeColor(storyContent.level) : 'default'}
+                                                sx={{ mt: 0.5 }}
+                                                icon={!storyContent ? <LockIcon /> : undefined}
                                             />
                                         </Box>
                                     </Box>
-                                    {!unlockedLevels.includes('BRONZE') ? (
-                                        <Typography variant="body2" color="text.secondary">
-                                            Unlock Bronze level to access stories
-                                        </Typography>
-                                    ) : storyContent ? (
+                                    {storyContent ? (
                                         <Typography variant="body2" color="text.secondary">
                                             Read today's story and learn new vocabulary
                                         </Typography>
                                     ) : (
                                         <Typography variant="body2" color="text.secondary">
-                                            No story available today
+                                            No story scheduled for you today
                                         </Typography>
                                     )}
                                 </CardContent>
@@ -434,22 +435,22 @@ const HomePage: React.FC = () => {
                         </Card>
                     </Grid>
 
-                    {/* Conversation (Silver) */}
+                    {/* Conversation */}
                     <Grid size={{ xs: 12, md: 6 }}>
                         <Card
                             elevation={3}
                             sx={{
                                 height: '100%',
                                 borderRadius: 2,
-                                opacity: unlockedLevels.includes('SILVER') && conversationContent ? 1 : 0.6,
+                                opacity: conversationContent ? 1 : 0.6,
                                 position: 'relative',
-                                border: conversationContent && unlockedLevels.includes('SILVER') ? `2px solid ${getContentTypeConfig('CONVERSATION').borderColor}` : 'none',
-                                backgroundColor: conversationContent && unlockedLevels.includes('SILVER') ? getContentTypeConfig('CONVERSATION').backgroundColor : 'background.paper'
+                                border: conversationContent ? `2px solid ${getContentTypeConfig('CONVERSATION').borderColor}` : 'none',
+                                backgroundColor: conversationContent ? getContentTypeConfig('CONVERSATION').backgroundColor : 'background.paper'
                             }}
                         >
                             <CardActionArea
                                 onClick={() => conversationContent && handleActivityClick(conversationContent, 'conversation')}
-                                disabled={!conversationContent || !unlockedLevels.includes('SILVER')}
+                                disabled={!conversationContent}
                                 sx={{ height: '100%' }}
                             >
                                 <CardContent sx={{ p: 3 }}>
@@ -458,7 +459,7 @@ const HomePage: React.FC = () => {
                                             component={getContentTypeConfig('CONVERSATION').icon}
                                             sx={{
                                                 fontSize: 40,
-                                                color: unlockedLevels.includes('SILVER') && conversationContent
+                                                color: conversationContent
                                                     ? getContentTypeConfig('CONVERSATION').color
                                                     : 'text.disabled',
                                                 mr: 2
@@ -469,31 +470,21 @@ const HomePage: React.FC = () => {
                                                 {getContentTypeConfig('CONVERSATION').label}
                                             </Typography>
                                             <Chip
-                                                label="SILVER"
+                                                label={conversationContent ? conversationContent.level : 'Locked'}
                                                 size="small"
-                                                color="info"
-                                                sx={{ mt: 0.5, cursor: !unlockedLevels.includes('SILVER') ? 'pointer' : 'default' }}
-                                                icon={!unlockedLevels.includes('SILVER') ? <LockIcon /> : undefined}
-                                                onClick={(e) => {
-                                                    if (!unlockedLevels.includes('SILVER')) {
-                                                        e.stopPropagation();
-                                                        handleLevelClick('SILVER');
-                                                    }
-                                                }}
+                                                color={conversationContent ? getLevelBadgeColor(conversationContent.level) : 'default'}
+                                                sx={{ mt: 0.5 }}
+                                                icon={!conversationContent ? <LockIcon /> : undefined}
                                             />
                                         </Box>
                                     </Box>
-                                    {!unlockedLevels.includes('SILVER') ? (
-                                        <Typography variant="body2" color="text.secondary">
-                                            Unlock Silver level to practice conversations
-                                        </Typography>
-                                    ) : conversationContent ? (
+                                    {conversationContent ? (
                                         <Typography variant="body2" color="text.secondary">
                                             Practice real-world conversations with roleplay mode
                                         </Typography>
                                     ) : (
                                         <Typography variant="body2" color="text.secondary">
-                                            No conversation available today
+                                            No conversation scheduled for you today
                                         </Typography>
                                     )}
                                 </CardContent>

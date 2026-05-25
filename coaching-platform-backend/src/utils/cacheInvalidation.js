@@ -61,8 +61,6 @@ export const invalidateSubscriptionPlanCache = async (planId = null, courseId = 
     try {
         // Invalidate all plan list caches
         await deleteCache('plans:list:*');
-        await deleteCache('plans:upsc:*');
-        await deleteCache('plans:law:*');
         
         if (courseId) {
             // Invalidate course-specific plan caches

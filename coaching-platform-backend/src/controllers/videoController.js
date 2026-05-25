@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import axios from "axios";
+import fs from "fs";
 import Video from "../models/Video.js";
 import User from "../models/User.js";
 import mongoose from "mongoose";
@@ -8,6 +8,10 @@ import ExamCategory from '../models/ExamCategory.js';
 import asyncHandler from 'express-async-handler';
 import { checkSequentialVideoAccess, markVideoAsCompleted } from '../utils/videoAccessHelper.js';
 import { getCache, setCache, generateCacheKey, CACHE_TTL } from '../utils/cacheHelper.js';
+import { getStreamProvider } from '../utils/videoStreamProvider.js';
+import { getThumbnailPath, getMasterPlaylistPath } from '../config/videoStorageConfig.js';
+import { assertUserCanPlayVideo } from '../utils/videoPlayAccess.js';
+import { getActiveUserTierLevel, canAccessRequiredPlansByTier } from '../utils/subscriptionTierAccess.js';
 
 /**
  * @desc    Get all published videos, with access rights for the current user
@@ -48,34 +52,28 @@ export const getAllPublishedVideos = async (req, res, next) => {
         .sort({ order: 1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select("_id title description bunnyThumbnailUrl durationSeconds tags requiredPlans videoStatus")
+        .select("_id title description durationSeconds tags requiredPlans videoStatus streamProvider localStorageId")
         .populate("requiredPlans", "_id name")
         .lean(),
       Video.countDocuments(queryConditions)
     ]);
 
-    let userActivePlanIds = new Set();
-
+    // Tier-based access: FREE < BRONZE < SILVER < GOLD < FULL_COURSE
+    let userTierLevel = 0;
     if (userId) {
-      // Optimized user query - only fetch subscriptions
       const user = await User.findById(userId).select("subscriptions").lean();
-      if (user?.subscriptions) {
-        const now = new Date();
-        user.subscriptions.forEach((sub) => {
-          if (sub.status === "active" && new Date(sub.endDate) >= now) {
-            userActivePlanIds.add(sub.planId.toString());
-          }
-        });
-      }
+      userTierLevel = getActiveUserTierLevel(user?.subscriptions);
     }
 
     const videosWithAccess = videosFromDB.map((video) => {
-      const isFree = !video.requiredPlans || video.requiredPlans.length === 0;
-      const userHasRequiredPlan = video.requiredPlans?.some(
-          (reqPlan) => reqPlan?._id && userActivePlanIds.has(reqPlan._id.toString())
-        ) || false;
-      const canAccess = isFree || userHasRequiredPlan;
-      return { ...video, canAccess };
+      const canAccess = canAccessRequiredPlansByTier({
+        requiredPlans: video.requiredPlans,
+        userTierLevel,
+      });
+      const thumb = getStreamProvider(video) === "local" && video.videoStatus === "AVAILABLE" && video.localStorageId
+        ? `/api/videos/thumbnail/${video._id}`
+        : null;
+      return { ...video, thumbnailUrl: thumb, canAccess };
     });
 
     const response = {
@@ -113,7 +111,11 @@ export const getPublishedVideoById = async (req, res, next) => {
 
     const video = await Video.findOne({ _id: videoId, isPublished: true })
       .populate("requiredPlans", "_id name")
-      .select("+order +modules") // Include order and modules fields for sequential access check
+      // Ensure we select `videoStatus` (and related fields) because the frontend
+      // gates playback on it and we interpolate it in access-denied messages.
+      .select(
+        "order modules courses streamProvider localStorageId videoStatus"
+      )
       .lean();
 
     if (!video) {
@@ -125,8 +127,27 @@ export const getPublishedVideoById = async (req, res, next) => {
     let accessDeniedMessage = "Access Denied.";
 
     const normalizedVideoStatus = (video.videoStatus || "").toUpperCase();
-    const isVideoAvailable = normalizedVideoStatus === "AVAILABLE";
-    const hasStreamUrl = video.bunnyStreamUrl && video.bunnyStreamUrl.trim().length > 0;
+    const provider = getStreamProvider(video);
+
+    // If DB status is stale, fall back to checking if the processed HLS master exists.
+    let isVideoAvailable = normalizedVideoStatus === "AVAILABLE";
+    if (provider === "local" && video.localStorageId) {
+      const masterPath = getMasterPlaylistPath(video.localStorageId);
+      try {
+        await fs.promises.access(masterPath, fs.constants.R_OK);
+        isVideoAvailable = true;
+        // Keep frontend gating/thumb URLs consistent with server storage reality.
+        if (normalizedVideoStatus !== "AVAILABLE") {
+          await Video.findByIdAndUpdate(videoId, {
+            $set: { videoStatus: "AVAILABLE", processingError: null, transcodeStep: "file_ready" },
+          });
+          video.videoStatus = "AVAILABLE";
+        }
+      } catch {
+        // master.m3u8 not present yet; keep original DB status result
+      }
+    }
+    const hasStreamUrl = !!video.localStorageId;
     const isFreeVideo = !video.requiredPlans || video.requiredPlans.length === 0;
 
     // Debug logging (remove in production if needed)
@@ -137,35 +158,35 @@ export const getPublishedVideoById = async (req, res, next) => {
       accessDeniedMessage = `This video is currently processing and not yet available. (Status: ${video.videoStatus})`;
       hasSubscriptionAccess = false;
     } else if (!hasStreamUrl) {
-      accessDeniedMessage = "This video is currently processing and not yet available. (Stream URL missing)";
+      accessDeniedMessage = "This video is currently processing and not yet available.";
       hasSubscriptionAccess = false;
     } else if (isFreeVideo) {
       hasSubscriptionAccess = true; // Free video - always accessible
     } else {
-      const user = await User.findById(userId).select("subscriptions").lean();
-      if (user) {
-        const now = new Date();
-        const userActivePlanIds = new Set(
-          user.subscriptions
-            .filter((sub) => sub.status === "active" && new Date(sub.endDate) >= now)
-            .map((sub) => sub.planId.toString())
-        );
-        if (video.requiredPlans.some((reqPlan) => userActivePlanIds.has(reqPlan._id.toString()))) {
+      if (!userId) {
+        accessDeniedMessage = "This video requires a subscription plan.";
+      } else {
+        const user = await User.findById(userId).select("subscriptions").lean();
+        const userTierLevel = getActiveUserTierLevel(user?.subscriptions);
+        const hasAccess = canAccessRequiredPlansByTier({
+          requiredPlans: video.requiredPlans,
+          userTierLevel,
+        });
+
+        if (hasAccess) {
           hasSubscriptionAccess = true;
         } else {
           accessDeniedMessage = "This video requires a different subscription plan.";
         }
-      } else {
-        accessDeniedMessage = "This video requires a subscription plan.";
       }
     }
 
     if (!hasSubscriptionAccess) {
-      const { bunnyStreamUrl, ...partialVideoInfo } = video;
+      const partialVideoInfo = { ...video };
       return res.status(403).json({
         status: "fail",
         message: accessDeniedMessage,
-        data: { video: { ...partialVideoInfo, bunnyStreamUrl: null, canAccess: false } },
+        data: { video: { ...partialVideoInfo, canAccess: false } },
       });
     }
 
@@ -194,14 +215,13 @@ export const getPublishedVideoById = async (req, res, next) => {
     }
 
     if (!canAccess) {
-      const { bunnyStreamUrl, ...partialVideoInfo } = video;
+      const partialVideoInfo = { ...video };
       return res.status(403).json({
         status: "fail",
         message: accessDeniedMessage,
         data: { 
           video: { 
-            ...partialVideoInfo, 
-            bunnyStreamUrl: null, 
+            ...partialVideoInfo,
             canAccess: false,
             watchCount: sequentialAccessInfo?.watchCount || 0,
             remainingWatches: sequentialAccessInfo?.remainingWatches || 0,
@@ -210,11 +230,17 @@ export const getPublishedVideoById = async (req, res, next) => {
       });
     }
 
+    const thumbOut =
+      provider === "local" && video.localStorageId
+        ? `/api/videos/thumbnail/${video._id}`
+        : null;
+
     res.status(200).json({
       status: "success",
       data: { 
         video: { 
           ...video, 
+          thumbnailUrl: thumbOut,
           canAccess: true,
           watchCount: sequentialAccessInfo?.watchCount || 0,
           remainingWatches: sequentialAccessInfo?.remainingWatches || 0,
@@ -236,165 +262,155 @@ export const getPlayToken = async (req, res) => {
   try {
     const { videoId } = req.params;
     const userId = req.user?._id;
-    
+
     const video = await Video.findById(videoId)
       .populate("requiredPlans", "_id name")
-      .select("+order +modules") // Include order and modules fields for sequential access check
+      .select("+order +modules streamProvider localStorageId videoStatus")
       .lean();
 
-    if (!video || !video.bunnyVideoId) {
+    if (!video) {
       return res.status(404).json({ status: "error", message: "Video not found." });
     }
 
-    const normalizedVideoStatus = (video.videoStatus || "").toUpperCase();
-    const isVideoAvailable = normalizedVideoStatus === "AVAILABLE";
-    const hasStreamUrl = video.bunnyStreamUrl && video.bunnyStreamUrl.trim().length > 0;
-    const isFreeVideo = !video.requiredPlans || video.requiredPlans.length === 0;
+    const access = await assertUserCanPlayVideo(videoId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ status: "error", message: access.message });
+    }
 
-    // Check subscription access
-    if (!isVideoAvailable || !hasStreamUrl) {
-      return res.status(403).json({ 
-        status: "error", 
-        message: "This video is currently processing and not yet available." 
+    const provider = getStreamProvider(video);
+    if (provider !== "local") {
+      return res.status(400).json({
+        status: "error",
+        message: "Only server-hosted (local) videos are supported.",
       });
     }
 
-    // Free videos don't need subscription check
-    if (!isFreeVideo && video.requiredPlans && video.requiredPlans.length > 0) {
-      const user = await User.findById(userId).select("subscriptions").lean();
-      if (!user) {
-        return res.status(403).json({ 
-          status: "error", 
-          message: "This video requires a subscription plan." 
-        });
-      }
-
-      const now = new Date();
-      const userActivePlanIds = new Set(
-        user.subscriptions
-          .filter((sub) => sub.status === "active" && new Date(sub.endDate) >= now)
-          .map((sub) => sub.planId.toString())
-      );
-
-      const hasAccess = video.requiredPlans.some((reqPlan) => 
-        userActivePlanIds.has(reqPlan._id.toString())
-      );
-
-      if (!hasAccess) {
-        return res.status(403).json({ 
-          status: "error", 
-          message: "This video requires a different subscription plan." 
-        });
-      }
-    }
-
-    // Check sequential access if video belongs to a module
-    // Skip security feature for free videos (no requiredPlans)
-    if (userId && video.modules && video.modules.length > 0 && !isFreeVideo) {
-      // Only apply security feature to paid videos
-      const moduleId = video.modules[0];
-      // Ensure moduleId is a string (handle ObjectId)
-      const moduleIdString = typeof moduleId === 'object' && moduleId?._id ? moduleId._id.toString() : moduleId?.toString() || moduleId;
-      
-      // Checking sequential access (details not logged)
-      
-      const sequentialAccess = await checkSequentialVideoAccess(userId, video, moduleIdString);
-      
-      // Sequential access check completed
-      
-      if (!sequentialAccess.canAccess) {
-        return res.status(403).json({ 
-          status: "error", 
-          message: sequentialAccess.reason 
-        });
-      }
-    }
-
-    const tokenAuthKey = process.env.BUNNY_TOKEN_AUTH_KEY;
-    if (!tokenAuthKey) {
-      console.error("BUNNY_TOKEN_AUTH_KEY not set in .env");
-      return res.status(500).json({ 
-        status: "error", 
-        message: "Player security is not configured." 
-      });
-    }
-
-    // Reduced token expiration to 20 minutes (1200 seconds) for better security
-    // Tokens expire quickly to prevent unauthorized access and downloads
-    const tokenExpirationSeconds = parseInt(process.env.VIDEO_TOKEN_EXPIRATION_SECONDS || '1200', 10); // Default 20 minutes
-    const expires = Math.floor(Date.now() / 1000) + tokenExpirationSeconds;
-    
-    // Bunny Stream token format: SHA256(tokenAuthKey + videoId + expires)
-    // Note: Do NOT include userId in the hash - Bunny Stream only validates tokenAuthKey + videoId + expires
-    const userIdString = userId ? userId.toString() : 'anonymous';
-    const stringToHash = tokenAuthKey + video.bunnyVideoId + expires;
-    const token = crypto.createHash("sha256").update(stringToHash).digest("hex");
-
-    // Token generated (details not logged for security)
-
-    res.status(200).json({
+    return res.status(200).json({
       status: "success",
-      data: { token, expires },
+      data: {
+        playbackProvider: "local",
+        playlistPath: `/videos/hls/${videoId}/master.m3u8`,
+      },
     });
   } catch (error) {
-    // Error generating play token (details not logged for security)
     res.status(500).json({ status: "error", message: "Failed to generate play token." });
   }
 };
 
 /**
- * @desc    Securely serves a video thumbnail image from Bunny.net
+ * @desc    Get module-scoped navigation list for a video (cyclic UI support)
+ * @route   GET /api/videos/:videoId/navigation
+ * @access  Private
+ */
+export const getVideoNavigationContext = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(videoId)) {
+      return res.status(400).json({ status: "fail", message: "Invalid video ID format." });
+    }
+
+    const video = await Video.findOne({ _id: videoId, isPublished: true })
+      .select("courses modules")
+      .lean();
+    if (!video) {
+      return res.status(404).json({ status: "fail", message: "Video not found or is not published." });
+    }
+
+    const moduleIdRaw = Array.isArray(video.modules) && video.modules.length > 0 ? video.modules[0] : null;
+    const moduleId = moduleIdRaw ? moduleIdRaw.toString() : null;
+    if (!moduleId || !mongoose.Types.ObjectId.isValid(moduleId)) {
+      return res.status(200).json({
+        status: "success",
+        data: { moduleId: null, moduleTitle: null, courseId: null, courseTitle: null, items: [] },
+      });
+    }
+
+    const Module = (await import("../models/Module.js")).default;
+    const moduleDoc = await Module.findById(moduleId).populate("course", "title").select("title course").lean();
+    const moduleTitle = moduleDoc?.title || "Module";
+    const courseId =
+      moduleDoc?.course && typeof moduleDoc.course === "object" && moduleDoc.course._id
+        ? moduleDoc.course._id.toString()
+        : Array.isArray(video.courses) && video.courses.length > 0
+          ? video.courses[0].toString()
+          : null;
+    const courseTitle =
+      moduleDoc?.course && typeof moduleDoc.course === "object" && moduleDoc.course.title
+        ? String(moduleDoc.course.title)
+        : null;
+
+    const moduleVideos = await Video.find({ modules: moduleId, isPublished: true })
+      .sort({ order: 1, createdAt: 1 })
+      .select("_id title durationSeconds order streamProvider localStorageId videoStatus")
+      .lean();
+
+    const items = moduleVideos.map((v) => ({
+      _id: v._id.toString(),
+      title: v.title,
+      moduleId,
+      moduleTitle,
+      durationSeconds: v.durationSeconds || 0,
+      thumbnailUrl:
+        getStreamProvider(v) === "local" && v.videoStatus === "AVAILABLE" && v.localStorageId
+          ? `/api/videos/thumbnail/${v._id}`
+          : null,
+    }));
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        moduleId,
+        moduleTitle,
+        courseId,
+        courseTitle,
+        items,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ status: "error", message: "Failed to build video navigation." });
+  }
+};
+
+/**
+ * @desc    Serves a video thumbnail (local transcodes only)
  * @route   GET /api/videos/thumbnail/:videoId
  */
 export const serveVideoThumbnail = async (req, res) => {
     try {
         const { videoId } = req.params;
-        const video = await Video.findById(videoId).select('bunnyThumbnailUrl').lean();
+        const video = await Video.findById(videoId)
+            .select("streamProvider localStorageId videoStatus")
+            .lean();
 
-        if (!video || !video.bunnyThumbnailUrl) {
-            return res.status(404).json({ message: 'Thumbnail not found.' });
+        if (!video) {
+            return res.status(404).json({ message: "Thumbnail not found." });
         }
-        
-        const response = await axios({
-            method: 'get',
-            url: video.bunnyThumbnailUrl,
-            responseType: 'stream',
-        });
 
-        res.setHeader('Content-Type', 'image/jpeg');
-        response.data.pipe(res);
+        if (getStreamProvider(video) === "local" && video.localStorageId && video.videoStatus === "AVAILABLE") {
+            const thumbPath = getThumbnailPath(video.localStorageId);
+            try {
+                await fs.promises.access(thumbPath, fs.constants.R_OK);
+            } catch {
+                return res.status(404).json({ message: "Thumbnail not found." });
+            }
+            res.setHeader("Content-Type", "image/jpeg");
+            return fs.createReadStream(thumbPath).pipe(res);
+        }
 
+        return res.status(404).json({ message: "Thumbnail not found." });
     } catch (error) {
-        // Error serving thumbnail (details not logged for security)
-        res.status(500).json({ message: 'Failed to serve thumbnail.' });
+        res.status(500).json({ message: "Failed to serve thumbnail." });
     }
 };
 
 /**
- * @desc    Securely serves the video player iframe content
  * @route   GET /api/videos/player/:videoId
+ * @deprecated External iframe playback removed; use local HLS + get-play-token.
  */
 export const serveVideoStream = async (req, res) => {
-    try {
-        const { videoId } = req.params;
-        const { token, expires } = req.query; 
-
-        const video = await Video.findById(videoId).select('bunnyVideoLibraryId bunnyVideoId').lean();
-
-        if (!video || !video.bunnyVideoLibraryId || !video.bunnyVideoId) {
-            return res.status(404).json({ message: 'Video player configuration not found.' });
-        }
-
-        const secureUrl = `https://iframe.mediadelivery.net/embed/${video.bunnyVideoLibraryId}/${video.bunnyVideoId}?token=${token}&expires=${expires}`;
-        
-        const response = await axios.get(secureUrl);
-        
-        res.send(response.data);
-
-    } catch (error) {
-        // Error serving video stream (details not logged for security)
-        res.status(500).json({ message: 'Failed to serve video stream.' });
-    }
+    return res.status(410).json({
+        message: "Embedded player URL is no longer used. Play videos via local HLS.",
+    });
 };
 
 /**
@@ -426,12 +442,12 @@ export const getPublicContentForGuests = asyncHandler(async (req, res) => {
     }
 
     const videos = await Video.find(videoQuery)
-        .select('title description bunnyThumbnailUrl durationSeconds associatedMaterials')
+        .select("title description durationSeconds associatedMaterials streamProvider localStorageId videoStatus")
         .sort({ order: 1, createdAt: -1 })
         .lean();
 
-    const publicVideos = videos.map(video => {
-        const publicMaterials = video.associatedMaterials.map(material => ({
+    const publicVideos = videos.map((video) => {
+        const publicMaterials = video.associatedMaterials.map((material) => ({
             _id: material._id,
             label: material.label,
             fileName: material.fileName,
@@ -439,13 +455,17 @@ export const getPublicContentForGuests = asyncHandler(async (req, res) => {
             fileType: material.fileType,
         }));
 
+        const thumb = getStreamProvider(video) === "local" && video.videoStatus === "AVAILABLE" && video.localStorageId
+          ? `/api/videos/thumbnail/${video._id}`
+          : null;
+
         return {
             _id: video._id,
             title: video.title,
             description: video.description,
-            thumbnailUrl: video.bunnyThumbnailUrl,
+            thumbnailUrl: thumb,
             duration: video.durationSeconds,
-            materials: publicMaterials, 
+            materials: publicMaterials,
         };
     });
 
