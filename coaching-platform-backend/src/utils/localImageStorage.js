@@ -22,6 +22,8 @@ const URL_TYPE_TO_STORAGE_FOLDER = {
     materials: 'material_files',
     'gated-content': 'gated_content_files',
     gated_content: 'gated_content_files',
+    'daily-content': 'daily_content_images',
+    daily_content: 'daily_content_images',
 };
 
 const STORAGE_FOLDER_TO_URL_TYPE = {
@@ -35,6 +37,7 @@ const STORAGE_FOLDER_TO_URL_TYPE = {
     exam_category_images: 'exam-categories',
     material_files: 'materials',
     gated_content_files: 'gated-content',
+    daily_content_images: 'daily-content',
 };
 
 export function getImageStorageRoot() {

@@ -1,4 +1,40 @@
 {
+  "auth": {
+    "phonePinSignIn": "फ़ोन और PIN से साइन इन करें",
+    "phonePinSubtitle": "जुड़ते समय आपका 6-अंकीय PIN ईमेल किया गया था। इसे सुरक्षित रखें—डैशबोर्ड से कभी भी बदल सकते हैं।",
+    "phoneNumber": "फ़ोन नंबर",
+    "phoneHint": "देश कोड शामिल करें (जैसे भारत के लिए +91)",
+    "loginPin": "6-अंकीय PIN",
+    "agreeToTerms": "मैं सहमत हूँ",
+    "and": "और",
+    "forgotPin": "PIN भूल गए? नया PIN ईमेल करें",
+    "noAccount": "नए हैं?",
+    "signUpNow": "खाता बनाएँ",
+    "pleaseVerifyEmail": "कृपया पहले अपना ईमेल सत्यापित करें।",
+    "failedLogin": "साइन इन नहीं हो सका। फ़ोन और PIN जाँचें।",
+    "forgotPinFailed": "PIN ईमेल नहीं भेजा जा सका।",
+    "pinEmailedAfterVerify": "आपका लॉगिन PIN ईमेल कर दिया गया है। नीचे फ़ोन और PIN से साइन इन करें।",
+    "createAccount": "अपना खाता बनाएँ",
+    "registrationPinInfo": "ईमेल सत्यापन के बाद हम आपका 6-अंकीय लॉगिन PIN ईमेल करेंगे। केवल फ़ोन + PIN से साइन इन होगा।",
+    "fullName": "पूरा नाम",
+    "email": "ईमेल पता",
+    "phoneRequired": "वैध फ़ोन नंबर आवश्यक है।",
+    "registrationOtpSent": "सत्यापन कोड के लिए अपना ईमेल देखें।",
+    "registrationFailed": "पंजीकरण विफल। पुनः प्रयास करें।",
+    "sendVerificationCode": "सत्यापन कोड भेजें",
+    "alreadyHaveAccount": "पहले से खाता है? साइन इन करें",
+    "verifyEmail": "ईमेल सत्यापित करें",
+    "verifyEmailSubtitle": "{{email}} पर भेजा गया 6-अंकीय कोड दर्ज करें",
+    "afterVerifyPinEmail": "सत्यापन के बाद लॉगिन PIN ईमेल होगा। फिर फ़ोन + PIN से साइन इन करें।",
+    "verificationCode": "सत्यापन कोड",
+    "verifyAndGetPin": "सत्यापित करें और PIN पाएँ",
+    "invalidOtp": "कृपया वैध 6-अंकीय कोड दर्ज करें।",
+    "verificationFailed": "सत्यापन विफल।",
+    "resendIn": "{{seconds}} सेकंड में पुनः भेजें",
+    "resendCode": "कोड पुनः भेजें",
+    "resendFailed": "कोड पुनः नहीं भेजा जा सका।",
+    "backToLogin": "साइन इन पर वापस जाएँ"
+  },
   "common": {
     "language": "भाषा",
     "login": "लॉग इन",
@@ -8,7 +44,15 @@
     "hindi": "हिंदी"
   },
   "nav": {
+    "home": "होम",
+    "courses": "पाठ्यक्रम",
     "blog": "ब्लॉग",
+    "help": "सहायता",
+    "about": "हमारे बारे में",
+    "contact": "संपर्क",
+    "myDashboard": "मेरा डैशबोर्ड",
+    "mySubscription": "मेरी सदस्यता",
+    "profileSettings": "प्रोफ़ाइल सेटिंग्स",
     "openSettings": "सेटिंग्स खोलें"
   },
   "blog": {
@@ -38,9 +82,10 @@
     "copyrightAfter": "Verble {{year}}. सर्वाधिकार सुरक्षित।"
   },
   "languageModal": {
-    "title": "अपनी भाषा चुनें",
-    "subtitle": "आप इसे कभी भी मेनू से बदल सकते हैं।",
-    "slogan": "अपने तरीके से अंग्रेज़ी सीखें।"
+    "title": "VERBLE",
+    "subtitle": "English Intensive Learning (EIL)",
+    "slogan": "Build confidence. Speak clearly. Grow globally.",
+    "pickLanguage": "अपनी पसंदीदा भाषा चुनें"
   },
   "landing": {
     "heroChip": "AI-संचालित अंग्रेज़ी अभ्यास",
@@ -81,6 +126,8 @@
     "subheading": "संरचित दैनिक अभ्यास, प्रतिक्रिया और प्रीमियम सामग्री।"
   },
   "dashboard": {
+    "todaysActivities": "आज की गतिविधियाँ",
+    "premiumContent": "प्रीमियम सामग्री",
     "masteryPath": {
       "title": "आपका मास्टरी मार्ग",
       "streakDays": "{{count}}-दिन की लकीर",
@@ -91,7 +138,19 @@
       "premiumTitle": "प्रीमियम सामग्री",
       "expertPractice": "विशेषज्ञ अभ्यास",
       "structuredLearning": "संरचित सीखना",
-      "purchaseToUnlock": "अनलॉक करने के लिए खरीदें"
+      "purchaseToUnlock": "अनलॉक करने के लिए खरीदें",
+      "unlocked": "अनलॉक",
+      "currentLevel": "वर्तमान स्तर: {{level}}"
+    },
+    "agenda": {
+      "freeHeader": "FREE",
+      "bronzeHeader": "BRONZE",
+      "silverHeader": "SILVER",
+      "goldHeader": "GOLD",
+      "fullCourseHeader": "FULL COURSE",
+      "proRibbon": "PRO",
+      "ultimateRibbon": "ULTIMATE",
+      "completeChallengeToUnlock": "अनलॉक करने के लिए चुनौती पूरी करें"
     },
     "activities": {
       "todayTitle": "आज की गतिविधियाँ",

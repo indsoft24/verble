@@ -55,11 +55,17 @@ export interface BulkCreateDailyContentResult {
 export const bulkCreateDailyContentAdmin = async (
     items: CreateDailyContentPayload[]
 ): Promise<BulkCreateDailyContentResult> => {
-    const response = await apiClient.post<{ status: string; data: BulkCreateDailyContentResult }>(
-        '/admin/daily-content/bulk',
-        { items }
-    );
-    return response.data.data;
+    const response = await apiClient.post<{
+        status: string;
+        data: BulkCreateDailyContentResult & { content?: DailyContent[] };
+    }>('/admin/daily-content/bulk', { items });
+    const data = response.data.data;
+    return {
+        createdCount: data.createdCount ?? data.content?.length ?? 0,
+        failedCount: data.failedCount ?? 0,
+        failures: data.failures ?? [],
+        content: data.content,
+    };
 };
 
 /**
@@ -78,4 +84,21 @@ export const updateDailyContentAdmin = async (
  */
 export const deleteDailyContentAdmin = async (id: string): Promise<void> => {
     await apiClient.delete(`/admin/daily-content/${id}`);
+};
+
+/** Upload image for daily content (feed posts, scenes, etc.) */
+export const uploadDailyContentImage = async (imageFile: File): Promise<{ imageUrl: string }> => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const response = await apiClient.post<{ status: string; data: { imageUrl: string } }>(
+        '/admin/daily-content/upload-image',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+
+    if (response.data.status === 'success' && response.data.data?.imageUrl) {
+        return response.data.data;
+    }
+    throw new Error('Image upload did not return a URL.');
 };

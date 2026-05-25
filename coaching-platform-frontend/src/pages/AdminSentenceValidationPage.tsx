@@ -105,6 +105,19 @@ const AdminSentenceValidationPage: React.FC = () => {
     }, [activeTab, selectedStatus]);
 
     useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem('adminSentenceValidationView');
+            if (raw) {
+                const saved = JSON.parse(raw) as { activeTab?: ValidationTabId; selectedStatus?: SubmissionStatus };
+                if (saved.activeTab) setActiveTab(saved.activeTab);
+                if (saved.selectedStatus) setSelectedStatus(saved.selectedStatus);
+            }
+        } catch {
+            /* ignore */
+        }
+    }, []);
+
+    useEffect(() => {
         fetchSubmissions();
     }, [fetchSubmissions]);
 
@@ -130,6 +143,10 @@ const AdminSentenceValidationPage: React.FC = () => {
     };
 
     const handleOpenValidationDialog = (submission: SentenceSubmission) => {
+        sessionStorage.setItem(
+            'adminSentenceValidationView',
+            JSON.stringify({ activeTab, selectedStatus })
+        );
         setSelectedSubmission(submission);
         setIsCorrect(true);
         setValidationFeedback('');
@@ -302,7 +319,8 @@ const AdminSentenceValidationPage: React.FC = () => {
                             <TableHead>
                                 <TableRow>
                                     <TableCell sx={{ fontWeight: 700, minWidth: 160 }}>Activity</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, minWidth: 180 }}>User</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, minWidth: 140 }}>User</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, minWidth: 120 }}>Phone</TableCell>
                                     <TableCell sx={{ fontWeight: 700, minWidth: 220 }}>
                                         User submission
                                     </TableCell>
@@ -362,9 +380,6 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                 <Typography variant="body2" fontWeight={700}>
                                                     {submission.userId?.name || 'Unknown'}
                                                 </Typography>
-                                                <Typography variant="body2" display="block" sx={{ mt: 0.25 }}>
-                                                    {getUserPhone(submission)}
-                                                </Typography>
                                                 {submission.userId?.email && (
                                                     <Typography
                                                         variant="caption"
@@ -374,6 +389,9 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                         {submission.userId.email}
                                                     </Typography>
                                                 )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">{getUserPhone(submission)}</Typography>
                                             </TableCell>
                                             <TableCell>
                                                 <Typography

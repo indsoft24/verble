@@ -72,8 +72,8 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
     const checkNavigationAvailability = async () => {
         try {
             const [prevContent, nextContent] = await Promise.all([
-                getAdjacentContent(data.date, 'LYRICS', data.level, 'prev'),
-                getAdjacentContent(data.date, 'LYRICS', data.level, 'next')
+                getAdjacentContent(data._id, 'prev'),
+                getAdjacentContent(data._id, 'next')
             ]);
 
             setHasPrevious(!!prevContent);
@@ -87,12 +87,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
     const handleNavigation = async (direction: 'prev' | 'next') => {
         setIsLoadingNav(true);
         try {
-            const adjacentContent = await getAdjacentContent(
-                currentContent.date,
-                'LYRICS',
-                currentContent.level,
-                direction
-            );
+            const adjacentContent = await getAdjacentContent(currentContent._id, direction);
 
             if (adjacentContent) {
                 // Stop current audio if playing

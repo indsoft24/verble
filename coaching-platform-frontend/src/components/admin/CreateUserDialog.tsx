@@ -19,42 +19,36 @@ interface CreateUserDialogProps {
     onSuccess: () => void;
 }
 
+const emptyForm: CreateUserPayload = {
+    name: '',
+    email: '',
+    phoneNumber: '',
+    role: 'user',
+};
+
 const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClose, onSuccess }) => {
-    const [formData, setFormData] = useState<CreateUserPayload>({
-        name: '',
-        email: '',
-        phoneNumber: '',
-        password: '',
-        role: 'user',
-    });
-    const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const [formData, setFormData] = useState<CreateUserPayload>(emptyForm);
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const validateForm = (): boolean => {
-        const newErrors: { [key: string]: string } = {};
+        const newErrors: Record<string, string> = {};
 
         if (!formData.name.trim()) {
             newErrors.name = 'Name is required';
         }
-
         if (!formData.email.trim()) {
             newErrors.email = 'Email is required';
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = 'Please enter a valid email address';
         }
-
-        if (!formData.password) {
-            newErrors.password = 'Password is required';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters';
-        }
-
-        if (formData.phoneNumber && formData.phoneNumber.trim()) {
-            // Basic phone validation (can be enhanced)
-            const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
-            if (!phoneRegex.test(formData.phoneNumber.trim())) {
-                newErrors.phoneNumber = 'Please enter a valid phone number';
+        if (!formData.phoneNumber.trim()) {
+            newErrors.phoneNumber = 'Phone number is required';
+        } else {
+            const phoneRegex = /^\+?[0-9]{10,15}$/;
+            if (!phoneRegex.test(formData.phoneNumber.trim().replace(/[\s-]/g, ''))) {
+                newErrors.phoneNumber = 'Please enter a valid phone number with country code';
             }
         }
 
@@ -65,16 +59,12 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClose, onSu
     const handleChange = (field: keyof CreateUserPayload) => (
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: e.target.value,
-        }));
-        // Clear error when user starts typing
+        setFormData((prev) => ({ ...prev, [field]: e.target.value }));
         if (errors[field]) {
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors[field];
-                return newErrors;
+            setErrors((prev) => {
+                const next = { ...prev };
+                delete next[field];
+                return next;
             });
         }
         setErrorMessage(null);
@@ -82,41 +72,26 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClose, onSu
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!validateForm()) {
-            return;
-        }
+        if (!validateForm()) return;
 
         setLoading(true);
         setErrorMessage(null);
 
         try {
-            const payload: CreateUserPayload = {
+            await createUser({
                 name: formData.name.trim(),
                 email: formData.email.trim().toLowerCase(),
-                password: formData.password,
+                phoneNumber: formData.phoneNumber.trim(),
                 role: formData.role,
-                ...(formData.phoneNumber?.trim() && { phoneNumber: formData.phoneNumber.trim() }),
-            };
-
-            await createUser(payload);
-            
-            // Reset form
-            setFormData({
-                name: '',
-                email: '',
-                phoneNumber: '',
-                password: '',
-                role: 'user',
             });
+
+            setFormData(emptyForm);
             setErrors({});
-            setErrorMessage(null);
-            
             onSuccess();
             onClose();
-        } catch (error: any) {
-            const message = error?.message || error?.data?.message || 'Failed to create user. Please try again.';
-            setErrorMessage(message);
+        } catch (error: unknown) {
+            const err = error as { message?: string; data?: { message?: string } };
+            setErrorMessage(err?.message || err?.data?.message || 'Failed to create user.');
         } finally {
             setLoading(false);
         }
@@ -124,13 +99,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClose, onSu
 
     const handleClose = () => {
         if (!loading) {
-            setFormData({
-                name: '',
-                email: '',
-                phoneNumber: '',
-                password: '',
-                role: 'user',
-            });
+            setFormData(emptyForm);
             setErrors({});
             setErrorMessage(null);
             onClose();
@@ -148,6 +117,9 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClose, onSu
                                 {errorMessage}
                             </Alert>
                         )}
+                        <Alert severity="info">
+                            A 6-digit login PIN will be emailed to the user. They sign in with phone + PIN.
+                        </Alert>
 
                         <TextField
                             label="Name"
@@ -160,7 +132,6 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClose, onSu
                             disabled={loading}
                             autoFocus
                         />
-
                         <TextField
                             label="Email"
                             type="email"
@@ -172,34 +143,22 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClose, onSu
                             helperText={errors.email}
                             disabled={loading}
                         />
-
                         <TextField
                             label="Phone Number"
                             value={formData.phoneNumber}
                             onChange={handleChange('phoneNumber')}
-                            fullWidth
-                            error={!!errors.phoneNumber}
-                            helperText={errors.phoneNumber || 'Optional'}
-                            disabled={loading}
-                        />
-
-                        <TextField
-                            label="Password"
-                            type="password"
-                            value={formData.password}
-                            onChange={handleChange('password')}
                             required
                             fullWidth
-                            error={!!errors.password}
-                            helperText={errors.password || 'Minimum 6 characters'}
+                            placeholder="+919876543210"
+                            error={!!errors.phoneNumber}
+                            helperText={errors.phoneNumber || 'Include country code'}
                             disabled={loading}
                         />
-
                         <TextField
                             label="Role"
                             select
                             value={formData.role}
-                            onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'user' | 'admin' }))}
+                            onChange={handleChange('role')}
                             fullWidth
                             disabled={loading}
                         >
@@ -208,17 +167,12 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClose, onSu
                         </TextField>
                     </Box>
                 </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
+                <DialogActions>
                     <Button onClick={handleClose} disabled={loading}>
                         Cancel
                     </Button>
-                    <Button
-                        type="submit"
-                        variant="contained"
-                        disabled={loading}
-                        startIcon={loading ? <CircularProgress size={20} /> : null}
-                    >
-                        {loading ? 'Creating...' : 'Create User'}
+                    <Button type="submit" variant="contained" disabled={loading}>
+                        {loading ? <CircularProgress size={22} /> : 'Create User'}
                     </Button>
                 </DialogActions>
             </form>
@@ -227,4 +181,3 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClose, onSu
 };
 
 export default CreateUserDialog;
-

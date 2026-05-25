@@ -1,5 +1,5 @@
 // src/components/features/PhraseOfTheDayCard.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Card,
     CardContent,
@@ -10,510 +10,480 @@ import {
     IconButton,
     CircularProgress,
     Alert,
-    Divider,
-    Chip
+    Chip,
+    Popover,
+    List,
+    alpha,
 } from '@mui/material';
 import { keyframes } from '@emotion/react';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import SendIcon from '@mui/icons-material/Send';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-
+import { getUserWordSubmissions } from '../../services/sentenceSubmissionService';
+import type { UserWordSubmission } from '../../services/sentenceSubmissionService';
+import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
+import {
+    activityCardShell,
+    getContentDisplayNumber,
+    isContentScheduledToday,
+    refreshAdjacentFlags,
+    GREEN_ACCENT,
+    GOLD_ACCENT,
+    MAX_ACTIVITY_SENTENCES,
+} from '../../utils/dailyActivityUi';
+import { SubmissionHistoryItem } from './ActivitySubmissionHistory';
 
 interface PhraseOfTheDayCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
+    onNavigateToWord?: () => void;
     onSubmissionSuccess?: () => void;
 }
 
-// Confetti animation keyframes
 const confettiFall = keyframes`
-    from {
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-    }
-    to {
-        transform: translateY(100vh) rotate(720deg);
-        opacity: 0;
-    }
+    from { transform: translateY(0) rotate(0deg); opacity: 1; }
+    to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 `;
 
-// Simple CSS-based Confetti Effect
-const ConfettiEffect: React.FC = () => {
-    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+const ConfettiEffect: React.FC = () => (
+    <Box sx={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1400, overflow: 'hidden' }}>
+        {Array.from({ length: 50 }).map((_, i) => (
+            <Box
+                key={i}
+                sx={{
+                    position: 'absolute',
+                    width: 10,
+                    height: 10,
+                    backgroundColor: ['#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff'][i % 6],
+                    left: `${Math.random() * 100}%`,
+                    top: '-10px',
+                    animation: `${confettiFall} ${2 + Math.random() * 2}s linear ${Math.random() * 0.5}s forwards`,
+                }}
+            />
+        ))}
+    </Box>
+);
 
-    return (
-        <Box
-            sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-                zIndex: 1000,
-                overflow: 'hidden',
-            }}
-        >
-            {Array.from({ length: 50 }).map((_, i) => {
-                const duration = 2 + Math.random() * 2;
-                const delay = Math.random() * 0.5;
-                const left = Math.random() * 100;
-
-                return (
-                    <Box
-                        key={i}
-                        sx={{
-                            position: 'absolute',
-                            width: 10,
-                            height: 10,
-                            backgroundColor: colors[Math.floor(Math.random() * colors.length)],
-                            left: `${left}%`,
-                            top: '-10px',
-                            animation: `${confettiFall} ${duration}s linear ${delay}s forwards`,
-                        }}
-                    />
-                );
-            })}
-        </Box>
-    );
-};
-
-const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
+const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
+    data,
+    onContentChange,
+    onNavigateToWord,
+    onSubmissionSuccess,
+}) => {
     const { user } = useAuth();
-    const [sentences, setSentences] = useState<string[]>(['']);
+    const [sentences, setSentences] = useState<string[]>(['', '']);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
+    const [playingKey, setPlayingKey] = useState<string | null>(null);
     const [showConfetti, setShowConfetti] = useState(false);
-    const [isLoadingNav, setIsLoadingNav] = useState(false);
     const [currentContent, setCurrentContent] = useState<DailyContent>(data);
     const [hasPrevious, setHasPrevious] = useState(false);
     const [hasNext, setHasNext] = useState(false);
+    const [isLoadingNav, setIsLoadingNav] = useState(false);
+    const [submissions, setSubmissions] = useState<UserWordSubmission[]>([]);
+    const [submissionsLoading, setSubmissionsLoading] = useState(false);
+    const [historyAnchor, setHistoryAnchor] = useState<HTMLElement | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const synthRef = useRef<SpeechSynthesis | null>(null);
 
+    const isToday = isContentScheduledToday(currentContent.date);
+    const submittedCount = submissions.length;
+    const remainingSlots = Math.max(0, MAX_ACTIVITY_SENTENCES - submittedCount);
+    const canAddField = sentences.length < remainingSlots && sentences.length < MAX_ACTIVITY_SENTENCES;
+
+    const loadSubmissions = useCallback(async (contentId: string) => {
+        if (!user) {
+            setSubmissions([]);
+            return;
+        }
+        setSubmissionsLoading(true);
+        try {
+            setSubmissions(await getUserWordSubmissions(contentId));
+        } catch {
+            setSubmissions([]);
+        } finally {
+            setSubmissionsLoading(false);
+        }
+    }, [user]);
+
+    const checkAdjacent = useCallback(async (contentId: string) => {
+        const flags = await refreshAdjacentFlags(contentId);
+        setHasPrevious(flags.hasPrevious);
+        setHasNext(flags.hasNext);
+    }, []);
+
     useEffect(() => {
         synthRef.current = window.speechSynthesis;
-        setCurrentContent(data);
-        checkNavigationAvailability();
         return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current = null;
-            }
-            if (synthRef.current) {
-                synthRef.current.cancel();
-            }
+            audioRef.current?.pause();
+            synthRef.current?.cancel();
         };
-    }, [data]);
+    }, []);
 
-    const checkNavigationAvailability = async () => {
-        try {
-            // const currentDate = parseISO(data.date);
-            // const prevDate = subDays(currentDate, 1);
-            // const nextDate = addDays(currentDate, 1);
+    useEffect(() => {
+        setCurrentContent(data);
+        setSentences(['', '']);
+        setSubmitStatus(null);
+        void loadSubmissions(data._id);
+        void checkAdjacent(data._id);
+    }, [data, loadSubmissions, checkAdjacent]);
 
-            // Check if previous/next content exists
-            const [prevContent, nextContent] = await Promise.all([
-                getAdjacentContent(data.date, 'PHRASE', data.level, 'prev'),
-                getAdjacentContent(data.date, 'PHRASE', data.level, 'next')
-            ]);
+    const stopAudio = () => {
+        audioRef.current?.pause();
+        synthRef.current?.cancel();
+        setPlayingKey(null);
+    };
 
-            setHasPrevious(!!prevContent);
-            setHasNext(!!nextContent);
-        } catch (error) {
-            setHasPrevious(false);
-            setHasNext(false);
+    const playText = (text: string, key: string, audioUrl?: string) => {
+        if (!text?.trim()) return;
+        if (playingKey === key) {
+            stopAudio();
+            return;
         }
+        stopAudio();
+        setPlayingKey(key);
+        const finish = () => setPlayingKey(null);
+        if (audioUrl) {
+            try {
+                const audio = new Audio(audioUrl);
+                audioRef.current = audio;
+                audio.onended = finish;
+                audio.onerror = () => playTTS(text, finish);
+                audio.play().catch(() => playTTS(text, finish));
+                return;
+            } catch {
+                /* fallback */
+            }
+        }
+        playTTS(text, finish);
+    };
+
+    const playTTS = (text: string, onEnd: () => void) => {
+        if (!synthRef.current) {
+            onEnd();
+            return;
+        }
+        const u = new SpeechSynthesisUtterance(text);
+        applyPreferredFemaleEnVoice(u);
+        u.onend = onEnd;
+        u.onerror = onEnd;
+        synthRef.current.speak(u);
     };
 
     const handleNavigation = async (direction: 'prev' | 'next') => {
         setIsLoadingNav(true);
+        setSubmitStatus(null);
         try {
-            const adjacentContent = await getAdjacentContent(
-                currentContent.date,
-                'PHRASE',
-                currentContent.level,
-                direction
-            );
-
-            if (adjacentContent) {
-                setCurrentContent(adjacentContent);
-                setSentences(['']);
-                setSubmitStatus(null);
-                if (onContentChange) {
-                    onContentChange(adjacentContent);
-                }
-                await checkNavigationAvailability();
+            const adjacent = await getAdjacentContent(currentContent._id, direction);
+            if (adjacent) {
+                setCurrentContent(adjacent);
+                setSentences(['', '']);
+                onContentChange?.(adjacent);
+                await loadSubmissions(adjacent._id);
+                await checkAdjacent(adjacent._id);
             } else {
                 setSubmitStatus({
                     type: 'error',
-                    message: `No ${direction === 'prev' ? 'previous' : 'next'} phrase available.`
+                    message: `No ${direction === 'prev' ? 'previous' : 'next'} phrase available.`,
                 });
             }
-        } catch (error: any) {
-            setSubmitStatus({
-                type: 'error',
-                message: `Failed to load ${direction === 'prev' ? 'previous' : 'next'} phrase.`
-            });
+        } catch {
+            setSubmitStatus({ type: 'error', message: 'Failed to load phrase.' });
         } finally {
             setIsLoadingNav(false);
         }
     };
 
-    const handleSentenceChange = (index: number, value: string) => {
-        const newSentences = [...sentences];
-        newSentences[index] = value;
-        setSentences(newSentences);
-    };
-
-    const addSentenceField = () => {
-        if (sentences.length < 5) {
-            setSentences([...sentences, '']);
-        }
-    };
-
-    const removeSentenceField = (index: number) => {
-        if (sentences.length > 2) {
-            const newSentences = sentences.filter((_, i) => i !== index);
-            setSentences(newSentences);
-        }
-    };
-
-    const handlePlayAudio = () => {
-        if (isPlaying) {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.currentTime = 0;
-            }
-            if (synthRef.current) {
-                synthRef.current.cancel();
-            }
-            setIsPlaying(false);
-            return;
-        }
-
-        setIsPlaying(true);
-
-        if (currentContent.metadata?.audio) {
-            try {
-                const audio = new Audio(currentContent.metadata.audio);
-                audioRef.current = audio;
-                audio.onended = () => setIsPlaying(false);
-                audio.onerror = () => playTTS();
-                audio.play().catch(() => playTTS());
-            } catch (error) {
-                playTTS();
-            }
-        } else {
-            playTTS();
-        }
-    };
-
-    const playTTS = () => {
-        if (synthRef.current && currentContent.metadata?.text) {
-            const utterance = new SpeechSynthesisUtterance(currentContent.metadata.text);
-            utterance.lang = 'en-US';
-            utterance.onend = () => setIsPlaying(false);
-            utterance.onerror = () => setIsPlaying(false);
-            synthRef.current.speak(utterance);
-        } else {
-            setIsPlaying(false);
-        }
-    };
-
     const handleSubmitSentences = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        const validSentences = sentences.filter(s => s.trim());
-        if (validSentences.length < 2) {
+        if (!isToday) {
             setSubmitStatus({
                 type: 'error',
-                message: 'Please submit at least 2 sentences (minimum 2, maximum 5).'
+                message: "You can only submit sentences for today's phrase.",
             });
             return;
         }
-
-        if (validSentences.length > 5) {
+        const valid = sentences.map((s) => s.trim()).filter(Boolean);
+        if (valid.length < 2) return;
+        if (valid.length > remainingSlots) {
             setSubmitStatus({
                 type: 'error',
-                message: 'Maximum 5 sentences allowed.'
+                message: `You can submit at most ${remainingSlots} more sentence(s) (5 total).`,
             });
             return;
         }
 
         setIsSubmitting(true);
         setSubmitStatus(null);
-
         try {
-            // Submit each sentence
-            const submissionPromises = validSentences.map(sentence =>
-                apiClient.post('/submit-sentence', {
-                    wordId: currentContent._id,
-                    word: currentContent.metadata?.text,
-                    sentence: sentence.trim()
-                })
-            );
-
-            await Promise.all(submissionPromises);
-
-            setSubmitStatus({
-                type: 'success',
-                message: `Great job! Your ${validSentences.length} sentence(s) have been submitted.`
+            const phraseText = String(currentContent.metadata?.text ?? '').trim();
+            const response = await apiClient.post('/submit-sentence', {
+                wordId: currentContent._id,
+                word: phraseText,
+                sentences: valid,
             });
-            setSentences(['']);
-            setShowConfetti(true);
-            setTimeout(() => setShowConfetti(false), 3000);
-            onSubmissionSuccess?.();
-        } catch (error: any) {
+            if (response.data?.status === 'success') {
+                setSubmitStatus({ type: 'success', message: 'Your sentences have been submitted.' });
+                setSentences(['', '']);
+                setShowConfetti(true);
+                setTimeout(() => setShowConfetti(false), 3000);
+                await loadSubmissions(currentContent._id);
+                onSubmissionSuccess?.();
+            } else {
+                setSubmitStatus({
+                    type: 'error',
+                    message: response.data?.message || 'Failed to submit sentences.',
+                });
+            }
+        } catch (err: unknown) {
+            const e = err as { response?: { data?: { message?: string } } };
             setSubmitStatus({
                 type: 'error',
-                message: error.response?.data?.message || 'Failed to submit sentences. Please try again.'
+                message: e.response?.data?.message || 'Failed to submit sentences. Please try again.',
             });
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    // Get phrase number from sequenceNumber or metadata
-    const phraseNumber = currentContent.sequenceNumber || currentContent.metadata?.phraseNumber || 0;
-    const phraseText = currentContent.metadata?.text || '';
-    const meaningEn = currentContent.metadata?.meaning_en || '';
-    const meaningHi = currentContent.metadata?.meaning_hi || '';
-    const example = currentContent.metadata?.examples?.[0] || null;
+    const meta = currentContent.metadata || {};
+    const phraseText = meta.text || '';
+    const meaningEn = meta.meaning_en || '';
+    const meaningHi = meta.meaning_hi || '';
+    const example = meta.examples?.[0] || null;
+    const displayNumber = getContentDisplayNumber(currentContent.sequenceNumber);
+    const validDraftCount = sentences.map((s) => s.trim()).filter(Boolean).length;
+
+    const SpeakerButton: React.FC<{ text: string; playKey: string; audioUrl?: string }> = ({
+        text,
+        playKey,
+        audioUrl,
+    }) => (
+        <IconButton
+            size="small"
+            onClick={() => playText(text, playKey, audioUrl)}
+            sx={{ color: GREEN_ACCENT, bgcolor: alpha(GREEN_ACCENT, 0.12) }}
+            aria-label="Play"
+        >
+            {playingKey === playKey ? <StopIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
+        </IconButton>
+    );
 
     return (
-        <Card
-            elevation={4}
-            sx={{
-                maxWidth: 800,
-                margin: '0 auto',
-                borderRadius: 3,
-                overflow: 'hidden',
-                position: 'relative',
-            }}
-        >
-            {/* Confetti Effect */}
+        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
             {showConfetti && <ConfettiEffect />}
 
-            <CardContent sx={{ p: 4 }}>
-                {/* Header with Phrase Number, Phrase, and Audio Button */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        mb: 3,
-                    }}
-                >
-                    <Box sx={{ flex: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                            <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                Phrase #{phraseNumber}
+            <Card elevation={0} sx={activityCardShell(GREEN_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 2 }}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                                <Typography variant="overline" sx={{ fontWeight: 800, color: GREEN_ACCENT, letterSpacing: 1.2 }}>
+                                    Phrase of the Day
+                                </Typography>
+                                {displayNumber && (
+                                    <Chip label={displayNumber} size="small" variant="outlined" sx={{ borderColor: alpha(GREEN_ACCENT, 0.6), color: GREEN_ACCENT }} />
+                                )}
+                                <Chip label={currentContent.level} size="small" variant="outlined" sx={{ color: alpha('#e2e8f0', 0.8) }} />
+                            </Box>
+                            <Typography
+                                variant="h3"
+                                sx={{
+                                    fontWeight: 900,
+                                    fontSize: { xs: '1.75rem', sm: '2.5rem' },
+                                    background: `linear-gradient(135deg, #e2e8f0, ${GREEN_ACCENT})`,
+                                    backgroundClip: 'text',
+                                    WebkitBackgroundClip: 'text',
+                                    color: 'transparent',
+                                }}
+                            >
+                                {phraseText}
                             </Typography>
-                            <Chip label="FREE" size="small" color="default" />
-                        </Box>
-                        <Typography
-                            variant="h2"
-                            component="h1"
-                            sx={{
-                                fontWeight: 'bold',
-                                color: 'primary.main',
-                                mt: 0.5,
-                                fontSize: { xs: '1.75rem', sm: '2.5rem' },
-                                lineHeight: 1.2,
-                            }}
-                        >
-                            {phraseText}
-                        </Typography>
-                    </Box>
-                    <IconButton
-                        onClick={handlePlayAudio}
-                        sx={{
-                            backgroundColor: 'primary.main',
-                            color: 'white',
-                            width: 64,
-                            height: 64,
-                            '&:hover': {
-                                backgroundColor: 'primary.dark',
-                            },
-                        }}
-                        aria-label="Play pronunciation"
-                    >
-                        {isPlaying ? (
-                            <VolumeOffIcon sx={{ fontSize: 32 }} />
-                        ) : (
-                            <VolumeUpIcon sx={{ fontSize: 32 }} />
-                        )}
-                    </IconButton>
-                </Box>
-
-                <Divider sx={{ my: 3 }} />
-
-                {/* Meanings Section */}
-                <Box sx={{ mb: 4 }}>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                        Meanings
-                    </Typography>
-                    <Box sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            English Meaning
-                        </Typography>
-                        <Typography variant="body1" paragraph>
-                            {meaningEn}
-                        </Typography>
-                    </Box>
-                    {meaningHi && (
-                        <Box>
-                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                Hindi Meaning
-                            </Typography>
-                            <Typography variant="body1" paragraph>
-                                {meaningHi}
-                            </Typography>
-                        </Box>
-                    )}
-                </Box>
-
-                {/* Example Section */}
-                {example && (
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                            Example
-                        </Typography>
-                        <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
-                            <Typography variant="body1" sx={{ fontWeight: 'medium', mb: 1 }}>
-                                {example.en}
-                            </Typography>
-                            {example.hi && (
-                                <Typography variant="body2" color="text.secondary">
-                                    {example.hi}
+                            {meta.pronunciation_devanagari && (
+                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7), mt: 1 }}>
+                                    {meta.pronunciation_devanagari}
                                 </Typography>
                             )}
                         </Box>
+                        <IconButton
+                            onClick={() => playText(phraseText, 'phrase-main', meta.audio)}
+                            sx={{ bgcolor: GREEN_ACCENT, color: '#0f172a', width: 56, height: 56, flexShrink: 0 }}
+                        >
+                            {playingKey === 'phrase-main' ? <StopIcon /> : <PlayArrowIcon sx={{ fontSize: 32 }} />}
+                        </IconButton>
                     </Box>
-                )}
 
-                <Divider sx={{ my: 4 }} />
-
-                {/* Navigation Buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<ArrowBackIcon />}
-                        onClick={() => handleNavigation('prev')}
-                        disabled={!hasPrevious || isLoadingNav}
-                    >
-                        Previous Phrase
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        endIcon={<ArrowForwardIcon />}
-                        onClick={() => handleNavigation('next')}
-                        disabled={!hasNext || isLoadingNav}
-                    >
-                        Next Phrase
-                    </Button>
-                </Box>
-
-                {/* Link to Word of the Day */}
-                <Box sx={{ textAlign: 'center', mb: 4 }}>
-                    <Button
-                        variant="text"
-                        color="primary"
-                        onClick={() => {
-                            // This will be handled by parent component
-                            if (onContentChange) {
-                                // Trigger word of the day fetch
-                                // Parent should handle this navigation
-                            }
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                            gap: 2,
+                            p: 2,
+                            borderRadius: 2,
+                            bgcolor: alpha('#1a1f2e', 0.8),
+                            border: `1px solid ${alpha(GREEN_ACCENT, 0.25)}`,
+                            mb: 2,
                         }}
-                        sx={{ textTransform: 'none' }}
                     >
-                        View Word of the Day
-                    </Button>
-                </Box>
-
-                {/* Interaction Section */}
-                <Box>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                        Make sentences with this phrase (2-5 sentences)
-                    </Typography>
-                    {submitStatus && (
-                        <Alert severity={submitStatus.type} sx={{ mb: 2 }}>
-                            {submitStatus.message}
-                        </Alert>
-                    )}
-                    <Box component="form" onSubmit={handleSubmitSentences}>
-                        {sentences.map((sentence, index) => (
-                            <Box key={index} sx={{ mb: 2, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    rows={2}
-                                    placeholder={`Sentence ${index + 1}...`}
-                                    value={sentence}
-                                    onChange={(e) => handleSentenceChange(index, e.target.value)}
-                                    disabled={isSubmitting || !user}
-                                    label={`Sentence ${index + 1}`}
-                                />
-                                {sentences.length > 2 && (
-                                    <IconButton
-                                        onClick={() => removeSentenceField(index)}
-                                        disabled={isSubmitting}
-                                        color="error"
-                                        sx={{ mt: 1 }}
-                                    >
-                                        ×
-                                    </IconButton>
-                                )}
+                        <Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#f8fafc' }}>
+                                    English Meaning
+                                </Typography>
+                                <SpeakerButton text={meaningEn} playKey="meaning-en" />
                             </Box>
-                        ))}
-                        {sentences.length < 5 && (
-                            <Button
-                                type="button"
-                                variant="outlined"
-                                onClick={addSentenceField}
-                                disabled={isSubmitting || !user}
-                                sx={{ mb: 2 }}
-                            >
-                                + Add Another Sentence
-                            </Button>
-                        )}
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                color="primary"
-                                size="large"
-                                endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-                                disabled={
-                                    sentences.filter(s => s.trim()).length < 2 ||
-                                    isSubmitting ||
-                                    !user
-                                }
-                                sx={{ minWidth: 150 }}
-                            >
-                                {isSubmitting ? 'Submitting...' : 'Submit'}
-                            </Button>
-                            <Typography variant="body2" color="text.secondary">
-                                {sentences.filter(s => s.trim()).length} / 5 sentences
-                            </Typography>
+                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.85) }}>{meaningEn}</Typography>
                         </Box>
-                        {!user && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Please log in to submit sentences.
-                            </Typography>
+                        {meaningHi && (
+                            <Box>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#f8fafc', mb: 0.5 }}>
+                                    Hindi Meaning
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.85) }}>{meaningHi}</Typography>
+                            </Box>
                         )}
                     </Box>
-                </Box>
-            </CardContent>
-        </Card>
+
+                    {example && (
+                        <Box sx={{ p: 2, borderRadius: 2, bgcolor: alpha('#1a1f2e', 0.6), border: `1px solid ${alpha(GREEN_ACCENT, 0.2)}` }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: GREEN_ACCENT, mb: 1 }}>
+                                Example
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                                <SpeakerButton text={example.en} playKey="example-en" audioUrl={example.audio} />
+                                <Box>
+                                    <Typography variant="body1" sx={{ color: '#f1f5f9', fontWeight: 500 }}>{example.en}</Typography>
+                                    {example.hi && (
+                                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65), mt: 0.5 }}>{example.hi}</Typography>
+                                    )}
+                                </Box>
+                            </Box>
+                        </Box>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+                    <Typography variant="overline" sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2, display: 'block', mb: 1 }}>
+                        Practice and Interact — Make Sentences
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
+                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.8) }}>Sentences submitted:</Typography>
+                        {user ? (
+                            <Button
+                                variant="text"
+                                onClick={(e) => setHistoryAnchor(e.currentTarget)}
+                                disabled={submissionsLoading || submittedCount === 0}
+                                sx={{ minWidth: 0, p: 0, fontWeight: 800, fontSize: '1.1rem', color: GOLD_ACCENT, textDecoration: submittedCount > 0 ? 'underline' : 'none' }}
+                            >
+                                {submissionsLoading ? '…' : submittedCount}
+                            </Button>
+                        ) : (
+                            <Typography sx={{ fontWeight: 800, color: GOLD_ACCENT }}>0</Typography>
+                        )}
+                    </Box>
+                    <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65), mb: 2 }}>
+                        Make 2–5 sentences with this phrase
+                        {remainingSlots < MAX_ACTIVITY_SENTENCES && isToday ? ` (${remainingSlots} left)` : ''}
+                    </Typography>
+
+                    <Popover
+                        open={Boolean(historyAnchor)}
+                        anchorEl={historyAnchor}
+                        onClose={() => setHistoryAnchor(null)}
+                        PaperProps={{ sx: { bgcolor: '#1a1f2e', border: `1px solid ${alpha(GOLD_ACCENT, 0.4)}`, maxWidth: 360, p: 1.5 } }}
+                    >
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: GOLD_ACCENT, mb: 1 }}>Your submitted sentences</Typography>
+                        {submissions.length === 0 ? (
+                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.6) }}>No sentences yet.</Typography>
+                        ) : (
+                            <List dense disablePadding>
+                                {submissions.map((s) => (
+                                    <SubmissionHistoryItem key={s._id} submission={s} />
+                                ))}
+                            </List>
+                        )}
+                    </Popover>
+
+                    {!isToday && (
+                        <Alert severity="info" sx={{ mb: 2 }}>Past phrase — browse only. Submit on today&apos;s phrase.</Alert>
+                    )}
+                    {submitStatus && <Alert severity={submitStatus.type} sx={{ mb: 2 }}>{submitStatus.message}</Alert>}
+
+                    {remainingSlots > 0 && isToday ? (
+                        <Box component="form" onSubmit={handleSubmitSentences}>
+                            {sentences.map((sentence, index) => (
+                                <Box key={index} sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={2}
+                                        placeholder={`Sentence ${index + 1}...`}
+                                        value={sentence}
+                                        onChange={(e) => {
+                                            const next = [...sentences];
+                                            next[index] = e.target.value;
+                                            setSentences(next);
+                                        }}
+                                        disabled={isSubmitting || !user}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                bgcolor: alpha('#1a1f2e', 0.9),
+                                                color: '#f1f5f9',
+                                                '& fieldset': { borderColor: alpha(GOLD_ACCENT, 0.45) },
+                                            },
+                                        }}
+                                    />
+                                    {sentences.length > 2 && (
+                                        <Button type="button" color="error" variant="outlined" onClick={() => setSentences(sentences.filter((_, i) => i !== index))}>
+                                            Remove
+                                        </Button>
+                                    )}
+                                </Box>
+                            ))}
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+                                {canAddField && (
+                                    <Button type="button" variant="outlined" onClick={() => setSentences([...sentences, ''])} sx={{ borderColor: alpha(GOLD_ACCENT, 0.6), color: GOLD_ACCENT }}>
+                                        + Add Sentence
+                                    </Button>
+                                )}
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    disabled={validDraftCount < 2 || validDraftCount > remainingSlots || isSubmitting || !user}
+                                    endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                                    sx={{ bgcolor: GOLD_ACCENT, color: '#0f172a', fontWeight: 800, minWidth: 140 }}
+                                >
+                                    Submit
+                                </Button>
+                            </Box>
+                        </Box>
+                    ) : isToday ? (
+                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>Maximum of 5 sentences submitted for this phrase.</Typography>
+                    ) : null}
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 3, pt: 2, borderTop: `1px solid ${alpha(GOLD_ACCENT, 0.25)}` }}>
+                        <Button startIcon={<ArrowBackIcon />} onClick={() => handleNavigation('prev')} disabled={!hasPrevious || isLoadingNav} sx={{ color: alpha('#e2e8f0', 0.85) }}>
+                            Previous Phrase
+                        </Button>
+                        <Button onClick={() => onNavigateToWord?.()} disabled={!onNavigateToWord} sx={{ color: GOLD_ACCENT, fontWeight: 700, textDecoration: onNavigateToWord ? 'underline' : 'none' }}>
+                            View Word of the Day
+                        </Button>
+                        <Button endIcon={<ArrowForwardIcon />} onClick={() => handleNavigation('next')} disabled={!hasNext || isLoadingNav} sx={{ color: alpha('#e2e8f0', 0.85) }}>
+                            Next Phrase
+                        </Button>
+                    </Box>
+                </CardContent>
+            </Card>
+        </Box>
     );
 };
 

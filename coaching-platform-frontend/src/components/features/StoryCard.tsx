@@ -126,8 +126,8 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
     const checkNavigationAvailability = async () => {
         try {
             const [prevContent, nextContent] = await Promise.all([
-                getAdjacentContent(data.date, 'STORY', data.level, 'prev'),
-                getAdjacentContent(data.date, 'STORY', data.level, 'next')
+                getAdjacentContent(data._id, 'prev'),
+                getAdjacentContent(data._id, 'next')
             ]);
 
             setHasPrevious(!!prevContent);
@@ -141,12 +141,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
     const handleNavigation = async (direction: 'prev' | 'next') => {
         setIsLoadingNav(true);
         try {
-            const adjacentContent = await getAdjacentContent(
-                currentContent.date,
-                'STORY',
-                currentContent.level,
-                direction
-            );
+            const adjacentContent = await getAdjacentContent(currentContent._id, direction);
 
             if (adjacentContent) {
                 setCurrentContent(adjacentContent);

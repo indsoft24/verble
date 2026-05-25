@@ -29,6 +29,7 @@ import {
     type UpdateUserInfoPayload
 } from '../services/adminService'; 
 import { getAllSubscriptionPlansAdmin, type SubscriptionPlan } from '../services/subscriptionPlanAdminService';
+import { formatPlanDurationLabel } from '../utils/adminUserDisplay';
 
 const subscriptionStatuses: AdminAddUserSubscriptionPayload['status'][] = ['active', 'pending_cancellation', 'cancelled', 'expired', 'trial', 'future_active', 'none'];
 
@@ -210,7 +211,12 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                 <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 1 }}>
                     Manage User: {user?.name || 'User'}
                 </Typography>
-                {user && <Typography variant="body2" color="text.secondary" sx={{mb:3}}>Email: {user.email}</Typography>}
+                {user && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Phone: {user.phoneNumber || '—'}
+                        {user.email ? ` · Email: ${user.email}` : ''}
+                    </Typography>
+                )}
 
                 {/* User Information Edit Section */}
                 <Paper elevation={2} sx={{ p: {xs: 2, sm: 3}, mb: 4 }}>
@@ -325,7 +331,12 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                                                         <Chip label={sub.status?.toUpperCase() || 'N/A'} color={chipColor} size="small"/>
                                                     </Box>
                                                 }
-                                                secondary={`Dates: ${formatDate(sub.startDate)} - ${formatDate(sub.endDate)} (ID: ${sub._id || 'N/A'})`}
+                                                secondary={
+                                                    (sub.planName === 'Free Foundation'
+                                                        ? `Active since ${formatDate(sub.startDate)} — No expiry (Free Foundation)`
+                                                        : `Dates: ${formatDate(sub.startDate)} - ${formatDate(sub.endDate)}`) +
+                                                    ` (ID: ${sub._id || 'N/A'})`
+                                                }
                                             />
                                             <ListItemSecondaryAction>
                                                 <Tooltip title="Remove this specific subscription instance">
@@ -369,7 +380,7 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                                     <MenuItem value=""><em>-- Select a Plan --</em></MenuItem>
                                     {allPlans.map((plan) => (
                                         <MenuItem key={plan._id} value={plan._id}>
-                                            {plan.name} ({ (plan.price / 100).toFixed(2)} {plan.currency}/{plan.duration.unit})
+                                            {plan.name} — {formatPlanDurationLabel(plan) || `${plan.duration?.value} ${plan.duration?.unit}`}
                                         </MenuItem>
                                     ))}
                                 </Select>

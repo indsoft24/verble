@@ -112,7 +112,11 @@ const ProfessionalConversationDetail: React.FC<ProfessionalConversationDetailPro
                         <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
                             Conversation
                         </Typography>
-                        <ConversationChat dialogue={dialogue} />
+                        <ConversationChat
+                            dialogue={dialogue}
+                            participant1={String(conversation.metadata?.participant1 || conversation.metadata?.participants?.[0] || 'Speaker 1')}
+                            participant2={String(conversation.metadata?.participant2 || conversation.metadata?.participants?.[1] || 'Speaker 2')}
+                        />
                     </CardContent>
                 </Card>
             ) : (

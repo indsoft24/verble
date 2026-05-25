@@ -1,9 +1,22 @@
 import React, { useState, useEffect, type FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link as RouterLink } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
+import { useTranslation } from 'react-i18next';
+import {
+    Box,
+    Button,
+    Container,
+    CssBaseline,
+    TextField,
+    Typography,
+    CircularProgress,
+    Alert,
+    Link as MuiLink,
+} from '@mui/material';
 
 const VerifyEmailPage: React.FC = () => {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { verifyAndLogin, resendOtp } = useAuth();
@@ -11,20 +24,16 @@ const VerifyEmailPage: React.FC = () => {
     const email = searchParams.get('email');
 
     const [otp, setOtp] = useState('');
-    const [error, setError] = useState<string | null>(null);
-    const [message, setMessage] = useState<string | null>(`An OTP has been sent to ${email}. Please check your inbox.`);
     const [isLoading, setIsLoading] = useState(false);
-    const [resendCooldown, setResendCooldown] = useState(30); // Changed to 30 seconds
+    const [resendCooldown, setResendCooldown] = useState(30);
     const { addNotification } = useNotification();
 
-    // Redirect if email is not in the URL
     useEffect(() => {
         if (!email) {
             navigate('/login');
         }
     }, [email, navigate]);
 
-    // Timer for the "Resend OTP" button
     useEffect(() => {
         let timer: number;
         if (resendCooldown > 0) {
@@ -33,28 +42,26 @@ const VerifyEmailPage: React.FC = () => {
         return () => window.clearTimeout(timer);
     }, [resendCooldown]);
 
-
     const handleVerificationSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        setError(null);
-        setMessage(null);
 
-        if (!email) {
-            setError("Email is missing. Please return to registration.");
-            return;
-        }
+        if (!email) return;
         if (!otp || otp.length !== 6) {
-            setError("Please enter a valid 6-digit OTP.");
+            addNotification(t('auth.invalidOtp'), 'error');
             return;
         }
 
         setIsLoading(true);
         try {
-            await verifyAndLogin({ email, otp });
-            addNotification('Email verified successfully!', 'success');
-            navigate('/'); 
-        } catch (err: any) {
-            addNotification(err.message || 'Verification failed. Please check the OTP and try again.', 'error');
+            const message = await verifyAndLogin({ email, otp });
+            addNotification(message, 'success');
+            navigate('/login', {
+                state: { pinSent: true },
+                replace: true,
+            });
+        } catch (err: unknown) {
+            const error = err as { message?: string };
+            addNotification(error.message || t('auth.verificationFailed'), 'error');
         } finally {
             setIsLoading(false);
         }
@@ -63,53 +70,74 @@ const VerifyEmailPage: React.FC = () => {
     const handleResendOtp = async () => {
         if (resendCooldown > 0 || !email) return;
 
-        setError(null);
-        setMessage("Sending a new OTP...");
         try {
             const responseMessage = await resendOtp(email);
             addNotification(responseMessage, 'info');
-            setResendCooldown(30); // Reset to 30 seconds
-        } catch (err: any) {
-            // Handle cooldown error from backend
-            if (err.cooldownRemaining) {
-                setResendCooldown(err.cooldownRemaining);
-                addNotification(err.message || 'Please wait before requesting a new OTP.', 'warning');
-            } else {
-                addNotification(err.message || 'Failed to resend OTP.', 'error');
+            setResendCooldown(30);
+        } catch (err: unknown) {
+            const error = err as { cooldownRemaining?: number; message?: string };
+            if (error.cooldownRemaining) {
+                setResendCooldown(error.cooldownRemaining);
             }
+            addNotification(error.message || t('auth.resendFailed'), 'error');
         }
     };
 
     return (
-        <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-            <h2>Verify Your Email</h2>
-            {message && <p style={{ color: 'green' }}>{message}</p>}
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            <p>Enter the 6-digit OTP sent to <strong>{email}</strong>.</p>
-            <form onSubmit={handleVerificationSubmit}>
-                <div style={{ marginBottom: '15px' }}>
-                    <label htmlFor="otp">One-Time Password (OTP):</label>
-                    <input
-                        type="text"
-                        id="otp"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
+        <Container component="main" maxWidth="xs">
+            <CssBaseline />
+            <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Typography component="h1" variant="h5" gutterBottom>
+                    {t('auth.verifyEmail')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
+                    {t('auth.verifyEmailSubtitle', { email })}
+                </Typography>
+
+                <Alert severity="info" sx={{ mb: 2, width: '100%' }}>
+                    {t('auth.afterVerifyPinEmail')}
+                </Alert>
+
+                <Box component="form" onSubmit={handleVerificationSubmit} sx={{ width: '100%' }}>
+                    <TextField
+                        margin="normal"
                         required
-                        maxLength={6}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', textAlign: 'center', fontSize: '1.2rem', letterSpacing: '0.5rem' }}
+                        fullWidth
+                        label={t('auth.verificationCode')}
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        disabled={isLoading}
+                        inputProps={{
+                            maxLength: 6,
+                            style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem' },
+                        }}
                     />
-                </div>
-                <button type="submit" disabled={isLoading} style={{ width: '100%', padding: '10px', backgroundColor: isLoading ? '#ccc' : '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                    {isLoading ? 'Verifying...' : 'Verify & Login'}
-                </button>
-            </form>
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
-                <p>Didn't receive the code?</p>
-                <button onClick={handleResendOtp} disabled={resendCooldown > 0} style={{ background: 'none', border: 'none', color: resendCooldown > 0 ? '#999' : '#007bff', cursor: 'pointer', textDecoration: 'underline' }}>
-                    {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : 'Resend OTP'}
-                </button>
-            </div>
-        </div>
+                    <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        sx={{ mt: 2, mb: 1 }}
+                        disabled={isLoading || otp.length !== 6}
+                    >
+                        {isLoading ? <CircularProgress size={24} /> : t('auth.verifyAndGetPin')}
+                    </Button>
+                    <Button
+                        fullWidth
+                        variant="text"
+                        onClick={() => void handleResendOtp()}
+                        disabled={resendCooldown > 0 || isLoading}
+                    >
+                        {resendCooldown > 0
+                            ? t('auth.resendIn', { seconds: resendCooldown })
+                            : t('auth.resendCode')}
+                    </Button>
+                </Box>
+
+                <MuiLink component={RouterLink} to="/login" variant="body2" sx={{ mt: 2 }}>
+                    {t('auth.backToLogin')}
+                </MuiLink>
+            </Box>
+        </Container>
     );
 };
 

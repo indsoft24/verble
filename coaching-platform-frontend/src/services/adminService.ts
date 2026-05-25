@@ -208,9 +208,22 @@ export const finalizeVideoCreationAdmin = async (payload: FinalizeVideoPayload):
 
 // --- USER MANAGEMENT FUNCTIONS (Admin) ---
 
-export const getAllUsers = async (): Promise<AdminUserView[]> => {
+export type AdminUsersQuery = {
+    search?: string;
+    segment?: 'all' | 'free' | 'premium';
+    limit?: number;
+};
+
+export const getAllUsers = async (query: AdminUsersQuery = {}): Promise<AdminUserView[]> => {
     try {
-        const response = await apiClient.get<ApiResponse<{ users: AdminUserView[] }>>(`/admin/users`);
+        const params = new URLSearchParams();
+        if (query.search?.trim()) params.set('search', query.search.trim());
+        if (query.segment && query.segment !== 'all') params.set('segment', query.segment);
+        if (query.limit) params.set('limit', String(query.limit));
+        const qs = params.toString();
+        const response = await apiClient.get<ApiResponse<{ users: AdminUserView[] }>>(
+            `/admin/users${qs ? `?${qs}` : ''}`
+        );
         if (response.data.status === 'success' && response.data.data?.users) {
             return response.data.data.users.map(user => ({
                 ...user,
@@ -220,6 +233,18 @@ export const getAllUsers = async (): Promise<AdminUserView[]> => {
         throw new Error(response.data?.message || 'Failed to fetch users');
     } catch (error: any) {
         throw error.response?.data || { status: 'error', message: 'Failed to fetch users for admin' };
+    }
+};
+
+export const resendLoginPinForUser = async (userId: string): Promise<string> => {
+    try {
+        const response = await apiClient.post<ApiResponse<unknown>>(`/admin/users/${userId}/resend-login-pin`);
+        if (response.data.status === 'success') {
+            return response.data.message || 'Login PIN sent.';
+        }
+        throw new Error(response.data?.message || 'Failed to resend login PIN');
+    } catch (error: any) {
+        throw error.response?.data || { status: 'error', message: 'Failed to resend login PIN' };
     }
 };
 
@@ -240,8 +265,7 @@ export const updateUserRole = async (userId: string, newRole: 'user' | 'admin'):
 export interface CreateUserPayload {
     name: string;
     email: string;
-    phoneNumber?: string;
-    password: string;
+    phoneNumber: string;
     role?: 'user' | 'admin';
 }
 

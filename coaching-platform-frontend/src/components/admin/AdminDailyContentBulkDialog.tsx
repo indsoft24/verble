@@ -31,25 +31,12 @@ import {
     validateAndBuildPayloads,
     type BulkDailyContentType,
 } from '../../utils/dailyContentBulkCsv';
+import { DAILY_CONTENT_CATALOG, levelForAdminKey } from '../../utils/dailyContentTypeCatalog';
 import {
     bulkCreateDailyContentAdmin,
     type CreateDailyContentPayload,
 } from '../../services/dailyContentAdminService';
 
-const CONTENT_TYPES: BulkDailyContentType[] = [
-    'WORD',
-    'PHRASE',
-    'STORY',
-    'VOCAB_SET',
-    'CONVERSATION',
-    'PUZZLE',
-    'SCENE',
-    'SPEECH',
-    'LYRICS',
-    'FEED',
-];
-
-const LEVELS = ['FREE', 'BRONZE', 'SILVER', 'GOLD', 'BONUS'] as const;
 
 export interface AdminDailyContentBulkDialogProps {
     open: boolean;
@@ -66,7 +53,7 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
     calendarDate,
 }) => {
     const [bulkType, setBulkType] = useState<BulkDailyContentType>('WORD');
-    const [bulkLevel, setBulkLevel] = useState<string>('FREE');
+    const bulkLevel = levelForAdminKey(bulkType);
     const [fileName, setFileName] = useState<string | null>(null);
     const [csvRaw, setCsvRaw] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -211,13 +198,13 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
             <DialogContent dividers>
                 {busy && <LinearProgress sx={{ mb: 2 }} />}
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Choose content type and level first. The CSV must match the column layout below. Dates in the file
-                    determine each row&apos;s schedule
+                    Choose content type first. Level is assigned automatically from the catalog ({bulkLevel}). Dates in
+                    the CSV determine each row&apos;s schedule
                     {calendarDate ? ` (calendar is on ${format(calendarDate, 'MMM d, yyyy')} for reference only)` : ''}.
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-                    <FormControl sx={{ minWidth: 200 }} size="small">
+                    <FormControl sx={{ minWidth: 320 }} size="small">
                         <InputLabel id="bulk-type-label">Type</InputLabel>
                         <Select
                             labelId="bulk-type-label"
@@ -228,27 +215,9 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                                 onTypeOrLevelChange();
                             }}
                         >
-                            {CONTENT_TYPES.map((t) => (
-                                <MenuItem key={t} value={t}>
-                                    {t}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <FormControl sx={{ minWidth: 180 }} size="small">
-                        <InputLabel id="bulk-level-label">Level</InputLabel>
-                        <Select
-                            labelId="bulk-level-label"
-                            label="Level"
-                            value={bulkLevel}
-                            onChange={(e) => {
-                                setBulkLevel(e.target.value);
-                                onTypeOrLevelChange();
-                            }}
-                        >
-                            {LEVELS.map((l) => (
-                                <MenuItem key={l} value={l}>
-                                    {l}
+                            {DAILY_CONTENT_CATALOG.map((slot) => (
+                                <MenuItem key={slot.adminKey} value={slot.adminKey}>
+                                    {slot.label}
                                 </MenuItem>
                             ))}
                         </Select>

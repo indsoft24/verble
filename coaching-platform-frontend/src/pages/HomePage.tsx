@@ -224,7 +224,8 @@ const HomePage: React.FC = () => {
                     <Box sx={{ height: '80vh' }}>
                         <ConversationChat
                             dialogue={selectedActivity.metadata.dialogue}
-                            userSpeaker={selectedActivity.metadata.participants?.[1]}
+                            participant1={String(selectedActivity.metadata.participant1 || selectedActivity.metadata.participants?.[0] || 'Speaker 1')}
+                            participant2={String(selectedActivity.metadata.participant2 || selectedActivity.metadata.participants?.[1] || 'Speaker 2')}
                         />
                     </Box>
                 )}

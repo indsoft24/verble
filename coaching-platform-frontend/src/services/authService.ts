@@ -73,7 +73,19 @@ export interface VerificationPayload {
 }
 
 export interface LoginCredentials { email?: string; password?: string; mobile?: string; }
-export interface RegisterData { name?: string; email?: string; password?: string; phoneNumber?: string; mobile?: string; role?: string; }
+export interface PhonePinLoginPayload {
+    phoneNumber: string;
+    pin: string;
+    agreedToTerms: boolean;
+}
+export interface RegisterData {
+    name?: string;
+    email?: string;
+    password?: string;
+    phoneNumber?: string;
+    mobile?: string;
+    role?: string;
+}
 export interface MobileOTPRequest { mobile: string; }
 export interface MobileOTPVerify { mobile: string; otp: string; name?: string; }
 
@@ -96,12 +108,15 @@ export const register = async (userData: RegisterData): Promise<RegistrationInit
 /**
  * Verifies the user's email with an OTP and logs them in.
  */
-export const verifyEmail = async (payload: VerificationPayload): Promise<AuthResponse> => {
+export interface VerifyEmailResponse {
+    status: string;
+    message: string;
+    data?: { email: string };
+}
+
+export const verifyEmail = async (payload: VerificationPayload): Promise<VerifyEmailResponse> => {
     try {
-        const response = await apiClient.post<AuthResponse>(`${API_URL_AUTH}/verify-email`, payload);
-         if (response.data?.data?.user && !Array.isArray(response.data.data.user.subscriptions)) {
-            response.data.data.user.subscriptions = [];
-        }
+        const response = await apiClient.post<VerifyEmailResponse>(`${API_URL_AUTH}/verify-email`, payload);
         return response.data;
     } catch (error: any) {
         throw error.response?.data || { status: 'error', message: 'An unknown verification error occurred' };
@@ -119,6 +134,43 @@ export const resendVerificationEmail = async (email: string): Promise<{ message:
         // Preserve cooldown information from backend
         const errorData = error.response?.data || { status: 'error', message: 'Failed to resend OTP' };
         throw errorData;
+    }
+};
+
+export const loginWithPhonePin = async (payload: PhonePinLoginPayload): Promise<AuthResponse> => {
+    try {
+        const response = await apiClient.post<AuthResponse>(`${API_URL_AUTH}/phone-pin/login`, payload);
+        if (response.data?.data?.user && !Array.isArray(response.data.data.user.subscriptions)) {
+            response.data.data.user.subscriptions = [];
+        }
+        return response.data;
+    } catch (error: any) {
+        const errorData = error.response?.data || { status: 'error', message: 'Login failed' };
+        throw errorData;
+    }
+};
+
+export const forgotLoginPin = async (phoneNumber: string): Promise<string> => {
+    try {
+        const response = await apiClient.post<{ status: string; message: string }>(
+            `${API_URL_AUTH}/phone-pin/forgot-pin`,
+            { phoneNumber }
+        );
+        return response.data.message || 'If an account exists, a new PIN has been sent to your email.';
+    } catch (error: any) {
+        throw error.response?.data || { message: 'Could not send PIN email.' };
+    }
+};
+
+export const changeLoginPin = async (currentPin: string, newPin: string): Promise<string> => {
+    try {
+        const response = await apiClient.patch<{ status: string; message: string }>(
+            `${API_URL_AUTH}/phone-pin/change-pin`,
+            { currentPin, newPin }
+        );
+        return response.data.message || 'PIN updated successfully.';
+    } catch (error: any) {
+        throw error.response?.data || { message: 'Failed to update PIN.' };
     }
 };
 

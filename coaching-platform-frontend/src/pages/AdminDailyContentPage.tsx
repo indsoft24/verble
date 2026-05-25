@@ -10,7 +10,6 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    TextField,
     Select,
     MenuItem,
     FormControl,
@@ -42,21 +41,27 @@ import {
 } from '../services/dailyContentAdminService';
 import type { DailyContent } from '../services/dailyContentService';
 import { getContentTypeConfig, type ContentType } from '../utils/contentTypeConfig';
+import {
+    DAILY_CONTENT_CATALOG,
+    LEVEL_CARD_COLORS,
+    contentMatchesCatalogSlot,
+    getAdminCardDisplayTitle,
+    apiTypeForAdminKey,
+    resolveAdminKeyFromContent,
+    getCatalogEntry,
+    type AdminContentTypeKey,
+} from '../utils/dailyContentTypeCatalog';
+import { defaultMetadataForAdminKey } from '../utils/adminDailyContentDefaults';
+import AdminDailyContentMetadataForm from '../components/admin/AdminDailyContentMetadataForm';
+import AdminDailyContentBulkDialog from '../components/admin/AdminDailyContentBulkDialog';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
 
-const CONTENT_TYPES = [
-    'WORD',
-    'PHRASE',
-    'STORY',
-    'VOCAB_SET',
-    'CONVERSATION',
-    'PUZZLE',
-    'SCENE',
-    'SPEECH',
-    'LYRICS',
-    'FEED'
-] as const;
-
-const LEVELS = ['FREE', 'BRONZE', 'SILVER', 'GOLD'] as const;
+type DailyContentFormState = Partial<CreateDailyContentPayload> & {
+    _id?: string;
+    adminKey: AdminContentTypeKey;
+};
 
 const AdminDailyContentPage: React.FC = () => {
     const [content, setContent] = useState<DailyContent[]>([]);
@@ -65,10 +70,11 @@ const AdminDailyContentPage: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
     const [openDialog, setOpenDialog] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [currentContent, setCurrentContent] = useState<(Partial<CreateDailyContentPayload> & { _id?: string }) | null>(null);
+    const [currentContent, setCurrentContent] = useState<DailyContentFormState | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
     const fetchContent = useCallback(async () => {
         setIsLoading(true);
@@ -94,24 +100,31 @@ const AdminDailyContentPage: React.FC = () => {
     const handleOpenDialog = (contentItem?: DailyContent) => {
         if (contentItem) {
             setIsEditMode(true);
+            const adminKey = resolveAdminKeyFromContent(contentItem);
+            const meta = {
+                ...defaultMetadataForAdminKey(adminKey),
+                ...(contentItem.metadata || {}),
+            };
             setCurrentContent({
                 _id: contentItem._id,
+                adminKey,
                 type: contentItem.type,
                 date: contentItem.date,
                 level: contentItem.level,
                 title: contentItem.title,
-                metadata: contentItem.metadata,
-                isActive: contentItem.isActive
+                metadata: meta,
+                isActive: contentItem.isActive,
             });
         } else {
             setIsEditMode(false);
+            const adminKey: AdminContentTypeKey = 'WORD';
             setCurrentContent({
-                type: 'WORD',
+                adminKey,
+                type: apiTypeForAdminKey(adminKey),
                 date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-                level: 'FREE',
                 title: '',
-                metadata: {},
-                isActive: true
+                metadata: defaultMetadataForAdminKey(adminKey),
+                isActive: true,
             });
         }
         setFormError(null);
@@ -151,9 +164,17 @@ const AdminDailyContentPage: React.FC = () => {
     const handleFormSubmit = async () => {
         if (!currentContent) return;
 
-        if (!currentContent.type || !currentContent.date || !currentContent.level || !currentContent.title) {
-            setFormError('Type, date, level, and title are required.');
+        if (!currentContent.type || !currentContent.date) {
+            setFormError('Type and date are required.');
             return;
+        }
+
+        if (currentContent.type === 'PUZZLE') {
+            const questions = currentContent.metadata?.questions || [];
+            if (questions.length !== 5) {
+                setFormError('Puzzle must have exactly 5 questions.');
+                return;
+            }
         }
 
         // Validate metadata based on type
@@ -172,6 +193,31 @@ const AdminDailyContentPage: React.FC = () => {
                 setFormError('At least one dialogue entry is required for conversations.');
                 return;
             }
+        } else if (currentContent.type === 'VOCAB_SET') {
+            const items = currentContent.metadata?.vocabItems || [];
+            if (!Array.isArray(items) || !items.some((v: { word?: string }) => String(v?.word || '').trim())) {
+                setFormError('Add at least one vocabulary word.');
+                return;
+            }
+        } else if (currentContent.type === 'SCENE') {
+            if (!String(currentContent.metadata?.explanation || '').trim()) {
+                setFormError('Scene explanation is required.');
+                return;
+            }
+        }
+
+        const payload = { ...currentContent };
+        if (payload.type === 'SCENE') {
+            const headline = String(payload.metadata?.title || payload.title || '').trim();
+            if (headline) {
+                payload.title = headline;
+            }
+        }
+        if (payload.type === 'STORY') {
+            const storyTitle = String(payload.metadata?.title || '').trim();
+            if (storyTitle) {
+                payload.title = storyTitle;
+            }
         }
 
         setIsSubmitting(true);
@@ -179,9 +225,9 @@ const AdminDailyContentPage: React.FC = () => {
 
         try {
             if (isEditMode && currentContent._id) {
-                await updateDailyContentAdmin(currentContent._id, currentContent);
+                await updateDailyContentAdmin(currentContent._id, payload);
             } else {
-                await createDailyContentAdmin(currentContent as CreateDailyContentPayload);
+                await createDailyContentAdmin(payload as CreateDailyContentPayload);
             }
             fetchContent();
             handleCloseDialog();
@@ -219,303 +265,37 @@ const AdminDailyContentPage: React.FC = () => {
         return grouped;
     }, [content]);
 
+    const handleAdminKeyChange = (adminKey: AdminContentTypeKey) => {
+        const entry = getCatalogEntry(adminKey);
+        setCurrentContent((prev) => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                adminKey,
+                type: entry.apiType,
+                metadata: defaultMetadataForAdminKey(adminKey),
+                title: entry.apiType === 'SCENE' ? '' : prev.title,
+            };
+        });
+    };
+
     // Render dynamic form based on type
     const renderDynamicForm = () => {
         if (!currentContent) return null;
 
-        const type = currentContent.type;
-        const metadata = currentContent.metadata || {};
-
-        if (type === 'WORD' || type === 'PHRASE') {
-            return (
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid size={{ xs: 12 }}>
-                        <TextField
-                            fullWidth
-                            label="Word/Phrase Text"
-                            value={metadata.text || ''}
-                            onChange={(e) => handleMetadataChange('text', e.target.value)}
-                            required
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            label="English Meaning"
-                            value={metadata.meaning_en || ''}
-                            onChange={(e) => handleMetadataChange('meaning_en', e.target.value)}
-                            required
-                            multiline
-                            rows={2}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            label="Hindi Meaning"
-                            value={metadata.meaning_hi || ''}
-                            onChange={(e) => handleMetadataChange('meaning_hi', e.target.value)}
-                            required
-                            multiline
-                            rows={2}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            label="Audio URL (Optional)"
-                            value={metadata.audio || ''}
-                            onChange={(e) => handleMetadataChange('audio', e.target.value)}
-                        />
-                    </Grid>
-                    {type === 'WORD' && (
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                label="Part of Speech (Optional)"
-                                placeholder="e.g., noun, verb, adjective"
-                                value={metadata.partOfSpeech || ''}
-                                onChange={(e) => handleMetadataChange('partOfSpeech', e.target.value)}
-                                helperText="e.g., noun, verb, adjective, adverb"
-                            />
-                        </Grid>
-                    )}
-                    <Grid size={{ xs: 12 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>Examples (Optional)</Typography>
-                        <Button
-                            size="small"
-                            onClick={() => {
-                                const examples = metadata.examples || [];
-                                handleMetadataChange('examples', [...examples, { en: '', hi: '', audio: '' }]);
-                            }}
-                        >
-                            Add Example
-                        </Button>
-                        {(metadata.examples || []).map((example: any, idx: number) => (
-                            <Box key={idx} sx={{ mt: 1, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
-                                <TextField
-                                    fullWidth
-                                    label="English"
-                                    value={example.en || ''}
-                                    onChange={(e) => {
-                                        const examples = [...(metadata.examples || [])];
-                                        examples[idx] = { ...examples[idx], en: e.target.value };
-                                        handleMetadataChange('examples', examples);
-                                    }}
-                                    sx={{ mb: 1 }}
-                                />
-                                <TextField
-                                    fullWidth
-                                    label="Hindi"
-                                    value={example.hi || ''}
-                                    onChange={(e) => {
-                                        const examples = [...(metadata.examples || [])];
-                                        examples[idx] = { ...examples[idx], hi: e.target.value };
-                                        handleMetadataChange('examples', examples);
-                                    }}
-                                />
-                            </Box>
-                        ))}
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            label="Synonyms (comma-separated)"
-                            value={Array.isArray(metadata.synonyms) ? metadata.synonyms.join(', ') : ''}
-                            onChange={(e) => handleMetadataChange('synonyms', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            label="Antonyms (comma-separated)"
-                            value={Array.isArray(metadata.antonyms) ? metadata.antonyms.join(', ') : ''}
-                            onChange={(e) => handleMetadataChange('antonyms', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-                        />
-                    </Grid>
-                </Grid>
-            );
-        }
-
-        if (type === 'STORY') {
-            return (
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid size={{ xs: 12 }}>
-                        <TextField
-                            fullWidth
-                            label="Story Title"
-                            value={metadata.title || ''}
-                            onChange={(e) => handleMetadataChange('title', e.target.value)}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                        <TextField
-                            fullWidth
-                            label="Story Content"
-                            value={metadata.text_content || ''}
-                            onChange={(e) => handleMetadataChange('text_content', e.target.value)}
-                            required
-                            multiline
-                            rows={10}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                        <TextField
-                            fullWidth
-                            label="Audio URL (Optional)"
-                            value={metadata.audio || ''}
-                            onChange={(e) => handleMetadataChange('audio', e.target.value)}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            label="Moral (English)"
-                            value={metadata.moral_en || ''}
-                            onChange={(e) => handleMetadataChange('moral_en', e.target.value)}
-                            multiline
-                            rows={2}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            label="Moral (Hindi)"
-                            value={metadata.moral_hi || ''}
-                            onChange={(e) => handleMetadataChange('moral_hi', e.target.value)}
-                            multiline
-                            rows={2}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                            Sentence Translations (Hindi) - One per line, matching story sentences
-                        </Typography>
-                        <TextField
-                            fullWidth
-                            label="Hindi Translations"
-                            value={Array.isArray(metadata.sentence_translations)
-                                ? metadata.sentence_translations.join('\n')
-                                : ''}
-                            onChange={(e) => {
-                                const translations = e.target.value.split('\n').map(s => s.trim()).filter(s => s);
-                                handleMetadataChange('sentence_translations', translations);
-                            }}
-                            multiline
-                            rows={8}
-                            helperText="Enter Hindi translation for each sentence, one per line. Order should match the story sentences."
-                        />
-                    </Grid>
-                </Grid>
-            );
-        }
-
-        if (type === 'CONVERSATION') {
-            return (
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid size={{ xs: 12 }}>
-                        <TextField
-                            fullWidth
-                            label="Participants (comma-separated)"
-                            value={Array.isArray(metadata.participants) ? metadata.participants.join(', ') : ''}
-                            onChange={(e) => handleMetadataChange('participants', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-                            helperText="e.g., Waiter, Customer"
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>Dialogue</Typography>
-                        <Button
-                            size="small"
-                            onClick={() => {
-                                const dialogue = metadata.dialogue || [];
-                                handleMetadataChange('dialogue', [...dialogue, { speaker: '', text_en: '', text_hi: '', audio: '' }]);
-                            }}
-                        >
-                            Add Dialogue Entry
-                        </Button>
-                        {(metadata.dialogue || []).map((dialogue: any, idx: number) => (
-                            <Box key={idx} sx={{ mt: 1, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
-                                <TextField
-                                    fullWidth
-                                    label="Speaker"
-                                    value={dialogue.speaker || ''}
-                                    onChange={(e) => {
-                                        const dialogueList = [...(metadata.dialogue || [])];
-                                        dialogueList[idx] = { ...dialogueList[idx], speaker: e.target.value };
-                                        handleMetadataChange('dialogue', dialogueList);
-                                    }}
-                                    sx={{ mb: 1 }}
-                                    required
-                                />
-                                <TextField
-                                    fullWidth
-                                    label="English Text"
-                                    value={dialogue.text_en || ''}
-                                    onChange={(e) => {
-                                        const dialogueList = [...(metadata.dialogue || [])];
-                                        dialogueList[idx] = { ...dialogueList[idx], text_en: e.target.value };
-                                        handleMetadataChange('dialogue', dialogueList);
-                                    }}
-                                    sx={{ mb: 1 }}
-                                    required
-                                    multiline
-                                    rows={2}
-                                />
-                                <TextField
-                                    fullWidth
-                                    label="Hindi Text"
-                                    value={dialogue.text_hi || ''}
-                                    onChange={(e) => {
-                                        const dialogueList = [...(metadata.dialogue || [])];
-                                        dialogueList[idx] = { ...dialogueList[idx], text_hi: e.target.value };
-                                        handleMetadataChange('dialogue', dialogueList);
-                                    }}
-                                    sx={{ mb: 1 }}
-                                    required
-                                    multiline
-                                    rows={2}
-                                />
-                                <TextField
-                                    fullWidth
-                                    label="Audio URL (Optional)"
-                                    value={dialogue.audio || ''}
-                                    onChange={(e) => {
-                                        const dialogueList = [...(metadata.dialogue || [])];
-                                        dialogueList[idx] = { ...dialogueList[idx], audio: e.target.value };
-                                        handleMetadataChange('dialogue', dialogueList);
-                                    }}
-                                />
-                            </Box>
-                        ))}
-                    </Grid>
-                </Grid>
-            );
-        }
-
-        // Default form for other types
         return (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid size={{ xs: 12 }}>
-                    <TextField
-                        fullWidth
-                        label="Metadata (JSON)"
-                        value={JSON.stringify(metadata, null, 2)}
-                        onChange={(e) => {
-                            try {
-                                const parsed = JSON.parse(e.target.value);
-                                handleMetadataChange('', parsed);
-                            } catch {
-                                // Invalid JSON, ignore
-                            }
-                        }}
-                        multiline
-                        rows={10}
-                        helperText="Enter metadata as JSON"
-                    />
-                </Grid>
-            </Grid>
+            <AdminDailyContentMetadataForm
+                type={currentContent.type || 'WORD'}
+                metadata={(currentContent.metadata || {}) as Record<string, unknown>}
+                displayTitle={currentContent.title || ''}
+                onDisplayTitleChange={(value) =>
+                    setCurrentContent((prev) => (prev ? { ...prev, title: value } : null))
+                }
+                onChange={handleMetadataChange}
+            />
         );
     };
+
 
     return (
         <AdminLayout title="Daily Content Management">
@@ -524,13 +304,22 @@ const AdminDailyContentPage: React.FC = () => {
                     <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
                         Daily Content Management
                     </Typography>
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => handleOpenDialog()}
-                    >
-                        Add New Content
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<UploadFileIcon />}
+                            onClick={() => setBulkDialogOpen(true)}
+                        >
+                            Add Bulk Content
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={() => handleOpenDialog()}
+                        >
+                            Add New Content
+                        </Button>
+                    </Box>
                 </Box>
 
                 {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
@@ -549,6 +338,71 @@ const AdminDailyContentPage: React.FC = () => {
                             sx={{ mt: 2, width: 300 }}
                         />
                     </LocalizationProvider>
+                </Paper>
+
+                {/* 12-slot catalog for selected date */}
+                <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                        Content slots ({selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'today'})
+                    </Typography>
+                    <Grid container spacing={2}>
+                        {DAILY_CONTENT_CATALOG.map((slot) => {
+                            const dateKey = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+                            const item = content.find(
+                                (c) =>
+                                    format(parseISO(c.date), 'yyyy-MM-dd') === dateKey &&
+                                    contentMatchesCatalogSlot(c, slot)
+                            );
+                            const colors = LEVEL_CARD_COLORS[slot.level];
+                            return (
+                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={slot.adminKey}>
+                                    <Card
+                                        sx={{
+                                            border: `2px solid ${colors.borderColor}`,
+                                            backgroundColor: colors.backgroundColor,
+                                            cursor: 'pointer',
+                                        }}
+                                        onClick={() => {
+                                            if (item) {
+                                                handleOpenDialog(item);
+                                            } else {
+                                                setIsEditMode(false);
+                                                setCurrentContent({
+                                                    adminKey: slot.adminKey,
+                                                    type: apiTypeForAdminKey(slot.adminKey),
+                                                    date: dateKey,
+                                                    title: '',
+                                                    metadata: defaultMetadataForAdminKey(slot.adminKey),
+                                                    isActive: true,
+                                                });
+                                                setFormError(null);
+                                                setOpenDialog(true);
+                                            }
+                                        }}
+                                    >
+                                        <CardContent>
+                                            <Typography variant="subtitle2" fontWeight={700} color={colors.color}>
+                                                {slot.label}
+                                            </Typography>
+                                            <Chip label={slot.level} size="small" sx={{ mt: 1, mr: 0.5 }} />
+                                            {item ? (
+                                                <>
+                                                    <Chip label="Scheduled" color="success" size="small" sx={{ mt: 1 }} />
+                                                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                                                        {getAdminCardDisplayTitle(item)}
+                                                    </Typography>
+                                                </>
+                                            ) : (
+                                                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                                                    {slot.emptyHint}
+                                                </Typography>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            );
+                        })}
+                    </Grid>
                 </Paper>
 
                 {/* Content List */}
@@ -575,6 +429,7 @@ const AdminDailyContentPage: React.FC = () => {
                                             const contentType = item.type as ContentType;
                                             const config = getContentTypeConfig(contentType);
                                             const IconComponent = config.icon;
+                                            const slotLabel = getCatalogEntry(resolveAdminKeyFromContent(item)).label;
 
                                             return (
                                                 <Grid size={{ xs: 12, md: 6, lg: 4 }} key={item._id}>
@@ -595,7 +450,7 @@ const AdminDailyContentPage: React.FC = () => {
                                                                     </Box>
                                                                     <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
                                                                         <Chip
-                                                                            label={item.type}
+                                                                            label={slotLabel}
                                                                             size="small"
                                                                             color={config.chipColor}
                                                                             sx={{
@@ -642,20 +497,25 @@ const AdminDailyContentPage: React.FC = () => {
                 {/* Add/Edit Dialog */}
                 <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
                     <DialogTitle>{isEditMode ? 'Edit Daily Content' : 'Add New Daily Content'}</DialogTitle>
-                    <DialogContent>
+                    <DialogContent dividers sx={{ pt: 2 }}>
                         {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
                         {currentContent && (
-                            <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid container spacing={2}>
                                 <Grid size={{ xs: 12, md: 6 }}>
                                     <FormControl fullWidth required>
-                                        <InputLabel>Type</InputLabel>
+                                        <InputLabel id="daily-content-type-label">Type</InputLabel>
                                         <Select
-                                            value={currentContent.type || ''}
+                                            labelId="daily-content-type-label"
+                                            value={currentContent.adminKey}
                                             label="Type"
-                                            onChange={(e) => handleFormChange('type', e.target.value)}
+                                            onChange={(e) =>
+                                                handleAdminKeyChange(e.target.value as AdminContentTypeKey)
+                                            }
                                         >
-                                            {CONTENT_TYPES.map(type => (
-                                                <MenuItem key={type} value={type}>{type}</MenuItem>
+                                            {DAILY_CONTENT_CATALOG.map((slot) => (
+                                                <MenuItem key={slot.adminKey} value={slot.adminKey}>
+                                                    {slot.label}
+                                                </MenuItem>
                                             ))}
                                         </Select>
                                     </FormControl>
@@ -674,29 +534,26 @@ const AdminDailyContentPage: React.FC = () => {
                                         />
                                     </LocalizationProvider>
                                 </Grid>
-                                <Grid size={{ xs: 12, md: 6 }}>
-                                    <FormControl fullWidth required>
-                                        <InputLabel>Level</InputLabel>
-                                        <Select
-                                            value={currentContent.level || ''}
-                                            label="Level"
-                                            onChange={(e) => handleFormChange('level', e.target.value)}
-                                        >
-                                            {LEVELS.map(level => (
-                                                <MenuItem key={level} value={level}>{level}</MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
+                                <Grid size={{ xs: 12 }}>
+                                    <Alert severity="info">
+                                        Level and display title (#1111+) are assigned automatically when you save.
+                                    </Alert>
                                 </Grid>
-                                <Grid size={{ xs: 12, md: 6 }}>
-                                    <TextField
-                                        fullWidth
-                                        label="Title"
-                                        value={currentContent.title || ''}
-                                        onChange={(e) => handleFormChange('title', e.target.value)}
-                                        required
-                                    />
-                                </Grid>
+                                {isEditMode && (
+                                    <Grid size={{ xs: 12 }}>
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    checked={currentContent.isActive !== false}
+                                                    onChange={(e) =>
+                                                        handleFormChange('isActive', e.target.checked)
+                                                    }
+                                                />
+                                            }
+                                            label="Active (visible to learners)"
+                                        />
+                                    </Grid>
+                                )}
                                 {renderDynamicForm()}
                             </Grid>
                         )}
@@ -708,6 +565,16 @@ const AdminDailyContentPage: React.FC = () => {
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                <AdminDailyContentBulkDialog
+                    open={bulkDialogOpen}
+                    onClose={() => setBulkDialogOpen(false)}
+                    onImported={() => {
+                        setBulkDialogOpen(false);
+                        fetchContent();
+                    }}
+                    calendarDate={selectedDate}
+                />
 
                 {/* Delete Confirmation Dialog */}
                 <Dialog open={!!deleteId} onClose={() => setDeleteId(null)}>

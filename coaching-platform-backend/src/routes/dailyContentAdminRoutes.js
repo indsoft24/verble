@@ -6,8 +6,11 @@ import {
     createDailyContentAdmin,
     bulkCreateDailyContentAdmin,
     updateDailyContentAdmin,
-    deleteDailyContentAdmin
+    deleteDailyContentAdmin,
+    uploadDailyContentImageAdmin,
 } from '../controllers/dailyContentAdminController.js';
+import uploadBlogImage from '../middleware/uploadBlogImageMiddleware.js';
+import multerErrorHandler from '../middleware/multerErrorHandler.js';
 
 const router = express.Router();
 
@@ -20,6 +23,13 @@ router.get('/', getAllDailyContentAdmin);
 
 // POST /api/admin/daily-content/bulk - Bulk create (must be before /:id if ever added under POST)
 router.post('/bulk', bulkCreateDailyContentAdmin);
+
+router.post(
+    '/upload-image',
+    uploadBlogImage.single('image'),
+    multerErrorHandler,
+    uploadDailyContentImageAdmin
+);
 
 // POST /api/admin/daily-content - Create new daily content
 router.post('/', createDailyContentAdmin);

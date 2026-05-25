@@ -134,8 +134,8 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
     const checkNavigationAvailability = async () => {
         try {
             const [prevContent, nextContent] = await Promise.all([
-                getAdjacentContent(data.date, 'VOCAB_SET', data.level, 'prev'),
-                getAdjacentContent(data.date, 'VOCAB_SET', data.level, 'next')
+                getAdjacentContent(data._id, 'prev'),
+                getAdjacentContent(data._id, 'next')
             ]);
 
             setHasPrevious(!!prevContent);
@@ -149,12 +149,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
     const handleNavigation = async (direction: 'prev' | 'next') => {
         setIsLoadingNav(true);
         try {
-            const adjacentContent = await getAdjacentContent(
-                currentContent.date,
-                'VOCAB_SET',
-                currentContent.level,
-                direction
-            );
+            const adjacentContent = await getAdjacentContent(currentContent._id, direction);
 
             if (adjacentContent) {
                 setCurrentContent(adjacentContent);

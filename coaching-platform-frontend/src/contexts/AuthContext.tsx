@@ -11,8 +11,9 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (credentials: authService.LoginCredentials) => Promise<void>;
+    loginWithPhonePin: (payload: authService.PhonePinLoginPayload) => Promise<void>;
     register: (userData: authService.RegisterData) => Promise<{ email: string }>;
-    verifyAndLogin: (payload: authService.VerificationPayload) => Promise<void>;
+    verifyAndLogin: (payload: authService.VerificationPayload) => Promise<string>;
     resendOtp: (email: string) => Promise<string>;
     logout: () => Promise<void>;
     setUserContext: (userData: User | null, token?: string | null) => void;
@@ -94,6 +95,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         finally { setIsLoading(false); }
     };
 
+    const loginWithPhonePin = async (payload: authService.PhonePinLoginPayload) => {
+        setIsLoading(true);
+        try {
+            const response = await authService.loginWithPhonePin(payload);
+            if (response.token && response.data?.user) {
+                handleSetAuthData(response.data.user, response.token);
+            } else {
+                throw new Error(response.message || 'Login failed');
+            }
+        } catch (error) {
+            handleSetAuthData(null, null);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const register = async (userData: authService.RegisterData) => {
         setIsLoading(true);
         try {
@@ -112,11 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(true);
         try {
             const response = await authService.verifyEmail(payload);
-            if (response.token && response.data?.user) {
-                handleSetAuthData(response.data.user, response.token);
-            } else {
-                throw new Error(response.message || 'Verification failed');
-            }
+            return response.message || 'Email verified. Check your email for your login PIN.';
         } catch (error) {
             throw error;
         } finally {
@@ -177,6 +191,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             value={{
                 user, token, isAuthenticated: !!token && !!user, isLoading,
                 login,
+                loginWithPhonePin,
                 register,
                 verifyAndLogin,
                 resendOtp,

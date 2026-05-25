@@ -5,11 +5,11 @@ export interface DailyContent {
     _id: string;
     type: 'WORD' | 'PHRASE' | 'STORY' | 'VOCAB_SET' | 'CONVERSATION' | 'PUZZLE' | 'SCENE' | 'SPEECH' | 'LYRICS' | 'FEED';
     date: string;
-    level: 'FREE' | 'BRONZE' | 'SILVER' | 'GOLD';
+    level: 'FREE' | 'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE' | 'BONUS';
     title: string;
     metadata: any;
     isActive: boolean;
-    sequenceNumber?: number; // Sequence number for this content type and level
+    sequenceNumber?: number;
     createdAt: string;
     updatedAt: string;
 }
@@ -21,11 +21,22 @@ export interface DailyContentResponse {
     };
 }
 
-/**
- * Get daily content for a specific date and level
- */
+export interface SingleDailyContentResponse {
+    status: string;
+    data: {
+        content: DailyContent | null;
+    };
+}
+
+export const WORD_DISPLAY_NUMBER_BASE = 1111;
+
+export const getWordDisplayNumber = (sequenceNumber?: number, base = WORD_DISPLAY_NUMBER_BASE): string => {
+    if (!sequenceNumber || sequenceNumber < 1) return `#${base}`;
+    return `#${base + sequenceNumber - 1}`;
+};
+
 export const getDailyContent = async (date?: Date, level?: string): Promise<DailyContent[]> => {
-    const params: any = {};
+    const params: Record<string, string> = {};
     if (date) {
         params.date = date.toISOString().split('T')[0];
     }
@@ -37,45 +48,49 @@ export const getDailyContent = async (date?: Date, level?: string): Promise<Dail
     return response.data.data.content || [];
 };
 
-/**
- * Get today's daily content for all levels
- */
 export const getTodaysDailyContent = async (): Promise<DailyContent[]> => {
-    // const today = new Date();
     const response = await apiClient.get<DailyContentResponse>('/daily-content/today');
     return response.data.data.content || [];
 };
 
-/**
- * Get previous or next content of a specific type
- */
+/** Sequence-based prev/next (same type + level). */
 export const getAdjacentContent = async (
+    contentId: string,
+    direction: 'prev' | 'next'
+): Promise<DailyContent | null> => {
+    try {
+        const response = await apiClient.get<SingleDailyContentResponse>('/daily-content/adjacent', {
+            params: { id: contentId, direction },
+        });
+        return response.data.data.content ?? null;
+    } catch {
+        return null;
+    }
+};
+
+/** @deprecated Use getAdjacentContent(contentId, direction) */
+export const getAdjacentContentByDate = async (
     currentDate: string,
     type: string,
     level: string,
     direction: 'prev' | 'next'
 ): Promise<DailyContent | null> => {
-    try {
-        const currentDateObj = new Date(currentDate);
-        const targetDate = new Date(currentDateObj);
-
-        if (direction === 'prev') {
-            targetDate.setDate(targetDate.getDate() - 1);
-        } else {
-            targetDate.setDate(targetDate.getDate() + 1);
-        }
-
-        const response = await apiClient.get<DailyContentResponse>('/daily-content', {
-            params: {
-                date: targetDate.toISOString().split('T')[0],
-                type: type,
-                level: level
-            }
-        });
-
-        const content = response.data.data.content || [];
-        return content.length > 0 ? content[0] : null;
-    } catch (error) {
-        return null;
+    const currentDateObj = new Date(currentDate);
+    const targetDate = new Date(currentDateObj);
+    if (direction === 'prev') {
+        targetDate.setDate(targetDate.getDate() - 1);
+    } else {
+        targetDate.setDate(targetDate.getDate() + 1);
     }
+
+    const response = await apiClient.get<DailyContentResponse>('/daily-content', {
+        params: {
+            date: targetDate.toISOString().split('T')[0],
+            type,
+            level,
+        },
+    });
+
+    const content = response.data.data.content || [];
+    return content.length > 0 ? content[0] : null;
 };

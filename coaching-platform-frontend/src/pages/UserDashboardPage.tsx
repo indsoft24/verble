@@ -1,57 +1,99 @@
 // src/pages/UserDashboardPage.tsx
-
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link as RouterLink } from 'react-router-dom';
 import UserLayout from '../components/layout/UserLayout';
 import {
-    Container, Typography, Box, Grid, Paper, Button,
-    CircularProgress, Chip, Alert, Card, CardContent,
-    CardActionArea, LinearProgress, Avatar, List, ListItem,
-    ListItemText, ListItemAvatar
+    Container,
+    Typography,
+    Box,
+    Grid,
+    Paper,
+    Button,
+    CircularProgress,
+    Chip,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemAvatar,
+    Avatar,
 } from '@mui/material';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
-import LockIcon from '@mui/icons-material/Lock';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import PeopleIcon from '@mui/icons-material/People';
-import SchoolIcon from '@mui/icons-material/School';
-import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TranslateIcon from '@mui/icons-material/Translate';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
+import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import ExtensionIcon from '@mui/icons-material/Extension';
+import TheaterComedyIcon from '@mui/icons-material/TheaterComedy';
+import MicIcon from '@mui/icons-material/Mic';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import InstagramIcon from '@mui/icons-material/Instagram';
 import StarIcon from '@mui/icons-material/Star';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+
 import LevelUnlockDialog from '../components/features/LevelUnlockDialog';
+import DashboardMasteryPath from '../components/dashboard/DashboardMasteryPath';
+import DashboardActivitiesPanel, {
+    type ActivityTileConfig,
+    TIER_COLORS,
+} from '../components/dashboard/DashboardActivitiesPanel';
 import WordOfTheDayCard from '../components/features/WordOfTheDayCard';
+import PhraseOfTheDayCard from '../components/features/PhraseOfTheDayCard';
+import StoryCard from '../components/features/StoryCard';
+import VocabularySetCard from '../components/features/VocabularySetCard';
 import ConversationChat from '../components/features/ConversationChat';
+import PuzzleCard from '../components/features/PuzzleCard';
+import SceneCard from '../components/features/SceneCard';
+import SpeechCard from '../components/features/SpeechCard';
+import LyricsCard from '../components/features/LyricsCard';
+import InstagramFeedsCard from '../components/features/InstagramFeedsCard';
 import { getTodaysDailyContent, type DailyContent } from '../services/dailyContentService';
-import { getContentTypeConfig } from '../utils/contentTypeConfig';
+import { contentMatchesCatalogSlot, DAILY_CONTENT_CATALOG } from '../utils/dailyContentTypeCatalog';
+import { findTodaysGoldMedia } from '../utils/goldDailyContent';
+import {
+    getDisplayMembershipLevel,
+    getStreakForDisplayLevel,
+    getUnlockedLevels,
+    hasActiveGold,
+    hasActiveFullCourse,
+} from '../utils/userAccessState';
 import { getFreeLeaderboard, getPaidLeaderboard, getMyRank, type LeaderboardEntry } from '../services/leaderboardService';
 import { getActiveOffers, type Offer } from '../services/offerService';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
 
+type ActivityKind =
+    | 'word'
+    | 'phrase'
+    | 'story'
+    | 'vocab'
+    | 'conversation'
+    | 'puzzle_spot'
+    | 'puzzle_grammar'
+    | 'scene'
+    | 'speech'
+    | 'lyrics'
+    | 'feed';
+
 const UserDashboardPage: React.FC = () => {
     const { user, isLoading: authIsLoading, refreshUser } = useAuth();
 
-
-    // State management
     const [dailyContent, setDailyContent] = useState<DailyContent[]>([]);
     const [isLoadingContent, setIsLoadingContent] = useState(true);
     const [contentError, setContentError] = useState<string | null>(null);
     const [selectedActivity, setSelectedActivity] = useState<DailyContent | null>(null);
-    const [activityType, setActivityType] = useState<'word' | 'conversation' | null>(null);
+    const [activityKind, setActivityKind] = useState<ActivityKind | null>(null);
     const [levelDialogOpen, setLevelDialogOpen] = useState(false);
     const [selectedLevel, setSelectedLevel] = useState<'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE' | null>(null);
     const [offers, setOffers] = useState<Offer[]>([]);
     const [recentJoiners, setRecentJoiners] = useState<RecentJoiner[]>([]);
     const [freeLeaderboard, setFreeLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [paidLeaderboard, setPaidLeaderboard] = useState<LeaderboardEntry[]>([]);
-    const [myRank, setMyRank] = useState<{ rank: number; points: number; leaderboardType: string } | null>(null);
+    const [, setMyRank] = useState<{ rank: number; points: number; leaderboardType: string } | null>(null);
     const [isLoadingAdditional, setIsLoadingAdditional] = useState(true);
 
-    // Fetch daily content
     const fetchDailyContent = useCallback(async () => {
         if (!user) return;
         setIsLoadingContent(true);
@@ -59,19 +101,19 @@ const UserDashboardPage: React.FC = () => {
         try {
             const content = await getTodaysDailyContent();
             setDailyContent(content);
-        } catch (err: any) {
-            setContentError(err.message || 'Failed to load daily content.');
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Failed to load daily content.';
+            setContentError(message);
         } finally {
             setIsLoadingContent(false);
         }
     }, [user]);
 
-    // Fetch additional data
     const fetchAdditionalData = useCallback(async () => {
         if (!user) return;
         setIsLoadingAdditional(true);
         try {
-            const [offersData, joinersData, freeLeaderboardData, paidLeaderboardData, myRankData] = await Promise.all([
+            const [offersData, joinersData, freeLb, paidLb, rank] = await Promise.all([
                 getActiveOffers().catch(() => []),
                 getRecentJoiners(10).catch(() => []),
                 getFreeLeaderboard(10).catch(() => []),
@@ -80,9 +122,9 @@ const UserDashboardPage: React.FC = () => {
             ]);
             setOffers(offersData);
             setRecentJoiners(joinersData);
-            setFreeLeaderboard(freeLeaderboardData);
-            setPaidLeaderboard(paidLeaderboardData);
-            setMyRank(myRankData);
+            setFreeLeaderboard(freeLb);
+            setPaidLeaderboard(paidLb);
+            setMyRank(rank);
         } catch (error) {
             console.error('Failed to load additional data:', error);
         } finally {
@@ -95,12 +137,165 @@ const UserDashboardPage: React.FC = () => {
         fetchAdditionalData();
     }, [fetchDailyContent, fetchAdditionalData]);
 
+    const refreshDashboardAfterSubmission = useCallback(async () => {
+        await Promise.allSettled([refreshUser(), fetchAdditionalData()]);
+    }, [refreshUser, fetchAdditionalData]);
+
+    const findSlot = useCallback(
+        (adminKey: (typeof DAILY_CONTENT_CATALOG)[number]['adminKey']) => {
+            const slot = DAILY_CONTENT_CATALOG.find((s) => s.adminKey === adminKey);
+            if (!slot) return undefined;
+            return dailyContent.find((c) => contentMatchesCatalogSlot(c, slot));
+        },
+        [dailyContent]
+    );
+
+    const wordContent = findSlot('WORD');
+    const phraseContent = findSlot('PHRASE');
+    const storyContent = findSlot('STORY');
+    const vocabContent = findSlot('VOCAB_SET');
+    const conversationContent = findSlot('CONVERSATION');
+    const puzzleSpotContent = findSlot('PUZZLE_SPOT');
+    const puzzleGrammarContent = findSlot('PUZZLE_GRAMMAR');
+    const sceneContent = findTodaysGoldMedia(dailyContent, 'SCENE');
+    const speechContent = findTodaysGoldMedia(dailyContent, 'SPEECH');
+    const lyricsContent = findTodaysGoldMedia(dailyContent, 'LYRICS');
+    const feedContent = findTodaysGoldMedia(dailyContent, 'FEED');
+
+    const handleActivityClick = (content: DailyContent, kind: ActivityKind) => {
+        setSelectedActivity(content);
+        setActivityKind(kind);
+    };
+
+    const handleCloseActivity = () => {
+        setSelectedActivity(null);
+        setActivityKind(null);
+    };
+
+    const handleLockedTier = (tier: 'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE') => {
+        setSelectedLevel(tier);
+        setLevelDialogOpen(true);
+    };
+
+    const getLevelBadgeColor = (level: string): 'default' | 'warning' | 'info' | 'success' | 'primary' => {
+        switch (level) {
+            case 'BRONZE':
+                return 'warning';
+            case 'SILVER':
+                return 'info';
+            case 'GOLD':
+                return 'success';
+            case 'FULL_COURSE':
+                return 'primary';
+            default:
+                return 'default';
+        }
+    };
+
+    const tile = (
+        id: string,
+        title: string,
+        subtitle: string,
+        icon: React.ReactNode,
+        accent: string,
+        content: DailyContent | undefined,
+        kind: ActivityKind
+    ): ActivityTileConfig => ({
+        id,
+        title,
+        subtitle,
+        icon,
+        accentColor: accent,
+        emptyToday: !content,
+        onOpen: content ? () => handleActivityClick(content, kind) : undefined,
+    });
+
+    const activityTiles = useMemo(() => {
+        if (!user) return null;
+
+        const unlocked = getUnlockedLevels(user);
+        const isBronzeUp = unlocked.includes('BRONZE');
+        const isSilverUp = unlocked.includes('SILVER');
+        const isGoldOrFull = hasActiveGold(user) || hasActiveFullCourse(user);
+        const tierHasFullCourse = hasActiveFullCourse(user);
+
+        const freeTiles: ActivityTileConfig[] = [
+            tile('word', 'Word of the Day', 'Vocabulary & pronunciation', <TranslateIcon />, TIER_COLORS.FREE, wordContent, 'word'),
+            tile('phrase', 'Phrase of the Day', 'Everyday expressions', <RecordVoiceOverIcon />, TIER_COLORS.FREE, phraseContent, 'phrase'),
+        ];
+
+        const bronzeTiles: ActivityTileConfig[] = [
+            tile('story', 'One Minute Read', 'Short story practice', <VideoLibraryIcon />, TIER_COLORS.BRONZE, storyContent, 'story'),
+            tile('vocab', 'Essential Vocab', 'Weekly word set', <MenuBookIcon />, TIER_COLORS.BRONZE, vocabContent, 'vocab'),
+        ];
+
+        const silverTiles: ActivityTileConfig[] = [
+            tile(
+                'conversation',
+                'Practical Conversations',
+                'Real-life dialogue',
+                <PeopleIcon />,
+                TIER_COLORS.SILVER,
+                conversationContent,
+                'conversation'
+            ),
+            tile(
+                'puzzle-spot',
+                'Spot the Sentence',
+                '5 quick puzzles',
+                <ExtensionIcon />,
+                TIER_COLORS.SILVER,
+                puzzleSpotContent,
+                'puzzle_spot'
+            ),
+            tile(
+                'puzzle-grammar',
+                'Grammar Puzzle',
+                'Verb form practice',
+                <ExtensionIcon />,
+                TIER_COLORS.SILVER,
+                puzzleGrammarContent,
+                'puzzle_grammar'
+            ),
+        ];
+
+        const goldTopTiles: ActivityTileConfig[] = [
+            tile('scene', 'Explain the Scene', 'Visual storytelling', <TheaterComedyIcon />, TIER_COLORS.GOLD, sceneContent, 'scene'),
+            tile('speech', 'Famous Speeches', 'Listen & learn', <MicIcon />, TIER_COLORS.GOLD, speechContent, 'speech'),
+        ];
+
+        const goldBottomTiles: ActivityTileConfig[] = [
+            tile('lyrics', 'Song Lyrics', 'Music & English', <MusicNoteIcon />, TIER_COLORS.GOLD, lyricsContent, 'lyrics'),
+            tile('feed', 'Instagram Feeds', 'Social English', <InstagramIcon />, TIER_COLORS.GOLD, feedContent, 'feed'),
+            {
+                id: 'pro-conversations',
+                title: 'Professional Conversations',
+                subtitle: 'Workplace English library',
+                icon: <PeopleIcon />,
+                accentColor: TIER_COLORS.GOLD,
+                emptyToday: false,
+                onOpen: () => window.location.assign('/professional-conversations'),
+            },
+        ];
+
+        return {
+            isBronzeUp,
+            isSilverUp,
+            isGoldOrFull,
+            tierHasFullCourse,
+            freeTiles,
+            bronzeTiles,
+            silverTiles,
+            goldTopTiles,
+            goldBottomTiles,
+        };
+    }, [user, wordContent, phraseContent, storyContent, vocabContent, conversationContent, puzzleSpotContent, puzzleGrammarContent, sceneContent, speechContent, lyricsContent, feedContent]);
+
     if (authIsLoading) {
         return (
             <UserLayout title="Dashboard">
                 <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
                     <CircularProgress />
-                    <Typography sx={{ mt: 2, ml: 2 }}>Loading...</Typography>
                 </Container>
             </UserLayout>
         );
@@ -110,471 +305,211 @@ const UserDashboardPage: React.FC = () => {
         return (
             <UserLayout title="Dashboard">
                 <Container sx={{ mt: 4, textAlign: 'center' }}>
-                    <Typography variant="h6" color="error">User data not available.</Typography>
-                    <Button component={RouterLink} to="/login" variant="contained" sx={{ mt: 2 }}>Login</Button>
+                    <Typography variant="h6" color="error">
+                        User data not available.
+                    </Typography>
+                    <Button component={RouterLink} to="/login" variant="contained" sx={{ mt: 2 }}>
+                        Login
+                    </Button>
                 </Container>
             </UserLayout>
         );
     }
 
-    // Calculate level progress
-    const getLevelProgress = () => {
-        const level = user.membershipLevel || 'FREE';
-        // const unlockedLevels = user.unlockedLevels || ['FREE'];
+    const displayLevel = getDisplayMembershipLevel(user);
+    const displayStreak = getStreakForDisplayLevel(user);
+    const unlockedLevels = getUnlockedLevels(user);
 
-        if (level === 'FREE') {
-            const streak = user.streaks?.free?.current || 0;
-            const target = 30;
-            const daysRemaining = Math.max(0, target - streak);
-            return {
-                current: streak,
-                target,
-                daysRemaining,
-                nextLevel: 'BRONZE',
-                progress: Math.min(100, (streak / target) * 100),
-                level: 'FREE'
-            };
-        } else if (level === 'BRONZE') {
-            const streak = user.streaks?.bronze?.current || 0;
-            const target = 60;
-            const daysRemaining = Math.max(0, target - streak);
-            return {
-                current: streak,
-                target,
-                daysRemaining,
-                nextLevel: 'SILVER',
-                progress: Math.min(100, (streak / target) * 100),
-                level: 'BRONZE'
-            };
-        } else if (level === 'SILVER') {
-            const streak = user.streaks?.silver?.current || 0;
-            const target = 90;
-            const daysRemaining = Math.max(0, target - streak);
-            return {
-                current: streak,
-                target,
-                daysRemaining,
-                nextLevel: 'GOLD',
-                progress: Math.min(100, (streak / target) * 100),
-                level: 'SILVER'
-            };
-        }
-        return null;
-    };
-
-    const levelProgress = getLevelProgress();
-    const currentStreak = user.streaks?.[user.membershipLevel?.toLowerCase() as 'free' | 'bronze' | 'silver']?.current || 0;
-    const unlockedLevels = user.unlockedLevels || ['FREE'];
-
-    // Filter content by unlocked levels
-    const filteredContent = dailyContent.filter(content =>
-        unlockedLevels.includes(content.level)
-    );
-
-    // Get specific content types
-    const wordContent = filteredContent.find(c => c.type === 'WORD');
-    const phraseContent = filteredContent.find(c => c.type === 'PHRASE');
-    const storyContent = filteredContent.find(c => c.type === 'STORY');
-    const conversationContent = filteredContent.find(c => c.type === 'CONVERSATION');
-
-    const getLevelBadgeColor = (level: string) => {
-        switch (level) {
-            case 'FREE': return 'default';
-            case 'BRONZE': return 'warning';
-            case 'SILVER': return 'info';
-            case 'GOLD': return 'success';
-            case 'FULL_COURSE': return 'primary';
-            default: return 'default';
-        }
-    };
-
-    const handleLevelClick = (level: 'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE') => {
-        if (!unlockedLevels.includes(level)) {
-            setSelectedLevel(level);
-            setLevelDialogOpen(true);
-        }
-    };
-
-    const handleActivityClick = (content: DailyContent, type: 'word' | 'conversation') => {
-        setSelectedActivity(content);
-        setActivityType(type);
-    };
-
-    const handleCloseActivity = () => {
-        setSelectedActivity(null);
-        setActivityType(null);
-    };
-
-    const refreshDashboardAfterSubmission = useCallback(async () => {
-        // Refresh points/streaks in header + leaderboard/rank cards
-        await Promise.allSettled([refreshUser(), fetchAdditionalData()]);
-    }, [refreshUser, fetchAdditionalData]);
-
-    // Show activity modal if selected
-    if (selectedActivity && activityType) {
+    if (selectedActivity && activityKind) {
+        const meta = selectedActivity.metadata || {};
         return (
             <UserLayout title="Activity">
-                <Container maxWidth="lg" sx={{ py: 4 }}>
-                    <Box sx={{ mb: 2 }}>
-                        <Button onClick={handleCloseActivity} startIcon={<Box>←</Box>}>
-                            Back to Dashboard
-                        </Button>
-                    </Box>
-                    {activityType === 'word' && (
+                <Container maxWidth="lg" sx={{ py: 2 }}>
+                    <Button onClick={handleCloseActivity} startIcon={<ArrowBackIcon />} sx={{ mb: 2 }}>
+                        Back to Dashboard
+                    </Button>
+                    {activityKind === 'word' && (
                         <WordOfTheDayCard
-                            data={selectedActivity as any}
+                            data={selectedActivity as never}
                             onSubmissionSuccess={refreshDashboardAfterSubmission}
                         />
                     )}
-                    {activityType === 'conversation' && selectedActivity.metadata?.dialogue && (
-                        <Box sx={{ height: '80vh' }}>
+                    {activityKind === 'phrase' && (
+                        <PhraseOfTheDayCard
+                            data={selectedActivity as never}
+                            onSubmissionSuccess={refreshDashboardAfterSubmission}
+                        />
+                    )}
+                    {activityKind === 'story' && (
+                        <StoryCard
+                            data={selectedActivity as never}
+                            onSubmissionSuccess={refreshDashboardAfterSubmission}
+                        />
+                    )}
+                    {activityKind === 'vocab' && (
+                        <VocabularySetCard
+                            data={selectedActivity as never}
+                            onSubmissionSuccess={refreshDashboardAfterSubmission}
+                        />
+                    )}
+                    {activityKind === 'conversation' && Array.isArray(meta.dialogue) && (
+                        <Box sx={{ minHeight: '70vh' }}>
                             <ConversationChat
-                                dialogue={selectedActivity.metadata.dialogue}
-                                userSpeaker={selectedActivity.metadata.participants?.[1]}
+                                dialogue={meta.dialogue}
+                                participant1={String(meta.participant1 || meta.participants?.[0] || 'Speaker 1')}
+                                participant2={String(meta.participant2 || meta.participants?.[1] || 'Speaker 2')}
                             />
                         </Box>
                     )}
+                    {(activityKind === 'puzzle_spot' || activityKind === 'puzzle_grammar') && (
+                        <PuzzleCard
+                            data={selectedActivity}
+                            puzzleType={
+                                activityKind === 'puzzle_grammar'
+                                    ? 'GRAMMAR_FILL_BLANK'
+                                    : 'SPOT_CORRECT_SENTENCE'
+                            }
+                            onSubmissionSuccess={refreshDashboardAfterSubmission}
+                        />
+                    )}
+                    {activityKind === 'scene' && (
+                        <SceneCard data={selectedActivity as never} onSubmissionSuccess={refreshDashboardAfterSubmission} />
+                    )}
+                    {activityKind === 'speech' && <SpeechCard data={selectedActivity as never} />}
+                    {activityKind === 'lyrics' && <LyricsCard data={selectedActivity as never} />}
+                    {activityKind === 'feed' && <InstagramFeedsCard data={selectedActivity as never} />}
                 </Container>
             </UserLayout>
         );
     }
 
-    const levels = [
-        { name: 'FREE', label: 'Free', icon: <SchoolIcon />, color: '#757575' },
-        { name: 'BRONZE', label: 'Bronze', icon: <EmojiEventsIcon />, color: '#ff9800' },
-        { name: 'SILVER', label: 'Silver', icon: <StarIcon />, color: '#2196f3' },
-        { name: 'GOLD', label: 'Gold', icon: <WorkspacePremiumIcon />, color: '#4caf50' },
-        { name: 'FULL_COURSE', label: 'Full Course', icon: <AutoAwesomeIcon />, color: '#9c27b0' },
-    ];
-
     return (
         <UserLayout title="Dashboard">
-            <Container maxWidth="xl" sx={{ py: 4 }}>
-                {/* Header Section - Logo, Membership Level, Welcome Message */}
-                <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: 2, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                Welcome back, {user.name}! 👋
-                            </Typography>
-                            <Typography variant="body1" sx={{ opacity: 0.95 }}>
-                                Continue your English learning journey
-                            </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Container maxWidth="xl">
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, gap: 2 }}>
+                    <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#0f172a' }}>
+                            Welcome back, {user.name}!
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Continue your English learning journey
+                        </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                        <Box
+                            component="img"
+                            src="/verble-logo.png"
+                            alt="Verble"
+                            onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                                e.currentTarget.style.display = 'none';
+                            }}
+                            sx={{ height: 48, width: 'auto', mb: 1 }}
+                        />
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                             <Chip
-                                label={user.membershipLevel || 'FREE'}
-                                color={getLevelBadgeColor(user.membershipLevel || 'FREE')}
-                                sx={{ fontWeight: 'bold', fontSize: '0.875rem', bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                                label={displayLevel.replace('_', ' ')}
+                                color={getLevelBadgeColor(displayLevel)}
+                                size="small"
+                                sx={{ fontWeight: 700 }}
                             />
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'rgba(255,255,255,0.15)', px: 2, py: 1, borderRadius: 2 }}>
-                                <LocalFireDepartmentIcon sx={{ color: 'orange' }} />
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                    {currentStreak}
-                                </Typography>
-                                <Typography variant="body2">
-                                    day streak
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'rgba(255,255,255,0.15)', px: 2, py: 1, borderRadius: 2 }}>
-                                <EmojiEventsIcon />
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                    {user.points || 0}
-                                </Typography>
-                                <Typography variant="body2">
-                                    pts
-                                </Typography>
-                            </Box>
+                            <Chip
+                                icon={<LocalFireDepartmentIcon />}
+                                label={`${displayStreak}d`}
+                                size="small"
+                                color="warning"
+                                variant="outlined"
+                            />
+                            <Chip icon={<EmojiEventsIcon />} label={`${user.points || 0} pts`} size="small" variant="outlined" />
                         </Box>
                     </Box>
-                </Paper>
+                </Box>
 
-                {/* Challenge Progress Section */}
-                {levelProgress && (
-                    <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                            {levelProgress.level} Challenge Progress
-                        </Typography>
-                        <Box sx={{ mb: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="body1" color="text.secondary">
-                                    Day {levelProgress.current} of {levelProgress.target} - Progress to {levelProgress.nextLevel}
-                                </Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                                    {Math.round(levelProgress.progress)}%
-                                </Typography>
-                            </Box>
-                            <LinearProgress
-                                variant="determinate"
-                                value={levelProgress.progress}
-                                sx={{ height: 12, borderRadius: 6 }}
-                            />
-                        </Box>
-                        <Typography variant="body2" sx={{ fontWeight: 'medium', color: 'primary.main' }}>
-                            {levelProgress.daysRemaining} days remaining to unlock {levelProgress.nextLevel}! Keep it up! 🔥
-                        </Typography>
-                    </Paper>
+                <DashboardMasteryPath
+                    user={user}
+                    onLockedTierClick={(tier) => {
+                        if (tier !== 'FREE') handleLockedTier(tier);
+                    }}
+                />
+
+                {activityTiles && (
+                    <DashboardActivitiesPanel
+                        isBronzeUp={activityTiles.isBronzeUp}
+                        isSilverUp={activityTiles.isSilverUp}
+                        isGoldOrFull={activityTiles.isGoldOrFull}
+                        tierHasFullCourse={activityTiles.tierHasFullCourse}
+                        freeTiles={activityTiles.freeTiles}
+                        bronzeTiles={activityTiles.bronzeTiles}
+                        silverTiles={activityTiles.silverTiles}
+                        goldTopTiles={activityTiles.goldTopTiles}
+                        goldBottomTiles={activityTiles.goldBottomTiles}
+                        fullCourseHero={{
+                            modulesTitle: 'Structured modules',
+                            modulesSubtitle: 'Video path & certificate track',
+                            accessTitle: 'Full course access',
+                            accessSubtitle: 'All tiers + premium media',
+                        }}
+                        fullCourseBenefits={[
+                            {
+                                id: 'fc-videos',
+                                title: 'Course videos',
+                                subtitle: 'Module-by-module learning',
+                                icon: <VideoLibraryIcon />,
+                                accentColor: TIER_COLORS.FULL_COURSE,
+                                onOpen: () => window.location.assign('/my-courses'),
+                            },
+                            {
+                                id: 'fc-plans',
+                                title: 'Subscription',
+                                subtitle: 'Manage your plan',
+                                icon: <StarIcon />,
+                                accentColor: TIER_COLORS.FULL_COURSE,
+                                onOpen: () => window.location.assign('/subscription-plans'),
+                            },
+                        ]}
+                        onLockedTier={handleLockedTier}
+                        isLoading={isLoadingContent}
+                        error={contentError}
+                    />
                 )}
 
-                {/* Unlocked Levels Display */}
-                <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
-                        Your Learning Levels
-                    </Typography>
-                    <Grid container spacing={2}>
-                        {levels.map((level) => {
-                            const isUnlocked = unlockedLevels.includes(level.name);
-                            return (
-                                <Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={level.name}>
-                                    <Card
-                                        sx={{
-                                            height: '100%',
-                                            cursor: isUnlocked ? 'default' : 'pointer',
-                                            opacity: isUnlocked ? 1 : 0.6,
-                                            border: isUnlocked ? `2px solid ${level.color}` : '1px solid #e0e0e0',
-                                            transition: 'all 0.3s',
-                                            '&:hover': {
-                                                transform: 'translateY(-4px)',
-                                                boxShadow: 4
-                                            }
-                                        }}
-                                        onClick={() => !isUnlocked && handleLevelClick(level.name as 'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE')}
-                                    >
-                                        <CardContent sx={{ textAlign: 'center', p: 2 }}>
-                                            <Box sx={{ color: isUnlocked ? level.color : 'text.disabled', mb: 1 }}>
-                                                {isUnlocked ? level.icon : <LockIcon />}
-                                            </Box>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                                {level.label}
-                                            </Typography>
-                                            {!isUnlocked && (
-                                                <Chip
-                                                    label="Locked"
-                                                    size="small"
-                                                    icon={<LockIcon />}
-                                                    sx={{ mt: 1 }}
-                                                />
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            );
-                        })}
-                    </Grid>
-                </Paper>
-
-                {/* Daily Activities Section */}
-                <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', mb: 3 }}>
-                    Today's Learning Activities
-                </Typography>
-
-                {isLoadingContent ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : contentError ? (
-                    <Alert severity="error" sx={{ mb: 3 }}>{contentError}</Alert>
-                ) : (
-                    <Grid container spacing={3} sx={{ mb: 4 }}>
-                        {/* Word of the Day */}
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <Card
-                                elevation={3}
-                                sx={{
-                                    height: '100%',
-                                    borderRadius: 2,
-                                    opacity: wordContent ? 1 : 0.6,
-                                    border: wordContent ? `2px solid ${getContentTypeConfig('WORD').borderColor}` : 'none',
-                                }}
-                            >
-                                <CardActionArea
-                                    onClick={() => wordContent && handleActivityClick(wordContent, 'word')}
-                                    disabled={!wordContent}
-                                    sx={{ height: '100%' }}
-                                >
-                                    <CardContent sx={{ p: 3 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                            <TranslateIcon sx={{ fontSize: 40, color: wordContent ? '#4caf50' : 'text.disabled', mr: 2 }} />
-                                            <Box>
-                                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                                    Word of the Day
-                                                </Typography>
-                                                <Chip label="FREE" size="small" color="default" sx={{ mt: 0.5 }} />
-                                            </Box>
-                                        </Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {wordContent ? 'Learn a new word with examples and practice' : 'No word available today'}
-                                        </Typography>
-                                    </CardContent>
-                                </CardActionArea>
-                            </Card>
-                        </Grid>
-
-                        {/* Phrase of the Day */}
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <Card
-                                elevation={3}
-                                sx={{
-                                    height: '100%',
-                                    borderRadius: 2,
-                                    opacity: phraseContent ? 1 : 0.6,
-                                    border: phraseContent ? `2px solid ${getContentTypeConfig('PHRASE').borderColor}` : 'none',
-                                }}
-                            >
-                                <CardActionArea
-                                    onClick={() => phraseContent && handleActivityClick(phraseContent, 'word')}
-                                    disabled={!phraseContent}
-                                    sx={{ height: '100%' }}
-                                >
-                                    <CardContent sx={{ p: 3 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                            <RecordVoiceOverIcon sx={{ fontSize: 40, color: phraseContent ? '#2196f3' : 'text.disabled', mr: 2 }} />
-                                            <Box>
-                                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                                    Phrase of the Day
-                                                </Typography>
-                                                <Chip label="FREE" size="small" color="default" sx={{ mt: 0.5 }} />
-                                            </Box>
-                                        </Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {phraseContent ? 'Learn a new phrase with examples' : 'No phrase available today'}
-                                        </Typography>
-                                    </CardContent>
-                                </CardActionArea>
-                            </Card>
-                        </Grid>
-
-                        {/* One Minute Read (Bronze) */}
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <Card
-                                elevation={3}
-                                sx={{
-                                    height: '100%',
-                                    borderRadius: 2,
-                                    opacity: unlockedLevels.includes('BRONZE') && storyContent ? 1 : 0.6,
-                                    border: storyContent && unlockedLevels.includes('BRONZE') ? `2px solid ${getContentTypeConfig('STORY').borderColor}` : 'none',
-                                }}
-                            >
-                                <CardActionArea
-                                    onClick={() => storyContent && unlockedLevels.includes('BRONZE') && handleActivityClick(storyContent, 'word')}
-                                    disabled={!storyContent || !unlockedLevels.includes('BRONZE')}
-                                    sx={{ height: '100%' }}
-                                >
-                                    <CardContent sx={{ p: 3 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                            <VideoLibraryIcon sx={{ fontSize: 40, color: unlockedLevels.includes('BRONZE') && storyContent ? '#ff9800' : 'text.disabled', mr: 2 }} />
-                                            <Box>
-                                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                                    One Minute Read
-                                                </Typography>
-                                                <Chip
-                                                    label={unlockedLevels.includes('BRONZE') ? 'BRONZE' : 'Locked'}
-                                                    size="small"
-                                                    color={unlockedLevels.includes('BRONZE') ? 'warning' : 'default'}
-                                                    icon={!unlockedLevels.includes('BRONZE') ? <LockIcon /> : undefined}
-                                                    sx={{ mt: 0.5 }}
-                                                />
-                                            </Box>
-                                        </Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {unlockedLevels.includes('BRONZE') && storyContent
-                                                ? 'Read a short story and improve your reading skills'
-                                                : 'Unlock Bronze level to access'}
-                                        </Typography>
-                                    </CardContent>
-                                </CardActionArea>
-                            </Card>
-                        </Grid>
-
-                        {/* Practical Conversations (Silver) */}
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <Card
-                                elevation={3}
-                                sx={{
-                                    height: '100%',
-                                    borderRadius: 2,
-                                    opacity: unlockedLevels.includes('SILVER') && conversationContent ? 1 : 0.6,
-                                    border: conversationContent && unlockedLevels.includes('SILVER') ? `2px solid ${getContentTypeConfig('CONVERSATION').borderColor}` : 'none',
-                                }}
-                            >
-                                <CardActionArea
-                                    onClick={() => conversationContent && unlockedLevels.includes('SILVER') && handleActivityClick(conversationContent, 'conversation')}
-                                    disabled={!conversationContent || !unlockedLevels.includes('SILVER')}
-                                    sx={{ height: '100%' }}
-                                >
-                                    <CardContent sx={{ p: 3 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                            <PeopleIcon sx={{ fontSize: 40, color: unlockedLevels.includes('SILVER') && conversationContent ? '#2196f3' : 'text.disabled', mr: 2 }} />
-                                            <Box>
-                                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                                    Practical Conversations
-                                                </Typography>
-                                                <Chip
-                                                    label={unlockedLevels.includes('SILVER') ? 'SILVER' : 'Locked'}
-                                                    size="small"
-                                                    color={unlockedLevels.includes('SILVER') ? 'info' : 'default'}
-                                                    icon={!unlockedLevels.includes('SILVER') ? <LockIcon /> : undefined}
-                                                    sx={{ mt: 0.5 }}
-                                                />
-                                            </Box>
-                                        </Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {unlockedLevels.includes('SILVER') && conversationContent
-                                                ? 'Practice real-life conversations'
-                                                : 'Unlock Silver level to access'}
-                                        </Typography>
-                                    </CardContent>
-                                </CardActionArea>
-                            </Card>
-                        </Grid>
-                    </Grid>
-                )}
-
-                {/* Offers and Recent Joiners Section */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    {/* Active Offers */}
+                <Grid container spacing={3} sx={{ mt: 2, mb: 4 }}>
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper elevation={2} sx={{ p: 3, borderRadius: 2, height: '100%' }}>
+                        <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 <CampaignIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                <Typography variant="h6" fontWeight={700}>
                                     Active Offers
                                 </Typography>
                             </Box>
                             {isLoadingAdditional ? (
                                 <CircularProgress size={24} />
                             ) : offers.length > 0 ? (
-                                <List>
+                                <List dense>
                                     {offers.slice(0, 3).map((offer, index) => (
                                         <ListItem key={index} sx={{ px: 0 }}>
-                                            <ListItemText
-                                                primary={offer.title}
-                                                secondary={offer.description}
-                                            />
+                                            <ListItemText primary={offer.title} secondary={offer.description} />
                                         </ListItem>
                                     ))}
                                 </List>
                             ) : (
                                 <Typography variant="body2" color="text.secondary">
-                                    No active offers at the moment
+                                    No active offers
                                 </Typography>
                             )}
                         </Paper>
                     </Grid>
-
-                    {/* Recent Joiners */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper elevation={2} sx={{ p: 3, borderRadius: 2, height: '100%' }}>
+                        <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 <PeopleIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                <Typography variant="h6" fontWeight={700}>
                                     Recent Joiners
                                 </Typography>
                             </Box>
                             {isLoadingAdditional ? (
                                 <CircularProgress size={24} />
                             ) : recentJoiners.length > 0 ? (
-                                <List>
+                                <List dense>
                                     {recentJoiners.slice(0, 5).map((joiner, index) => (
                                         <ListItem key={index} sx={{ px: 0 }}>
                                             <ListItemAvatar>
@@ -582,110 +517,62 @@ const UserDashboardPage: React.FC = () => {
                                                     {joiner.name.charAt(0).toUpperCase()}
                                                 </Avatar>
                                             </ListItemAvatar>
-                                            <ListItemText
-                                                primary={joiner.name}
-                                                secondary={'New member'}
-                                            />
+                                            <ListItemText primary={joiner.name} secondary="New member" />
                                         </ListItem>
                                     ))}
                                 </List>
                             ) : (
                                 <Typography variant="body2" color="text.secondary">
-                                    No recent joiners to display
+                                    No recent joiners
                                 </Typography>
                             )}
                         </Paper>
                     </Grid>
                 </Grid>
 
-                {/* Leaderboards Section */}
                 <Grid container spacing={3}>
-                    {/* Free Challenges Leaderboard */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                    Free Challenges Leaderboard
-                                </Typography>
-                            </Box>
-                            {isLoadingAdditional ? (
-                                <CircularProgress size={24} />
-                            ) : freeLeaderboard.length > 0 ? (
-                                <List>
+                        <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                                Free Challenges Leaderboard
+                            </Typography>
+                            {freeLeaderboard.length > 0 ? (
+                                <List dense>
                                     {freeLeaderboard.map((entry, index) => (
                                         <ListItem key={index} sx={{ px: 0 }}>
-                                            <ListItemAvatar>
-                                                <Avatar sx={{ bgcolor: index < 3 ? 'primary.main' : 'grey.500' }}>
-                                                    {index + 1}
-                                                </Avatar>
-                                            </ListItemAvatar>
-                                            <ListItemText
-                                                primary={entry.name}
-                                                secondary={`${entry.points} points`}
-                                            />
+                                            <ListItemText primary={entry.name} secondary={`${entry.points} points`} />
                                         </ListItem>
                                     ))}
                                 </List>
                             ) : (
                                 <Typography variant="body2" color="text.secondary">
-                                    No leaderboard data available
+                                    No data yet
                                 </Typography>
-                            )}
-                            {myRank && myRank.leaderboardType === 'free' && (
-                                <Box sx={{ mt: 2, p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                        Your Rank: #{myRank.rank} ({myRank.points} points)
-                                    </Typography>
-                                </Box>
                             )}
                         </Paper>
                     </Grid>
-
-                    {/* Paid Challenges Leaderboard */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                <StarIcon sx={{ mr: 1, color: 'success.main' }} />
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                    Paid Challenges Leaderboard
-                                </Typography>
-                            </Box>
-                            {isLoadingAdditional ? (
-                                <CircularProgress size={24} />
-                            ) : paidLeaderboard.length > 0 ? (
-                                <List>
+                        <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                                Paid Challenges Leaderboard
+                            </Typography>
+                            {paidLeaderboard.length > 0 ? (
+                                <List dense>
                                     {paidLeaderboard.map((entry, index) => (
                                         <ListItem key={index} sx={{ px: 0 }}>
-                                            <ListItemAvatar>
-                                                <Avatar sx={{ bgcolor: index < 3 ? 'success.main' : 'grey.500' }}>
-                                                    {index + 1}
-                                                </Avatar>
-                                            </ListItemAvatar>
-                                            <ListItemText
-                                                primary={entry.name}
-                                                secondary={`${entry.points} points`}
-                                            />
+                                            <ListItemText primary={entry.name} secondary={`${entry.points} points`} />
                                         </ListItem>
                                     ))}
                                 </List>
                             ) : (
                                 <Typography variant="body2" color="text.secondary">
-                                    No leaderboard data available
+                                    No data yet
                                 </Typography>
-                            )}
-                            {myRank && myRank.leaderboardType === 'paid' && (
-                                <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                        Your Rank: #{myRank.rank} ({myRank.points} points)
-                                    </Typography>
-                                </Box>
                             )}
                         </Paper>
                     </Grid>
                 </Grid>
 
-                {/* Level Unlock Dialog */}
                 {selectedLevel && (
                     <LevelUnlockDialog
                         open={levelDialogOpen}

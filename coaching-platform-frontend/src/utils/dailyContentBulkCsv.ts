@@ -1,17 +1,13 @@
 import { format, isValid, parse } from 'date-fns';
 import type { CreateDailyContentPayload } from '../services/dailyContentAdminService';
+import {
+    type AdminContentTypeKey,
+    getCatalogEntry,
+    apiTypeForAdminKey,
+    levelForAdminKey,
+} from './dailyContentTypeCatalog';
 
-export type BulkDailyContentType =
-    | 'WORD'
-    | 'PHRASE'
-    | 'STORY'
-    | 'VOCAB_SET'
-    | 'CONVERSATION'
-    | 'PUZZLE'
-    | 'SCENE'
-    | 'SPEECH'
-    | 'LYRICS'
-    | 'FEED';
+export type BulkDailyContentType = AdminContentTypeKey;
 
 export interface BulkColumnSpec {
     key: string;
@@ -141,25 +137,46 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                     ['2026-04-01', 'At the restaurant', '', 'Customer', 'A table for two please.', 'कृपया दो लोगों के लिए एक मेज।'],
                 ],
             };
-        case 'PUZZLE':
+        case 'PUZZLE_SPOT':
+        case 'PUZZLE_GRAMMAR':
             return {
-                type: 'PUZZLE',
-                description: 'One row per puzzle (single question, multiple choice). correct_idx is 0-based.',
+                type: contentType,
+                description:
+                    'One row per puzzle day. questions_json must be a JSON array of exactly 5 objects: {question, options[], correct_idx}.',
                 rowMode: 'one_row_per_item',
                 columns: [
                     { key: 'date', label: 'date', required: true },
-                    { key: 'title', label: 'title', required: true },
-                    { key: 'question', label: 'question', required: true },
-                    { key: 'option_1', label: 'option_1', required: true },
-                    { key: 'option_2', label: 'option_2', required: true },
-                    { key: 'option_3', label: 'option_3', required: false },
-                    { key: 'option_4', label: 'option_4', required: false },
-                    { key: 'correct_idx', label: 'correct_idx', required: true, hint: '0–3' },
-                    { key: 'explanation', label: 'explanation', required: false },
+                    { key: 'title', label: 'title', required: false, hint: 'Optional; auto-assigned if blank' },
+                    { key: 'questions_json', label: 'questions_json', required: true, hint: 'JSON array of 5 questions' },
                 ],
                 exampleRows: [
-                    ['date', 'title', 'question', 'option_1', 'option_2', 'option_3', 'option_4', 'correct_idx', 'explanation'],
-                    ['2026-04-01', 'Grammar 1', 'She ___ to school.', 'go', 'goes', 'going', '', '1', 'Third person singular.'],
+                    ['date', 'title', 'questions_json'],
+                    [
+                        '2026-04-01',
+                        '',
+                        '[{"question":"Pick the correct sentence.","options":["I goes","I go"],"correct_idx":1}]',
+                    ],
+                ],
+            };
+        case 'PROFESSIONAL_CONVERSATION':
+            return {
+                type: 'PROFESSIONAL_CONVERSATION',
+                description:
+                    'Multiple rows per conversation (GOLD). Same columns as PRACTICAL CONVERSATIONS; sets isProfessionalLibrary.',
+                rowMode: 'grouped',
+                groupHint: 'Group rows by date + title. Each row is one dialogue line.',
+                columns: [
+                    { key: 'date', label: 'date', required: true },
+                    { key: 'title', label: 'title', required: true },
+                    { key: 'participants', label: 'participants', required: true, hint: 'comma-separated' },
+                    { key: 'speaker', label: 'speaker', required: true },
+                    { key: 'text_en', label: 'text_en', required: true },
+                    { key: 'text_hi', label: 'text_hi', required: true },
+                    { key: 'line_audio', label: 'line_audio', required: false },
+                ],
+                exampleRows: [
+                    ['date', 'title', 'participants', 'speaker', 'text_en', 'text_hi'],
+                    ['2026-04-01', 'Office standup', 'Manager,Employee', 'Manager', 'Good morning.', 'सुप्रभात।'],
                 ],
             };
         case 'SCENE':
@@ -332,13 +349,16 @@ function extraCols(headers: string[], schema: BulkTypeSchema): string[] {
 }
 
 export function validateAndBuildPayloads(
-    contentType: BulkDailyContentType,
-    level: string,
+    adminKey: BulkDailyContentType,
+    _levelIgnored: string,
     headers: string[],
     rows: Record<string, string>[]
 ): ValidationResult {
     const errors: string[] = [];
-    const schema = getBulkSchema(contentType);
+    const schema = getBulkSchema(adminKey);
+    const catalogEntry = getCatalogEntry(adminKey);
+    const apiType = apiTypeForAdminKey(adminKey);
+    const level = levelForAdminKey(adminKey);
     const missing = requireCols(headers, schema);
     if (missing.length) {
         errors.push(`Missing required column(s): ${missing.join(', ')}`);
@@ -351,7 +371,7 @@ export function validateAndBuildPayloads(
 
     const payloads: CreateDailyContentPayload[] = [];
 
-    if (contentType === 'WORD' || contentType === 'PHRASE') {
+    if (adminKey === 'WORD' || adminKey === 'PHRASE') {
         for (let idx = 0; idx < rows.length; idx++) {
             const row = rows[idx];
             const line = idx + 2;
@@ -407,20 +427,20 @@ export function validateAndBuildPayloads(
                 pronunciation_ipa: (row.pronunciation_ipa ?? '').trim() || undefined,
                 pronunciation_devanagari: (row.pronunciation_devanagari ?? '').trim() || undefined,
             };
-            if (contentType === 'WORD') {
+            if (adminKey === 'WORD') {
                 meta.partOfSpeech = (row.part_of_speech ?? '').trim() || undefined;
             }
             Object.keys(meta).forEach((k) => (meta[k] === undefined || meta[k] === '') && delete meta[k]);
             payloads.push({
-                type: contentType,
+                type: apiType,
                 date,
                 level,
-                title,
+                title: title || 'bulk-import',
                 metadata: meta,
                 isActive: true,
             });
         }
-    } else if (contentType === 'STORY') {
+    } else if (adminKey === 'STORY') {
         for (let idx = 0; idx < rows.length; idx++) {
             const row = rows[idx];
             const line = idx + 2;
@@ -450,7 +470,7 @@ export function validateAndBuildPayloads(
                 isActive: true,
             });
         }
-    } else if (contentType === 'VOCAB_SET') {
+    } else if (adminKey === 'VOCAB_SET') {
         const groupMap = new Map<string, Record<string, string>[]>();
         for (const row of rows) {
             const date = parseFlexibleDate(row.date ?? '');
@@ -511,7 +531,7 @@ export function validateAndBuildPayloads(
                 isActive: true,
             });
         }
-    } else if (contentType === 'CONVERSATION') {
+    } else if (adminKey === 'CONVERSATION' || adminKey === 'PROFESSIONAL_CONVERSATION') {
         const groupMap = new Map<string, Record<string, string>[]>();
         for (const row of rows) {
             const date = parseFlexibleDate(row.date ?? '');
@@ -556,55 +576,72 @@ export function validateAndBuildPayloads(
                 groupFailed = true;
             }
             if (groupFailed) continue;
+            const meta: Record<string, unknown> = { participants: participants!, dialogue };
+            if (adminKey === 'PROFESSIONAL_CONVERSATION') {
+                meta.isProfessionalLibrary = true;
+            }
             payloads.push({
-                type: 'CONVERSATION',
+                type: apiType,
                 date,
                 level,
                 title,
-                metadata: { participants: participants!, dialogue },
+                metadata: meta,
                 isActive: true,
             });
         }
-    } else if (contentType === 'PUZZLE') {
+    } else if (adminKey === 'PUZZLE_SPOT' || adminKey === 'PUZZLE_GRAMMAR') {
+        const puzzleType = catalogEntry.puzzleType || 'SPOT_CORRECT_SENTENCE';
         for (let idx = 0; idx < rows.length; idx++) {
             const row = rows[idx];
             const line = idx + 2;
             const date = parseFlexibleDate(row.date ?? '');
             if (!date) errors.push(`Row ${line}: invalid or empty date`);
             const title = (row.title ?? '').trim();
-            const question = (row.question ?? '').trim();
-            if (!title) errors.push(`Row ${line}: title is required`);
-            if (!question) errors.push(`Row ${line}: question is required`);
-            const opts = [
-                (row.option_1 ?? '').trim(),
-                (row.option_2 ?? '').trim(),
-                (row.option_3 ?? '').trim(),
-                (row.option_4 ?? '').trim(),
-            ].filter((o) => o.length > 0);
-            if (opts.length < 2) errors.push(`Row ${line}: at least option_1 and option_2 required`);
-            const correct_idx = parseInt((row.correct_idx ?? '').trim(), 10);
-            if (Number.isNaN(correct_idx)) errors.push(`Row ${line}: correct_idx must be a number`);
-            if (!Number.isNaN(correct_idx) && opts.length >= 2 && (correct_idx < 0 || correct_idx >= opts.length)) {
-                errors.push(`Row ${line}: correct_idx must be between 0 and ${opts.length - 1}`);
+            const raw = (row.questions_json ?? '').trim();
+            if (!raw) errors.push(`Row ${line}: questions_json is required`);
+            let questions: { question: string; options: string[]; correct_idx: number }[] | null = null;
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (!Array.isArray(parsed) || parsed.length !== 5) {
+                        errors.push(`Row ${line}: questions_json must be a JSON array of exactly 5 questions`);
+                    } else {
+                        questions = [];
+                        for (let q = 0; q < parsed.length; q++) {
+                            const item = parsed[q];
+                            const qText = String(item?.question ?? '').trim();
+                            const options = Array.isArray(item?.options)
+                                ? item.options.map((o: unknown) => String(o).trim()).filter(Boolean)
+                                : [];
+                            const correct_idx = Number(item?.correct_idx);
+                            if (!qText || options.length < 2) {
+                                errors.push(`Row ${line}: question ${q + 1} needs question text and at least 2 options`);
+                                questions = null;
+                                break;
+                            }
+                            if (Number.isNaN(correct_idx) || correct_idx < 0 || correct_idx >= options.length) {
+                                errors.push(`Row ${line}: question ${q + 1} has invalid correct_idx`);
+                                questions = null;
+                                break;
+                            }
+                            questions.push({ question: qText, options, correct_idx });
+                        }
+                    }
+                } catch {
+                    errors.push(`Row ${line}: questions_json is not valid JSON`);
+                }
             }
-            if (!date || !title || !question || opts.length < 2 || Number.isNaN(correct_idx) || correct_idx < 0 || correct_idx >= opts.length) {
-                continue;
-            }
+            if (!date || !raw || !questions) continue;
             payloads.push({
                 type: 'PUZZLE',
                 date,
                 level,
-                title,
-                metadata: {
-                    question,
-                    options: opts,
-                    correct_idx,
-                    explanation: (row.explanation ?? '').trim() || '',
-                },
+                title: title || 'bulk-import',
+                metadata: { puzzleType, questions },
                 isActive: true,
             });
         }
-    } else if (['SCENE', 'SPEECH', 'LYRICS', 'FEED'].includes(contentType)) {
+    } else if (['SCENE', 'SPEECH', 'LYRICS', 'FEED'].includes(adminKey)) {
         for (let idx = 0; idx < rows.length; idx++) {
             const row = rows[idx];
             const line = idx + 2;
@@ -629,7 +666,7 @@ export function validateAndBuildPayloads(
             }
             if (!date || !title || !raw || !metadata) continue;
             payloads.push({
-                type: contentType,
+                type: apiType,
                 date,
                 level,
                 title,

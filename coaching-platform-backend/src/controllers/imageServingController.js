@@ -28,7 +28,9 @@ export const serveGeneralImage = async (req, res) => {
             'exam_categories': 'exam_category_images', // Alternative naming
             'materials': 'material_files',
             'gated-content': 'gated_content_files',
-            'gated_content': 'gated_content_files' // Alternative naming
+            'gated_content': 'gated_content_files', // Alternative naming
+            'daily-content': 'daily_content_images',
+            'daily_content': 'daily_content_images',
         };
 
         const storagePath = imageTypeMap[type];

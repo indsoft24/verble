@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import AdminDailyContentMetadataForm from './AdminDailyContentMetadataForm';
 import {
     Alert,
     Box,
@@ -222,19 +223,26 @@ function DailyContentForm({
                 />
             </Grid>
             <Grid size={{ xs: 12 }}>
-                <TextField
-                    fullWidth
-                    label="Title"
-                    value={String(value.title ?? '')}
-                    onChange={(e) => onChange(patch(value, 'title', e.target.value))}
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Content fields
+                </Typography>
+                <AdminDailyContentMetadataForm
+                    type={String(value.type ?? 'WORD')}
+                    metadata={(value.metadata ?? {}) as Record<string, unknown>}
+                    displayTitle={String(value.title ?? '')}
+                    onDisplayTitleChange={(t) => onChange(patch(value, 'title', t))}
+                    onChange={(field, val) => {
+                        const meta = { ...((value.metadata ?? {}) as Record<string, unknown>), [field]: val };
+                        onChange(patch(value, 'metadata', meta));
+                    }}
                 />
             </Grid>
             <Grid size={{ xs: 12 }}>
                 <TextField
                     fullWidth
-                    label="Metadata (JSON)"
+                    label="Metadata (JSON — advanced)"
                     multiline
-                    minRows={6}
+                    minRows={4}
                     value={JSON.stringify(value.metadata ?? {}, null, 2)}
                     onChange={(e) => {
                         try {
@@ -243,6 +251,7 @@ function DailyContentForm({
                             /* ignore while typing */
                         }
                     }}
+                    helperText="Edit raw JSON only if the structured fields above are insufficient."
                 />
             </Grid>
             <Grid size={{ xs: 12 }}>

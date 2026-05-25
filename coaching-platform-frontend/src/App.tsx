@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import {
     BrowserRouter as Router, Routes, Route, Navigate, useLocation
 } from 'react-router-dom';
@@ -9,6 +9,9 @@ import theme from './theme';
 import ScrollToTop from './components/utils/ScrollToTop';
 import NotificationContainer from './components/common/NotificationContainer';
 import SecurityProtection from './components/SecurityProtection';
+import { LanguageProvider } from './contexts/LanguageContext';
+import LanguageSwitcherModal from './components/layout/LanguageSwitcherModal';
+import { getLanguageChoiceMade } from './i18n/config';
 
 // --- Layout Component Imports (Keep these eager - used on most pages) ---
 import Navbar from './components/layout/Navbar';
@@ -19,11 +22,9 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 // Public Pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
-const MobileLoginPage = lazy(() => import('./pages/MobileLoginPage'));
 const RegistrationPage = lazy(() => import('./pages/RegistrationPage'));
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 const GoogleCallbackPage = lazy(() => import('./pages/GoogleCallbackPage'));
-const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 
 // User Pages
@@ -40,6 +41,7 @@ const CourseDetailPage = lazy(() => import('./pages/CourseDetailPage'));
 const ModuleVideosPage = lazy(() => import('./pages/ModuleVideosPage'));
 const ExamCategoryCoursesPage = lazy(() => import('./pages/ExamCategoryCoursesPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const ProfessionalConversationsPage = lazy(() => import('./pages/ProfessionalConversationsPage'));
 
 // Blog Pages
 const BlogListPage = lazy(() => import('./pages/BlogListPage'));
@@ -64,6 +66,9 @@ const AdminKnowledgeBasePage = lazy(() => import('./pages/AdminKnowledgeBasePage
 const AdminSentenceValidationPage = lazy(() => import('./pages/AdminSentenceValidationPage'));
 const AdminDailyContentPage = lazy(() => import('./pages/AdminDailyContentPage'));
 const AdminDatabaseManagerPage = lazy(() => import('./pages/AdminDatabaseManagerPage'));
+const AdminWebinarLeadsPage = lazy(() => import('./pages/AdminWebinarLeadsPage'));
+const AdminPromoBannerPage = lazy(() => import('./pages/AdminPromoBannerPage'));
+const AdminCertificationManagementPage = lazy(() => import('./pages/AdminCertificationManagementPage'));
 
 // Static Pages (Low priority - lazy load)
 const ContactUsPage = lazy(() => import('./pages/static/ContactUsPage'));
@@ -115,7 +120,7 @@ function AppContent() {
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             {/* Only show Navbar and Footer for non-admin and non-user dashboard routes */}
             {!location.pathname.startsWith('/admin') &&
-                !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications'].some(path =>
+                !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications', '/professional-conversations'].some(path =>
                     location.pathname === path || location.pathname.startsWith(path + '/')
                 ) && <Navbar />}
 
@@ -127,9 +132,9 @@ function AppContent() {
                         <Route path="/register" element={<RegistrationPage />} />
                         <Route path="/verify-email" element={<VerifyEmailPage />} />
                         <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to={dashboardPath} replace />} />
-                        <Route path="/mobile-login" element={!isAuthenticated ? <MobileLoginPage /> : <Navigate to={dashboardPath} replace />} />
+                        <Route path="/mobile-login" element={<Navigate to="/login" replace />} />
                         <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
-                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                        <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
                         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
                         {/* Blog Routes */}
@@ -174,6 +179,7 @@ function AppContent() {
                             <Route path="/subscription-plans/:planId" element={<SubscriptionPlanDetailPage />} />
                             <Route path="/my-subscription" element={<MySubscriptionPage />} />
                             <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route path="/professional-conversations" element={<ProfessionalConversationsPage />} />
                             <Route path="/modules/:moduleId/videos" element={<ModuleVideosPage />} />
                         </Route>
 
@@ -198,6 +204,9 @@ function AppContent() {
                             <Route path='/admin/sentence-validation' element={<AdminSentenceValidationPage />} />
                             <Route path='/admin/daily-content' element={<AdminDailyContentPage />} />
                             <Route path='/admin/database-manager' element={<AdminDatabaseManagerPage />} />
+                            <Route path='/admin/leads' element={<AdminWebinarLeadsPage />} />
+                            <Route path='/admin/promo-banner' element={<AdminPromoBannerPage />} />
+                            <Route path='/admin/certification-management' element={<AdminCertificationManagementPage />} />
                         </Route>
 
                         {/* Fallback Routes */}
@@ -209,7 +218,7 @@ function AppContent() {
 
             {/* Only show Footer for non-admin and non-user dashboard routes */}
             {!location.pathname.startsWith('/admin') &&
-                !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications'].some(path =>
+                !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications', '/professional-conversations'].some(path =>
                     location.pathname === path || location.pathname.startsWith(path + '/')
                 ) && <Footer />}
             {/* Chatbot: keep code, hide it from dashboards/admin */}
@@ -224,16 +233,30 @@ function AppContent() {
 }
 
 function App() {
+    const [isLanguageModalOpen, setLanguageModalOpen] = useState(() => !getLanguageChoiceMade());
+
+    useEffect(() => {
+        if (!getLanguageChoiceMade()) {
+            setLanguageModalOpen(true);
+        }
+    }, []);
+
     return (
         <ThemeProvider theme={theme}>
-            <Router>
-                <CssBaseline />
-                {/* Security protection only in production */}
-                {import.meta.env.PROD && <SecurityProtection />}
-                <ScrollToTop />
-                <NotificationContainer />
-                <AppContent />
-            </Router>
+            <LanguageProvider
+                isLanguageModalOpen={isLanguageModalOpen}
+                setLanguageModalOpen={setLanguageModalOpen}
+            >
+                <Router>
+                    <CssBaseline />
+                    {/* Security protection only in production */}
+                    {import.meta.env.PROD && <SecurityProtection />}
+                    <ScrollToTop />
+                    <LanguageSwitcherModal />
+                    <NotificationContainer />
+                    <AppContent />
+                </Router>
+            </LanguageProvider>
         </ThemeProvider>
     );
 }

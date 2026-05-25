@@ -3,51 +3,66 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, Box, Typography, Button } from '@mui/material';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { setLanguageChoiceMade } from '../../i18n/config';
+import { getLanguageChoiceMade, setLanguageChoiceMade } from '../../i18n/config';
 import type { SupportedLanguage } from '../../i18n/config';
+import { brandAssets } from '../../assets/brandAssets';
 
-/** Decorative chrome matching first-visit language modal (English labels). */
+/** Decorative feature pills (background layer). */
 const FLOATING_TAGS: { label: string; top: string; left: string; rotate: number }[] = [
-    { label: 'Word of the Day', top: '48%', left: '4%', rotate: -6 },
-    { label: 'Voice Practice', top: '58%', left: '72%', rotate: 5 },
-    { label: 'One Minute Read', top: '52%', left: '38%', rotate: -3 },
-    { label: 'Starter Pack', top: '68%', left: '12%', rotate: 4 },
-    { label: 'Bronze Access', top: '72%', left: '48%', rotate: -5 },
-    { label: 'Silver Upgrade', top: '62%', left: '18%', rotate: 7 },
-    { label: 'AI Learning Buddy', top: '76%', left: '62%', rotate: -4 },
-    { label: 'Full Course • 200+ Videos', top: '84%', left: '22%', rotate: 2 },
+    { label: 'Word of the Day', top: '46%', left: '3%', rotate: -6 },
+    { label: 'Phrase of the Day', top: '50%', left: '55%', rotate: 3 },
+    { label: 'One Minute Read', top: '54%', left: '28%', rotate: -3 },
+    { label: 'Voice Practice', top: '60%', left: '70%', rotate: 5 },
+    { label: 'Bronze Access', top: '66%', left: '8%', rotate: 4 },
+    { label: 'Silver Upgrade', top: '70%', left: '42%', rotate: -5 },
+    { label: 'AI Learning Buddy', top: '74%', left: '58%', rotate: -4 },
+    { label: 'Full Course • 200+ Videos', top: '80%', left: '18%', rotate: 2 },
 ];
 
 const LanguageSwitcherModal: React.FC = () => {
     const { t } = useTranslation();
     const { language, setLanguage, isLanguageModalOpen, setLanguageModalOpen } = useLanguage();
+    const handlePickLanguage = (lang: SupportedLanguage) => {
+        setLanguage(lang);
+        setLanguageChoiceMade();
+    };
 
     const handleClose = () => {
         setLanguageChoiceMade();
         setLanguageModalOpen(false);
     };
 
+    const handleDialogClose = (_event: object, reason: 'backdropClick' | 'escapeKeyDown') => {
+        if (!getLanguageChoiceMade() && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
+            return;
+        }
+        handleClose();
+    };
+
     return (
         <Dialog
             open={isLanguageModalOpen}
-            onClose={handleClose}
+            onClose={handleDialogClose}
+            disableEscapeKeyDown={!getLanguageChoiceMade()}
             disableScrollLock={false}
             slotProps={{
                 backdrop: {
                     sx: {
-                        bgcolor: 'rgba(2, 6, 23, 0.72)',
-                        backdropFilter: 'blur(6px)',
+                        bgcolor: 'rgba(2, 6, 23, 0.78)',
+                        backdropFilter: 'blur(8px)',
                     },
                 },
             }}
             PaperProps={{
                 sx: {
-                    borderRadius: '20px',
-                    maxWidth: 460,
-                    width: 'min(92vw, 460px)',
+                    borderRadius: '22px',
+                    maxWidth: 480,
+                    width: 'min(92vw, 480px)',
                     overflow: 'hidden',
-                    boxShadow: '0 25px 80px -12px rgba(0,0,0,0.65), 0 0 0 1px rgba(148,163,184,0.12)',
-                    background: 'linear-gradient(165deg, #070b18 0%, #0f172a 38%, #1e3a5f 100%)',
+                    boxShadow:
+                        '0 28px 90px -16px rgba(0,0,0,0.7), 0 0 0 1px rgba(148,163,184,0.15), inset 0 1px 0 rgba(255,255,255,0.08)',
+                    background:
+                        'linear-gradient(168deg, #050a14 0%, #0c1628 32%, #132a4a 58%, #1a3d6b 100%)',
                     color: '#fff',
                 },
             }}
@@ -56,15 +71,14 @@ const LanguageSwitcherModal: React.FC = () => {
                 sx={{
                     position: 'relative',
                     px: { xs: 3, sm: 4 },
-                    pt: { xs: 4, sm: 5 },
-                    pb: { xs: 3, sm: 3.5 },
-                    minHeight: { xs: 420, sm: 460 },
+                    pt: { xs: 3.5, sm: 4 },
+                    pb: { xs: 3.5, sm: 4 },
+                    minHeight: { xs: 440, sm: 480 },
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                 }}
             >
-                {/* Floating feature pills — background layer */}
                 <Box
                     aria-hidden
                     sx={{
@@ -72,7 +86,7 @@ const LanguageSwitcherModal: React.FC = () => {
                         inset: 0,
                         overflow: 'hidden',
                         pointerEvents: 'none',
-                        opacity: 0.38,
+                        opacity: 0.55,
                     }}
                 >
                     {FLOATING_TAGS.map((tag) => (
@@ -83,19 +97,17 @@ const LanguageSwitcherModal: React.FC = () => {
                                 top: tag.top,
                                 left: tag.left,
                                 transform: `rotate(${tag.rotate}deg)`,
-                                px: 1.25,
-                                py: 0.5,
+                                px: 1.5,
+                                py: 0.6,
                                 borderRadius: '999px',
-                                fontSize: '0.65rem',
+                                fontSize: '0.68rem',
                                 fontWeight: 600,
-                                letterSpacing: '0.04em',
-                                color: 'rgba(255,255,255,0.95)',
-                                border: '1px solid rgba(255,255,255,0.22)',
-                                bgcolor: 'rgba(255,255,255,0.06)',
+                                letterSpacing: '0.03em',
+                                color: 'rgba(255,255,255,0.92)',
+                                border: '1px solid rgba(255,255,255,0.28)',
+                                bgcolor: 'rgba(255,255,255,0.1)',
                                 whiteSpace: 'nowrap',
-                                maxWidth: '90%',
-                                textOverflow: 'ellipsis',
-                                overflow: 'hidden',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                             }}
                         >
                             {tag.label}
@@ -103,32 +115,88 @@ const LanguageSwitcherModal: React.FC = () => {
                     ))}
                 </Box>
 
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: -80,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 280,
+                        height: 160,
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, rgba(59,130,246,0.35) 0%, transparent 70%)',
+                        pointerEvents: 'none',
+                    }}
+                />
+
                 <Box sx={{ position: 'relative', zIndex: 1, width: '100%', textAlign: 'center' }}>
+                    <Box
+                        component="img"
+                        src={brandAssets.primaryLogo}
+                        alt="Verble"
+                        sx={{
+                            height: { xs: 52, sm: 60 },
+                            width: 'auto',
+                            objectFit: 'contain',
+                            mb: 2,
+                            filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.35))',
+                        }}
+                    />
+
                     <Typography
                         component="h2"
                         sx={{
                             fontWeight: 900,
-                            fontSize: { xs: '2.25rem', sm: '2.65rem' },
-                            letterSpacing: '0.12em',
+                            fontSize: { xs: '2rem', sm: '2.35rem' },
+                            letterSpacing: '0.14em',
                             lineHeight: 1.05,
-                            mb: 1,
+                            mb: 0.75,
                             textTransform: 'uppercase',
-                            textShadow: '0 2px 24px rgba(99, 102, 241, 0.35)',
+                            background: 'linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%)',
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
                         }}
                     >
                         {t('languageModal.title')}
                     </Typography>
+
                     <Typography
                         sx={{
-                            color: 'rgba(255,255,255,0.92)',
-                            fontSize: { xs: '0.95rem', sm: '1rem' },
+                            color: 'rgba(255,255,255,0.9)',
+                            fontSize: { xs: '0.9rem', sm: '0.98rem' },
                             fontWeight: 500,
-                            mb: { xs: 4, sm: 5 },
-                            px: 1,
-                            lineHeight: 1.45,
+                            mb: 0.5,
+                            letterSpacing: '0.02em',
                         }}
                     >
                         {t('languageModal.subtitle')}
+                    </Typography>
+
+                    <Box
+                        sx={{
+                            width: 48,
+                            height: 3,
+                            borderRadius: 2,
+                            bgcolor: 'rgba(96, 165, 250, 0.85)',
+                            mx: 'auto',
+                            mb: { xs: 3, sm: 3.5 },
+                        }}
+                    />
+
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            display: 'block',
+                            color: 'rgba(255,255,255,0.65)',
+                            mb: 2,
+                            letterSpacing: '0.04em',
+                            textTransform: 'uppercase',
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                        }}
+                    >
+                        {t('languageModal.pickLanguage')}
                     </Typography>
 
                     <Box
@@ -137,35 +205,35 @@ const LanguageSwitcherModal: React.FC = () => {
                             gap: 2,
                             justifyContent: 'center',
                             flexWrap: 'wrap',
-                            mb: { xs: 4, sm: 5 },
+                            mb: { xs: 3.5, sm: 4 },
                         }}
                     >
                         <Button
                             variant={language === 'en' ? 'contained' : 'outlined'}
-                            onClick={() => setLanguage('en')}
+                            onClick={() => handlePickLanguage('en')}
                             sx={{
-                                minWidth: 148,
-                                py: 1.75,
+                                minWidth: 152,
+                                py: 1.85,
                                 px: 3,
-                                borderRadius: '14px',
+                                borderRadius: '999px',
                                 fontWeight: 700,
-                                fontSize: '1rem',
+                                fontSize: '1.05rem',
                                 textTransform: 'none',
                                 ...(language === 'en'
                                     ? {
                                           bgcolor: '#fff',
                                           color: '#0f172a',
-                                          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                                          '&:hover': { bgcolor: 'rgba(255,255,255,0.94)' },
+                                          boxShadow: '0 10px 28px rgba(0,0,0,0.25)',
+                                          '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' },
                                       }
                                     : {
-                                          borderColor: 'rgba(255,255,255,0.75)',
-                                          borderWidth: 1.5,
+                                          borderColor: 'rgba(255,255,255,0.8)',
+                                          borderWidth: 2,
                                           color: '#fff',
                                           bgcolor: 'transparent',
                                           '&:hover': {
                                               borderColor: '#fff',
-                                              bgcolor: 'rgba(255,255,255,0.08)',
+                                              bgcolor: 'rgba(255,255,255,0.1)',
                                           },
                                       }),
                             }}
@@ -174,30 +242,30 @@ const LanguageSwitcherModal: React.FC = () => {
                         </Button>
                         <Button
                             variant={language === 'hi' ? 'contained' : 'outlined'}
-                            onClick={() => setLanguage('hi' as SupportedLanguage)}
+                            onClick={() => handlePickLanguage('hi')}
                             sx={{
-                                minWidth: 148,
-                                py: 1.75,
+                                minWidth: 152,
+                                py: 1.85,
                                 px: 3,
-                                borderRadius: '14px',
+                                borderRadius: '999px',
                                 fontWeight: 700,
-                                fontSize: '1rem',
+                                fontSize: '1.05rem',
                                 textTransform: 'none',
                                 ...(language === 'hi'
                                     ? {
                                           bgcolor: '#fff',
                                           color: '#0f172a',
-                                          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                                          '&:hover': { bgcolor: 'rgba(255,255,255,0.94)' },
+                                          boxShadow: '0 10px 28px rgba(0,0,0,0.25)',
+                                          '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' },
                                       }
                                     : {
-                                          borderColor: 'rgba(255,255,255,0.75)',
-                                          borderWidth: 1.5,
+                                          borderColor: 'rgba(255,255,255,0.8)',
+                                          borderWidth: 2,
                                           color: '#fff',
                                           bgcolor: 'transparent',
                                           '&:hover': {
                                               borderColor: '#fff',
-                                              bgcolor: 'rgba(255,255,255,0.08)',
+                                              bgcolor: 'rgba(255,255,255,0.1)',
                                           },
                                       }),
                             }}
@@ -208,12 +276,12 @@ const LanguageSwitcherModal: React.FC = () => {
 
                     <Typography
                         sx={{
-                            color: 'rgba(255,255,255,0.88)',
+                            color: 'rgba(255,255,255,0.9)',
                             fontStyle: 'italic',
-                            fontSize: { xs: '0.82rem', sm: '0.9rem' },
+                            fontSize: { xs: '0.84rem', sm: '0.92rem' },
                             fontWeight: 500,
-                            lineHeight: 1.5,
-                            maxWidth: 340,
+                            lineHeight: 1.55,
+                            maxWidth: 360,
                             mx: 'auto',
                             px: 1,
                         }}

@@ -192,7 +192,9 @@ const Navbar: React.FC = () => {
                                 >
                                     <Box sx={{px: 2, py: 1}}>
                                         <Typography variant="subtitle1" sx={{fontWeight: 'bold'}}>{user?.name}</Typography>
-                                        <Typography variant="body2" color="text.secondary">{user?.email}</Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {user?.phoneNumber || user?.mobile || t('nav.account')}
+                                        </Typography>
                                     </Box>
                                     <Divider />
                                     {userPages.map((page) => (
