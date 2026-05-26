@@ -22,6 +22,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
+import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
 
 
 interface LyricsCardProps {
@@ -171,7 +172,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const lyricsNumber = currentContent.sequenceNumber || currentContent.metadata?.lyricsNumber || 0;
+    const lyricsDisplayTag = getDisplayTag(currentContent.sequenceNumber);
 
     const songTitle = currentContent.title || '';
     const artist = currentContent.metadata?.artist || '';
@@ -197,7 +198,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
                 <Box sx={{ mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                         <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            Lyrics #{lyricsNumber}
+                            {lyricsDisplayTag ? `Song Lyrics ${lyricsDisplayTag}` : 'Song Lyrics'}
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>

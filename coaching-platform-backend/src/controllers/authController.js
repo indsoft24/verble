@@ -7,6 +7,7 @@ import redisClient from '../config/redisClient.js';
 import sendEmail from '../utils/email.js';
 import { formatMobileNumber, validateMobileNumber } from '../utils/smsService.js';
 import { assignFreeFoundationToUser } from '../services/defaultSubscriptionService.js';
+import { checkAndHandleSubscriptionExpiration } from '../services/subscriptionAccessService.js';
 import { issueLoginPinForUser } from './phonePinAuthController.js';
 
 const SESSION_PREFIX = 'session:user:';
@@ -229,6 +230,8 @@ export const login = asyncHandler(async (req, res) => {
 });
 
 export const getMe = asyncHandler(async (req, res) => {
+    await checkAndHandleSubscriptionExpiration(req.user._id);
+
     const user = await User.findById(req.user._id)
         .populate({
             path: 'subscriptions.planId',

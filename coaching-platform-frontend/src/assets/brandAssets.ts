@@ -6,6 +6,7 @@ import websiteHeroBackground from './images/website-hero-background.png';
 import appStoreIcon from './images/app-store-icon.png';
 import captivatingLoadingIcon from './images/captivating-loading-icon.png';
 import mobileAppLaunchSplash from './images/mobile-app-launch-splash.png';
+import indianCoach from './images/indian-coach.jpg';
 
 /** Public App Store listing; override via env when the store URL is available. */
 export const appStoreListingUrl =
@@ -14,6 +15,7 @@ export const appStoreListingUrl =
 export const brandAssets = {
     primaryLogo,
     websiteHeroBackground,
+    indianCoach,
     appStoreIcon,
     captivatingLoadingIcon,
     mobileAppLaunchSplash,

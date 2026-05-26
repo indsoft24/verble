@@ -14,6 +14,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
+import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
 
 
 interface InstagramFeedsCardProps {
@@ -73,7 +74,7 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({ data, onContent
         }
     };
 
-    const feedNumber = currentContent.sequenceNumber || currentContent.metadata?.feedNumber || 0;
+    const feedDisplayTag = getDisplayTag(currentContent.sequenceNumber);
 
     const feedTitle = currentContent.title || 'Curated Instagram Feeds';
     const posts: InstagramPost[] = currentContent.metadata?.posts || [];
@@ -93,7 +94,7 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({ data, onContent
                 <Box sx={{ mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                         <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            Feed #{feedNumber}
+                            {feedDisplayTag ? `Instagram Feed ${feedDisplayTag}` : 'Instagram Feed'}
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>

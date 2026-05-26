@@ -1,5 +1,5 @@
 // src/components/features/VocabularySetCard.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Card,
     CardContent,
@@ -27,6 +27,12 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
+import {
+    isContentScheduledToday,
+    refreshAdjacentFlags,
+    canShowNextNavigation,
+} from '../../utils/dailyActivityUi';
+import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
 
 
 interface VocabularySetCardProps {
@@ -115,10 +121,19 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
     const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
     const synthRef = useRef<SpeechSynthesis | null>(null);
 
+    const checkAdjacent = useCallback(async (contentId: string) => {
+        const flags = await refreshAdjacentFlags(contentId);
+        setHasPrevious(flags.hasPrevious);
+        setHasNext(flags.hasNext);
+    }, []);
+
     useEffect(() => {
         synthRef.current = window.speechSynthesis;
         setCurrentContent(data);
-        checkNavigationAvailability();
+        setSentences([{ sentence: '', vocabWordsUsed: [] }]);
+        setSelectedVocabWords({});
+        setSubmitStatus(null);
+        void checkAdjacent(data._id);
         return () => {
             Object.values(audioRefs.current).forEach(audio => {
                 if (audio) {
@@ -129,22 +144,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                 synthRef.current.cancel();
             }
         };
-    }, [data]);
-
-    const checkNavigationAvailability = async () => {
-        try {
-            const [prevContent, nextContent] = await Promise.all([
-                getAdjacentContent(data._id, 'prev'),
-                getAdjacentContent(data._id, 'next')
-            ]);
-
-            setHasPrevious(!!prevContent);
-            setHasNext(!!nextContent);
-        } catch (error) {
-            setHasPrevious(false);
-            setHasNext(false);
-        }
-    };
+    }, [data, checkAdjacent]);
 
     const handleNavigation = async (direction: 'prev' | 'next') => {
         setIsLoadingNav(true);
@@ -159,7 +159,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                 if (onContentChange) {
                     onContentChange(adjacentContent);
                 }
-                await checkNavigationAvailability();
+                await checkAdjacent(adjacentContent._id);
             } else {
                 setSubmitStatus({
                     type: 'error',
@@ -282,6 +282,14 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
     const handleSubmitSentences = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (!isContentScheduledToday(currentContent.date)) {
+            setSubmitStatus({
+                type: 'error',
+                message: "You can only submit sentences for today's vocabulary set.",
+            });
+            return;
+        }
+
         const validSentences = sentences.filter(s => s.sentence.trim() && s.vocabWordsUsed.length > 0);
 
         if (validSentences.length < 2) {
@@ -349,7 +357,9 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
         }
     };
 
-    const vocabSetNumber = currentContent.sequenceNumber || currentContent.metadata?.vocabSetNumber || 0;
+    const vocabDisplayTag = getDisplayTag(currentContent.sequenceNumber);
+    const isToday = isContentScheduledToday(currentContent.date);
+    const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
 
     const theme = currentContent.metadata?.theme || currentContent.title;
     const vocabItems: VocabItem[] = currentContent.metadata?.vocabItems || [];
@@ -379,7 +389,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                 <Box sx={{ mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                         <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            Vocabulary Set #{vocabSetNumber}
+                            {vocabDisplayTag ? `Vocabulary Set ${vocabDisplayTag}` : 'Vocabulary Set'}
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>
@@ -465,13 +475,13 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                         variant="outlined"
                         endIcon={<ArrowForwardIcon />}
                         onClick={() => handleNavigation('next')}
-                        disabled={!hasNext || isLoadingNav}
+                        disabled={!canGoNext || isLoadingNav}
                     >
                         Next Set
                     </Button>
                 </Box>
 
-                {/* Sentence Submission Section */}
+                {/* Sentence Submission Section — today only */}
                 <Box>
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 1 }}>
                         Create sentences using vocabulary words (2-5 sentences)
@@ -479,14 +489,22 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         Use at least 5 different vocabulary words across all sentences. You will earn 10 points per correct sentence.
                     </Typography>
-                    <Typography variant="body2" color="primary" sx={{ mb: 2, fontWeight: 'medium' }}>
-                        Vocabulary words used: {allVocabWordsUsed.size} / 5 minimum
-                    </Typography>
+                    {!isToday && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            Past vocabulary set — browse only. Submit sentences on today&apos;s set.
+                        </Alert>
+                    )}
+                    {isToday && (
+                        <Typography variant="body2" color="primary" sx={{ mb: 2, fontWeight: 'medium' }}>
+                            Vocabulary words used: {allVocabWordsUsed.size} / 5 minimum
+                        </Typography>
+                    )}
                     {submitStatus && (
                         <Alert severity={submitStatus.type} sx={{ mb: 2 }}>
                             {submitStatus.message}
                         </Alert>
                     )}
+                    {isToday && (
                     <Box component="form" onSubmit={handleSubmitSentences}>
                         {sentences.map((sentenceData, index) => (
                             <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
@@ -594,6 +612,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                             </Typography>
                         )}
                     </Box>
+                    )}
                 </Box>
             </CardContent>
         </Card>

@@ -1,4 +1,5 @@
 import type { DailyContent } from '../services/dailyContentService';
+import { buildAutoDisplayTitle } from './dailyContentDisplayNumber';
 
 /** Admin dropdown key (includes split puzzles). */
 export type AdminContentTypeKey =
@@ -167,8 +168,13 @@ export function getAdminCardDisplayTitle(item: DailyContent): string {
         const storyTitle = String(item.metadata?.title ?? '').trim();
         if (storyTitle) return storyTitle;
     }
+    if (item.title?.trim()) return item.title.trim();
+    if (item.sequenceNumber) {
+        const auto = buildAutoDisplayTitle(item.type, item.sequenceNumber, item.metadata);
+        if (auto) return auto;
+    }
     const slot = DAILY_CONTENT_CATALOG.find((s) => contentMatchesCatalogSlot(item, s));
-    return (slot?.label ?? item.title?.trim()) || item.type;
+    return slot?.label ?? item.type;
 }
 
 export function levelForAdminKey(adminKey: AdminContentTypeKey): ContentLevel {

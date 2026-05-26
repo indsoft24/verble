@@ -5,6 +5,7 @@ import SubscriptionPlan from '../models/SubscriptionPlan.js';
 import User from '../models/User.js';
 import { validateWebhookSignature } from 'razorpay/dist/utils/razorpay-utils.js';
 import { getRazorpayConfig } from '../config/razorpayConfig.js';
+import { updateUnlockedLevelsFromSubscriptions } from '../services/subscriptionAccessService.js';
 
 // Helper function to calculate subscription end dates.
 const calculateEndDate = (startDate, duration) => {
@@ -120,9 +121,15 @@ export const verifyPayment = async (req, res) => {
         user.subscriptions.push(newSubscriptionInstance);
         await user.save({ validateBeforeSave: false });
 
+        const levelSync = await updateUnlockedLevelsFromSubscriptions(userId);
+
         res.status(200).json({
             status: 'success',
             message: `Payment successful! You are now subscribed to ${plan.name}.`,
+            data: {
+                unlockedLevels: levelSync.unlockedLevels,
+                membershipLevel: levelSync.membershipLevel,
+            },
         });
 
     } catch (error) {
@@ -201,6 +208,7 @@ export const razorpayWebhook = async (req, res) => {
                         }
                     });
                     await user.save({ validateBeforeSave: false });
+                    await updateUnlockedLevelsFromSubscriptions(userId);
                     console.log(`Webhook: Successfully activated subscription for user ${userId}.`);
                 }
             }

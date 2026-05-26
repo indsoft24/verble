@@ -25,6 +25,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
+import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
 
 
 interface SpeechCardProps {
@@ -211,7 +212,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange, onSubmis
         }
     };
 
-    const speechNumber = currentContent.sequenceNumber || currentContent.metadata?.speechNumber || 0;
+    const speechDisplayTag = getDisplayTag(currentContent.sequenceNumber);
 
     const speechTitle = currentContent.title || '';
     const speakerName = currentContent.metadata?.speaker || '';
@@ -245,7 +246,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange, onSubmis
                 <Box sx={{ mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                         <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            Speech #{speechNumber}
+                            {speechDisplayTag ? `Famous Speech ${speechDisplayTag}` : 'Famous Speech'}
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>

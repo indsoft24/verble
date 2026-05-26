@@ -26,8 +26,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-import { parseISO } from 'date-fns';
-
+import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
 interface StoryCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
@@ -329,14 +328,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
         }));
     };
 
-    const storyNumber = currentContent.sequenceNumber || currentContent.metadata?.storyNumber ||
-        (() => {
-            const referenceDate = new Date('2024-01-01');
-            const currentDate = parseISO(currentContent.date);
-            const daysDiff = Math.floor((currentDate.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24));
-            return daysDiff + 1;
-        })();
-
+    const storyDisplayTag = getDisplayTag(currentContent.sequenceNumber);
     const storyTitle = currentContent.title || '';
     // const storyContent = currentContent.metadata?.text_content || '';
     const moralEn = currentContent.metadata?.moral_en || '';
@@ -363,7 +355,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                 <Box sx={{ mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                         <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            Story #{storyNumber}
+                            {storyDisplayTag ? `One Minute Read ${storyDisplayTag}` : 'One Minute Read'}
                         </Typography>
                         <Chip label={currentContent.level} size="small" color="primary" />
                     </Box>

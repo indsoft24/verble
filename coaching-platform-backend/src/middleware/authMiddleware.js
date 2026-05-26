@@ -29,7 +29,20 @@ export const protect = async (req, res, next) => {
             console.warn('[Protect Middleware] Redis client not connected. Session check cannot be performed.');
         } else {
             const redisKey = `${SESSION_PREFIX}${currentUser._id.toString()}`;
-            const storedSessionId = await redisClient.get(redisKey);
+            let storedSessionId = null;
+            try {
+                storedSessionId = await Promise.race([
+                    redisClient.get(redisKey),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Redis session lookup timed out')), 3000)
+                    ),
+                ]);
+            } catch (redisErr) {
+                console.warn('[Protect Middleware] Redis session check skipped:', redisErr.message);
+                req.user = currentUser;
+                req.token = token;
+                return next();
+            }
 
             if (!decoded.sessionId) {
                 console.warn(`[Protect Middleware] JWT for user ${currentUser._id} is missing sessionId payload.`);

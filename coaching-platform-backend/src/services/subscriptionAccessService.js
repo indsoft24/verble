@@ -1,59 +1,40 @@
 import User from '../models/User.js';
-
-const LEVEL_ORDER = ['FREE', 'BRONZE', 'SILVER', 'GOLD', 'FULL_COURSE'];
-
-const planNameToLevel = (planName = '') => {
-    const n = planName.toLowerCase();
-    if (n.includes('full course')) return 'FULL_COURSE';
-    if (n.includes('gold')) return 'GOLD';
-    if (n.includes('silver')) return 'SILVER';
-    if (n.includes('bronze')) return 'BRONZE';
-    return 'FREE';
-};
+import {
+    buildUnlockedLevelsFromSubscriptions,
+    getHighestTierFromActiveSubscriptions,
+    mergeUnlockedLevels,
+    resolveMembershipLevel,
+    tierIndex,
+} from '../utils/tierAccessUtils.js';
 
 export const updateUnlockedLevelsFromSubscriptions = async (userId) => {
     const user = await User.findById(userId);
     if (!user) return { hasGold: false, hasFullCourse: false };
 
-    const now = new Date();
     const active = (user.subscriptions || []).filter(
-        (s) => s.status === 'active' && s.endDate && new Date(s.endDate) > now
+        (s) => s.status === 'active' && s.endDate && new Date(s.endDate) > new Date()
     );
 
-    const levels = new Set(['FREE']);
-    let membershipLevel = 'FREE';
-    let hasGold = false;
-    let hasFullCourse = false;
+    const fromSubscriptions = buildUnlockedLevelsFromSubscriptions(active);
+    const unlockedLevels = mergeUnlockedLevels({
+        fromSubscriptions,
+        existingUnlocked: user.unlockedLevels || [],
+        streaks: user.streaks || {},
+    });
 
-    for (const sub of active) {
-        const level = planNameToLevel(sub.planName);
-        levels.add(level);
-        if (LEVEL_ORDER.indexOf(level) > LEVEL_ORDER.indexOf(membershipLevel)) {
-            membershipLevel = level;
-        }
-        if (level === 'GOLD') hasGold = true;
-        if (level === 'FULL_COURSE') hasFullCourse = true;
-        if (level === 'BRONZE') levels.add('BRONZE');
-        if (level === 'SILVER') {
-            levels.add('BRONZE');
-            levels.add('SILVER');
-        }
-        if (level === 'GOLD') {
-            levels.add('BRONZE');
-            levels.add('SILVER');
-            levels.add('GOLD');
-            levels.add('BONUS');
-        }
-        if (level === 'FULL_COURSE') {
-            ['FREE', 'BRONZE', 'SILVER', 'GOLD', 'BONUS', 'FULL_COURSE'].forEach((l) => levels.add(l));
-        }
-    }
+    const membershipLevel = resolveMembershipLevel(unlockedLevels);
+    const highest = getHighestTierFromActiveSubscriptions(user.subscriptions || []);
 
-    user.unlockedLevels = [...levels];
+    user.unlockedLevels = unlockedLevels;
     user.membershipLevel = membershipLevel;
     await user.save({ validateBeforeSave: false });
 
-    return { hasGold, hasFullCourse, unlockedLevels: user.unlockedLevels };
+    return {
+        hasGold: tierIndex(highest) >= tierIndex('GOLD'),
+        hasFullCourse: highest === 'FULL_COURSE',
+        unlockedLevels: user.unlockedLevels,
+        membershipLevel: user.membershipLevel,
+    };
 };
 
 export const processAllUserSubscriptionExpirations = async () => {

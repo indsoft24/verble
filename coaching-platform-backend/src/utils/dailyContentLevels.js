@@ -32,13 +32,18 @@ export const assertGoldMediaLevel = (type, level) => {
     }
 };
 
-const DISPLAY_NUMBER_BASE = 1110;
+export const DISPLAY_NUMBER_BASE = 1110;
+
+export const getDisplayTag = (sequenceNumber) => {
+    if (!sequenceNumber || sequenceNumber < 1) return '';
+    return `#${DISPLAY_NUMBER_BASE + sequenceNumber}`;
+};
 
 export const buildAutoTitle = (type, sequenceNumber, metadata = {}) => {
     if (!sequenceNumber || sequenceNumber < 1) {
         return type;
     }
-    const tag = `#${DISPLAY_NUMBER_BASE + sequenceNumber}`;
+    const tag = getDisplayTag(sequenceNumber);
     if (type === 'PUZZLE') {
         return metadata.puzzleType === 'GRAMMAR_FILL_BLANK'
             ? `${tag} Grammar Puzzle`

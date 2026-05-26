@@ -3,6 +3,7 @@ import express from 'express';
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
 import {
     getAllDailyContentAdmin,
+    getSequencePreviewAdmin,
     createDailyContentAdmin,
     bulkCreateDailyContentAdmin,
     updateDailyContentAdmin,
@@ -20,6 +21,8 @@ router.use(restrictTo('admin'));
 
 // GET /api/admin/daily-content - Get all daily content
 router.get('/', getAllDailyContentAdmin);
+
+router.get('/sequence-preview', getSequencePreviewAdmin);
 
 // POST /api/admin/daily-content/bulk - Bulk create (must be before /:id if ever added under POST)
 router.post('/bulk', bulkCreateDailyContentAdmin);

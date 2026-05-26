@@ -5,6 +5,7 @@ import {
     deriveLevelFromType,
     assertGoldMediaLevel,
     buildAutoTitle,
+    getDisplayTag,
 } from '../utils/dailyContentLevels.js';
 import {
     getNextSequenceNumber,
@@ -85,20 +86,132 @@ const prepareBody = async (body, isUpdate = false) => {
     return payload;
 };
 
-export const getAllDailyContentAdmin = asyncHandler(async (req, res) => {
-    const { date } = req.query;
-    const query = {};
+const startOfLocalDay = (dateStr) => {
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) {
+        throw new Error('Invalid date.');
+    }
+    const start = new Date(d);
+    start.setHours(0, 0, 0, 0);
+    return start;
+};
 
-    if (date) {
-        const d = new Date(date);
-        const start = new Date(d);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 1);
-        query.date = { $gte: start, $lt: end };
+const endOfLocalDayExclusive = (dateStr) => {
+    const start = startOfLocalDay(dateStr);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return end;
+};
+
+/**
+ * @route GET /api/admin/daily-content/sequence-preview?type=&level=&puzzleType=
+ * Next display number for a new item (per type + level stream).
+ */
+export const getSequencePreviewAdmin = asyncHandler(async (req, res) => {
+    const { type, level, puzzleType } = req.query;
+    if (!type || typeof type !== 'string') {
+        return res.status(400).json({ status: 'fail', message: 'Query parameter type is required.' });
     }
 
-    const items = await DailyContent.find(query).sort({ date: -1, level: 1, type: 1, sequenceNumber: 1 });
+    const metadata = puzzleType ? { puzzleType: String(puzzleType) } : {};
+    const resolvedLevel = level && String(level).trim()
+        ? String(level).trim()
+        : deriveLevelFromType(type, metadata);
+
+    const sequenceNumber = await getNextSequenceNumber(type, resolvedLevel);
+    const displayTag = getDisplayTag(sequenceNumber);
+    const displayTitle = buildAutoTitle(type, sequenceNumber, metadata);
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            sequenceNumber,
+            displayTag,
+            displayTitle,
+            level: resolvedLevel,
+        },
+    });
+});
+
+export const getAllDailyContentAdmin = asyncHandler(async (req, res) => {
+    const {
+        date,
+        startDate,
+        endDate,
+        level,
+        type,
+        search,
+        isActive,
+        page: pageRaw,
+        limit: limitRaw,
+        sortOrder = 'desc',
+    } = req.query;
+
+    const query = {};
+
+    if (startDate || endDate) {
+        query.date = {};
+        if (startDate) {
+            query.date.$gte = startOfLocalDay(startDate);
+        }
+        if (endDate) {
+            query.date.$lt = endOfLocalDayExclusive(endDate);
+        }
+        if (Object.keys(query.date).length === 0) {
+            delete query.date;
+        }
+    } else if (date) {
+        query.date = {
+            $gte: startOfLocalDay(date),
+            $lt: endOfLocalDayExclusive(date),
+        };
+    }
+
+    if (level) {
+        query.level = level;
+    }
+    if (type) {
+        query.type = type;
+    }
+    if (isActive === 'true') {
+        query.isActive = true;
+    } else if (isActive === 'false') {
+        query.isActive = false;
+    }
+    if (search && String(search).trim()) {
+        query.title = { $regex: String(search).trim(), $options: 'i' };
+    }
+
+    const sortDir = sortOrder === 'asc' ? 1 : -1;
+    const sort = { date: sortDir, level: 1, type: 1, sequenceNumber: 1 };
+
+    const page = parseInt(pageRaw, 10);
+    const limit = parseInt(limitRaw, 10);
+    const usePagination = Number.isFinite(page) && page > 0 && Number.isFinite(limit) && limit > 0;
+    const safeLimit = usePagination ? Math.min(100, Math.max(1, limit)) : 0;
+    const safePage = usePagination ? page : 1;
+
+    if (usePagination) {
+        const total = await DailyContent.countDocuments(query);
+        const items = await DailyContent.find(query)
+            .sort(sort)
+            .skip((safePage - 1) * safeLimit)
+            .limit(safeLimit);
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                content: items,
+                pagination: {
+                    total,
+                    page: safePage,
+                    limit: safeLimit,
+                    totalPages: Math.max(1, Math.ceil(total / safeLimit) || 1),
+                },
+            },
+        });
+    }
+
+    const items = await DailyContent.find(query).sort(sort);
     res.status(200).json({ status: 'success', data: { content: items } });
 });
 

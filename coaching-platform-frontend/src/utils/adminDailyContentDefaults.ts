@@ -27,7 +27,7 @@ export const emptyDialogueLine = () => ({
 });
 
 export const emptyPuzzleQuestion = () => ({
-    prompt: '',
+    question: '',
     options: ['', '', '', ''],
     correct_idx: 0,
 });

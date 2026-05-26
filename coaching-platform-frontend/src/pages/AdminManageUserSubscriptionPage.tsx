@@ -1,14 +1,14 @@
 // File: src/pages/admin/AdminManageUserSubscriptionPage.tsx
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
+import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
     Container, Typography, Button, CircularProgress, Alert, Box, Paper, Grid,
     Select, MenuItem, InputLabel, FormControl, FormHelperText,
     List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Divider, Chip,
     Dialog, DialogTitle as MuiDialogTitle, DialogContent as MuiDialogContent, 
     DialogContentText as MuiDialogContentText, DialogActions as MuiDialogActions,
-    Tooltip, TextField,
+    Tooltip, TextField, Breadcrumbs, Link as MuiLink,
     type SelectChangeEvent
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -17,12 +17,17 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { isValid, formatISO, parseISO } from 'date-fns';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 
+import AdminLayout from '../components/layout/AdminLayout';
 import { 
     getUserByIdAdmin, 
     adminAddSubscriptionToUserService,
     adminRemoveSubscriptionFromUserService,
     updateUserInfo,
+    resendLoginPinForUser,
     type AdminDetailedUser, 
     type AdminAddUserSubscriptionPayload,
     type UserSubscriptionInstance,
@@ -33,8 +38,20 @@ import { formatPlanDurationLabel } from '../utils/adminUserDisplay';
 
 const subscriptionStatuses: AdminAddUserSubscriptionPayload['status'][] = ['active', 'pending_cancellation', 'cancelled', 'expired', 'trial', 'future_active', 'none'];
 
+const InfoField: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+    <Box>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+            {label}
+        </Typography>
+        <Typography variant="body1" sx={{ mt: 0.5, fontWeight: 500 }}>
+            {value}
+        </Typography>
+    </Box>
+);
+
 const AdminManageUserSubscriptionPage: React.FC = () => {
     const { userId } = useParams<{ userId: string }>();
+    const navigate = useNavigate();
 
     const [user, setUser] = useState<AdminDetailedUser | null>(null);
     const [allPlans, setAllPlans] = useState<SubscriptionPlan[]>([]);
@@ -57,6 +74,9 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
     const [editedUserName, setEditedUserName] = useState<string>('');
     const [editedUserPhone, setEditedUserPhone] = useState<string>('');
     const [isUpdatingUserInfo, setIsUpdatingUserInfo] = useState<boolean>(false);
+    const [displayedLoginPin, setDisplayedLoginPin] = useState<string | null>(null);
+    const [isRegeneratingPin, setIsRegeneratingPin] = useState(false);
+    const [pinCopyHint, setPinCopyHint] = useState<string | null>(null);
 
     const calculateEndDate = (startDate: Date, duration: SubscriptionPlan['duration']): Date => { 
         const date = new Date(startDate);
@@ -143,6 +163,47 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
         return new Date(dateString).toLocaleDateString();
     };
 
+    const formatDateTime = (dateString?: string | Date | null) => {
+        if (!dateString) return null;
+        return new Date(dateString).toLocaleString();
+    };
+
+    const handleRegeneratePin = async () => {
+        if (!userId) return;
+        setIsRegeneratingPin(true);
+        setError(null);
+        setPinCopyHint(null);
+        try {
+            const result = await resendLoginPinForUser(userId);
+            setDisplayedLoginPin(result.loginPin);
+            setUser((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          hasLoginPin: true,
+                          loginPinIssuedAt: result.loginPinIssuedAt || new Date().toISOString(),
+                      }
+                    : prev
+            );
+            setSuccess(result.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Failed to regenerate login PIN.';
+            setError(message);
+        } finally {
+            setIsRegeneratingPin(false);
+        }
+    };
+
+    const handleCopyPin = async () => {
+        if (!displayedLoginPin) return;
+        try {
+            await navigator.clipboard.writeText(displayedLoginPin);
+            setPinCopyHint('PIN copied to clipboard.');
+        } catch {
+            setPinCopyHint('Could not copy — select and copy the PIN manually.');
+        }
+    };
+
     const handleStartEditUserInfo = () => {
         if (user) {
             setEditedUserName(user.name || '');
@@ -193,33 +254,62 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
     };
 
     if (isLoadingPage) {
-        return <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /><Typography sx={{ml:1}}>Loading data...</Typography></Container>;
+        return (
+            <AdminLayout title="Manage User">
+                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+                    <CircularProgress size={28} />
+                    <Typography sx={{ ml: 1.5 }}>Loading user…</Typography>
+                </Container>
+            </AdminLayout>
+        );
     }
 
-    if (error && !user && !isSubmitting) { // Check !isSubmitting to avoid error flash during submit
+    if (error && !user && !isSubmitting) {
         return (
-            <Container sx={{ mt: 4 }}>
-                <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-                <Button component={RouterLink} to="/admin/users" sx={{mt:2}}>Back to Users List</Button>
-            </Container>
+            <AdminLayout title="Manage User">
+                <Container sx={{ py: 3 }}>
+                    <Button
+                        startIcon={<ArrowBackIcon />}
+                        onClick={() => navigate('/admin/users')}
+                        sx={{ mb: 2 }}
+                    >
+                        Back to users
+                    </Button>
+                    <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+                </Container>
+            </AdminLayout>
         );
     }
 
     return (
+        <AdminLayout title={`Manage User — ${user?.name || 'User'}`}>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-                <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 1 }}>
-                    Manage User: {user?.name || 'User'}
+            <Container maxWidth="lg" sx={{ py: 3 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
+                    <Breadcrumbs aria-label="breadcrumb">
+                        <MuiLink component={RouterLink} underline="hover" color="inherit" to="/admin/dashboard">
+                            Admin
+                        </MuiLink>
+                        <MuiLink component={RouterLink} underline="hover" color="inherit" to="/admin/users">
+                            Users
+                        </MuiLink>
+                        <Typography color="text.primary">Manage subscription</Typography>
+                    </Breadcrumbs>
+                    <Button
+                        variant="outlined"
+                        startIcon={<ArrowBackIcon />}
+                        onClick={() => navigate('/admin/users')}
+                    >
+                        Back to users
+                    </Button>
+                </Box>
+
+                <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 3 }}>
+                    {user?.name || 'User'}
                 </Typography>
-                {user && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Phone: {user.phoneNumber || '—'}
-                        {user.email ? ` · Email: ${user.email}` : ''}
-                    </Typography>
-                )}
 
                 {/* User Information Edit Section */}
-                <Paper elevation={2} sx={{ p: {xs: 2, sm: 3}, mb: 4 }}>
+                <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Typography variant="h6" component="h2">
                             User Information
@@ -281,22 +371,92 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                             </Grid>
                         </Grid>
                     ) : (
-                        <Grid container spacing={2}>
-                            <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
-                                <Typography variant="body2" color="text.secondary" gutterBottom>
-                                    Name
-                                </Typography>
-                                <Typography variant="body1" sx={{ mb: 2 }}>
-                                    {user?.name || 'N/A'}
-                                </Typography>
+                        <Grid container spacing={3}>
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                <InfoField label="Name" value={user?.name || '—'} />
                             </Grid>
-                            <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
-                                <Typography variant="body2" color="text.secondary" gutterBottom>
-                                    Phone Number
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                <InfoField label="Phone number" value={user?.phoneNumber || 'Not provided'} />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                <InfoField label="Email" value={user?.email || 'Not provided'} />
+                            </Grid>
+                            <Grid size={{ xs: 12 }}>
+                                <Divider sx={{ my: 0.5 }} />
+                            </Grid>
+                            <Grid size={{ xs: 12 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+                                    Login PIN (phone sign-in)
                                 </Typography>
-                                <Typography variant="body1" sx={{ mb: 2 }}>
-                                    {user?.phoneNumber || 'Not provided'}
-                                </Typography>
+                                <Box
+                                    sx={{
+                                        mt: 1.5,
+                                        p: 2,
+                                        borderRadius: 2,
+                                        bgcolor: 'grey.50',
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                    }}
+                                >
+                                    {displayedLoginPin ? (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
+                                            <Chip
+                                                icon={<VpnKeyIcon />}
+                                                label={displayedLoginPin}
+                                                sx={{
+                                                    fontFamily: 'monospace',
+                                                    fontSize: '1.25rem',
+                                                    fontWeight: 700,
+                                                    letterSpacing: 4,
+                                                    height: 44,
+                                                    px: 1,
+                                                }}
+                                                color="primary"
+                                                variant="outlined"
+                                            />
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                startIcon={<ContentCopyIcon />}
+                                                onClick={handleCopyPin}
+                                            >
+                                                Copy PIN
+                                            </Button>
+                                        </Box>
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                                            {user?.hasLoginPin
+                                                ? `A PIN was issued${user.loginPinIssuedAt ? ` on ${formatDateTime(user.loginPinIssuedAt)}` : ''}. For security it is not stored in plain text — regenerate to view a new PIN and email it to the user.`
+                                                : 'No login PIN on file. Generate one to enable phone PIN sign-in.'}
+                                        </Typography>
+                                    )}
+                                    {pinCopyHint && (
+                                        <Typography variant="caption" color="success.main" display="block" sx={{ mt: 1 }}>
+                                            {pinCopyHint}
+                                        </Typography>
+                                    )}
+                                    <Button
+                                        size="small"
+                                        variant="contained"
+                                        sx={{ mt: displayedLoginPin ? 1.5 : 0 }}
+                                        onClick={handleRegeneratePin}
+                                        disabled={isRegeneratingPin || !user?.email}
+                                        startIcon={isRegeneratingPin ? <CircularProgress size={18} color="inherit" /> : <VpnKeyIcon />}
+                                    >
+                                        {isRegeneratingPin
+                                            ? 'Generating…'
+                                            : displayedLoginPin
+                                              ? 'Regenerate PIN'
+                                              : user?.hasLoginPin
+                                                ? 'Regenerate & show PIN'
+                                                : 'Generate PIN'}
+                                    </Button>
+                                    {!user?.email && (
+                                        <Typography variant="caption" color="error" display="block" sx={{ mt: 1 }}>
+                                            User must have an email address to receive the PIN.
+                                        </Typography>
+                                    )}
+                                </Box>
                             </Grid>
                         </Grid>
                     )}
@@ -306,7 +466,7 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                 {error && !isSubmitting && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>} 
                 {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
-                <Paper elevation={2} sx={{ p: {xs: 1, sm: 2}, mb: 4 }}>
+                <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
                     <Typography variant="h6" gutterBottom>Current & Past Subscriptions</Typography>
                     {(!user?.subscriptions || user.subscriptions.length === 0) ? (
                         <Typography sx={{my: 2, fontStyle: 'italic'}}>No subscriptions found for this user.</Typography>
@@ -355,7 +515,7 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                     )}
                 </Paper>
 
-                <Paper elevation={3} sx={{ p: {xs: 2, sm: 3} }}>
+                <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2 }}>
                     <Typography variant="h6" component="h2" gutterBottom>Add New Subscription to User</Typography>
                     {/* Form-specific error for adding a subscription */}
                     {isSubmitting && error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>} 
@@ -438,10 +598,6 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                         </Grid>
                     </Grid>
                 </Paper>
-                 <Button component={RouterLink} to="/admin/users" sx={{mt: 3}}>
-                    Back to Users List
-                </Button>
-
                  {/* Delete Confirmation Dialog */}
                 <Dialog open={openDeleteConfirm} onClose={() => setOpenDeleteConfirm(false)}>
                     <MuiDialogTitle>Confirm Remove Subscription Instance</MuiDialogTitle>
@@ -461,6 +617,7 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                 </Dialog>
             </Container>
         </LocalizationProvider>
+        </AdminLayout>
     );
 };
 

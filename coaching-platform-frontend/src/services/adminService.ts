@@ -42,6 +42,9 @@ export interface AdminDetailedUser extends Omit<AuthContextUserType, 'subscripti
     email: string;
     role: 'user' | 'admin';
     phoneNumber?: string;
+    authProvider?: 'local' | 'google' | 'phone_pin';
+    hasLoginPin?: boolean;
+    loginPinIssuedAt?: string | null;
     subscriptions: UserSubscriptionInstance[]; 
     createdAt?: string;
     updatedAt?: string;
@@ -78,14 +81,21 @@ export interface VideoMetadata {
     description?: string;
     isPublished: boolean;
     order?: number;
-    bunnyVideoLibraryId: string; 
-    bunnyVideoId: string;      
+    streamProvider?: 'local' | 'bunny';
+    localStorageId?: string;
+    streamUrl?: string;
+    thumbnailUrl?: string;
+    bunnyVideoLibraryId?: string; 
+    bunnyVideoId?: string;      
     bunnyStreamUrl?: string;
     bunnyThumbnailUrl?: string;
     durationSeconds?: number;
     width?: number;
     height?: number;
     videoStatus?: 'METADATA_CREATED' | 'PENDING_UPLOAD' | 'UPLOADING' | 'UPLOADED' | 'PROCESSING' | 'AVAILABLE' | 'FAILED';
+    processingProgress?: number;
+    transcodeStep?: string;
+    processingError?: string;
     bunnyProcessingProgress?: number;
     courses?: Array<string | Course>;
     modules?: Array<string | Module>;
@@ -172,25 +182,66 @@ export interface InitiateUploadPayload {
     isPublished?: boolean;
     tags?: string[];
 }
-export interface InitiateUploadResponse {
-    video: VideoMetadata; 
-    uploadParameters: {   
-        videoId: string;
-        libraryId: string;
-        authorizationSignature: string;
-        authorizationExpires: number;
-    };
+export interface LocalVideoUploadInstructions {
+    method: 'POST';
+    fieldName: string;
+    path: string;
 }
+
+export interface InitiateUploadResponse {
+    video: VideoMetadata;
+    upload: LocalVideoUploadInstructions;
+}
+
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    if (error && typeof error === 'object') {
+        const err = error as { message?: string; response?: { data?: { message?: string } } };
+        return err.response?.data?.message || err.message || fallback;
+    }
+    return fallback;
+};
 
 export const initiateVideoUpload = async (payload: InitiateUploadPayload): Promise<InitiateUploadResponse> => {
     try {
         const response = await apiClient.post<ApiResponse<InitiateUploadResponse>>(`/admin/videos/initiate-upload`, payload);
-        if (response.data.status === 'success' && response.data.data) {
+        if (response.data.status === 'success' && response.data.data?.video && response.data.data?.upload) {
             return response.data.data;
         }
         throw new Error(response.data?.message || 'Failed to initiate video upload.');
-    } catch (error: any) {
-        throw error.response?.data || error;
+    } catch (error: unknown) {
+        throw new Error(getApiErrorMessage(error, 'Failed to initiate video upload.'));
+    }
+};
+
+/** Upload video file to server storage; FFmpeg transcoding starts after upload completes. */
+export const uploadVideoFileAdmin = async (
+    videoId: string,
+    file: File,
+    onProgress?: (percent: number) => void
+): Promise<VideoMetadata> => {
+    const formData = new FormData();
+    formData.append('video', file);
+
+    try {
+        const response = await apiClient.post<ApiResponse<{ video: VideoMetadata }>>(
+            `/admin/videos/${videoId}/upload-file`,
+            formData,
+            {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 0,
+                onUploadProgress: (event) => {
+                    if (event.total && onProgress) {
+                        onProgress(Math.round((event.loaded * 100) / event.total));
+                    }
+                },
+            }
+        );
+        if (response.data.status === 'success' && response.data.data?.video) {
+            return response.data.data.video;
+        }
+        throw new Error(response.data?.message || 'Failed to upload video file.');
+    } catch (error: unknown) {
+        throw new Error(getApiErrorMessage(error, 'Failed to upload video file.'));
     }
 };
 
@@ -236,15 +287,28 @@ export const getAllUsers = async (query: AdminUsersQuery = {}): Promise<AdminUse
     }
 };
 
-export const resendLoginPinForUser = async (userId: string): Promise<string> => {
+export interface ResendLoginPinResult {
+    message: string;
+    loginPin: string;
+    loginPinIssuedAt?: string;
+}
+
+export const resendLoginPinForUser = async (userId: string): Promise<ResendLoginPinResult> => {
     try {
-        const response = await apiClient.post<ApiResponse<unknown>>(`/admin/users/${userId}/resend-login-pin`);
-        if (response.data.status === 'success') {
-            return response.data.message || 'Login PIN sent.';
+        const response = await apiClient.post<
+            ApiResponse<{ loginPin: string; loginPinIssuedAt?: string }>
+        >(`/admin/users/${userId}/resend-login-pin`);
+        if (response.data.status === 'success' && response.data.data?.loginPin) {
+            return {
+                message: response.data.message || 'Login PIN sent.',
+                loginPin: response.data.data.loginPin,
+                loginPinIssuedAt: response.data.data.loginPinIssuedAt,
+            };
         }
         throw new Error(response.data?.message || 'Failed to resend login PIN');
     } catch (error: any) {
-        throw error.response?.data || { status: 'error', message: 'Failed to resend login PIN' };
+        const msg = error?.response?.data?.message || error?.message || 'Failed to resend login PIN';
+        throw new Error(msg);
     }
 };
 

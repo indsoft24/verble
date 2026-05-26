@@ -168,10 +168,10 @@ const AdminUsersListPage: React.FC = () => {
         setResendLoadingId(userId);
         setError(null);
         try {
-            const msg = await resendLoginPinForUser(userId);
+            const result = await resendLoginPinForUser(userId);
             setUpdateStatus((prev) => ({
                 ...prev,
-                [userId]: { loading: false, success: msg || `PIN emailed for ${userName}` },
+                [userId]: { loading: false, success: result.message || `PIN emailed for ${userName}` },
             }));
             setTimeout(() => {
                 setUpdateStatus((prev) => ({

@@ -28,12 +28,13 @@ export interface SingleDailyContentResponse {
     };
 }
 
-export const WORD_DISPLAY_NUMBER_BASE = 1111;
-
-export const getWordDisplayNumber = (sequenceNumber?: number, base = WORD_DISPLAY_NUMBER_BASE): string => {
-    if (!sequenceNumber || sequenceNumber < 1) return `#${base}`;
-    return `#${base + sequenceNumber - 1}`;
-};
+export {
+    DISPLAY_NUMBER_BASE,
+    WORD_DISPLAY_NUMBER_BASE,
+    getDisplayTag,
+    getWordDisplayNumber,
+    buildAutoDisplayTitle,
+} from '../utils/dailyContentDisplayNumber';
 
 export const getDailyContent = async (date?: Date, level?: string): Promise<DailyContent[]> => {
     const params: Record<string, string> = {};

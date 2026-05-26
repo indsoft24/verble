@@ -1,15 +1,17 @@
 import { alpha, type SxProps, type Theme } from '@mui/material';
+import { getAdjacentContent } from '../services/dailyContentService';
 import {
-    getAdjacentContent,
+    DISPLAY_NUMBER_BASE,
+    getDisplayTag as getContentDisplayNumber,
     getWordDisplayNumber,
     WORD_DISPLAY_NUMBER_BASE,
-} from '../services/dailyContentService';
+} from './dailyContentDisplayNumber';
 
 export const GREEN_ACCENT = '#14b8a6';
 export const GOLD_ACCENT = '#ca8a04';
 export const MAX_ACTIVITY_SENTENCES = 5;
 
-export { WORD_DISPLAY_NUMBER_BASE, getWordDisplayNumber as getContentDisplayNumber };
+export { DISPLAY_NUMBER_BASE, WORD_DISPLAY_NUMBER_BASE, getContentDisplayNumber, getWordDisplayNumber };
 
 const toLocalDateKey = (d: Date) => {
     const y = d.getFullYear();

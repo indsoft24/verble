@@ -25,7 +25,7 @@ export interface User {
     createdAt?: string;
     updatedAt?: string;
     googleId?: string;
-    authProvider?: 'local' | 'google';
+    authProvider?: 'local' | 'google' | 'phone_pin';
     googleProfile?: {
         id: string;
         email: string;

@@ -50,7 +50,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const tokenToUse = currentToken !== undefined ? currentToken : token;
         if (!tokenToUse) {
             handleSetAuthData(null, null);
-            setIsLoading(false);
             return;
         }
         try {
@@ -60,25 +59,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } else {
                 handleSetAuthData(null, null);
             }
-        } catch (error) {
+        } catch {
             handleSetAuthData(null, null);
-        } finally {
-            setIsLoading(false);
         }
     }, [token]);
 
     useEffect(() => {
+        let cancelled = false;
+
         const initializeAuth = async () => {
             const storedToken = localStorage.getItem('authToken');
             if (storedToken) {
                 setTokenState(storedToken);
                 apiClient.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-                await refreshUser(storedToken);
+                try {
+                    await refreshUser(storedToken);
+                } catch {
+                    if (!cancelled) {
+                        handleSetAuthData(null, null);
+                    }
+                }
             }
-            setIsLoading(false);
+            if (!cancelled) {
+                setIsLoading(false);
+            }
         };
+
         initializeAuth();
-    }, [refreshUser]);
+
+        return () => {
+            cancelled = true;
+        };
+        // Run once on mount; refreshUser is stable enough for initial session restore.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
 
     const login = async (credentials: authService.LoginCredentials) => {

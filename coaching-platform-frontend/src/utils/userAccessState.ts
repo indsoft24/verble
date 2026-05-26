@@ -3,6 +3,34 @@ import type { User, UserSubscriptionInstance } from '../services/authService';
 export type MembershipTier = 'FREE' | 'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE';
 export type TierAccessStatus = 'locked' | 'active' | 'completed' | 'unlocked';
 
+export const TIER_ORDER: MembershipTier[] = ['FREE', 'BRONZE', 'SILVER', 'GOLD', 'FULL_COURSE'];
+
+const planNameToLevel = (planName = ''): MembershipTier => {
+    const n = planName.toLowerCase();
+    if (n.includes('full course') || n.includes('fullcourse')) return 'FULL_COURSE';
+    if (n.includes('gold')) return 'GOLD';
+    if (n.includes('silver')) return 'SILVER';
+    if (n.includes('bronze')) return 'BRONZE';
+    return 'FREE';
+};
+
+const tierIndex = (tier: MembershipTier | string): number => {
+    const idx = TIER_ORDER.indexOf(tier as MembershipTier);
+    return idx === -1 ? 0 : idx;
+};
+
+/** All membership tiers at or below the given tier (client-side cascade). */
+export const expandLevelsForTier = (highestTier: MembershipTier): Set<string> => {
+    const levels = new Set<string>(['FREE']);
+    const hi = tierIndex(highestTier);
+    for (const tier of TIER_ORDER) {
+        if (tierIndex(tier) <= hi) {
+            levels.add(tier);
+        }
+    }
+    return levels;
+};
+
 export interface TierAccessInfo {
     tier: MembershipTier;
     status: TierAccessStatus;
@@ -49,6 +77,30 @@ export const hasActiveFullCourse = (user: User): boolean =>
 
 export const getUnlockedLevels = (user: User): string[] => user.unlockedLevels || ['FREE'];
 
+/** Highest tier implied by active subscription plan names. */
+export const getHighestActivePaidTier = (user: User): MembershipTier => {
+    let highest: MembershipTier = 'FREE';
+    for (const sub of getActiveSubscriptions(user)) {
+        const level = planNameToLevel(sub.planName);
+        if (tierIndex(level) > tierIndex(highest)) {
+            highest = level;
+        }
+    }
+    return highest;
+};
+
+/** Union of stored unlockedLevels and levels implied by active paid subscriptions. */
+export const getEffectiveUnlockedLevels = (user: User): string[] => {
+    const stored = getUnlockedLevels(user);
+    const fromSubs = expandLevelsForTier(getHighestActivePaidTier(user));
+    return [...new Set([...stored, ...fromSubs])];
+};
+
+export const hasTierAccess = (user: User, tier: MembershipTier): boolean => {
+    if (tier === 'FREE') return true;
+    return getEffectiveUnlockedLevels(user).includes(tier);
+};
+
 /** Header badge — never show FULL_COURSE/GOLD without active paid subscription. */
 export const getDisplayMembershipLevel = (user: User): MembershipTier => {
     if (hasActiveFullCourse(user)) return 'FULL_COURSE';
@@ -92,13 +144,11 @@ export const getChallengeProgress = (current: number, target: number) => ({
 });
 
 export const getTierAccess = (tier: MembershipTier, user: User): TierAccessInfo => {
-    const unlocked = getUnlockedLevels(user);
+    const unlocked = getEffectiveUnlockedLevels(user);
     const isPremium = tier === 'GOLD' || tier === 'FULL_COURSE';
 
     if (isPremium) {
-        const hasSub = tier === 'GOLD' ? hasActiveGold(user) : hasActiveFullCourse(user);
-        const inUnlocked = unlocked.includes(tier);
-        const hasAccess = hasSub && inUnlocked;
+        const hasAccess = hasTierAccess(user, tier);
 
         return {
             tier,
@@ -117,7 +167,7 @@ export const getTierAccess = (tier: MembershipTier, user: User): TierAccessInfo 
     const streak = user.streaks?.[streakKey]?.current ?? 0;
     const { progress, daysRemaining } = getChallengeProgress(streak, target);
 
-    const tierUnlocked = unlocked.includes(tier);
+    const tierUnlocked = hasTierAccess(user, tier);
     let status: TierAccessStatus;
 
     if (!tierUnlocked) {

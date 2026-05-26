@@ -13,25 +13,78 @@ export interface CreateDailyContentPayload {
 
 export interface UpdateDailyContentPayload extends Partial<CreateDailyContentPayload> {}
 
+export interface DailyContentPagination {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface DailyContentAdminListParams {
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    level?: string;
+    type?: string;
+    search?: string;
+    isActive?: 'true' | 'false' | '';
+    page?: number;
+    limit?: number;
+    sortOrder?: 'asc' | 'desc';
+}
+
+export interface DailyContentAdminListResult {
+    content: DailyContent[];
+    pagination?: DailyContentPagination;
+}
+
 export interface DailyContentAdminResponse {
     status: string;
     data: {
         content: DailyContent | DailyContent[];
+        pagination?: DailyContentPagination;
     };
 }
 
+export interface DailyContentSequencePreview {
+    sequenceNumber: number;
+    displayTag: string;
+    displayTitle: string;
+    level: string;
+}
+
+export const getDailyContentSequencePreviewAdmin = async (
+    type: string,
+    level: string,
+    puzzleType?: string
+): Promise<DailyContentSequencePreview> => {
+    const params: Record<string, string> = { type, level };
+    if (puzzleType) params.puzzleType = puzzleType;
+
+    const response = await apiClient.get<{
+        status: string;
+        data: DailyContentSequencePreview;
+    }>('/admin/daily-content/sequence-preview', { params });
+
+    if (response.data.status === 'success' && response.data.data?.sequenceNumber) {
+        return response.data.data;
+    }
+    throw new Error('Could not load display number preview.');
+};
+
 /**
- * Get all daily content (admin)
+ * Get daily content (admin) — optional pagination and filters.
  */
-export const getAllDailyContentAdmin = async (params?: {
-    date?: string;
-    level?: string;
-    type?: string;
-}): Promise<DailyContent[]> => {
+export const getAllDailyContentAdmin = async (
+    params?: DailyContentAdminListParams
+): Promise<DailyContentAdminListResult> => {
     const response = await apiClient.get<DailyContentAdminResponse>('/admin/daily-content', { params });
-    return Array.isArray(response.data.data.content)
-        ? response.data.data.content
-        : [response.data.data.content];
+    const raw = response.data.data.content;
+    const content = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    return {
+        content,
+        pagination: response.data.data.pagination,
+    };
 };
 
 /**

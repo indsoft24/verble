@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import mongoose from 'mongoose';
 import DailyContent from '../models/DailyContent.js';
-import { getLocalTodayBounds } from '../utils/dailyContentLocalDay.js';
+import { getLocalTodayBounds, isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
 import { attachSequenceNumbers } from '../utils/contentSequenceUtils.js';
 
 const getUnlockedLevelsForUser = (user) => {
@@ -156,6 +156,18 @@ export const getAdjacentContentBySequence = asyncHandler(async (req, res) => {
 
     if (!neighbor) {
         return res.status(200).json({ status: 'success', data: { content: null } });
+    }
+
+    // Do not expose future scheduled sets via "next" (browse only through today and earlier).
+    if (direction === 'next') {
+        const { end: startOfTomorrow } = getLocalTodayBounds();
+        if (new Date(neighbor.date).getTime() >= startOfTomorrow.getTime()) {
+            return res.status(200).json({ status: 'success', data: { content: null } });
+        }
+        // On today's set, "next" stays hidden — user may only go to previous sets.
+        if (isDailyContentScheduledForLocalToday(current.date)) {
+            return res.status(200).json({ status: 'success', data: { content: null } });
+        }
     }
 
     const [withSeq] = await attachSequenceNumbers([neighbor]);

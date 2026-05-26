@@ -2,6 +2,7 @@ import asyncHandler from 'express-async-handler';
 import User from '../models/User.js';
 import { formatMobileNumber, validateMobileNumber } from '../utils/smsService.js';
 import { assignFreeFoundationToUser } from '../services/defaultSubscriptionService.js';
+import { updateUnlockedLevelsFromSubscriptions } from '../services/subscriptionAccessService.js';
 import { issueLoginPinForUser } from './phonePinAuthController.js';
 import SubscriptionPlan from '../models/SubscriptionPlan.js';
 import Video from '../models/Video.js';
@@ -14,6 +15,15 @@ const sanitizeUser = (user) => {
     delete obj.emailVerificationToken;
     delete obj.mobileOtpToken;
     if (!Array.isArray(obj.subscriptions)) obj.subscriptions = [];
+    return obj;
+};
+
+/** Admin detail view — includes PIN metadata but never the hashed PIN. */
+const sanitizeUserForAdminDetail = (user) => {
+    const obj = sanitizeUser(user);
+    obj.authProvider = user.authProvider;
+    obj.loginPinIssuedAt = user.loginPinIssuedAt || null;
+    obj.hasLoginPin = Boolean(user.loginPinIssuedAt);
     return obj;
 };
 
@@ -115,8 +125,9 @@ export const resendLoginPinForUser = asyncHandler(async (req, res) => {
         return res.status(400).json({ status: 'fail', message: 'User has no email on file.' });
     }
 
+    let plainPin;
     try {
-        await issueLoginPinForUser(user);
+        plainPin = await issueLoginPinForUser(user);
     } catch (err) {
         console.error('[Admin resendLoginPin] failed:', err);
         return res.status(500).json({
@@ -125,9 +136,15 @@ export const resendLoginPinForUser = asyncHandler(async (req, res) => {
         });
     }
 
+    const refreshed = await User.findById(user._id).select('loginPinIssuedAt');
+
     res.status(200).json({
         status: 'success',
         message: `Login PIN sent to ${user.email}.`,
+        data: {
+            loginPin: plainPin,
+            loginPinIssuedAt: refreshed?.loginPinIssuedAt || new Date(),
+        },
     });
 });
 
@@ -144,7 +161,7 @@ export const getUserById = asyncHandler(async (req, res) => {
         return res.status(404).json({ status: 'fail', message: 'User not found.' });
     }
 
-    res.status(200).json({ status: 'success', data: { user: sanitizeUser(user) } });
+    res.status(200).json({ status: 'success', data: { user: sanitizeUserForAdminDetail(user) } });
 });
 
 export const createUserByAdmin = asyncHandler(async (req, res) => {
@@ -327,6 +344,8 @@ export const addSubscriptionToUser = asyncHandler(async (req, res) => {
     });
     await user.save();
 
+    await updateUnlockedLevelsFromSubscriptions(user._id);
+
     const populated = await User.findById(user._id)
         .select('-password -loginPin')
         .populate({ path: 'subscriptions.planId', model: 'SubscriptionPlan' });
@@ -344,6 +363,8 @@ export const removeSubscriptionFromUser = asyncHandler(async (req, res) => {
         (s) => s._id.toString() !== req.params.subscriptionInstanceId
     );
     await user.save();
+
+    await updateUnlockedLevelsFromSubscriptions(user._id);
 
     const populated = await User.findById(user._id)
         .select('-password -loginPin')

@@ -1,15 +1,18 @@
 import React from 'react';
 import {
+    Alert,
     Box,
     Button,
     FormControl,
+    FormControlLabel,
     Grid,
-    InputLabel,
-    MenuItem,
-    Select,
+    Paper,
+    Radio,
+    RadioGroup,
     TextField,
     Typography,
 } from '@mui/material';
+import type { AdminContentTypeKey } from '../../utils/dailyContentTypeCatalog';
 import AdminImageUploadField from './AdminImageUploadField';
 import {
     emptyDialogueLine,
@@ -22,20 +25,23 @@ import {
     emptyVocabItem,
 } from '../../utils/adminDailyContentDefaults';
 
-const PUZZLE_TYPES = ['SPOT_CORRECT_SENTENCE', 'GRAMMAR_FILL_BLANK'] as const;
-
 export interface AdminDailyContentMetadataFormProps {
     type: string;
     metadata: Record<string, unknown>;
+    adminKey?: AdminContentTypeKey;
     /** Learner-visible headline for SCENE (maps to content title on save) */
     displayTitle?: string;
     onDisplayTitleChange?: (value: string) => void;
     onChange: (field: string, value: unknown) => void;
 }
 
+const getPuzzleQuestionText = (q: ReturnType<typeof emptyPuzzleQuestion>) =>
+    String((q as { question?: string; prompt?: string }).question ?? (q as { prompt?: string }).prompt ?? '');
+
 const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps> = ({
     type,
     metadata,
+    adminKey,
     displayTitle = '',
     onDisplayTitleChange,
     onChange,
@@ -390,75 +396,133 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
     }
 
     if (type === 'PUZZLE') {
+        const puzzleType =
+            (metadata.puzzleType as string) ||
+            (adminKey === 'PUZZLE_GRAMMAR' ? 'GRAMMAR_FILL_BLANK' : 'SPOT_CORRECT_SENTENCE');
+        const isGrammar = puzzleType === 'GRAMMAR_FILL_BLANK';
         const questions =
             (metadata.questions as ReturnType<typeof emptyPuzzleQuestion>[])?.length === 5
                 ? (metadata.questions as ReturnType<typeof emptyPuzzleQuestion>[])
                 : Array.from({ length: 5 }, emptyPuzzleQuestion);
+
+        const updateQuestion = (idx: number, patch: Partial<ReturnType<typeof emptyPuzzleQuestion>>) => {
+            const next = [...questions];
+            next[idx] = { ...next[idx], ...patch };
+            onChange('questions', next);
+        };
+
         return (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid size={{ xs: 12 }}>
-                    <FormControl fullWidth>
-                        <InputLabel>Puzzle type</InputLabel>
-                        <Select
-                            label="Puzzle type"
-                            value={(metadata.puzzleType as string) || 'SPOT_CORRECT_SENTENCE'}
-                            onChange={(e) => onChange('puzzleType', e.target.value)}
+            <Box sx={{ mt: 1 }}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                        {isGrammar ? 'Grammar puzzle — fill in the verb' : 'Spot the correct sentence'}
+                    </Typography>
+                    <Typography variant="body2">
+                        {isGrammar
+                            ? 'Write 5 questions with ___ where the blank goes. Provide four answer choices and mark the correct one.'
+                            : 'Write 5 questions with four sentence options each. Mark which option is grammatically correct.'}
+                    </Typography>
+                    <Typography variant="caption" display="block" sx={{ mt: 1, opacity: 0.85 }}>
+                        Puzzle type is set by the Type field above — no need to change it here.
+                    </Typography>
+                </Alert>
+
+                {questions.map((q, idx) => {
+                    const options = q.options?.length === 4 ? q.options : ['', '', '', ''];
+                    const correctIdx = q.correct_idx ?? 0;
+
+                    return (
+                        <Paper
+                            key={idx}
+                            variant="outlined"
+                            sx={{
+                                p: { xs: 2, sm: 2.5 },
+                                mb: 2,
+                                borderRadius: 2,
+                                bgcolor: 'background.default',
+                            }}
                         >
-                            {PUZZLE_TYPES.map((pt) => (
-                                <MenuItem key={pt} value={pt}>
-                                    {pt === 'GRAMMAR_FILL_BLANK' ? 'Grammar (verb form)' : 'Spot correct sentence'}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </Grid>
-                {questions.map((q, idx) => (
-                    <Grid size={{ xs: 12 }} key={idx}>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                            Question {idx + 1}
-                        </Typography>
-                        <TextField
-                            fullWidth
-                            label="Prompt"
-                            value={q.prompt || ''}
-                            onChange={(e) => {
-                                const next = [...questions];
-                                next[idx] = { ...next[idx], prompt: e.target.value };
-                                onChange('questions', next);
-                            }}
-                            sx={{ mb: 1 }}
-                        />
-                        {(q.options || ['', '', '', '']).map((opt, oi) => (
+                            <Typography
+                                variant="subtitle1"
+                                fontWeight={700}
+                                color="primary"
+                                sx={{ mb: 2 }}
+                            >
+                                Question {idx + 1} of 5
+                            </Typography>
+
                             <TextField
-                                key={oi}
                                 fullWidth
-                                size="small"
-                                label={`Option ${oi + 1}`}
-                                value={opt}
-                                onChange={(e) => {
-                                    const next = [...questions];
-                                    const opts = [...(next[idx].options || ['', '', '', ''])];
-                                    opts[oi] = e.target.value;
-                                    next[idx] = { ...next[idx], options: opts };
-                                    onChange('questions', next);
-                                }}
-                                sx={{ mb: 1 }}
+                                label="Question text"
+                                placeholder={
+                                    isGrammar
+                                        ? 'Example: She ___ to the market every Sunday.'
+                                        : 'Example: Which sentence uses the past tense correctly?'
+                                }
+                                value={getPuzzleQuestionText(q)}
+                                onChange={(e) => updateQuestion(idx, { question: e.target.value })}
+                                multiline
+                                minRows={isGrammar ? 2 : 1}
+                                sx={{ mb: 2.5 }}
                             />
-                        ))}
-                        <TextField
-                            fullWidth
-                            type="number"
-                            label="Correct option index (0-based)"
-                            value={q.correct_idx ?? 0}
-                            onChange={(e) => {
-                                const next = [...questions];
-                                next[idx] = { ...next[idx], correct_idx: Number(e.target.value) };
-                                onChange('questions', next);
-                            }}
-                        />
-                    </Grid>
-                ))}
-            </Grid>
+
+                            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                                Answer choices
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
+                                Select the radio button next to the correct answer.
+                            </Typography>
+
+                            <FormControl component="fieldset" fullWidth>
+                                <RadioGroup
+                                    value={String(correctIdx)}
+                                    onChange={(e) => updateQuestion(idx, { correct_idx: Number(e.target.value) })}
+                                >
+                                    {options.map((opt, oi) => (
+                                        <Box
+                                            key={oi}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'flex-start',
+                                                gap: 1,
+                                                mb: 1.5,
+                                                p: 1,
+                                                borderRadius: 1,
+                                                border: '1px solid',
+                                                borderColor:
+                                                    correctIdx === oi ? 'primary.main' : 'divider',
+                                                bgcolor: correctIdx === oi ? 'action.hover' : 'transparent',
+                                            }}
+                                        >
+                                            <FormControlLabel
+                                                value={String(oi)}
+                                                control={<Radio size="small" />}
+                                                label={
+                                                    <Typography variant="body2" fontWeight={600} sx={{ minWidth: 20 }}>
+                                                        {String.fromCharCode(65 + oi)}
+                                                    </Typography>
+                                                }
+                                                sx={{ m: 0, mt: 0.75 }}
+                                            />
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                placeholder={`Choice ${String.fromCharCode(65 + oi)}`}
+                                                value={opt}
+                                                onChange={(e) => {
+                                                    const opts = [...options];
+                                                    opts[oi] = e.target.value;
+                                                    updateQuestion(idx, { options: opts });
+                                                }}
+                                            />
+                                        </Box>
+                                    ))}
+                                </RadioGroup>
+                            </FormControl>
+                        </Paper>
+                    );
+                })}
+            </Box>
         );
     }
 

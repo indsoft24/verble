@@ -6,16 +6,20 @@ import {
     FormControl, InputLabel, Select, OutlinedInput, Chip, MenuItem, type SelectChangeEvent
 } from '@mui/material';
 
-import { initiateVideoUpload, type InitiateUploadPayload } from '../services/adminService';
+import {
+    initiateVideoUpload,
+    uploadVideoFileAdmin,
+    type InitiateUploadPayload,
+} from '../services/adminService';
 import { getAllSubscriptionPlansAdmin, type SubscriptionPlan } from '../services/subscriptionPlanAdminService';
 import { getAllCoursesAdmin, type Course } from '../services/courseAdminService';
 import { getModulesForCourseAdmin, type Module } from '../services/moduleAdminService';
-import * as tus from 'tus-js-client';
+
+type UploadPhase = 'idle' | 'creating' | 'uploading' | 'done';
 
 const AdminCreateVideoPage: React.FC = () => {
     const navigate = useNavigate();
 
-    // Form state
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -23,16 +27,16 @@ const AdminCreateVideoPage: React.FC = () => {
     const [moduleIds, setModuleIds] = useState<string[]>([]);
     const [requiredPlanIds, setRequiredPlanIds] = useState<string[]>([]);
 
-    // Page state
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [uploadPhase, setUploadPhase] = useState<UploadPhase>('idle');
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
-    // Data for dropdowns
     const [isLoadingOptions, setIsLoadingOptions] = useState(true);
     const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
     const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([]);
     const [allModules, setAllModules] = useState<Module[]>([]);
+
+    const isSubmitting = uploadPhase === 'creating' || uploadPhase === 'uploading';
 
     const fetchOptions = useCallback(async () => {
         setIsLoadingOptions(true);
@@ -50,8 +54,9 @@ const AdminCreateVideoPage: React.FC = () => {
                 setAllModules(modulesByCourse.flat());
             }
 
-        } catch (err: any) {
-            setError(err.message || "Could not load form options.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Could not load form options.';
+            setError(message);
         } finally {
             setIsLoadingOptions(false);
         }
@@ -90,42 +95,27 @@ const AdminCreateVideoPage: React.FC = () => {
             return;
         }
 
-        setIsSubmitting(true);
         setError(null);
         setUploadProgress(0);
+        setUploadPhase('creating');
 
         try {
             const payload: InitiateUploadPayload = {
                 title, description, courseIds, moduleIds, requiredPlans: requiredPlanIds
             };
-            const { uploadParameters, video } = await initiateVideoUpload(payload);
+            const { video } = await initiateVideoUpload(payload);
 
-            const upload = new tus.Upload(selectedFile, {
-                endpoint: `https://video.bunnycdn.com/tusupload`,
-                retryDelays: [0, 3000, 5000, 10000],
-                headers: {
-                    AuthorizationSignature: uploadParameters.authorizationSignature,
-                    AuthorizationExpire: String(uploadParameters.authorizationExpires),
-                    VideoId: uploadParameters.videoId,
-                    LibraryId: uploadParameters.libraryId,
-                },
-                metadata: { filetype: selectedFile.type, title },
-                onError: (error) => {
-                    setError(`Direct video upload failed: ${error.message}`);
-                    setIsSubmitting(false);
-                },
-                onProgress: (bytesUploaded, bytesTotal) => {
-                    setUploadProgress(Math.round((bytesUploaded / bytesTotal) * 100));
-                },
-                onSuccess: () => {
-                    alert(`Video "${title}" uploaded successfully! It will now be processed.`);
-                    navigate(`/admin/videos/edit/${video._id}`);
-                },
-            });
-            upload.start();
-        } catch (err: any) {
-            setError(err.message || "Could not start the upload process.");
-            setIsSubmitting(false);
+            setUploadPhase('uploading');
+            await uploadVideoFileAdmin(video._id, selectedFile, setUploadProgress);
+
+            setUploadPhase('done');
+            setUploadProgress(100);
+            alert(`Video "${title}" uploaded successfully. Transcoding has started — you can publish once processing finishes.`);
+            navigate(`/admin/videos/edit/${video._id}`);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Could not upload the video.';
+            setError(message);
+            setUploadPhase('idle');
         }
     };
 
@@ -136,6 +126,13 @@ const AdminCreateVideoPage: React.FC = () => {
             return courseIds.includes(moduleCourseId);
         });
     }, [courseIds, allModules]);
+
+    const progressLabel =
+        uploadPhase === 'creating'
+            ? 'Creating video record…'
+            : uploadPhase === 'uploading'
+              ? `Uploading to server… ${uploadProgress}%`
+              : '';
 
     if (isLoadingOptions) {
         return <Container sx={{ display: 'flex', justifyContent: 'center', my: 5 }}><CircularProgress /></Container>;
@@ -148,8 +145,11 @@ const AdminCreateVideoPage: React.FC = () => {
                 <MuiLink component={RouterLink} underline="hover" color="inherit" to="/admin/videos">Manage Videos</MuiLink>
                 <Typography color="text.primary">Create New Video</Typography>
             </Breadcrumbs>
-            <Typography variant="h4" component="h1" sx={{ mb: 3, fontWeight: 'bold' }}>
+            <Typography variant="h4" component="h1" sx={{ mb: 1, fontWeight: 'bold' }}>
                 Create and Upload New Video
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Videos are stored on this server and transcoded automatically after upload (HLS).
             </Typography>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -159,7 +159,17 @@ const AdminCreateVideoPage: React.FC = () => {
                         <TextField required fullWidth label="Video Title" value={title} onChange={(e) => setTitle(e.target.value)} disabled={isSubmitting} />
                     </Grid>
                     <Grid sx={{ width: '100%' }}>
-                        <TextField required fullWidth type="file" label="Video File" InputLabelProps={{ shrink: true }} onChange={handleFileChange} disabled={isSubmitting} />
+                        <TextField
+                            required
+                            fullWidth
+                            type="file"
+                            label="Video File"
+                            InputLabelProps={{ shrink: true }}
+                            inputProps={{ accept: 'video/*,.mp4,.mov,.mkv,.webm,.avi,.m4v' }}
+                            onChange={handleFileChange}
+                            disabled={isSubmitting}
+                            helperText={selectedFile ? `${selectedFile.name} (${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB)` : 'MP4, MOV, MKV, WebM, and other common formats'}
+                        />
                     </Grid>
                     <Grid sx={{ width: '100%' }}>
                         <TextField fullWidth label="Video Description" multiline rows={4} value={description} onChange={(e) => setDescription(e.target.value)} disabled={isSubmitting} />
@@ -194,14 +204,19 @@ const AdminCreateVideoPage: React.FC = () => {
                     </Grid>
                     <Grid sx={{ width: '100%' }}>
                         <Button type="submit" variant="contained" size="large" disabled={isSubmitting || !selectedFile}>
-                            {isSubmitting ? "Uploading..." : "Create & Upload Video"}
+                            {isSubmitting ? 'Uploading…' : 'Create & Upload Video'}
                         </Button>
                     </Grid>
                     {isSubmitting && (
                         <Grid sx={{ width: '100%' }}>
-                            <Box sx={{ width: '100%', mt: 2 }}>
-                                <LinearProgress variant="determinate" value={uploadProgress} />
-                                <Typography variant="caption" display="block" sx={{ textAlign: 'center', mt: 1 }}>{uploadProgress}%</Typography>
+                            <Box sx={{ width: '100%', mt: 1 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    {progressLabel}
+                                </Typography>
+                                <LinearProgress
+                                    variant={uploadPhase === 'uploading' ? 'determinate' : 'indeterminate'}
+                                    value={uploadPhase === 'uploading' ? uploadProgress : undefined}
+                                />
                             </Box>
                         </Grid>
                     )}

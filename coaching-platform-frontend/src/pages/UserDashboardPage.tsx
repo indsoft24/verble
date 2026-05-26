@@ -56,9 +56,7 @@ import { findTodaysGoldMedia } from '../utils/goldDailyContent';
 import {
     getDisplayMembershipLevel,
     getStreakForDisplayLevel,
-    getUnlockedLevels,
-    hasActiveGold,
-    hasActiveFullCourse,
+    hasTierAccess,
 } from '../utils/userAccessState';
 import { getFreeLeaderboard, getPaidLeaderboard, getMyRank, type LeaderboardEntry } from '../services/leaderboardService';
 import { getActiveOffers, type Offer } from '../services/offerService';
@@ -213,11 +211,10 @@ const UserDashboardPage: React.FC = () => {
     const activityTiles = useMemo(() => {
         if (!user) return null;
 
-        const unlocked = getUnlockedLevels(user);
-        const isBronzeUp = unlocked.includes('BRONZE');
-        const isSilverUp = unlocked.includes('SILVER');
-        const isGoldOrFull = hasActiveGold(user) || hasActiveFullCourse(user);
-        const tierHasFullCourse = hasActiveFullCourse(user);
+        const isBronzeUp = hasTierAccess(user, 'BRONZE');
+        const isSilverUp = hasTierAccess(user, 'SILVER');
+        const isGoldOrFull = hasTierAccess(user, 'GOLD');
+        const tierHasFullCourse = hasTierAccess(user, 'FULL_COURSE');
 
         const freeTiles: ActivityTileConfig[] = [
             tile('word', 'Word of the Day', 'Vocabulary & pronunciation', <TranslateIcon />, TIER_COLORS.FREE, wordContent, 'word'),
@@ -318,7 +315,6 @@ const UserDashboardPage: React.FC = () => {
 
     const displayLevel = getDisplayMembershipLevel(user);
     const displayStreak = getStreakForDisplayLevel(user);
-    const unlockedLevels = getUnlockedLevels(user);
 
     if (selectedActivity && activityKind) {
         const meta = selectedActivity.metadata || {};
@@ -581,7 +577,7 @@ const UserDashboardPage: React.FC = () => {
                             setSelectedLevel(null);
                         }}
                         level={selectedLevel}
-                        isUnlocked={unlockedLevels.includes(selectedLevel)}
+                        isUnlocked={hasTierAccess(user, selectedLevel)}
                     />
                 )}
             </Container>

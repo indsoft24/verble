@@ -1,5 +1,6 @@
 import SubscriptionPlan from '../models/SubscriptionPlan.js';
 import User from '../models/User.js';
+import { updateUnlockedLevelsFromSubscriptions } from './subscriptionAccessService.js';
 
 const FREE_FOUNDATION_NAME = 'Free Foundation';
 
@@ -55,11 +56,7 @@ export const assignFreeFoundationToUser = async (userId) => {
         paymentDetails: { gateway: 'system' },
     });
 
-    if (!user.unlockedLevels?.includes('FREE')) {
-        user.unlockedLevels = [...(user.unlockedLevels || []), 'FREE'];
-    }
-    user.membershipLevel = user.membershipLevel || 'FREE';
-
     await user.save({ validateBeforeSave: false });
-    return user;
+    await updateUnlockedLevelsFromSubscriptions(userId);
+    return User.findById(userId);
 };

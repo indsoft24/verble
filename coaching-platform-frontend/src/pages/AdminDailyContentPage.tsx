@@ -22,7 +22,8 @@ import {
     Chip,
     IconButton,
     Paper,
-
+    Tabs,
+    Tab,
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -34,11 +35,22 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import {
     getAllDailyContentAdmin,
+    getDailyContentSequencePreviewAdmin,
     createDailyContentAdmin,
     updateDailyContentAdmin,
     deleteDailyContentAdmin,
-    type CreateDailyContentPayload
+    type CreateDailyContentPayload,
+    type DailyContentPagination,
+    type DailyContentAdminListParams,
+    type DailyContentSequencePreview,
 } from '../services/dailyContentAdminService';
+import { buildAutoDisplayTitle, getDisplayTag } from '../utils/dailyContentDisplayNumber';
+import AdminDailyContentBrowsePanel, {
+    defaultBrowseFilters,
+    type BrowseFilters,
+} from '../components/admin/AdminDailyContentBrowsePanel';
+import ViewDayIcon from '@mui/icons-material/ViewDay';
+import TableRowsIcon from '@mui/icons-material/TableRows';
 import type { DailyContent } from '../services/dailyContentService';
 import { getContentTypeConfig, type ContentType } from '../utils/contentTypeConfig';
 import {
@@ -61,10 +73,19 @@ import Switch from '@mui/material/Switch';
 type DailyContentFormState = Partial<CreateDailyContentPayload> & {
     _id?: string;
     adminKey: AdminContentTypeKey;
+    sequenceNumber?: number;
 };
 
+type ViewMode = 'daily' | 'browse';
+
 const AdminDailyContentPage: React.FC = () => {
+    const [viewMode, setViewMode] = useState<ViewMode>('daily');
     const [content, setContent] = useState<DailyContent[]>([]);
+    const [browseContent, setBrowseContent] = useState<DailyContent[]>([]);
+    const [browsePagination, setBrowsePagination] = useState<DailyContentPagination | null>(null);
+    const [browseFilters, setBrowseFilters] = useState<BrowseFilters>(defaultBrowseFilters);
+    const [browsePage, setBrowsePage] = useState(0);
+    const [browseRowsPerPage, setBrowseRowsPerPage] = useState(25);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
@@ -75,16 +96,40 @@ const AdminDailyContentPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+    const [sequenceInfo, setSequenceInfo] = useState<DailyContentSequencePreview | null>(null);
+    const [sequenceLoading, setSequenceLoading] = useState(false);
 
-    const fetchContent = useCallback(async () => {
+    const buildBrowseParams = useCallback(
+        (filters: BrowseFilters, pageIndex: number, rows: number): DailyContentAdminListParams => {
+            const params: DailyContentAdminListParams = {
+                page: pageIndex + 1,
+                limit: rows,
+                sortOrder: filters.sortOrder,
+            };
+            if (filters.startDate) {
+                params.startDate = format(filters.startDate, 'yyyy-MM-dd');
+            }
+            if (filters.endDate) {
+                params.endDate = format(filters.endDate, 'yyyy-MM-dd');
+            }
+            if (filters.level) params.level = filters.level;
+            if (filters.type) params.type = filters.type;
+            if (filters.search.trim()) params.search = filters.search.trim();
+            if (filters.isActive) params.isActive = filters.isActive;
+            return params;
+        },
+        []
+    );
+
+    const fetchDailyContent = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const params: any = {};
+            const params: DailyContentAdminListParams = {};
             if (selectedDate) {
                 params.date = format(selectedDate, 'yyyy-MM-dd');
             }
-            const data = await getAllDailyContentAdmin(params);
+            const { content: data } = await getAllDailyContentAdmin(params);
             setContent(data);
         } catch (err: any) {
             setError(err.message || 'Failed to load daily content.');
@@ -93,9 +138,115 @@ const AdminDailyContentPage: React.FC = () => {
         }
     }, [selectedDate]);
 
+    const fetchBrowseContent = useCallback(
+        async (filtersOverride?: BrowseFilters, pageIndex?: number) => {
+            const filters = filtersOverride ?? browseFilters;
+            const pageIdx = pageIndex ?? browsePage;
+            setIsLoading(true);
+            setError(null);
+            try {
+                const result = await getAllDailyContentAdmin(
+                    buildBrowseParams(filters, pageIdx, browseRowsPerPage)
+                );
+                setBrowseContent(result.content);
+                setBrowsePagination(result.pagination ?? null);
+            } catch (err: any) {
+                setError(err.message || 'Failed to load content.');
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [browseFilters, browsePage, browseRowsPerPage, buildBrowseParams]
+    );
+
+    const handleApplyBrowseFilters = (patch?: Partial<BrowseFilters>) => {
+        const merged = patch ? { ...browseFilters, ...patch } : browseFilters;
+        if (patch) {
+            setBrowseFilters(merged);
+        }
+        setBrowsePage(0);
+        fetchBrowseContent(merged, 0);
+    };
+
+    const handleResetBrowseFilters = () => {
+        const defaults = defaultBrowseFilters();
+        setBrowseFilters(defaults);
+        setBrowsePage(0);
+        fetchBrowseContent(defaults, 0);
+    };
+
+    const refreshCurrentView = useCallback(() => {
+        if (viewMode === 'daily') {
+            fetchDailyContent();
+        } else {
+            fetchBrowseContent();
+        }
+    }, [viewMode, fetchDailyContent, fetchBrowseContent]);
+
     useEffect(() => {
-        fetchContent();
-    }, [fetchContent]);
+        if (viewMode === 'daily') {
+            fetchDailyContent();
+        }
+    }, [viewMode, fetchDailyContent]);
+
+    useEffect(() => {
+        if (viewMode === 'browse') {
+            fetchBrowseContent();
+        }
+    }, [viewMode, fetchBrowseContent]);
+
+    useEffect(() => {
+        if (!openDialog || !currentContent) {
+            setSequenceInfo(null);
+            return;
+        }
+
+        const entry = getCatalogEntry(currentContent.adminKey);
+        const apiType = entry.apiType;
+        const catalogLevel = entry.level;
+        const puzzleType =
+            entry.puzzleType ||
+            (currentContent.metadata as { puzzleType?: string } | undefined)?.puzzleType;
+
+        if (isEditMode && currentContent.sequenceNumber) {
+            const seq = currentContent.sequenceNumber;
+            setSequenceInfo({
+                sequenceNumber: seq,
+                displayTag: getDisplayTag(seq),
+                displayTitle:
+                    currentContent.title?.trim() ||
+                    buildAutoDisplayTitle(apiType, seq, currentContent.metadata as Record<string, unknown>),
+                level: currentContent.level || catalogLevel,
+            });
+            setSequenceLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+        setSequenceLoading(true);
+        getDailyContentSequencePreviewAdmin(apiType, catalogLevel, puzzleType)
+            .then((data) => {
+                if (!cancelled) setSequenceInfo(data);
+            })
+            .catch(() => {
+                if (!cancelled) setSequenceInfo(null);
+            })
+            .finally(() => {
+                if (!cancelled) setSequenceLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        openDialog,
+        isEditMode,
+        currentContent?.adminKey,
+        currentContent?.sequenceNumber,
+        currentContent?.title,
+        currentContent?.level,
+        currentContent?.metadata,
+    ]);
 
     const handleOpenDialog = (contentItem?: DailyContent) => {
         if (contentItem) {
@@ -112,6 +263,7 @@ const AdminDailyContentPage: React.FC = () => {
                 date: contentItem.date,
                 level: contentItem.level,
                 title: contentItem.title,
+                sequenceNumber: contentItem.sequenceNumber,
                 metadata: meta,
                 isActive: contentItem.isActive,
             });
@@ -175,6 +327,19 @@ const AdminDailyContentPage: React.FC = () => {
                 setFormError('Puzzle must have exactly 5 questions.');
                 return;
             }
+            for (let i = 0; i < questions.length; i++) {
+                const q = questions[i] as { question?: string; prompt?: string; options?: string[] };
+                const text = String(q.question ?? q.prompt ?? '').trim();
+                const opts = (q.options || []).map((o) => String(o).trim()).filter(Boolean);
+                if (!text) {
+                    setFormError(`Question ${i + 1}: question text is required.`);
+                    return;
+                }
+                if (opts.length < 2) {
+                    setFormError(`Question ${i + 1}: add at least two answer choices.`);
+                    return;
+                }
+            }
         }
 
         // Validate metadata based on type
@@ -207,6 +372,18 @@ const AdminDailyContentPage: React.FC = () => {
         }
 
         const payload = { ...currentContent };
+        if (payload.type === 'PUZZLE' && payload.metadata?.questions) {
+            payload.metadata = {
+                ...payload.metadata,
+                questions: (payload.metadata.questions as { question?: string; prompt?: string; options?: string[]; correct_idx?: number }[]).map(
+                    (q) => ({
+                        question: String(q.question ?? q.prompt ?? '').trim(),
+                        options: (q.options || []).map((o) => String(o).trim()),
+                        correct_idx: q.correct_idx ?? 0,
+                    })
+                ),
+            };
+        }
         if (payload.type === 'SCENE') {
             const headline = String(payload.metadata?.title || payload.title || '').trim();
             if (headline) {
@@ -229,7 +406,7 @@ const AdminDailyContentPage: React.FC = () => {
             } else {
                 await createDailyContentAdmin(payload as CreateDailyContentPayload);
             }
-            fetchContent();
+            refreshCurrentView();
             handleCloseDialog();
         } catch (err: any) {
             setFormError(err.response?.data?.message || err.message || 'Failed to save content.');
@@ -243,7 +420,7 @@ const AdminDailyContentPage: React.FC = () => {
         setIsSubmitting(true);
         try {
             await deleteDailyContentAdmin(deleteId);
-            fetchContent();
+            refreshCurrentView();
             setDeleteId(null);
         } catch (err: any) {
             setError(err.message || 'Failed to delete content.');
@@ -286,6 +463,7 @@ const AdminDailyContentPage: React.FC = () => {
         return (
             <AdminDailyContentMetadataForm
                 type={currentContent.type || 'WORD'}
+                adminKey={currentContent.adminKey}
                 metadata={(currentContent.metadata || {}) as Record<string, unknown>}
                 displayTitle={currentContent.title || ''}
                 onDisplayTitleChange={(value) =>
@@ -322,8 +500,45 @@ const AdminDailyContentPage: React.FC = () => {
                     </Box>
                 </Box>
 
-                {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+                {error && viewMode === 'daily' && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
+                <Paper elevation={0} sx={{ mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                    <Tabs
+                        value={viewMode}
+                        onChange={(_, value: ViewMode) => setViewMode(value)}
+                        sx={{ px: 2, borderBottom: 1, borderColor: 'divider' }}
+                    >
+                        <Tab icon={<ViewDayIcon />} iconPosition="start" label="Daily schedule" value="daily" />
+                        <Tab icon={<TableRowsIcon />} iconPosition="start" label="Browse all content" value="browse" />
+                    </Tabs>
+                    <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
+                        <Typography variant="body2" color="text.secondary">
+                            {viewMode === 'daily'
+                                ? 'Plan and edit the 12 content slots for a single day.'
+                                : 'Search, filter by date range, and paginate through all scheduled content.'}
+                        </Typography>
+                    </Box>
+                </Paper>
+
+                {viewMode === 'browse' ? (
+                    <AdminDailyContentBrowsePanel
+                        content={browseContent}
+                        pagination={browsePagination}
+                        isLoading={isLoading}
+                        error={error}
+                        filters={browseFilters}
+                        page={browsePage}
+                        rowsPerPage={browseRowsPerPage}
+                        onFiltersChange={(patch) => setBrowseFilters((prev) => ({ ...prev, ...patch }))}
+                        onPageChange={setBrowsePage}
+                        onRowsPerPageChange={setBrowseRowsPerPage}
+                        onApplyFilters={handleApplyBrowseFilters}
+                        onResetFilters={handleResetBrowseFilters}
+                        onEdit={handleOpenDialog}
+                        onDelete={setDeleteId}
+                    />
+                ) : (
+                    <>
                 {/* Calendar/Date Picker */}
                 <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -493,9 +708,16 @@ const AdminDailyContentPage: React.FC = () => {
                         )}
                     </Box>
                 )}
+                    </>
+                )}
 
                 {/* Add/Edit Dialog */}
-                <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+                <Dialog
+                    open={openDialog}
+                    onClose={handleCloseDialog}
+                    maxWidth={currentContent?.type === 'PUZZLE' ? 'lg' : 'md'}
+                    fullWidth
+                >
                     <DialogTitle>{isEditMode ? 'Edit Daily Content' : 'Add New Daily Content'}</DialogTitle>
                     <DialogContent dividers sx={{ pt: 2 }}>
                         {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
@@ -535,8 +757,51 @@ const AdminDailyContentPage: React.FC = () => {
                                     </LocalizationProvider>
                                 </Grid>
                                 <Grid size={{ xs: 12 }}>
-                                    <Alert severity="info">
-                                        Level and display title (#1111+) are assigned automatically when you save.
+                                    <Alert
+                                        severity="info"
+                                        icon={false}
+                                        sx={{
+                                            '& .MuiAlert-message': { width: '100%' },
+                                        }}
+                                    >
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                alignItems: 'center',
+                                                gap: 1.5,
+                                            }}
+                                        >
+                                            {sequenceLoading ? (
+                                                <CircularProgress size={20} />
+                                            ) : sequenceInfo ? (
+                                                <Chip
+                                                    label={sequenceInfo.displayTag}
+                                                    color="primary"
+                                                    sx={{
+                                                        fontFamily: 'monospace',
+                                                        fontWeight: 700,
+                                                        fontSize: '0.95rem',
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <Box sx={{ flex: 1, minWidth: 200 }}>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {isEditMode
+                                                        ? 'Display number & level'
+                                                        : 'Next display number on save'}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {sequenceLoading
+                                                        ? 'Calculating next number…'
+                                                        : sequenceInfo
+                                                          ? isEditMode
+                                                            ? `Level ${sequenceInfo.level}. Display title: ${sequenceInfo.displayTitle}. This number is fixed for this item.`
+                                                            : `Level ${sequenceInfo.level} is assigned automatically. Saving will use display title ${sequenceInfo.displayTitle} unless you enter a custom title (e.g. story headline).`
+                                                          : 'Could not preview the display number. It will still be assigned when you save.'}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
                                     </Alert>
                                 </Grid>
                                 {isEditMode && (
@@ -571,7 +836,7 @@ const AdminDailyContentPage: React.FC = () => {
                     onClose={() => setBulkDialogOpen(false)}
                     onImported={() => {
                         setBulkDialogOpen(false);
-                        fetchContent();
+                        refreshCurrentView();
                     }}
                     calendarDate={selectedDate}
                 />
