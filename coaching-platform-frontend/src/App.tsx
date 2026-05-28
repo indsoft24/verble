@@ -17,6 +17,7 @@ import { getLanguageChoiceMade } from './i18n/config';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import { isUserAppRoute } from './constants/userAppRoutes';
 
 // --- Lazy Loaded Pages (Code Splitting) ---
 // Public Pages
@@ -119,10 +120,7 @@ function AppContent() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             {/* Only show Navbar and Footer for non-admin and non-user dashboard routes */}
-            {!location.pathname.startsWith('/admin') &&
-                !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications', '/professional-conversations'].some(path =>
-                    location.pathname === path || location.pathname.startsWith(path + '/')
-                ) && <Navbar />}
+            {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <Navbar />}
 
             <Box component="main" sx={{ flexGrow: 1 }}>
                 <Suspense fallback={<PageLoader />}>
@@ -217,10 +215,7 @@ function AppContent() {
             </Box>
 
             {/* Only show Footer for non-admin and non-user dashboard routes */}
-            {!location.pathname.startsWith('/admin') &&
-                !['/dashboard', '/profile', '/my-courses', '/videos', '/my-subscription', '/notifications', '/professional-conversations'].some(path =>
-                    location.pathname === path || location.pathname.startsWith(path + '/')
-                ) && <Footer />}
+            {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <Footer />}
             {/* Chatbot: keep code, hide it from dashboards/admin */}
             {!location.pathname.startsWith('/admin') &&
                 location.pathname !== '/dashboard' && (

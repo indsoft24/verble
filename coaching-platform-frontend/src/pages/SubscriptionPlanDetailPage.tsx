@@ -19,6 +19,7 @@ import {
 } from '../services/subscriptionService';
 import apiClient from '../services/apiClient';
 import { getImageUrl, getSplashImageUrl } from '../utils/imageUtils';
+import UserLayout from '../components/layout/UserLayout';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -181,44 +182,51 @@ const SubscriptionPlanDetailPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-                <CircularProgress />
-            </Container>
+            <UserLayout title="Plan Details">
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '40vh' }}>
+                    <CircularProgress />
+                </Box>
+            </UserLayout>
         );
     }
 
     if (error && !plan) {
         return (
-            <Container sx={{ mt: 4 }}>
-                <Alert severity="error">{error}</Alert>
-                <Button
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => navigate('/subscription-plans')}
-                    sx={{ mt: 2 }}
-                >
-                    Back to Plans
-                </Button>
-            </Container>
+            <UserLayout title="Plan Details">
+                <Container maxWidth="lg">
+                    <Alert severity="error">{error}</Alert>
+                    <Button
+                        startIcon={<ArrowBackIcon />}
+                        onClick={() => navigate('/subscription-plans')}
+                        sx={{ mt: 2 }}
+                    >
+                        Back to Plans
+                    </Button>
+                </Container>
+            </UserLayout>
         );
     }
 
     if (!plan) {
         return (
-            <Container sx={{ mt: 4 }}>
-                <Alert severity="warning">Plan not found.</Alert>
-                <Button
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => navigate('/subscription-plans')}
-                    sx={{ mt: 2 }}
-                >
-                    Back to Plans
-                </Button>
-            </Container>
+            <UserLayout title="Plan Details">
+                <Container maxWidth="lg">
+                    <Alert severity="warning">Plan not found.</Alert>
+                    <Button
+                        startIcon={<ArrowBackIcon />}
+                        onClick={() => navigate('/subscription-plans')}
+                        sx={{ mt: 2 }}
+                    >
+                        Back to Plans
+                    </Button>
+                </Container>
+            </UserLayout>
         );
     }
 
     return (
-        <Container maxWidth="lg" sx={{ my: 4 }}>
+        <UserLayout title={plan.name}>
+        <Container maxWidth="lg">
             <Button
                 startIcon={<ArrowBackIcon />}
                 onClick={() => navigate('/subscription-plans')}
@@ -386,6 +394,7 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                 </Grid>
             </Grid>
         </Container>
+        </UserLayout>
     );
 };
 

@@ -143,7 +143,6 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                                 e.target.value
                                     .split(',')
                                     .map((s) => s.trim())
-                                    .filter(Boolean)
                             )
                         }
                         helperText="Separate words with commas."
@@ -160,7 +159,6 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                                 e.target.value
                                     .split(',')
                                     .map((s) => s.trim())
-                                    .filter(Boolean)
                             )
                         }
                     />

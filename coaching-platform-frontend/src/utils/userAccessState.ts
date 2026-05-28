@@ -91,8 +91,15 @@ export const getHighestActivePaidTier = (user: User): MembershipTier => {
 
 /** Union of stored unlockedLevels and levels implied by active paid subscriptions. */
 export const getEffectiveUnlockedLevels = (user: User): string[] => {
+    // Admin hard-reset safeguard: when backend marks user FREE and no paid plan is active,
+    // do not trust stale cached unlockedLevels from old sessions.
+    const highestPaid = getHighestActivePaidTier(user);
+    if (highestPaid === 'FREE' && user.membershipLevel === 'FREE') {
+        return ['FREE'];
+    }
+
     const stored = getUnlockedLevels(user);
-    const fromSubs = expandLevelsForTier(getHighestActivePaidTier(user));
+    const fromSubs = expandLevelsForTier(highestPaid);
     return [...new Set([...stored, ...fromSubs])];
 };
 
@@ -106,7 +113,7 @@ export const getDisplayMembershipLevel = (user: User): MembershipTier => {
     if (hasActiveFullCourse(user)) return 'FULL_COURSE';
     if (hasActiveGold(user)) return 'GOLD';
 
-    const levels = getUnlockedLevels(user);
+    const levels = getEffectiveUnlockedLevels(user);
     if (levels.includes('SILVER')) return 'SILVER';
     if (levels.includes('BRONZE')) return 'BRONZE';
     return 'FREE';

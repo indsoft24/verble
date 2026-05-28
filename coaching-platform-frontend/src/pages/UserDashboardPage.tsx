@@ -381,17 +381,26 @@ const UserDashboardPage: React.FC = () => {
 
     return (
         <UserLayout title="Dashboard">
-            <Container maxWidth="xl">
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, gap: 2 }}>
-                    <Box>
-                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#0f172a' }}>
+            <Container maxWidth="xl" sx={{ px: { xs: 0, sm: 2 } }}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        justifyContent: 'space-between',
+                        alignItems: { xs: 'flex-start', sm: 'flex-start' },
+                        mb: 3,
+                        gap: 2,
+                    }}
+                >
+                    <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#0f172a', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                             Welcome back, {user.name}!
                         </Typography>
                         <Typography variant="body1" color="text.secondary">
                             Continue your English learning journey
                         </Typography>
                     </Box>
-                    <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                    <Box sx={{ textAlign: { xs: 'left', sm: 'right' }, flexShrink: 0, width: { xs: '100%', sm: 'auto' } }}>
                         <Box
                             component="img"
                             src="/verble-logo.png"
@@ -401,7 +410,7 @@ const UserDashboardPage: React.FC = () => {
                             }}
                             sx={{ height: 48, width: 'auto', mb: 1 }}
                         />
-                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: { xs: 'flex-start', sm: 'flex-end' }, flexWrap: 'wrap' }}>
                             <Chip
                                 label={displayLevel.replace('_', ' ')}
                                 color={getLevelBadgeColor(displayLevel)}

@@ -148,7 +148,9 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
         try {
             const updatedUser = await adminRemoveSubscriptionFromUserService(userId, subInstanceToDelete._id);
             setUser(updatedUser);
-            setSuccess(`Subscription instance for '${subInstanceToDelete.planName || (typeof subInstanceToDelete.planId === 'object' ? (subInstanceToDelete.planId as SubscriptionPlan)?.name : 'Selected Plan')}' removed successfully.`);
+            setSuccess(
+                `Subscription removed. User has been reset to FREE with 0-day streak (Bronze/Silver locked).`
+            );
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to remove subscription instance.');
         } finally {

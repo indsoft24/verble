@@ -2,7 +2,10 @@ import asyncHandler from 'express-async-handler';
 import User from '../models/User.js';
 import { formatMobileNumber, validateMobileNumber } from '../utils/smsService.js';
 import { assignFreeFoundationToUser } from '../services/defaultSubscriptionService.js';
-import { updateUnlockedLevelsFromSubscriptions } from '../services/subscriptionAccessService.js';
+import {
+    forceFreeResetForAdminDowngrade,
+    updateUnlockedLevelsFromSubscriptions,
+} from '../services/subscriptionAccessService.js';
 import { issueLoginPinForUser } from './phonePinAuthController.js';
 import SubscriptionPlan from '../models/SubscriptionPlan.js';
 import Video from '../models/Video.js';
@@ -364,11 +367,16 @@ export const removeSubscriptionFromUser = asyncHandler(async (req, res) => {
     );
     await user.save();
 
-    await updateUnlockedLevelsFromSubscriptions(user._id);
+    // Admin-selected downgrade path: hard reset learner to FREE + 0-day.
+    await forceFreeResetForAdminDowngrade(user._id);
 
     const populated = await User.findById(user._id)
         .select('-password -loginPin')
         .populate({ path: 'subscriptions.planId', model: 'SubscriptionPlan' });
 
-    res.status(200).json({ status: 'success', data: { user: sanitizeUser(populated) } });
+    res.status(200).json({
+        status: 'success',
+        message: 'Subscription removed. User reset to FREE with 0-day streak.',
+        data: { user: sanitizeUserForAdminDetail(populated) },
+    });
 });

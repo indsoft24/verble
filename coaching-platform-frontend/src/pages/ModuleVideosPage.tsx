@@ -26,6 +26,7 @@ import parse from 'html-react-parser';
 import { getPublishedModuleWithVideosForUser, type ModuleDetailUser, type VideoListItemForModulePage } from '../services/courseUserService';
 import { extractId } from '../utils/idUtils';
 import { getSplashImageUrl, resolveBackendMediaUrl, getImageUrl } from '../utils/imageUtils';
+import UserLayout from '../components/layout/UserLayout';
 
 function formatDuration(totalSeconds: number): string {
     const s = Math.max(0, Math.floor(totalSeconds));
@@ -130,28 +131,34 @@ const ModuleVideosPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <Box sx={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                <CircularProgress size={28} />
-                <Typography color="text.secondary">Loading lessons…</Typography>
-            </Box>
+            <UserLayout title="Module Videos">
+                <Box sx={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                    <CircularProgress size={28} />
+                    <Typography color="text.secondary">Loading lessons…</Typography>
+                </Box>
+            </UserLayout>
         );
     }
 
     if (error) {
         return (
-            <Container maxWidth="sm" sx={{ mt: 6 }}>
-                <Alert severity="error" action={<Button onClick={fetchModuleData}>Retry</Button>}>
-                    {error}
-                </Alert>
-            </Container>
+            <UserLayout title="Module Videos">
+                <Container maxWidth="sm">
+                    <Alert severity="error" action={<Button onClick={fetchModuleData}>Retry</Button>}>
+                        {error}
+                    </Alert>
+                </Container>
+            </UserLayout>
         );
     }
 
     if (!moduleDetails) {
         return (
-            <Container maxWidth="sm" sx={{ mt: 6 }}>
-                <Alert severity="info">This module is not available.</Alert>
-            </Container>
+            <UserLayout title="Module Videos">
+                <Container maxWidth="sm">
+                    <Alert severity="info">This module is not available.</Alert>
+                </Container>
+            </UserLayout>
         );
     }
 
@@ -162,8 +169,9 @@ const ModuleVideosPage: React.FC = () => {
     const sortedVideos = [...videos].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     return (
-        <Box sx={{ bgcolor: 'grey.50', minHeight: '100vh', pb: { xs: 6, md: 8 } }}>
-            <Container maxWidth="lg" sx={{ pt: { xs: 2, sm: 3 } }}>
+        <UserLayout title={moduleDetails.title || 'Module Videos'}>
+        <Box sx={{ pb: { xs: 4, md: 6 } }}>
+            <Container maxWidth="lg" disableGutters sx={{ px: { xs: 0, sm: 2 } }}>
                 <Breadcrumbs
                     aria-label="breadcrumb"
                     sx={{ mb: 3, '& .MuiBreadcrumbs-separator': { color: 'text.disabled' } }}
@@ -564,6 +572,7 @@ const ModuleVideosPage: React.FC = () => {
                 ) : undefined}
             </Snackbar>
         </Box>
+        </UserLayout>
     );
 };
 

@@ -1,37 +1,44 @@
 import React from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
-import { Snackbar, Alert, Box } from '@mui/material';
+import { Alert, Box } from '@mui/material';
 
 const NotificationContainer: React.FC = () => {
     const { notifications, removeNotification } = useNotification();
+
+    if (notifications.length === 0) return null;
 
     return (
         <Box
             sx={{
                 position: 'fixed',
-                top: 20,
-                right: 20,
                 zIndex: 9999,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 1,
+                pointerEvents: 'none',
+                top: { xs: 16, sm: 20 },
+                right: { xs: 16, sm: 20 },
+                left: { xs: 16, sm: 'auto' },
+                alignItems: { xs: 'stretch', sm: 'flex-end' },
+                maxWidth: { xs: 'none', sm: 420 },
             }}
         >
-            {notifications.map(notification => (
-                <Snackbar
+            {notifications.map((notification) => (
+                <Alert
                     key={notification.id}
-                    open={true}
-                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    onClose={() => removeNotification(notification.id)}
+                    severity={notification.type}
+                    variant="filled"
+                    sx={{
+                        pointerEvents: 'auto',
+                        width: '100%',
+                        maxWidth: { xs: '100%', sm: 400 },
+                        wordBreak: 'break-word',
+                        boxShadow: 3,
+                    }}
                 >
-                    <Alert
-                        onClose={() => removeNotification(notification.id)}
-                        severity={notification.type}
-                        variant="filled"
-                        sx={{ width: '100%' }}
-                    >
-                        {notification.message}
-                    </Alert>
-                </Snackbar>
+                    {notification.message}
+                </Alert>
             ))}
         </Box>
     );

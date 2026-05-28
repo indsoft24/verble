@@ -54,14 +54,18 @@ const LoginPage: React.FC = () => {
                 sx={{
                     minHeight: '100vh',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     py: 4,
+                    px: 2,
+                    width: '100%',
+                    boxSizing: 'border-box',
                     background: 'linear-gradient(160deg, #f0f4ff 0%, #ffffff 45%, #e8f5e9 100%)',
                 }}
             >
                 {pinSent && (
-                    <Alert severity="success" sx={{ mb: 2, maxWidth: 400 }}>
+                    <Alert severity="success" sx={{ mb: 2, width: '100%', maxWidth: 400 }}>
                         {t('auth.pinEmailedAfterVerify')}
                     </Alert>
                 )}

@@ -8,8 +8,6 @@ import './index.css'
 import { AuthProvider } from './contexts/AuthContext'; 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
-import NotificationContainer from './components/common/NotificationContainer.tsx';
-
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,7 +27,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <AuthProvider> 
       <QueryClientProvider client={queryClient}>
         <NotificationProvider>
-        <NotificationContainer />
         <App />
         </NotificationProvider>
       </QueryClientProvider>

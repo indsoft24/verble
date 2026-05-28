@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import { brandAssets } from '../../assets/brandAssets';
+import { normalizeAndValidatePhone } from '../../utils/phoneUtils';
 
 const PIN_LENGTH = 6;
 
@@ -43,8 +44,9 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
     }, []);
 
     const pin = pinDigits.join('');
+    const phoneCheck = normalizeAndValidatePhone(phoneNumber);
     const canSubmit =
-        phoneNumber.trim().length >= 10 &&
+        phoneCheck.valid &&
         pin.length === PIN_LENGTH &&
         agreedToTerms &&
         !isLoading;
@@ -78,15 +80,16 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        if (!canSubmit) return;
-        await onSubmit(phoneNumber.trim(), pin, agreedToTerms);
+        if (!canSubmit || !phoneCheck.formatted) return;
+        await onSubmit(phoneCheck.formatted, pin, agreedToTerms);
     };
 
     const handleForgotPin = useCallback(async () => {
-        if (!phoneNumber.trim() || phoneNumber.trim().length < 10) return;
+        const { formatted, valid } = normalizeAndValidatePhone(phoneNumber);
+        if (!valid || !formatted) return;
         setForgotLoading(true);
         try {
-            await onForgotPin(phoneNumber.trim());
+            await onForgotPin(formatted);
         } finally {
             setForgotLoading(false);
         }
@@ -105,7 +108,8 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
                     width: '100%',
                     maxWidth: 400,
                     mx: 'auto',
-                    px: 2,
+                    px: { xs: 1, sm: 0 },
+                    boxSizing: 'border-box',
                 }}
             >
                 <Fade in={showForm} timeout={700}>
@@ -161,9 +165,10 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
                     onPaste={handlePinPaste}
                     sx={{
                         display: 'flex',
-                        gap: 1,
+                        gap: { xs: 0.5, sm: 1 },
                         justifyContent: 'center',
                         width: '100%',
+                        maxWidth: 360,
                         mb: 2,
                     }}
                 >
@@ -190,7 +195,10 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
                                 'aria-label': `${t('auth.loginPin')} ${index + 1}`,
                             }}
                             sx={{
-                                width: 48,
+                                flex: '1 1 0',
+                                minWidth: 0,
+                                maxWidth: 48,
+                                width: '100%',
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: 2,
                                     animation: digit ? 'pinPop 0.2s ease-out' : 'none',
@@ -245,7 +253,12 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
                     size="small"
                     disabled={isLoading || forgotLoading || phoneNumber.trim().length < 10}
                     onClick={() => void handleForgotPin()}
-                    sx={{ mb: 1 }}
+                    sx={{
+                        mb: 1,
+                        textAlign: 'center',
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                        whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                    }}
                 >
                     {forgotLoading ? <CircularProgress size={20} /> : t('auth.forgotPin')}
                 </Button>

@@ -2,11 +2,10 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Container, Typography, Button,
-    CircularProgress, Alert, Box, Paper, Chip, Card, CardContent
+    CircularProgress, Alert, Box, Chip, Card, CardContent
 } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import StarIcon from '@mui/icons-material/Star';
-import FilterListIcon from '@mui/icons-material/FilterList';
 import ExploreIcon from '@mui/icons-material/Explore';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import {
@@ -15,13 +14,13 @@ import {
     getMySubscriptionDetailsUser,
     type UserSubscriptionInstance
 } from '../services/subscriptionService';
-import { 
+import {
     getActiveSubscriptionPlans,
     type SubscriptionPlanPublic,
-    getFilterOptions 
 } from '../services/subscriptionPlanService';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl, getSplashImageUrl } from '../utils/imageUtils';
+import UserLayout from '../components/layout/UserLayout';
 
 const SubscriptionPlansPage: React.FC = () => {
     const navigate = useNavigate();
@@ -33,29 +32,15 @@ const SubscriptionPlansPage: React.FC = () => {
     const [subscribeError, setSubscribeError] = useState<string | null>(null);
     const [subscribeSuccess, setSubscribeSuccess] = useState<string | null>(null);
     
-    // Filter states
-    const [selectedTopic, setSelectedTopic] = useState<string>('');
-    const [selectedSubTopic, setSelectedSubTopic] = useState<string>('');
-    const [filterOptions, setFilterOptions] = useState<{ topics: string[]; subTopicsByTopic: Record<string, string[]> }>({
-        topics: [],
-        subTopicsByTopic: {}
-    });
-
     const { user, refreshUser } = useAuth();
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
-            // Fetch plans and user's current subscriptions simultaneously for the most up-to-date view
-            const filters = {
-                ...(selectedTopic && { topic: selectedTopic }),
-                ...(selectedSubTopic && { subTopic: selectedSubTopic })
-            };
-            
             const [fetchedPlans, userSubs] = await Promise.all([
-                getActiveSubscriptionPlans(filters),
-                getMySubscriptionDetailsUser()
+                getActiveSubscriptionPlans(),
+                getMySubscriptionDetailsUser(),
             ]);
             setPlans(fetchedPlans || []);
             setCurrentUserSubscriptions(userSubs || []);
@@ -64,35 +49,11 @@ const SubscriptionPlansPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedTopic, selectedSubTopic]);
+    }, []);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
-
-    // Load filter options on component mount
-    useEffect(() => {
-        const loadFilterOptions = async () => {
-            try {
-                const options = await getFilterOptions();
-                setFilterOptions(options);
-            } catch (err: any) {
-                // Silently fail
-            }
-        };
-        loadFilterOptions();
-    }, []);
-
-    // Handle subTopic change
-    const handleSubTopicChange = (subTopic: string) => {
-        setSelectedSubTopic(subTopic);
-    };
-
-    // Clear all filters
-    const clearFilters = () => {
-        setSelectedTopic('');
-        setSelectedSubTopic('');
-    };
 
     const handleSubscribe = async (plan: SubscriptionPlanPublic) => {
         if (!user) {
@@ -111,7 +72,7 @@ const SubscriptionPlansPage: React.FC = () => {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Public Key ID from .env
                 amount: order.amount, // Amount in the smallest currency unit (e.g., paise)
                 currency: order.currency,
-                name: 'First IAS Institute',
+                name: 'Verble',
                 description: `Payment for ${plan.name}`,
                 image: 'https://placehold.co/100x100/023e8a/ffffff?text=FI', // Your Logo URL
                 order_id: order.id,
@@ -173,12 +134,19 @@ const SubscriptionPlansPage: React.FC = () => {
     };
 
     if (isLoading) {
-        return <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Container>;
+        return (
+            <UserLayout title="Subscription Plans">
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                    <CircularProgress />
+                </Box>
+            </UserLayout>
+        );
     }
 
     return (
-        <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f5f5', py: 4 }}>
-            <Container maxWidth="lg">
+        <UserLayout title="Subscription Plans">
+        <Box sx={{ py: { xs: 1, sm: 2 } }}>
+            <Container maxWidth="lg" disableGutters sx={{ px: { xs: 0, sm: 2 } }}>
                 <Typography variant="h3" component="h1" gutterBottom sx={{ textAlign: 'center', mb: 4, color: 'text.primary' }}>
                     Choose Your Plan
                 </Typography>
@@ -187,85 +155,11 @@ const SubscriptionPlansPage: React.FC = () => {
             {subscribeSuccess && <Alert severity="success" sx={{ mb: 3 }}>{subscribeSuccess}</Alert>}
             {subscribeError && <Alert severity="error" sx={{ mb: 3 }}>{subscribeError}</Alert>}
 
-            {/* Enhanced Filter Bar Section (matching Android app) */}
-            <Paper 
-                elevation={4} 
-                sx={{ 
-                    mb: 3, 
-                    borderRadius: 2,
-                    backgroundColor: 'background.paper'
-                }}
-            >
-                <Box sx={{ p: 2 }}>
-                    <Box sx={{ 
-                        display: 'flex', 
-                        flexWrap: 'wrap', 
-                        gap: 1, 
-                        alignItems: 'center',
-                        overflowX: 'auto',
-                        pb: 1,
-                        '&::-webkit-scrollbar': {
-                            height: 6,
-                        },
-                        '&::-webkit-scrollbar-thumb': {
-                            backgroundColor: 'primary.main',
-                            borderRadius: 3,
-                        }
-                    }}>
-                        {/* Filter button */}
-                        <Chip
-                            icon={<FilterListIcon />}
-                            label="Filter"
-                            onClick={() => {}}
-                            sx={{
-                                backgroundColor: 'action.selected',
-                                '&:hover': {
-                                    backgroundColor: 'action.hover'
-                                }
-                            }}
-                        />
-                        
-                        {/* All filter option */}
-                        <Chip
-                            label="All"
-                            onClick={() => clearFilters()}
-                            color={!selectedSubTopic ? 'primary' : 'default'}
-                            variant={!selectedSubTopic ? 'filled' : 'outlined'}
-                            sx={{
-                                fontWeight: !selectedSubTopic ? 'bold' : 'normal'
-                            }}
-                        />
-                        
-                        {/* Dynamic filter options from API */}
-                        {filterOptions.subTopicsByTopic['LAW']?.map((subTopic) => (
-                            <Chip
-                                key={subTopic}
-                                label={subTopic}
-                                onClick={() => {
-                                    setSelectedTopic('LAW');
-                                    handleSubTopicChange(subTopic);
-                                }}
-                                color={selectedSubTopic === subTopic ? 'primary' : 'default'}
-                                variant={selectedSubTopic === subTopic ? 'filled' : 'outlined'}
-                                sx={{
-                                    fontWeight: selectedSubTopic === subTopic ? 'bold' : 'normal'
-                                }}
-                            />
-                        ))}
-                    </Box>
-                    
-                    {/* Batches count */}
-                    {!isLoading && (
-                        <Typography 
-                            variant="body2" 
-                            color="text.secondary"
-                            sx={{ mt: 1.5, px: 1 }}
-                        >
-                            {plans.length} Batch{plans.length !== 1 ? 'es' : ''} available
-                        </Typography>
-                    )}
-                </Box>
-            </Paper>
+            {!isLoading && plans.length > 0 && (
+                <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', mb: 3 }}>
+                    {plans.length} plan{plans.length !== 1 ? 's' : ''} available — pick the English learning tier that fits you.
+                </Typography>
+            )}
 
             {plans.length === 0 && !isLoading && (
                 <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -499,6 +393,7 @@ const SubscriptionPlansPage: React.FC = () => {
             )}
             </Container>
         </Box>
+        </UserLayout>
     );
 };
 

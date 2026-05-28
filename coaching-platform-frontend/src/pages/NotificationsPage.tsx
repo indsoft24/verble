@@ -42,6 +42,7 @@ import {
 } from '../services/notificationService';
 import { useNotification } from '../contexts/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
+import UserLayout from '../components/layout/UserLayout';
 
 const NotificationsPage: React.FC = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -215,14 +216,17 @@ const NotificationsPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-                <CircularProgress />
-            </Container>
+            <UserLayout title="Notifications">
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '40vh' }}>
+                    <CircularProgress />
+                </Box>
+            </UserLayout>
         );
     }
 
     return (
-        <Container maxWidth="md" sx={{ py: 4 }}>
+        <UserLayout title="Notifications">
+        <Container maxWidth="md" disableGutters sx={{ px: { xs: 0, sm: 2 } }}>
             {/* Header with Actions */}
             <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', mb: 2, flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
@@ -454,6 +458,7 @@ const NotificationsPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
         </Container>
+        </UserLayout>
     );
 };
 

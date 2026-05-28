@@ -100,15 +100,43 @@ export const register = asyncHandler(async (req, res) => {
         $or: [{ email: normalizedEmail }, { phoneNumber: formattedPhone }, { mobile: formattedPhone }],
     });
 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    const successPayload = {
+        status: 'success',
+        message: 'Registration started. Please check your email for the verification code.',
+        data: { email: normalizedEmail },
+    };
+
     if (existing) {
+        const phoneTaken =
+            existing.phoneNumber === formattedPhone || existing.mobile === formattedPhone;
+
+        if (!existing.isEmailVerified && existing.email === normalizedEmail) {
+            existing.name = name.trim();
+            existing.phoneNumber = formattedPhone;
+            existing.mobile = formattedPhone;
+            existing.authProvider = 'phone_pin';
+            existing.emailVerificationToken = hashedOTP;
+            existing.emailVerificationExpires = otpExpires;
+            await existing.save();
+            await sendVerificationOtpEmail(existing, otp);
+            return res.status(201).json(successPayload);
+        }
+
+        if (phoneTaken && existing.email !== normalizedEmail) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'This phone number is already registered with another account.',
+            });
+        }
+
         return res.status(400).json({
             status: 'fail',
             message: 'An account with this email or phone number already exists.',
         });
     }
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
 
     const user = await User.create({
         name: name.trim(),
@@ -118,17 +146,13 @@ export const register = asyncHandler(async (req, res) => {
         authProvider: 'phone_pin',
         isEmailVerified: false,
         emailVerificationToken: hashedOTP,
-        emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
+        emailVerificationExpires: otpExpires,
         role: 'user',
     });
 
     await sendVerificationOtpEmail(user, otp);
 
-    res.status(201).json({
-        status: 'success',
-        message: 'Registration started. Please check your email for the verification code.',
-        data: { email: normalizedEmail },
-    });
+    res.status(201).json(successPayload);
 });
 
 /**

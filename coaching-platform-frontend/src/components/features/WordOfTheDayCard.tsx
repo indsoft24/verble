@@ -500,9 +500,40 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
                     </Box>
 
                     <TabPanel value={tabValue} index={0}>
-                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.75) }}>
-                            Review the meanings above. Use the speaker icons to hear the English definition aloud.
-                        </Typography>
+                        <Box
+                            sx={{
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                                gap: 2,
+                                p: 2,
+                                borderRadius: 2,
+                                bgcolor: alpha('#1a1f2e', 0.6),
+                                border: `1px solid ${alpha(GREEN_ACCENT, 0.2)}`,
+                            }}
+                        >
+                            <Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#f8fafc' }}>
+                                        English Meaning
+                                    </Typography>
+                                    <SpeakerButton
+                                        text={currentData.metadata.meaning_en}
+                                        playKey="meaning-en-tab"
+                                    />
+                                </Box>
+                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.85) }}>
+                                    {currentData.metadata.meaning_en || 'No English meaning available.'}
+                                </Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#f8fafc', mb: 0.5 }}>
+                                    Hindi Meaning
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.85) }}>
+                                    {currentData.metadata.meaning_hi || 'No Hindi meaning available.'}
+                                </Typography>
+                            </Box>
+                        </Box>
                     </TabPanel>
 
                     <TabPanel value={tabValue} index={1}>

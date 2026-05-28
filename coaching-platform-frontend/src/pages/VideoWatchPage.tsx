@@ -47,6 +47,7 @@ import {
 } from '../services/courseUserService';
 import { extractId, getStringId } from '../utils/idUtils';
 import { getSplashImageUrl, resolveBackendMediaUrl } from '../utils/imageUtils';
+import UserLayout from '../components/layout/UserLayout';
 
 /** One row in the flattened course / module lesson order (for prev / next / up next). */
 interface CourseNavItem {
@@ -451,42 +452,45 @@ const VideoWatchPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', gap: 2 }}>
-                <CircularProgress size={28} />
-                <Typography color="text.secondary">Loading video…</Typography>
-            </Box>
+            <UserLayout title="Watch Video" fullWidth>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', gap: 2 }}>
+                    <CircularProgress size={28} />
+                    <Typography color="text.secondary">Loading video…</Typography>
+                </Box>
+            </UserLayout>
         );
     }
 
     if (error && !video) {
         return (
-            <Container sx={{ mt: 6, textAlign: 'center' }}>
-                <Alert severity="error">{error.message}</Alert>
-                <Button component={RouterLink} to="/videos" variant="outlined" sx={{ mt: 2 }}>
-                    Back to videos
-                </Button>
-            </Container>
+            <UserLayout title="Watch Video">
+                <Container sx={{ textAlign: 'center' }}>
+                    <Alert severity="error">{error.message}</Alert>
+                    <Button component={RouterLink} to="/videos" variant="outlined" sx={{ mt: 2 }}>
+                        Back to videos
+                    </Button>
+                </Container>
+            </UserLayout>
         );
     }
 
     if (!video) {
         return (
-            <Container sx={{ mt: 4 }}>
+            <UserLayout title="Watch Video">
                 <Alert severity="warning">Could not find video data.</Alert>
-            </Container>
+            </UserLayout>
         );
     }
 
     return (
+        <UserLayout title={video.title || 'Watch Video'} fullWidth>
         <Box
             sx={{
-                bgcolor: 'grey.50',
-                minHeight: '100vh',
                 pb: { xs: 4, md: 6 },
                 backgroundImage: 'linear-gradient(180deg, rgba(15,23,42,0.02) 0%, rgba(15,23,42,0) 30%)',
             }}
         >
-            <Container maxWidth="xl" sx={{ pt: { xs: 2, sm: 3 } }}>
+            <Container maxWidth="xl" disableGutters sx={{ px: { xs: 0, sm: 2 } }}>
                 <Breadcrumbs sx={{ mb: 2, '& .MuiBreadcrumbs-separator': { color: 'text.disabled' } }}>
                     <MuiLink component={RouterLink} underline="hover" color="text.secondary" to="/" sx={{ fontSize: 14 }}>
                         Home
@@ -900,6 +904,7 @@ const VideoWatchPage: React.FC = () => {
                 </Alert>
             </Snackbar>
         </Box>
+        </UserLayout>
     );
 };
 

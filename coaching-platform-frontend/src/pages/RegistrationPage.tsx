@@ -16,6 +16,7 @@ import {
     Alert,
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { normalizeAndValidatePhone } from '../utils/phoneUtils';
 
 const RegistrationPage: React.FC = () => {
     const { t } = useTranslation();
@@ -23,6 +24,7 @@ const RegistrationPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
 
     const { addNotification } = useNotification();
     const { register } = useAuth();
@@ -30,27 +32,33 @@ const RegistrationPage: React.FC = () => {
 
     const handleRegistrationSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        setFormError(null);
 
-        if (!phoneNumber.trim() || phoneNumber.trim().length < 10) {
-            addNotification(t('auth.phoneRequired'), 'error');
+        const { formatted, valid } = normalizeAndValidatePhone(phoneNumber);
+        if (!valid || !formatted) {
+            const msg = t('auth.invalidPhoneFormat');
+            setFormError(msg);
+            addNotification(msg, 'error');
             return;
         }
 
         setIsLoading(true);
         try {
-            await register({ name, email, phoneNumber: phoneNumber.trim() });
+            await register({ name: name.trim(), email: email.trim(), phoneNumber: formatted });
             addNotification(t('auth.registrationOtpSent'), 'success');
-            navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+            navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
         } catch (err: unknown) {
             const error = err as { message?: string };
-            addNotification(error.message || t('auth.registrationFailed'), 'error');
+            const msg = error.message || t('auth.registrationFailed');
+            setFormError(msg);
+            addNotification(msg, 'error');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <Container component="main" maxWidth="xs">
+        <Container component="main" maxWidth="xs" sx={{ px: { xs: 2, sm: 3 } }}>
             <CssBaseline />
             <Box
                 sx={{
@@ -70,6 +78,12 @@ const RegistrationPage: React.FC = () => {
                 <Alert severity="info" sx={{ mt: 2, width: '100%' }}>
                     {t('auth.registrationPinInfo')}
                 </Alert>
+
+                {formError && (
+                    <Alert severity="error" sx={{ mt: 2, width: '100%' }} onClose={() => setFormError(null)}>
+                        {formError}
+                    </Alert>
+                )}
 
                 <Box component="form" onSubmit={handleRegistrationSubmit} noValidate sx={{ mt: 2, width: '100%' }}>
                     <TextField
@@ -108,9 +122,13 @@ const RegistrationPage: React.FC = () => {
                         placeholder="+919876543210"
                         autoComplete="tel"
                         value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        onChange={(e) => {
+                            setPhoneNumber(e.target.value);
+                            if (formError) setFormError(null);
+                        }}
                         disabled={isLoading}
                         helperText={t('auth.phoneHint')}
+                        error={Boolean(formError && formError === t('auth.invalidPhoneFormat'))}
                     />
                     <Button
                         type="submit"
@@ -119,7 +137,7 @@ const RegistrationPage: React.FC = () => {
                         disabled={isLoading}
                         sx={{ mt: 3, mb: 2, py: 1.25 }}
                     >
-                        {isLoading ? <CircularProgress size={24} /> : t('auth.sendVerificationCode')}
+                        {isLoading ? <CircularProgress size={24} /> : t('auth.sendEmailVerificationCode')}
                     </Button>
 
                     <Box sx={{ textAlign: 'center' }}>

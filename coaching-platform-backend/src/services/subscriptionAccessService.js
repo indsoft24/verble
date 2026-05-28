@@ -7,6 +7,28 @@ import {
     tierIndex,
 } from '../utils/tierAccessUtils.js';
 
+const ZERO_STREAK = { current: 0, max: 0, lastActive: null };
+
+/**
+ * Admin-only hard reset after manual downgrade/removal.
+ * Keeps no challenge carry-over: user returns to FREE + 0-day.
+ */
+export const forceFreeResetForAdminDowngrade = async (userId) => {
+    const user = await User.findById(userId);
+    if (!user) return null;
+
+    user.unlockedLevels = ['FREE'];
+    user.membershipLevel = 'FREE';
+    user.streaks = {
+        free: { ...ZERO_STREAK },
+        bronze: { ...ZERO_STREAK },
+        silver: { ...ZERO_STREAK },
+    };
+
+    await user.save({ validateBeforeSave: false });
+    return user;
+};
+
 export const updateUnlockedLevelsFromSubscriptions = async (userId) => {
     const user = await User.findById(userId);
     if (!user) return { hasGold: false, hasFullCourse: false };

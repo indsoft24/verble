@@ -202,25 +202,31 @@ const sendViaMock = async (mobileNumber, otp) => {
  */
 export const formatMobileNumber = (mobileNumber, defaultCountryCode = '+91') => {
     if (!mobileNumber) return null;
-    
+
     // Remove all spaces, dashes, and parentheses
     let cleaned = mobileNumber.replace(/[\s\-\(\)]/g, '');
-    
+
     // If already starts with +, return as is
     if (cleaned.startsWith('+')) {
         return cleaned;
     }
-    
-    // If starts with 0, remove it
+
+    // If starts with 0, remove leading trunk prefix (e.g. 09876543210)
     if (cleaned.startsWith('0')) {
         cleaned = cleaned.substring(1);
     }
-    
+
+    // Avoid double country code when user types 919876543210 without +
+    const countryDigits = defaultCountryCode.replace(/^\+/, '');
+    if (countryDigits && cleaned.startsWith(countryDigits)) {
+        cleaned = cleaned.substring(countryDigits.length);
+    }
+
     // Add default country code if not present
     if (!cleaned.startsWith('+')) {
         cleaned = defaultCountryCode + cleaned;
     }
-    
+
     return cleaned;
 };
 
@@ -231,8 +237,15 @@ export const formatMobileNumber = (mobileNumber, defaultCountryCode = '+91') => 
  */
 export const validateMobileNumber = (mobileNumber) => {
     if (!mobileNumber) return false;
-    
-    // Basic validation: should start with + and have 10-15 digits after country code
+
     const mobileRegex = /^\+[1-9]\d{9,14}$/;
-    return mobileRegex.test(mobileNumber);
+    if (!mobileRegex.test(mobileNumber)) return false;
+
+    // India (+91): exactly 10 national digits
+    if (mobileNumber.startsWith('+91')) {
+        const national = mobileNumber.slice(3);
+        return /^\d{10}$/.test(national);
+    }
+
+    return true;
 };

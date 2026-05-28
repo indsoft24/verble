@@ -120,9 +120,10 @@ const ChallengeCard: React.FC<{
                 }
             }}
             sx={{
-                flex: '1 1 200px',
-                minWidth: 180,
-                maxWidth: 320,
+                flex: { xs: '1 1 100%', sm: '1 1 200px' },
+                minWidth: { xs: 0, sm: 180 },
+                maxWidth: { xs: '100%', sm: 320 },
+                width: { xs: '100%', sm: 'auto' },
                 borderRadius: 3,
                 border: '2px solid',
                 borderColor: locked ? alpha(meta.primary, 0.35) : meta.primary,
@@ -141,11 +142,12 @@ const ChallengeCard: React.FC<{
                     variant="caption"
                     sx={{
                         position: 'absolute',
-                        top: 16,
-                        right: 16,
+                        top: { xs: 12, sm: 16 },
+                        right: { xs: 12, sm: 16 },
                         color: meta.primary,
                         fontWeight: 800,
                         letterSpacing: 0.5,
+                        fontSize: { xs: '0.65rem', sm: '0.75rem' },
                     }}
                 >
                     {t('dashboard.masteryPath.youAreHere')}
@@ -261,8 +263,10 @@ const PremiumCard: React.FC<{
     return (
         <Box
             sx={{
-                flex: '1 1 240px',
-                minWidth: 220,
+                flex: { xs: '1 1 100%', sm: '1 1 240px' },
+                minWidth: { xs: 0, sm: 220 },
+                maxWidth: { xs: '100%', sm: 360 },
+                width: { xs: '100%', sm: 'auto' },
                 borderRadius: 3,
                 border: '2px solid',
                 borderColor: alpha(meta.primary, locked ? 0.35 : 0.9),

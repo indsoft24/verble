@@ -27,9 +27,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         const id = Date.now();
         setNotifications(prev => [...prev, { id, message, type }]);
 
+        const duration = message.length > 80 ? 4500 : 3000;
         setTimeout(() => {
             removeNotification(id);
-        }, 2500); 
+        }, duration); 
     }, [removeNotification]);
 
     return (

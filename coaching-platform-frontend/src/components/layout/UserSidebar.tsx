@@ -111,6 +111,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                     <ListItemButton
                         component={RouterLink}
                         to={item.path}
+                        onClick={isMobile ? onToggle : undefined}
                         selected={active}
                         sx={{
                             minHeight: 48,
@@ -186,9 +187,11 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                         </Box>
                     </Box>
                 )}
-                <IconButton onClick={onToggle} size="small" sx={{ ml: open ? 1 : 0 }}>
-                    {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-                </IconButton>
+                {!isMobile && (
+                    <IconButton onClick={onToggle} size="small" sx={{ ml: open ? 1 : 0 }}>
+                        {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+                    </IconButton>
+                )}
             </Box>
 
             {/* Navigation Menu */}
@@ -258,11 +261,12 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
             variant={isMobile ? 'temporary' : 'permanent'}
             open={isMobile ? open : true}
             onClose={isMobile ? onToggle : undefined}
+            ModalProps={{ keepMounted: true }}
             sx={{
-                width: open ? DRAWER_WIDTH : DRAWER_WIDTH_COLLAPSED,
+                width: isMobile ? DRAWER_WIDTH : open ? DRAWER_WIDTH : DRAWER_WIDTH_COLLAPSED,
                 flexShrink: 0,
                 '& .MuiDrawer-paper': {
-                    width: open ? DRAWER_WIDTH : DRAWER_WIDTH_COLLAPSED,
+                    width: isMobile ? DRAWER_WIDTH : open ? DRAWER_WIDTH : DRAWER_WIDTH_COLLAPSED,
                     boxSizing: 'border-box',
                     transition: theme.transitions.create('width', {
                         easing: theme.transitions.easing.sharp,
