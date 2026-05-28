@@ -5,6 +5,8 @@ import { Link as RouterLink } from 'react-router-dom';
 import { getPlatformStatsAdmin, type PlatformStats, getAllUsers, type AdminUserView } from '../services/adminService';
 import { getAllDailyContentAdmin } from '../services/dailyContentAdminService';
 import type { DailyContent } from '../services/dailyContentService';
+import { DAILY_CONTENT_CATALOG, contentMatchesCatalogSlot } from '../utils/dailyContentTypeCatalog';
+import { format } from 'date-fns';
 import { getActiveOffers, type Offer } from '../services/offerService';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
 import AdminLayout from '../components/layout/AdminLayout';
@@ -77,16 +79,16 @@ const AdminDashboardPage: React.FC = () => {
     const fetchAdditionalData = useCallback(async () => {
         setIsLoadingAdditional(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = format(new Date(), 'yyyy-MM-dd');
 
-            const [usersData, contentData, offersData, joinersData] = await Promise.all([
+            const [usersData, contentResult, offersData, joinersData] = await Promise.all([
                 getAllUsers().catch((err) => {
                     console.error('Failed to fetch users:', err);
                     return [];
                 }),
                 getAllDailyContentAdmin({ date: today }).catch((err) => {
                     console.error('Failed to fetch daily content:', err);
-                    return [];
+                    return { content: [] as DailyContent[] };
                 }),
                 getActiveOffers().catch((err) => {
                     console.error('Failed to fetch offers:', err);
@@ -106,7 +108,10 @@ const AdminDashboardPage: React.FC = () => {
             }) : [];
             setRecentUsers(sortedUsers.slice(0, 10));
 
-            setTodayContent(Array.isArray(contentData) ? contentData : []);
+            const contentList = Array.isArray(contentResult)
+                ? contentResult
+                : contentResult?.content ?? [];
+            setTodayContent(contentList);
             setOffers(Array.isArray(offersData) ? offersData : []);
             setRecentJoiners(Array.isArray(joinersData) ? joinersData : []);
         } catch (error) {
@@ -126,22 +131,31 @@ const AdminDashboardPage: React.FC = () => {
         fetchAdditionalData();
     }, [fetchStats, fetchAdditionalData]);
 
-    // Calculate daily content stats
+    const filledCatalogSlots = DAILY_CONTENT_CATALOG.filter((slot) =>
+        todayContent.some((c) => contentMatchesCatalogSlot(c, slot))
+    );
+
     const contentStats = {
-        total: todayContent.length,
+        total: filledCatalogSlots.length,
+        maxSlots: DAILY_CONTENT_CATALOG.length,
         byType: {
-            WORD: todayContent.filter(c => c.type === 'WORD').length,
-            PHRASE: todayContent.filter(c => c.type === 'PHRASE').length,
-            STORY: todayContent.filter(c => c.type === 'STORY').length,
-            CONVERSATION: todayContent.filter(c => c.type === 'CONVERSATION').length,
-            PUZZLE: todayContent.filter(c => c.type === 'PUZZLE').length,
+            WORD: todayContent.filter((c) => c.type === 'WORD').length,
+            PHRASE: todayContent.filter((c) => c.type === 'PHRASE').length,
+            STORY: todayContent.filter((c) => c.type === 'STORY').length,
+            VOCAB_SET: todayContent.filter((c) => c.type === 'VOCAB_SET').length,
+            CONVERSATION: todayContent.filter((c) => c.type === 'CONVERSATION').length,
+            PUZZLE: todayContent.filter((c) => c.type === 'PUZZLE').length,
+            SCENE: todayContent.filter((c) => c.type === 'SCENE').length,
+            SPEECH: todayContent.filter((c) => c.type === 'SPEECH').length,
+            LYRICS: todayContent.filter((c) => c.type === 'LYRICS').length,
+            FEED: todayContent.filter((c) => c.type === 'FEED').length,
         },
         byLevel: {
-            FREE: todayContent.filter(c => c.level === 'FREE').length,
-            BRONZE: todayContent.filter(c => c.level === 'BRONZE').length,
-            SILVER: todayContent.filter(c => c.level === 'SILVER').length,
-            GOLD: todayContent.filter(c => c.level === 'GOLD').length,
-        }
+            FREE: todayContent.filter((c) => c.level === 'FREE').length,
+            BRONZE: todayContent.filter((c) => c.level === 'BRONZE').length,
+            SILVER: todayContent.filter((c) => c.level === 'SILVER').length,
+            GOLD: todayContent.filter((c) => c.level === 'GOLD').length,
+        },
     };
 
     const StatCard = ({
@@ -448,8 +462,8 @@ const AdminDashboardPage: React.FC = () => {
                                     variant="outlined"
                                 >
                                     {contentStats.total > 0
-                                        ? `You have ${contentStats.total} content items scheduled for today. Users will see these items in their daily feed.`
-                                        : "No content scheduled for today. Add content to keep users engaged!"}
+                                        ? `${contentStats.total} of ${contentStats.maxSlots} daily slots filled for today. Learners see one item per slot on their dashboard.`
+                                        : 'No content scheduled for today. Add content to keep users engaged!'}
                                 </Alert>
                             </Grid>
                         </Grid>

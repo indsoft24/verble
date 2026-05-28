@@ -6,7 +6,9 @@ import { useTranslation } from 'react-i18next';
 import {
     Avatar,
     Button,
+    Checkbox,
     CssBaseline,
+    FormControlLabel,
     TextField,
     Link as MuiLink,
     Box,
@@ -23,6 +25,7 @@ const RegistrationPage: React.FC = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
 
@@ -42,9 +45,21 @@ const RegistrationPage: React.FC = () => {
             return;
         }
 
+        if (!agreedToTerms) {
+            const msg = t('auth.mustAgreeToTerms');
+            setFormError(msg);
+            addNotification(msg, 'error');
+            return;
+        }
+
         setIsLoading(true);
         try {
-            await register({ name: name.trim(), email: email.trim(), phoneNumber: formatted });
+            await register({
+                name: name.trim(),
+                email: email.trim(),
+                phoneNumber: formatted,
+                agreedToTerms: true,
+            });
             addNotification(t('auth.registrationOtpSent'), 'success');
             navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
         } catch (err: unknown) {
@@ -130,11 +145,40 @@ const RegistrationPage: React.FC = () => {
                         helperText={t('auth.phoneHint')}
                         error={Boolean(formError && formError === t('auth.invalidPhoneFormat'))}
                     />
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={agreedToTerms}
+                                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                disabled={isLoading}
+                                color="primary"
+                            />
+                        }
+                        label={
+                            <Typography variant="body2">
+                                {t('auth.agreeToTerms')}{' '}
+                                <MuiLink component={RouterLink} to="/privacy-policy" target="_blank" rel="noopener">
+                                    {t('footer.privacyPolicy')}
+                                </MuiLink>
+                                {' '}
+                                {t('auth.and')}{' '}
+                                <MuiLink
+                                    component={RouterLink}
+                                    to="/terms-and-conditions"
+                                    target="_blank"
+                                    rel="noopener"
+                                >
+                                    {t('footer.termsAndConditions')}
+                                </MuiLink>
+                            </Typography>
+                        }
+                        sx={{ mt: 1, alignItems: 'flex-start' }}
+                    />
                     <Button
                         type="submit"
                         fullWidth
                         variant="contained"
-                        disabled={isLoading}
+                        disabled={isLoading || !agreedToTerms}
                         sx={{ mt: 3, mb: 2, py: 1.25 }}
                     >
                         {isLoading ? <CircularProgress size={24} /> : t('auth.sendEmailVerificationCode')}

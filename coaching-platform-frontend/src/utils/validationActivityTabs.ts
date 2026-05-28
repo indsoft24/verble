@@ -115,6 +115,116 @@ export function getActivityRowLabel(submission: SentenceSubmission): string {
     return label;
 }
 
+export function getContentTypeLabel(submission: SentenceSubmission): string {
+    const type = getLinkedContentType(submission);
+    if (type && CONTENT_TYPE_LABELS[type]) return CONTENT_TYPE_LABELS[type];
+    return contentLabel(submission);
+}
+
+export interface ValidationContentDetailLine {
+    label: string;
+    value: string;
+}
+
+/** Full prompt/context for admin review (table + dialog). */
+export function getValidationContentDetails(
+    submission: SentenceSubmission
+): ValidationContentDetailLine[] {
+    const ref =
+        submission.wordId ||
+        submission.storyId ||
+        submission.vocabSetId ||
+        submission.sceneId ||
+        submission.speechId;
+    const meta = (ref?.metadata || {}) as Record<string, unknown>;
+    const lines: ValidationContentDetailLine[] = [];
+
+    lines.push({ label: 'Activity type', value: getContentTypeLabel(submission) });
+
+    if (ref?.title?.trim()) {
+        lines.push({ label: 'Title', value: ref.title.trim() });
+    }
+
+    if (submission.submissionType === 'sentence') {
+        const text = String(meta.text ?? submission.word ?? '').trim();
+        const meaningEn = String(meta.meaning_en ?? '').trim();
+        const meaningHi = String(meta.meaning_hi ?? '').trim();
+        const pos = String(meta.part_of_speech ?? '').trim();
+        if (text) lines.push({ label: 'Word / phrase', value: text });
+        if (meaningEn) lines.push({ label: 'English meaning', value: meaningEn });
+        if (meaningHi) lines.push({ label: 'Hindi meaning', value: meaningHi });
+        if (pos) lines.push({ label: 'Part of speech', value: pos });
+        const examples = meta.examples as { en?: string; hi?: string }[] | undefined;
+        if (Array.isArray(examples) && examples.length > 0) {
+            const exText = examples
+                .map((ex, i) => {
+                    const en = String(ex.en ?? '').trim();
+                    const hi = String(ex.hi ?? '').trim();
+                    if (en && hi) return `${i + 1}. ${en} — ${hi}`;
+                    return en || hi ? `${i + 1}. ${en || hi}` : '';
+                })
+                .filter(Boolean)
+                .join('\n');
+            if (exText) lines.push({ label: 'Examples', value: exText });
+        }
+        return lines;
+    }
+
+    if (submission.submissionType === 'story') {
+        const storyTitle = String(meta.title ?? '').trim();
+        const body = String(meta.text_content ?? '').trim();
+        if (storyTitle) lines.push({ label: 'Story title', value: storyTitle });
+        if (body) lines.push({ label: 'Story text', value: body });
+        return lines;
+    }
+
+    if (submission.submissionType === 'vocab') {
+        const theme = String(meta.theme ?? '').trim();
+        if (theme) lines.push({ label: 'Theme', value: theme });
+        const items = meta.vocabItems as { word?: string; meaning_en?: string; meaning_hi?: string }[] | undefined;
+        if (Array.isArray(items) && items.length > 0) {
+            const vocabList = items
+                .map((v, i) => {
+                    const w = String(v.word ?? '').trim();
+                    const en = String(v.meaning_en ?? '').trim();
+                    const hi = String(v.meaning_hi ?? '').trim();
+                    if (!w) return '';
+                    const parts = [w];
+                    if (en) parts.push(en);
+                    if (hi) parts.push(`(${hi})`);
+                    return `${i + 1}. ${parts.join(' — ')}`;
+                })
+                .filter(Boolean)
+                .join('\n');
+            if (vocabList) lines.push({ label: 'Vocabulary list', value: vocabList });
+        }
+        return lines;
+    }
+
+    if (submission.submissionType === 'scene') {
+        const headline = String(meta.title ?? ref?.title ?? '').trim();
+        const explanation = String(meta.explanation ?? '').trim();
+        if (headline) lines.push({ label: 'Headline', value: headline });
+        if (explanation) lines.push({ label: 'Scene / prompt', value: explanation });
+        const keywords = meta.keywords as { word?: string }[] | undefined;
+        if (Array.isArray(keywords) && keywords.length > 0) {
+            const kw = keywords.map((k) => String(k.word ?? '').trim()).filter(Boolean).join(', ');
+            if (kw) lines.push({ label: 'Keywords', value: kw });
+        }
+        return lines;
+    }
+
+    if (submission.submissionType === 'speech') {
+        const speaker = String(meta.speaker ?? '').trim();
+        const transcript = String(meta.transcript ?? '').trim();
+        if (speaker) lines.push({ label: 'Speaker', value: speaker });
+        if (transcript) lines.push({ label: 'Speech excerpt', value: transcript });
+        return lines;
+    }
+
+    return lines;
+}
+
 export function getOriginalReferenceText(submission: SentenceSubmission): string {
     const ref =
         submission.wordId ||

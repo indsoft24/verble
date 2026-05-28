@@ -1,3 +1,4 @@
+import { format, parseISO } from 'date-fns';
 import type { DailyContent } from '../services/dailyContentService';
 import { buildAutoDisplayTitle } from './dailyContentDisplayNumber';
 
@@ -183,4 +184,15 @@ export function levelForAdminKey(adminKey: AdminContentTypeKey): ContentLevel {
 
 export function apiTypeForAdminKey(adminKey: AdminContentTypeKey): ApiContentType {
     return getCatalogEntry(adminKey).apiType;
+}
+
+/** Find scheduled item for a catalog slot on a given yyyy-MM-dd day. */
+export function findContentForSlot(
+    items: DailyContent[],
+    dateKey: string,
+    slot: DailyContentCatalogEntry
+): DailyContent | undefined {
+    return items.find(
+        (c) => format(parseISO(c.date), 'yyyy-MM-dd') === dateKey && contentMatchesCatalogSlot(c, slot)
+    );
 }

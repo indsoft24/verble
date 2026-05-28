@@ -52,9 +52,11 @@ import { format } from 'date-fns';
 import {
     VALIDATION_ACTIVITY_TABS,
     getActivityRowLabel,
+    getContentTypeLabel,
     getLinkedContentType,
     getOriginalReferenceText,
     getUserPhone,
+    getValidationContentDetails,
     submissionMatchesTab,
     type ValidationTabId,
 } from '../utils/validationActivityTabs';
@@ -318,14 +320,15 @@ const AdminSentenceValidationPage: React.FC = () => {
                         <Table stickyHeader size="small">
                             <TableHead>
                                 <TableRow>
+                                    <TableCell sx={{ fontWeight: 700, minWidth: 140 }}>Type</TableCell>
                                     <TableCell sx={{ fontWeight: 700, minWidth: 160 }}>Activity</TableCell>
                                     <TableCell sx={{ fontWeight: 700, minWidth: 140 }}>User</TableCell>
                                     <TableCell sx={{ fontWeight: 700, minWidth: 120 }}>Phone</TableCell>
                                     <TableCell sx={{ fontWeight: 700, minWidth: 220 }}>
                                         User submission
                                     </TableCell>
-                                    <TableCell sx={{ fontWeight: 700, minWidth: 180 }}>
-                                        Original / prompt
+                                    <TableCell sx={{ fontWeight: 700, minWidth: 260 }}>
+                                        Daily content (prompt)
                                     </TableCell>
                                     <TableCell sx={{ fontWeight: 700, width: 150 }}>Submitted</TableCell>
                                     <TableCell sx={{ fontWeight: 700, width: 140 }} align="center">
@@ -342,6 +345,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                     const IconComponent = config?.icon;
                                     const isPending = submission.isCorrect === null;
                                     const busy = actionLoadingId === submission._id;
+                                    const contentDetails = getValidationContentDetails(submission);
 
                                     return (
                                         <TableRow
@@ -356,6 +360,14 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                           : 'error.50',
                                             }}
                                         >
+                                            <TableCell>
+                                                <Chip
+                                                    label={getContentTypeLabel(submission)}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{ fontWeight: 600, maxWidth: '100%' }}
+                                                />
+                                            </TableCell>
                                             <TableCell>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     {IconComponent && (
@@ -406,13 +418,38 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
-                                                <Typography
-                                                    variant="body2"
-                                                    color="text.secondary"
-                                                    sx={{ maxWidth: 200 }}
-                                                >
-                                                    {getOriginalReferenceText(submission)}
-                                                </Typography>
+                                                <Box sx={{ maxWidth: 320 }}>
+                                                    {contentDetails
+                                                        .filter((line) => line.label !== 'Activity type')
+                                                        .slice(0, 4)
+                                                        .map((line) => (
+                                                            <Box key={line.label} sx={{ mb: 0.75 }}>
+                                                                <Typography
+                                                                    variant="caption"
+                                                                    color="text.secondary"
+                                                                    display="block"
+                                                                >
+                                                                    {line.label}
+                                                                </Typography>
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    sx={{
+                                                                        whiteSpace: 'pre-wrap',
+                                                                        wordBreak: 'break-word',
+                                                                    }}
+                                                                >
+                                                                    {line.value.length > 200
+                                                                        ? `${line.value.slice(0, 200)}…`
+                                                                        : line.value}
+                                                                </Typography>
+                                                            </Box>
+                                                        ))}
+                                                    {contentDetails.length <= 1 && (
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            {getOriginalReferenceText(submission)}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
                                             </TableCell>
                                             <TableCell>
                                                 <Typography variant="caption" display="block">
@@ -521,8 +558,33 @@ const AdminSentenceValidationPage: React.FC = () => {
                                     {selectedSubmission.userId?.name} · {getUserPhone(selectedSubmission)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    {getContentTypeLabel(selectedSubmission)} ·{' '}
                                     {getActivityRowLabel(selectedSubmission)} ·{' '}
                                     {format(new Date(selectedSubmission.createdAt), 'PPp')}
+                                </Typography>
+                                <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
+                                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                                        Daily content students responded to
+                                    </Typography>
+                                    {getValidationContentDetails(selectedSubmission).map((line) => (
+                                        <Box key={line.label} sx={{ mb: 1.25 }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {line.label}
+                                            </Typography>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                                            >
+                                                {line.value}
+                                            </Typography>
+                                        </Box>
+                                    ))}
+                                </Paper>
+                                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                                    Student submission
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+                                    {getSubmissionContent(selectedSubmission) || '—'}
                                 </Typography>
                                 <Divider sx={{ my: 2 }} />
                                 {selectedSubmission.submissionType === 'story' &&

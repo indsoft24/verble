@@ -3,7 +3,11 @@ import SubscriptionPlan from '../models/SubscriptionPlan.js';
 import User from '../models/User.js';
 
 export const getActiveSubscriptionPlans = asyncHandler(async (req, res) => {
-    const plans = await SubscriptionPlan.find({ isActive: true }).sort({ displayOrder: 1, price: 1 });
+    // Public catalog: paid plans only (Free Foundation is assigned on registration, not sold here)
+    const plans = await SubscriptionPlan.find({ isActive: true, price: { $gt: 0 } }).sort({
+        displayOrder: 1,
+        price: 1,
+    });
     res.status(200).json({ status: 'success', results: plans.length, data: { plans } });
 });
 

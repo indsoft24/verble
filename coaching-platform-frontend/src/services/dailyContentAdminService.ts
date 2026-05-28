@@ -90,9 +90,33 @@ export const getAllDailyContentAdmin = async (
 /**
  * Create daily content
  */
+export class DailyContentDuplicateError extends Error {
+    existing: DailyContent;
+
+    constructor(message: string, existing: DailyContent) {
+        super(message);
+        this.name = 'DailyContentDuplicateError';
+        this.existing = existing;
+    }
+}
+
 export const createDailyContentAdmin = async (payload: CreateDailyContentPayload): Promise<DailyContent> => {
-    const response = await apiClient.post<DailyContentAdminResponse>('/admin/daily-content', payload);
-    return response.data.data.content as DailyContent;
+    try {
+        const response = await apiClient.post<DailyContentAdminResponse>('/admin/daily-content', payload);
+        return response.data.data.content as DailyContent;
+    } catch (error: unknown) {
+        const axiosErr = error as {
+            response?: { status?: number; data?: { message?: string; data?: { content?: DailyContent } } };
+        };
+        if (axiosErr.response?.status === 409 && axiosErr.response.data?.data?.content) {
+            throw new DailyContentDuplicateError(
+                axiosErr.response.data.message ||
+                    'Content for this type is already scheduled on this date.',
+                axiosErr.response.data.data.content
+            );
+        }
+        throw error;
+    }
 };
 
 export interface BulkCreateDailyContentResult {

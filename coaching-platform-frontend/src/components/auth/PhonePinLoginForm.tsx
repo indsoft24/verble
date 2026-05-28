@@ -4,10 +4,8 @@ import { useTranslation } from 'react-i18next';
 import {
     Box,
     Button,
-    Checkbox,
     CircularProgress,
     Fade,
-    FormControlLabel,
     Link as MuiLink,
     Slide,
     TextField,
@@ -20,7 +18,7 @@ import { normalizeAndValidatePhone } from '../../utils/phoneUtils';
 const PIN_LENGTH = 6;
 
 interface PhonePinLoginFormProps {
-    onSubmit: (phoneNumber: string, pin: string, agreedToTerms: boolean) => Promise<void>;
+    onSubmit: (phoneNumber: string, pin: string) => Promise<void>;
     onForgotPin: (phoneNumber: string) => Promise<void>;
     isLoading?: boolean;
 }
@@ -33,7 +31,6 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
     const { t } = useTranslation();
     const [phoneNumber, setPhoneNumber] = useState('');
     const [pinDigits, setPinDigits] = useState<string[]>(Array(PIN_LENGTH).fill(''));
-    const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [forgotLoading, setForgotLoading] = useState(false);
     const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -45,11 +42,7 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
 
     const pin = pinDigits.join('');
     const phoneCheck = normalizeAndValidatePhone(phoneNumber);
-    const canSubmit =
-        phoneCheck.valid &&
-        pin.length === PIN_LENGTH &&
-        agreedToTerms &&
-        !isLoading;
+    const canSubmit = phoneCheck.valid && pin.length === PIN_LENGTH && !isLoading;
 
     const handlePinChange = (index: number, value: string) => {
         const digit = value.replace(/\D/g, '').slice(-1);
@@ -81,7 +74,7 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!canSubmit || !phoneCheck.formatted) return;
-        await onSubmit(phoneCheck.formatted, pin, agreedToTerms);
+        await onSubmit(phoneCheck.formatted, pin);
     };
 
     const handleForgotPin = useCallback(async () => {
@@ -207,30 +200,6 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
                         />
                     ))}
                 </Box>
-
-                <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked={agreedToTerms}
-                            onChange={(e) => setAgreedToTerms(e.target.checked)}
-                            disabled={isLoading}
-                            color="primary"
-                        />
-                    }
-                    label={
-                        <Typography variant="body2">
-                            {t('auth.agreeToTerms')}{' '}
-                            <MuiLink component={RouterLink} to="/privacy-policy" target="_blank" rel="noopener">
-                                {t('footer.privacyPolicy')}
-                            </MuiLink>
-                            {' '}{t('auth.and')}{' '}
-                            <MuiLink component={RouterLink} to="/terms-and-conditions" target="_blank" rel="noopener">
-                                {t('footer.termsAndConditions')}
-                            </MuiLink>
-                        </Typography>
-                    }
-                    sx={{ alignSelf: 'flex-start', mb: 1 }}
-                />
 
                 <Button
                     type="submit"

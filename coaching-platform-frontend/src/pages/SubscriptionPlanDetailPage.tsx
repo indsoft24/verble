@@ -97,6 +97,11 @@ const SubscriptionPlanDetailPage: React.FC = () => {
             return;
         }
 
+        if (!plan.price || plan.price <= 0) {
+            setSubscribeError('This plan is free and is included when you register. Open your dashboard to start learning.');
+            return;
+        }
+
         setSubscribeLoading(true);
         setSubscribeError(null);
         setSubscribeSuccess(null);
@@ -108,9 +113,8 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: order.amount,
                 currency: order.currency,
-                name: 'Knowledge Nation Law Centre',
+                name: 'Verble',
                 description: `Payment for ${plan.name}`,
-                image: 'https://placehold.co/100x100/023e8a/ffffff?text=KN',
                 order_id: order.id,
                 handler: async function (response: any) {
                     const dataToVerify = {
@@ -150,8 +154,9 @@ const SubscriptionPlanDetailPage: React.FC = () => {
             });
 
             rzp.open();
-        } catch (err: any) {
-            setSubscribeError(err.response?.data?.message || err.message || 'Failed to initiate payment.');
+        } catch (err: unknown) {
+            const e = err as { message?: string };
+            setSubscribeError(e.message || 'Failed to initiate payment.');
         } finally {
             setSubscribeLoading(false);
         }
@@ -368,12 +373,19 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                             size="large"
                             startIcon={<ShoppingCartIcon />}
                             onClick={handleSubscribe}
-                            disabled={subscribeLoading || isCurrentUserPlanActive}
+                            disabled={
+                                subscribeLoading ||
+                                isCurrentUserPlanActive ||
+                                !plan.price ||
+                                plan.price <= 0
+                            }
                             sx={{ py: 1.5, fontWeight: 'bold' }}
                         >
-                            {isCurrentUserPlanActive
-                                ? 'Your Current Plan'
-                                : subscribeLoading
+                            {!plan.price || plan.price <= 0
+                                ? 'Free with registration'
+                                : isCurrentUserPlanActive
+                                  ? 'Your Current Plan'
+                                  : subscribeLoading
                                     ? <CircularProgress size={24} color="inherit" />
                                     : 'Subscribe Now'}
                         </Button>

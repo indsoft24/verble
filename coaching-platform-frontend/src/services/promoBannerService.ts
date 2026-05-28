@@ -23,13 +23,17 @@ export interface PromoBannerResponse {
 
 export const getPromoBanner = async (): Promise<PromoBanner | null> => {
     const response = await apiClient.get<PromoBannerResponse>('/promo-banner');
-    const banner = response.data.data.promoBanner;
-    return banner.isEnabled ? banner : null;
+    const banner = response.data?.data?.promoBanner;
+    if (!banner?.isEnabled) return null;
+    return banner;
 };
 
 export const getPromoBannerAdmin = async (): Promise<PromoBanner> => {
     const response = await apiClient.get<PromoBannerResponse>('/admin/promo-banner');
-    return response.data.data.promoBanner;
+    if (response.data?.status === 'success' && response.data.data?.promoBanner) {
+        return response.data.data.promoBanner;
+    }
+    throw new Error('Invalid promo banner response from server.');
 };
 
 export const updatePromoBanner = async (data: Partial<PromoBanner>): Promise<PromoBanner> => {

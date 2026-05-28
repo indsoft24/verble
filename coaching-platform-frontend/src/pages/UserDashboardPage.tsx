@@ -59,6 +59,7 @@ import {
     hasTierAccess,
 } from '../utils/userAccessState';
 import { getFreeLeaderboard, getPaidLeaderboard, getMyRank, type LeaderboardEntry } from '../services/leaderboardService';
+import LeaderboardPanel from '../components/dashboard/LeaderboardPanel';
 import { getActiveOffers, type Offer } from '../services/offerService';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
 
@@ -89,7 +90,7 @@ const UserDashboardPage: React.FC = () => {
     const [recentJoiners, setRecentJoiners] = useState<RecentJoiner[]>([]);
     const [freeLeaderboard, setFreeLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [paidLeaderboard, setPaidLeaderboard] = useState<LeaderboardEntry[]>([]);
-    const [, setMyRank] = useState<{ rank: number; points: number; leaderboardType: string } | null>(null);
+    const [myRank, setMyRank] = useState<{ rank: number; points: number; leaderboardType: string } | null>(null);
     const [isLoadingAdditional, setIsLoadingAdditional] = useState(true);
 
     const fetchDailyContent = useCallback(async () => {
@@ -168,6 +169,12 @@ const UserDashboardPage: React.FC = () => {
     const handleCloseActivity = () => {
         setSelectedActivity(null);
         setActivityKind(null);
+    };
+
+    const openLinkedActivity = (content: DailyContent | undefined, kind: ActivityKind) => {
+        if (!content) return;
+        setSelectedActivity(content);
+        setActivityKind(kind);
     };
 
     const handleLockedTier = (tier: 'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE') => {
@@ -328,12 +335,20 @@ const UserDashboardPage: React.FC = () => {
                         <WordOfTheDayCard
                             data={selectedActivity as never}
                             onSubmissionSuccess={refreshDashboardAfterSubmission}
+                            onNavigateToPhrase={
+                                phraseContent
+                                    ? () => openLinkedActivity(phraseContent, 'phrase')
+                                    : undefined
+                            }
                         />
                     )}
                     {activityKind === 'phrase' && (
                         <PhraseOfTheDayCard
                             data={selectedActivity as never}
                             onSubmissionSuccess={refreshDashboardAfterSubmission}
+                            onNavigateToWord={
+                                wordContent ? () => openLinkedActivity(wordContent, 'word') : undefined
+                            }
                         />
                     )}
                     {activityKind === 'story' && (
@@ -537,44 +552,32 @@ const UserDashboardPage: React.FC = () => {
 
                 <Grid container spacing={3}>
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-                                Free Challenges Leaderboard
-                            </Typography>
-                            {freeLeaderboard.length > 0 ? (
-                                <List dense>
-                                    {freeLeaderboard.map((entry, index) => (
-                                        <ListItem key={index} sx={{ px: 0 }}>
-                                            <ListItemText primary={entry.name} secondary={`${entry.points} points`} />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                    No data yet
-                                </Typography>
-                            )}
-                        </Paper>
+                        <LeaderboardPanel
+                            title="Free Challenges"
+                            subtitle="Word, phrase & free-tier activities"
+                            entries={freeLeaderboard}
+                            isLoading={isLoadingAdditional}
+                            accentColor="#14b8a6"
+                            myRank={
+                                myRank?.leaderboardType === 'free'
+                                    ? { rank: myRank.rank, points: myRank.points }
+                                    : null
+                            }
+                        />
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-                                Paid Challenges Leaderboard
-                            </Typography>
-                            {paidLeaderboard.length > 0 ? (
-                                <List dense>
-                                    {paidLeaderboard.map((entry, index) => (
-                                        <ListItem key={index} sx={{ px: 0 }}>
-                                            <ListItemText primary={entry.name} secondary={`${entry.points} points`} />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                    No data yet
-                                </Typography>
-                            )}
-                        </Paper>
+                        <LeaderboardPanel
+                            title="Paid Challenges"
+                            subtitle="Bronze, silver & gold activities"
+                            entries={paidLeaderboard}
+                            isLoading={isLoadingAdditional}
+                            accentColor="#7c3aed"
+                            myRank={
+                                myRank?.leaderboardType === 'paid'
+                                    ? { rank: myRank.rank, points: myRank.points }
+                                    : null
+                            }
+                        />
                     </Grid>
                 </Grid>
 

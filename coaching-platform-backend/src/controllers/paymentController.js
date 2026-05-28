@@ -32,7 +32,22 @@ export const createRazorpayOrder = async (req, res) => {
         }
         const plan = await SubscriptionPlan.findById(planId);
         if (!plan) {
-            return res.status(404).json({ message: 'Subscription plan not found' });
+            return res.status(404).json({ status: 'fail', message: 'Subscription plan not found' });
+        }
+
+        if (!plan.price || plan.price <= 0) {
+            return res.status(400).json({
+                status: 'fail',
+                message:
+                    'This plan is free and is activated when you register. Go to your dashboard to use Free Foundation.',
+            });
+        }
+
+        if (plan.price < 100) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Minimum payable amount is ₹1. Please contact support if this plan should be purchasable.',
+            });
         }
 
         // Get Razorpay configuration
@@ -45,21 +60,37 @@ export const createRazorpayOrder = async (req, res) => {
         
         const options = {
             amount: plan.price,
-            currency: plan.currency,
-            receipt: `receipt_order_${new Date().getTime()}`,
-            payment_capture: 1,
+            currency: plan.currency || 'INR',
+            receipt: `verble_${planId.toString().slice(-8)}_${Date.now()}`,
             notes: {
                 planId: planId,
-                userId: req.user._id.toString()
-            }
+                userId: req.user._id.toString(),
+            },
         };
         const order = await instance.orders.create(options);
         res.status(200).json({ status: 'success', data: { order } });
     } catch (error) {
-        console.error("CREATE RAZORPAY ORDER ERROR:", error);
-        res.status(500).json({ 
+        console.error('CREATE RAZORPAY ORDER ERROR:', error);
+
+        if (error?.message?.includes('Razorpay credentials not configured')) {
+            return res.status(503).json({
+                status: 'error',
+                message: 'Online payments are not configured yet. Please contact support.',
+            });
+        }
+
+        const razorpayDesc = error?.error?.description || error?.description;
+        if (error?.statusCode === 401 || razorpayDesc?.includes('Authentication')) {
+            return res.status(503).json({
+                status: 'error',
+                message:
+                    'Payment gateway authentication failed. Please try again later or contact support.',
+            });
+        }
+
+        res.status(500).json({
             status: 'error',
-            message: 'Failed to create payment order. Please try again.' 
+            message: razorpayDesc || 'Failed to create payment order. Please try again.',
         });
     }
 };

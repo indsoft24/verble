@@ -26,6 +26,7 @@ export interface User {
     updatedAt?: string;
     googleId?: string;
     authProvider?: 'local' | 'google' | 'phone_pin';
+    loginPinConfigured?: boolean;
     googleProfile?: {
         id: string;
         email: string;
@@ -76,7 +77,6 @@ export interface LoginCredentials { email?: string; password?: string; mobile?: 
 export interface PhonePinLoginPayload {
     phoneNumber: string;
     pin: string;
-    agreedToTerms: boolean;
 }
 export interface RegisterData {
     name?: string;
@@ -85,6 +85,7 @@ export interface RegisterData {
     phoneNumber?: string;
     mobile?: string;
     role?: string;
+    agreedToTerms?: boolean;
 }
 export interface MobileOTPRequest { mobile: string; }
 export interface MobileOTPVerify { mobile: string; otp: string; name?: string; }
@@ -162,15 +163,19 @@ export const forgotLoginPin = async (phoneNumber: string): Promise<string> => {
     }
 };
 
-export const changeLoginPin = async (currentPin: string, newPin: string): Promise<string> => {
+export const changeLoginPin = async (payload: {
+    currentPin?: string;
+    newPin: string;
+}): Promise<string> => {
     try {
         const response = await apiClient.patch<{ status: string; message: string }>(
             `${API_URL_AUTH}/phone-pin/change-pin`,
-            { currentPin, newPin }
+            payload
         );
         return response.data.message || 'PIN updated successfully.';
     } catch (error: any) {
-        throw error.response?.data || { message: 'Failed to update PIN.' };
+        const err = error.response?.data || error;
+        throw new Error(err.message || 'Failed to update PIN.');
     }
 };
 

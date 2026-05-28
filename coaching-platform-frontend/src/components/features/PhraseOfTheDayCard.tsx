@@ -474,8 +474,27 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
                         <Button startIcon={<ArrowBackIcon />} onClick={() => handleNavigation('prev')} disabled={!hasPrevious || isLoadingNav} sx={{ color: alpha('#e2e8f0', 0.85) }}>
                             Previous Phrase
                         </Button>
-                        <Button onClick={() => onNavigateToWord?.()} disabled={!onNavigateToWord} sx={{ color: GOLD_ACCENT, fontWeight: 700, textDecoration: onNavigateToWord ? 'underline' : 'none' }}>
-                            View Word of the Day
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => onNavigateToWord?.()}
+                            disabled={!onNavigateToWord}
+                            sx={{
+                                borderColor: '#14b8a6',
+                                color: '#14b8a6',
+                                fontWeight: 700,
+                                px: 2,
+                                '&:hover': {
+                                    borderColor: '#14b8a6',
+                                    bgcolor: 'rgba(20, 184, 166, 0.12)',
+                                },
+                                '&.Mui-disabled': {
+                                    borderColor: 'rgba(226, 232, 240, 0.2)',
+                                    color: 'rgba(226, 232, 240, 0.35)',
+                                },
+                            }}
+                        >
+                            ← Word of the Day
                         </Button>
                         <Button endIcon={<ArrowForwardIcon />} onClick={() => handleNavigation('next')} disabled={!hasNext || isLoadingNav} sx={{ color: alpha('#e2e8f0', 0.85) }}>
                             Next Phrase

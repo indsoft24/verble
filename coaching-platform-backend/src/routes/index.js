@@ -48,6 +48,7 @@ import certificateRoutes from './certificateRoutes.js';
 import leaderboardRoutes from './leaderboardRoutes.js';
 import offerRoutes from './offerRoutes.js';
 import promoBannerRoutes from './promoBannerRoutes.js';
+import promoBannerAdminRoutes from './promoBannerAdminRoutes.js';
 import recentJoinersRoutes from './recentJoinersRoutes.js';
 import sentenceValidationRoutes from './sentenceValidationRoutes.js';
 import databaseManagerRoutes from './databaseManagerRoutes.js';
@@ -111,6 +112,7 @@ router.use('/certificates', certificateRoutes); // Handles /api/certificates/*
 router.use('/leaderboard', leaderboardRoutes); // Handles /api/leaderboard/*
 router.use('/offers', offerRoutes); // Handles /api/offers/*
 router.use('/promo-banner', promoBannerRoutes); // Handles /api/promo-banner/*
+router.use('/admin/promo-banner', promoBannerAdminRoutes); // Handles /api/admin/promo-banner/*
 router.use('/recent-joiners', recentJoinersRoutes); // Handles /api/recent-joiners/*
 router.use('/validate-sentence', sentenceValidationRoutes); // Handles /api/validate-sentence/*
 router.use('/admin/database-manager', databaseManagerRoutes); // Handles /api/admin/database-manager/*

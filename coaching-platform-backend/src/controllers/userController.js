@@ -23,7 +23,7 @@ export const getMyUserProfile = async (req, res, next) => {
         });
     }
     const user = await User.findById(req.user._id)
-      .select("-password -activeSessions")
+      .select("-password -activeSessions -loginPin")
       .populate({
         path: "subscriptions.planId",
         model: "SubscriptionPlan",
@@ -35,22 +35,29 @@ export const getMyUserProfile = async (req, res, next) => {
         .json({ status: "fail", message: "User not found." });
     }
 
+    const pinMeta = await User.findById(req.user._id).select("loginPin").lean();
+    const userPayload = user.toObject();
+    userPayload.loginPinConfigured = Boolean(pinMeta?.loginPin);
+
     // Check and update subscription expiration and unlocked levels
     try {
       await checkAndHandleSubscriptionExpiration(req.user._id);
       // Refresh user to get updated unlocked levels
       const updatedUser = await User.findById(req.user._id)
-        .select("-password -activeSessions")
+        .select("-password -activeSessions -loginPin")
         .populate({
           path: "subscriptions.planId",
           model: "SubscriptionPlan",
           select: "name price currency duration isActive features",
         });
       
+      const refreshedPayload = updatedUser.toObject();
+      refreshedPayload.loginPinConfigured = userPayload.loginPinConfigured;
+
       res.status(200).json({
         status: "success",
         data: {
-          user: updatedUser,
+          user: refreshedPayload,
         },
       });
     } catch (error) {
@@ -59,7 +66,7 @@ export const getMyUserProfile = async (req, res, next) => {
       res.status(200).json({
         status: "success",
         data: {
-          user: user,
+          user: userPayload,
         },
       });
     }

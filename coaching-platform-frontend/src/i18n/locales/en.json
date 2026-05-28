@@ -6,6 +6,7 @@
     "phoneHint": "Include country code (e.g. +91 for India)",
     "loginPin": "6-digit PIN",
     "agreeToTerms": "I agree to the",
+    "mustAgreeToTerms": "Please accept the privacy policy and terms & conditions to continue.",
     "and": "and",
     "forgotPin": "Forgot PIN? Email me a new one",
     "noAccount": "New here?",

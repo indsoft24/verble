@@ -57,16 +57,13 @@ const clearLoginAttempts = async (formattedPhone) => {
  * @route   POST /api/auth/phone-pin/login
  */
 export const loginWithPhonePin = asyncHandler(async (req, res) => {
-    const { phoneNumber, pin, agreedToTerms } = req.body;
+    const { phoneNumber, pin } = req.body;
 
     if (!phoneNumber || !pin) {
         return res.status(400).json({ status: 'fail', message: 'Phone number and PIN are required.' });
     }
     if (!isValidLoginPinFormat(pin)) {
         return res.status(400).json({ status: 'fail', message: 'PIN must be a 6-digit number.' });
-    }
-    if (!agreedToTerms) {
-        return res.status(400).json({ status: 'fail', message: 'You must accept the privacy policy to continue.' });
     }
 
     const formattedPhone = normalizePhone(phoneNumber);
@@ -126,19 +123,41 @@ export const loginWithPhonePin = asyncHandler(async (req, res) => {
 export const changeLoginPin = asyncHandler(async (req, res) => {
     const { currentPin, newPin } = req.body;
 
-    if (!currentPin || !newPin) {
-        return res.status(400).json({ status: 'fail', message: 'Current PIN and new PIN are required.' });
+    if (!newPin) {
+        return res.status(400).json({ status: 'fail', message: 'New PIN is required.' });
     }
     if (!isValidLoginPinFormat(newPin)) {
-        return res.status(400).json({ status: 'fail', message: 'New PIN must be a 6-digit number.' });
-    }
-    if (currentPin === newPin) {
-        return res.status(400).json({ status: 'fail', message: 'New PIN must be different from current PIN.' });
+        return res.status(400).json({ status: 'fail', message: 'PIN must be a 6-digit number.' });
     }
 
     const user = await User.findById(req.user._id).select('+loginPin');
-    if (!user || !user.loginPin) {
-        return res.status(400).json({ status: 'fail', message: 'PIN login is not set up for this account.' });
+    if (!user) {
+        return res.status(404).json({ status: 'fail', message: 'User not found.' });
+    }
+
+    if (!user.isEmailVerified) {
+        return res.status(403).json({
+            status: 'fail',
+            message: 'Please verify your email before setting a login PIN.',
+        });
+    }
+
+    // First-time PIN setup (no existing PIN)
+    if (!user.loginPin) {
+        user.loginPin = newPin;
+        user.authProvider = 'phone_pin';
+        await user.save();
+        return res.status(200).json({ status: 'success', message: 'Login PIN set successfully.' });
+    }
+
+    if (!currentPin) {
+        return res.status(400).json({ status: 'fail', message: 'Current PIN is required to change your PIN.' });
+    }
+    if (!isValidLoginPinFormat(currentPin)) {
+        return res.status(400).json({ status: 'fail', message: 'Current PIN must be a 6-digit number.' });
+    }
+    if (currentPin === newPin) {
+        return res.status(400).json({ status: 'fail', message: 'New PIN must be different from current PIN.' });
     }
 
     const match = await user.compareLoginPin(currentPin);

@@ -50,7 +50,7 @@ const PromoBanner: React.FC = () => {
         return () => clearInterval(id);
     }, [banner, endTime]);
 
-    if (!banner) return null;
+    if (!banner || !banner.isEnabled) return null;
 
     const ctaUrl = banner.ctaUrl?.trim() || '';
 
@@ -166,48 +166,81 @@ const PromoBanner: React.FC = () => {
                         textAlign: { xs: 'center', sm: 'left' },
                     }}
                 >
-                    <Button
-                        onClick={() => setOpenLeadDialog(true)}
-                        variant="contained"
-                        sx={{
-                            bgcolor: '#84cc16',
-                            color: '#fff',
-                            fontWeight: 600,
-                            px: 2.5,
-                            py: 1,
-                            alignSelf: { xs: 'stretch', sm: 'center' },
-                            '&:hover': { bgcolor: '#a3e635' },
-                        }}
-                    >
-                        {banner.ctaText || 'Join Now'}
-                    </Button>
                     <Box
                         sx={{
                             display: 'flex',
-                            flexWrap: 'wrap',
-                            alignItems: 'center',
-                            justifyContent: { xs: 'center', sm: 'flex-start' },
+                            flexDirection: 'column',
+                            alignItems: { xs: 'center', sm: 'flex-end' },
                             gap: 1,
                         }}
                     >
+                        <Box
+                            sx={{
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: 1,
+                                bgcolor: 'rgba(0,0,0,0.35)',
+                                border: '1px solid rgba(254,240,138,0.35)',
+                            }}
+                        >
+                            <Typography
+                                variant="caption"
+                                sx={{ display: 'block', color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}
+                            >
+                                Limited time · ends in
+                            </Typography>
+                            <Typography
+                                sx={{
+                                    fontFamily: 'monospace',
+                                    fontWeight: 800,
+                                    fontSize: '1.25rem',
+                                    color: '#fef08a',
+                                    textAlign: 'center',
+                                    letterSpacing: 1,
+                                }}
+                            >
+                                {formatCountdown(countdownSeconds)}
+                            </Typography>
+                        </Box>
                         {(banner.originalPrice || banner.offerPrice) && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 {banner.originalPrice && (
-                                    <Typography component="span" sx={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.6)', fontSize: '0.8125rem' }}>
+                                    <Typography
+                                        component="span"
+                                        sx={{
+                                            textDecoration: 'line-through',
+                                            color: 'rgba(255,255,255,0.55)',
+                                            fontSize: '0.8125rem',
+                                        }}
+                                    >
                                         {banner.originalPrice}
                                     </Typography>
                                 )}
                                 {banner.offerPrice && (
-                                    <Typography component="span" sx={{ fontWeight: 600, fontSize: '0.8125rem' }}>
+                                    <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.9rem' }}>
                                         {banner.offerPrice}
                                     </Typography>
                                 )}
                             </Box>
                         )}
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem' }}>
-                            Offer expires in {formatCountdown(countdownSeconds)}
-                        </Typography>
                     </Box>
+                    <Button
+                        onClick={() => setOpenLeadDialog(true)}
+                        variant="contained"
+                        size="large"
+                        sx={{
+                            bgcolor: '#84cc16',
+                            color: '#0f172a',
+                            fontWeight: 800,
+                            px: 3,
+                            py: 1.25,
+                            alignSelf: { xs: 'stretch', sm: 'center' },
+                            boxShadow: '0 4px 14px rgba(132,204,22,0.45)',
+                            '&:hover': { bgcolor: '#a3e635' },
+                        }}
+                    >
+                        {banner.ctaText || 'Enroll Now'}
+                    </Button>
                 </Box>
             </Box>
             <Dialog open={openLeadDialog} onClose={resetDialog} fullWidth maxWidth="sm">

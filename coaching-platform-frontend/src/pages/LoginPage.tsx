@@ -19,10 +19,10 @@ const LoginPage: React.FC = () => {
     const from = locationState?.from?.pathname || '/dashboard';
     const pinSent = locationState?.pinSent;
 
-    const handleSubmit = async (phoneNumber: string, pin: string, agreedToTerms: boolean) => {
+    const handleSubmit = async (phoneNumber: string, pin: string) => {
         setIsLoading(true);
         try {
-            await loginWithPhonePin({ phoneNumber, pin, agreedToTerms });
+            await loginWithPhonePin({ phoneNumber, pin });
             navigate(from, { replace: true });
         } catch (err: unknown) {
             const error = err as { code?: string; message?: string; data?: { email?: string } };

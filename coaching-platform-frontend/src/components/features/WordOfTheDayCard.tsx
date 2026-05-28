@@ -496,6 +496,7 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
                             <Tab label="Meaning" />
                             <Tab label="Examples" />
                             <Tab label="Synonyms" />
+                            <Tab label="Antonyms" />
                         </Tabs>
                     </Box>
 
@@ -600,24 +601,26 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
                                 No synonyms available.
                             </Typography>
                         )}
-                        {currentData.metadata.antonyms?.some((s) => String(s ?? '').trim()) && (
-                            <Box sx={{ mt: 2 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#f8fafc', mb: 1 }}>
-                                    Antonyms
-                                </Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                    {currentData.metadata.antonyms
-                                        .filter((s) => String(s ?? '').trim())
-                                        .map((antonym, index) => (
-                                            <Chip
-                                                key={index}
-                                                label={antonym}
-                                                variant="outlined"
-                                                sx={{ borderColor: alpha('#94a3b8', 0.5), color: '#94a3b8' }}
-                                            />
-                                        ))}
-                                </Box>
+                    </TabPanel>
+
+                    <TabPanel value={tabValue} index={3}>
+                        {currentData.metadata.antonyms?.some((s) => String(s ?? '').trim()) ? (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                {currentData.metadata.antonyms
+                                    .filter((s) => String(s ?? '').trim())
+                                    .map((antonym, index) => (
+                                        <Chip
+                                            key={index}
+                                            label={antonym}
+                                            variant="outlined"
+                                            sx={{ borderColor: alpha('#94a3b8', 0.5), color: '#94a3b8' }}
+                                        />
+                                    ))}
                             </Box>
+                        ) : (
+                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.5) }}>
+                                No antonyms available.
+                            </Typography>
                         )}
                     </TabPanel>
                 </CardContent>
@@ -836,17 +839,26 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
                         </Button>
 
                         <Button
-                            variant="text"
+                            variant="outlined"
+                            size="small"
                             onClick={() => onNavigateToPhrase?.()}
                             disabled={!onNavigateToPhrase}
                             sx={{
+                                borderColor: GOLD_ACCENT,
                                 color: GOLD_ACCENT,
                                 fontWeight: 700,
-                                textTransform: 'none',
-                                textDecoration: onNavigateToPhrase ? 'underline' : 'none',
+                                px: 2,
+                                '&:hover': {
+                                    borderColor: GOLD_ACCENT,
+                                    bgcolor: alpha(GOLD_ACCENT, 0.12),
+                                },
+                                '&.Mui-disabled': {
+                                    borderColor: alpha('#e2e8f0', 0.2),
+                                    color: alpha('#e2e8f0', 0.35),
+                                },
                             }}
                         >
-                            Phrase of the day
+                            → Phrase of the Day
                         </Button>
 
                         <Button

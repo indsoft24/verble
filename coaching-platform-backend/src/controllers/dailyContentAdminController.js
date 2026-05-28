@@ -103,6 +103,28 @@ const endOfLocalDayExclusive = (dateStr) => {
     return end;
 };
 
+/** One slot per calendar day (type + level + puzzle variant for PUZZLE). */
+const findExistingForDaySlot = async (payload) => {
+    const dateValue = payload.date;
+    if (!dateValue) return null;
+
+    const query = {
+        date: {
+            $gte: startOfLocalDay(dateValue),
+            $lt: endOfLocalDayExclusive(dateValue),
+        },
+        type: payload.type,
+        level: payload.level,
+    };
+
+    if (payload.type === 'PUZZLE') {
+        const puzzleType = payload.metadata?.puzzleType || 'SPOT_CORRECT_SENTENCE';
+        query['metadata.puzzleType'] = puzzleType;
+    }
+
+    return DailyContent.findOne(query).sort({ createdAt: -1 });
+};
+
 /**
  * @route GET /api/admin/daily-content/sequence-preview?type=&level=&puzzleType=
  * Next display number for a new item (per type + level stream).
@@ -217,6 +239,14 @@ export const getAllDailyContentAdmin = asyncHandler(async (req, res) => {
 
 export const createDailyContentAdmin = asyncHandler(async (req, res) => {
     const payload = await prepareBody(req.body);
+    const existing = await findExistingForDaySlot(payload);
+    if (existing) {
+        return res.status(409).json({
+            status: 'fail',
+            message: 'Content for this type is already scheduled on this date. Edit the existing entry instead.',
+            data: { content: existing, duplicate: true },
+        });
+    }
     const doc = await DailyContent.create({ ...payload, createdBy: req.user._id });
     await assignSequenceNumberIfMissing(doc);
     res.status(201).json({ status: 'success', data: { content: doc } });
@@ -234,6 +264,14 @@ export const bulkCreateDailyContentAdmin = asyncHandler(async (req, res) => {
     for (let index = 0; index < items.length; index++) {
         try {
             const payload = await prepareBody(items[index]);
+            const existing = await findExistingForDaySlot(payload);
+            if (existing) {
+                failures.push({
+                    index,
+                    message: 'Content for this type is already scheduled on this date.',
+                });
+                continue;
+            }
             const doc = await DailyContent.create({ ...payload, createdBy: req.user._id });
             await assignSequenceNumberIfMissing(doc);
             created.push(doc);

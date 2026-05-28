@@ -1,46 +1,60 @@
-// src/pages/ProfilePage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import UserLayout from '../components/layout/UserLayout';
 import {
-    Container, Typography, CircularProgress, Alert, Box, Paper, Grid,
-    TextField, Button, Divider, Chip
+    Container,
+    Typography,
+    CircularProgress,
+    Alert,
+    Box,
+    Paper,
+    Grid,
+    TextField,
+    Button,
+    Divider,
+    Chip,
+    Link as MuiLink,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { useAuth } from '../contexts/AuthContext';
-import {
-    getCurrentUserProfile, updateCurrentUserProfile, updateCurrentUserPassword,
-    type UpdateProfileData, type UpdatePasswordData
-} from '../services/userService';
-import type { User as AuthUser } from '../services/authService';
-
-// --- Icons ---
 import SaveIcon from '@mui/icons-material/Save';
-import PasswordIcon from '@mui/icons-material/Password';
+import PinIcon from '@mui/icons-material/Pin';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LockResetIcon from '@mui/icons-material/LockReset';
+import { useAuth } from '../contexts/AuthContext';
+import { getCurrentUserProfile, updateCurrentUserProfile, type UpdateProfileData } from '../services/userService';
+import { changeLoginPin, forgotLoginPin } from '../services/authService';
+import type { User as AuthUser } from '../services/authService';
+
+const PIN_LENGTH = 6;
+
+const digitsOnly = (value: string, max = PIN_LENGTH) => value.replace(/\D/g, '').slice(0, max);
 
 const ProfilePage: React.FC = () => {
     const { user: authUser, setUserContext, token, refreshUser } = useAuth();
 
     const [profileData, setProfileData] = useState<AuthUser | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // State for profile update form
     const [name, setName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [isProfileUpdating, setIsProfileUpdating] = useState(false);
-    const [profileUpdateMessage, setProfileUpdateMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [profileUpdateMessage, setProfileUpdateMessage] = useState<{
+        type: 'success' | 'error';
+        text: string;
+    } | null>(null);
 
-    // State for password update form
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
-    const [passwordUpdateMessage, setPasswordUpdateMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-    // --- NEW: State to control the visibility of the password form ---
-    const [isPasswordSectionVisible, setIsPasswordSectionVisible] = useState(false);
+    const [loginPinConfigured, setLoginPinConfigured] = useState(true);
+    const [currentPin, setCurrentPin] = useState('');
+    const [newPin, setNewPin] = useState('');
+    const [confirmPin, setConfirmPin] = useState('');
+    const [isPinUpdating, setIsPinUpdating] = useState(false);
+    const [pinUpdateMessage, setPinUpdateMessage] = useState<{
+        type: 'success' | 'error';
+        text: string;
+    } | null>(null);
+    const [isPinSectionVisible, setIsPinSectionVisible] = useState(false);
+    const [forgotPinLoading, setForgotPinLoading] = useState(false);
 
     const fetchProfile = useCallback(async () => {
         setIsLoading(true);
@@ -50,12 +64,14 @@ const ProfilePage: React.FC = () => {
             if (userProfileData) {
                 setProfileData(userProfileData);
                 setName(userProfileData.name || '');
-                setPhoneNumber(userProfileData.phoneNumber || '');
+                setPhoneNumber(userProfileData.phoneNumber || userProfileData.mobile || '');
+                setLoginPinConfigured(Boolean(userProfileData.loginPinConfigured));
             } else {
-                throw new Error("User profile data not found.");
+                throw new Error('User profile data not found.');
             }
-        } catch (err: any) {
-            setError(err.message || 'Failed to load profile data.');
+        } catch (err: unknown) {
+            const e = err as { message?: string };
+            setError(e.message || 'Failed to load profile data.');
         } finally {
             setIsLoading(false);
         }
@@ -72,10 +88,11 @@ const ProfilePage: React.FC = () => {
 
         const updateData: UpdateProfileData = {};
         if (name !== (profileData?.name || '')) updateData.name = name;
-        if (phoneNumber !== (profileData?.phoneNumber || '')) updateData.phoneNumber = phoneNumber;
+        const existingPhone = profileData?.phoneNumber || profileData?.mobile || '';
+        if (phoneNumber !== existingPhone) updateData.phoneNumber = phoneNumber;
 
         if (Object.keys(updateData).length === 0) {
-            setProfileUpdateMessage({ type: 'error', text: "No changes to update." });
+            setProfileUpdateMessage({ type: 'error', text: 'No changes to update.' });
             setIsProfileUpdating(false);
             return;
         }
@@ -85,70 +102,119 @@ const ProfilePage: React.FC = () => {
             if (updatedUserProfile) {
                 setProfileData(updatedUserProfile);
                 setName(updatedUserProfile.name || '');
-                setPhoneNumber(updatedUserProfile.phoneNumber || '');
+                setPhoneNumber(updatedUserProfile.phoneNumber || updatedUserProfile.mobile || '');
 
-                // Use the more reliable refreshUser if available, otherwise update context manually
                 if (refreshUser) {
                     await refreshUser();
                 } else if (setUserContext && token && authUser) {
-                    const newAuthUser: AuthUser = { ...authUser, name: updatedUserProfile.name, phoneNumber: updatedUserProfile.phoneNumber };
-                    setUserContext(newAuthUser, token);
+                    setUserContext(
+                        {
+                            ...authUser,
+                            name: updatedUserProfile.name,
+                            phoneNumber: updatedUserProfile.phoneNumber,
+                            mobile: updatedUserProfile.mobile,
+                        },
+                        token
+                    );
                 }
 
                 setProfileUpdateMessage({ type: 'success', text: 'Profile updated successfully!' });
             } else {
-                throw new Error("Profile update did not return user data.");
+                throw new Error('Profile update did not return user data.');
             }
-        } catch (err: any) {
-            setProfileUpdateMessage({ type: 'error', text: err.message || 'Failed to update profile.' });
+        } catch (err: unknown) {
+            const e = err as { message?: string };
+            setProfileUpdateMessage({ type: 'error', text: e.message || 'Failed to update profile.' });
         } finally {
             setIsProfileUpdating(false);
         }
     };
 
-    const handlePasswordUpdateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    const handlePinUpdateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (newPassword !== confirmPassword) {
-            setPasswordUpdateMessage({ type: 'error', text: "New passwords do not match." });
+
+        if (newPin.length !== PIN_LENGTH || confirmPin.length !== PIN_LENGTH) {
+            setPinUpdateMessage({ type: 'error', text: 'PIN must be exactly 6 digits.' });
             return;
         }
-        if (newPassword.length < 6) {
-            setPasswordUpdateMessage({ type: 'error', text: "New password must be at least 6 characters long." });
+        if (newPin !== confirmPin) {
+            setPinUpdateMessage({ type: 'error', text: 'New PIN and confirmation do not match.' });
             return;
         }
+        if (loginPinConfigured) {
+            if (currentPin.length !== PIN_LENGTH) {
+                setPinUpdateMessage({ type: 'error', text: 'Enter your current 6-digit PIN.' });
+                return;
+            }
+            if (currentPin === newPin) {
+                setPinUpdateMessage({ type: 'error', text: 'New PIN must be different from your current PIN.' });
+                return;
+            }
+        }
 
-        setIsPasswordUpdating(true);
-        setPasswordUpdateMessage(null);
-
-        const passwordData: UpdatePasswordData = { currentPassword, newPassword, confirmPassword };
+        setIsPinUpdating(true);
+        setPinUpdateMessage(null);
 
         try {
-            const response = await updateCurrentUserPassword(passwordData);
-            setPasswordUpdateMessage({ type: 'success', text: response.message || 'Password updated successfully!' });
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-            setIsPasswordSectionVisible(false); // Hide form on success
-        } catch (err: any) {
-            setPasswordUpdateMessage({ type: 'error', text: err.message || 'Failed to update password.' });
+            const message = await changeLoginPin({
+                ...(loginPinConfigured ? { currentPin } : {}),
+                newPin,
+            });
+            setPinUpdateMessage({ type: 'success', text: message });
+            setLoginPinConfigured(true);
+            setCurrentPin('');
+            setNewPin('');
+            setConfirmPin('');
+            setIsPinSectionVisible(false);
+        } catch (err: unknown) {
+            const e = err as { message?: string };
+            setPinUpdateMessage({ type: 'error', text: e.message || 'Failed to update PIN.' });
         } finally {
-            setIsPasswordUpdating(false);
+            setIsPinUpdating(false);
         }
     };
 
-    const handleCancelPasswordUpdate = () => {
-        setIsPasswordSectionVisible(false);
-        setPasswordUpdateMessage(null);
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+    const handleCancelPinUpdate = () => {
+        setIsPinSectionVisible(false);
+        setPinUpdateMessage(null);
+        setCurrentPin('');
+        setNewPin('');
+        setConfirmPin('');
+    };
+
+    const handleForgotPinEmail = async () => {
+        const phone = phoneNumber.trim() || profileData?.phoneNumber || profileData?.mobile;
+        if (!phone) {
+            setPinUpdateMessage({ type: 'error', text: 'Add a phone number to your profile first.' });
+            return;
+        }
+        setForgotPinLoading(true);
+        try {
+            const msg = await forgotLoginPin(phone);
+            setPinUpdateMessage({ type: 'success', text: msg });
+        } catch (err: unknown) {
+            const e = err as { message?: string };
+            setPinUpdateMessage({ type: 'error', text: e.message || 'Could not email a new PIN.' });
+        } finally {
+            setForgotPinLoading(false);
+        }
+    };
+
+    const pinFieldProps = {
+        inputProps: {
+            inputMode: 'numeric' as const,
+            pattern: '[0-9]*',
+            maxLength: PIN_LENGTH,
+        },
+        placeholder: '••••••',
     };
 
     if (isLoading) {
         return (
             <UserLayout title="Profile">
-                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-                    <CircularProgress /> <Typography sx={{ ml: 2 }}>Loading Profile...</Typography>
+                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+                    <CircularProgress />
+                    <Typography sx={{ ml: 2 }}>Loading profile…</Typography>
                 </Container>
             </UserLayout>
         );
@@ -158,7 +224,7 @@ const ProfilePage: React.FC = () => {
         return (
             <UserLayout title="Profile">
                 <Container sx={{ mt: 4 }}>
-                    <Alert severity="error">{error || 'Could not load profile data. Please try again.'}</Alert>
+                    <Alert severity="error">{error || 'Could not load profile data.'}</Alert>
                 </Container>
             </UserLayout>
         );
@@ -171,106 +237,224 @@ const ProfilePage: React.FC = () => {
                     Account Settings
                 </Typography>
 
-            <Paper elevation={2} sx={{ p: { xs: 2, sm: 4 }, borderRadius: '12px' }}>
-                {/* --- PROFILE DETAILS SECTION --- */}
-                <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <AccountCircleIcon color="primary" sx={{ mr: 1.5 }} />
-                        <Typography variant="h6" component="h2">Account Details</Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Edit your name and phone number. Your email address cannot be changed.
-                    </Typography>
+                <Paper elevation={2} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3 }}>
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <AccountCircleIcon color="primary" sx={{ mr: 1.5 }} />
+                            <Typography variant="h6" component="h2">
+                                Account Details
+                            </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Edit your name and phone number. Your email address cannot be changed.
+                        </Typography>
 
-                    <Box component="form" onSubmit={handleProfileUpdateSubmit} noValidate>
-                        <Grid container spacing={2}>
-                            {profileUpdateMessage && (
-                                <Grid sx={{ width: { sm: '100%' } }}>
-                                    <Alert severity={profileUpdateMessage.type} onClose={() => setProfileUpdateMessage(null)} sx={{ mb: 1 }}>{profileUpdateMessage.text}</Alert>
-                                </Grid>
-                            )}
-                            <Grid sx={{ width: { sm: '100%', xs: '50%' } }}>
-                                <TextField label="Name" name="name" value={name} onChange={(e) => setName(e.target.value)} fullWidth required variant="outlined" disabled={isProfileUpdating} />
-                            </Grid>
-                            <Grid sx={{ width: { sm: '100%', xs: '50%' } }}>
-                                <TextField label="Phone Number" name="phoneNumber" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} fullWidth variant="outlined" disabled={isProfileUpdating} />
-                            </Grid>
-                            <Grid sx={{ width: { sm: '100%' }, textAlign: 'right' }}>
-                                <TextField
-                                    label="Email"
-                                    value={profileData.email}
-                                    fullWidth
-                                    InputProps={{
-                                        readOnly: true,
-                                        endAdornment: profileData.isEmailVerified && (
-                                            <Chip
-                                                icon={<CheckCircleIcon />}
-                                                label="Verified"
-                                                color="success"
-                                                size="small"
-                                                variant="outlined"
-                                            />
-                                        )
-                                    }}
-                                    variant="outlined"
-                                />
-                            </Grid>
-                            <Grid sx={{ width: { sm: '100%' }, textAlign: 'right' }}>
-                                <Button type="submit" variant="contained" color="primary" disabled={isProfileUpdating} startIcon={<SaveIcon />} sx={{ mt: 2 }}>
-                                    {isProfileUpdating ? <CircularProgress size={24} color="inherit" /> : 'Save Changes'}
-                                </Button>
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Box>
-
-                <Divider sx={{ my: 4 }} />
-
-                {/* --- PASSWORD / SECURITY SECTION --- */}
-                <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <LockResetIcon color="action" sx={{ mr: 1.5 }} />
-                        <Typography variant="h6" component="h2">Security</Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Manage your account password.
-                    </Typography>
-
-                    {/* --- UPDATED: Conditionally render the password form --- */}
-                    {isPasswordSectionVisible ? (
-                        <Box component="form" onSubmit={handlePasswordUpdateSubmit} noValidate>
+                        <Box component="form" onSubmit={handleProfileUpdateSubmit} noValidate>
                             <Grid container spacing={2}>
-                                {passwordUpdateMessage && (
-                                    <Grid sx={{ width: { sm: '100%' } }}>
-                                        <Alert severity={passwordUpdateMessage.type} onClose={() => setPasswordUpdateMessage(null)} sx={{ mb: 1 }}>{passwordUpdateMessage.text}</Alert>
+                                {profileUpdateMessage && (
+                                    <Grid size={{ xs: 12 }}>
+                                        <Alert
+                                            severity={profileUpdateMessage.type}
+                                            onClose={() => setProfileUpdateMessage(null)}
+                                        >
+                                            {profileUpdateMessage.text}
+                                        </Alert>
                                     </Grid>
                                 )}
-                                <Grid sx={{ width: { sm: '100%' } }}>
-                                    <TextField type="password" label="Current Password" name="currentPassword" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} fullWidth required variant="outlined" disabled={isPasswordUpdating} />
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        label="Name"
+                                        name="name"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        fullWidth
+                                        required
+                                        disabled={isProfileUpdating}
+                                    />
                                 </Grid>
-                                <Grid sx={{ width: { sm: '100%', xs: '50%' } }}>
-                                    <TextField type="password" label="New Password" name="newPassword" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} fullWidth required variant="outlined" disabled={isPasswordUpdating} />
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        label="Phone number"
+                                        name="phoneNumber"
+                                        value={phoneNumber}
+                                        onChange={(e) => setPhoneNumber(e.target.value)}
+                                        fullWidth
+                                        helperText="Used to sign in with your 6-digit PIN"
+                                        disabled={isProfileUpdating}
+                                    />
                                 </Grid>
-                                <Grid sx={{ width: { sm: '100%', xs: '50%' } }}>
-                                    <TextField type="password" label="Confirm New Password" name="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} fullWidth required variant="outlined" disabled={isPasswordUpdating} />
+                                <Grid size={{ xs: 12 }}>
+                                    <TextField
+                                        label="Email"
+                                        value={profileData.email}
+                                        fullWidth
+                                        InputProps={{
+                                            readOnly: true,
+                                            endAdornment: profileData.isEmailVerified && (
+                                                <Chip
+                                                    icon={<CheckCircleIcon />}
+                                                    label="Verified"
+                                                    color="success"
+                                                    size="small"
+                                                    variant="outlined"
+                                                />
+                                            ),
+                                        }}
+                                    />
                                 </Grid>
-                                <Grid sx={{ width: { sm: '100%' }, mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                    <Button variant="text" color="secondary" onClick={handleCancelPasswordUpdate} disabled={isPasswordUpdating}>
-                                        Cancel
-                                    </Button>
-                                    <Button type="submit" variant="contained" color="secondary" disabled={isPasswordUpdating} startIcon={<PasswordIcon />}>
-                                        {isPasswordUpdating ? <CircularProgress size={24} color="inherit" /> : 'Update Password'}
+                                <Grid size={{ xs: 12 }} sx={{ textAlign: 'right' }}>
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        disabled={isProfileUpdating}
+                                        startIcon={<SaveIcon />}
+                                    >
+                                        {isProfileUpdating ? (
+                                            <CircularProgress size={24} color="inherit" />
+                                        ) : (
+                                            'Save changes'
+                                        )}
                                     </Button>
                                 </Grid>
                             </Grid>
                         </Box>
-                    ) : (
-                        <Button variant="outlined" color="secondary" onClick={() => setIsPasswordSectionVisible(true)}>
-                            Change Password
-                        </Button>
-                    )}
-                </Box>
-            </Paper>
+                    </Box>
+
+                    <Divider sx={{ my: 4 }} />
+
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <LockResetIcon color="action" sx={{ mr: 1.5 }} />
+                            <Typography variant="h6" component="h2">
+                                Login PIN
+                            </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            You sign in with your phone number and a 6-digit PIN (not a password). Change your PIN
+                            here or request a new one by email if you forgot it.
+                        </Typography>
+
+                        {!loginPinConfigured && !isPinSectionVisible && (
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                                No login PIN is set yet. Create one below to sign in with phone + PIN.
+                            </Alert>
+                        )}
+
+                        {pinUpdateMessage && !isPinSectionVisible && (
+                            <Alert
+                                severity={pinUpdateMessage.type}
+                                onClose={() => setPinUpdateMessage(null)}
+                                sx={{ mb: 2 }}
+                            >
+                                {pinUpdateMessage.text}
+                            </Alert>
+                        )}
+
+                        {isPinSectionVisible ? (
+                            <Box component="form" onSubmit={handlePinUpdateSubmit} noValidate>
+                                <Grid container spacing={2}>
+                                    {pinUpdateMessage && (
+                                        <Grid size={{ xs: 12 }}>
+                                            <Alert
+                                                severity={pinUpdateMessage.type}
+                                                onClose={() => setPinUpdateMessage(null)}
+                                            >
+                                                {pinUpdateMessage.text}
+                                            </Alert>
+                                        </Grid>
+                                    )}
+                                    {loginPinConfigured && (
+                                        <Grid size={{ xs: 12, sm: 4 }}>
+                                            <TextField
+                                                label="Current PIN"
+                                                value={currentPin}
+                                                onChange={(e) => setCurrentPin(digitsOnly(e.target.value))}
+                                                fullWidth
+                                                required
+                                                disabled={isPinUpdating}
+                                                {...pinFieldProps}
+                                            />
+                                        </Grid>
+                                    )}
+                                    <Grid size={{ xs: 12, sm: loginPinConfigured ? 4 : 6 }}>
+                                        <TextField
+                                            label={loginPinConfigured ? 'New PIN' : 'Choose PIN'}
+                                            value={newPin}
+                                            onChange={(e) => setNewPin(digitsOnly(e.target.value))}
+                                            fullWidth
+                                            required
+                                            disabled={isPinUpdating}
+                                            helperText="6 digits"
+                                            {...pinFieldProps}
+                                        />
+                                    </Grid>
+                                    <Grid size={{ xs: 12, sm: loginPinConfigured ? 4 : 6 }}>
+                                        <TextField
+                                            label="Confirm PIN"
+                                            value={confirmPin}
+                                            onChange={(e) => setConfirmPin(digitsOnly(e.target.value))}
+                                            fullWidth
+                                            required
+                                            disabled={isPinUpdating}
+                                            {...pinFieldProps}
+                                        />
+                                    </Grid>
+                                    <Grid
+                                        size={{ xs: 12 }}
+                                        sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 1 }}
+                                    >
+                                        <Button
+                                            variant="text"
+                                            onClick={handleCancelPinUpdate}
+                                            disabled={isPinUpdating}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            variant="contained"
+                                            color="primary"
+                                            disabled={isPinUpdating}
+                                            startIcon={<PinIcon />}
+                                        >
+                                            {isPinUpdating ? (
+                                                <CircularProgress size={24} color="inherit" />
+                                            ) : loginPinConfigured ? (
+                                                'Update PIN'
+                                            ) : (
+                                                'Set PIN'
+                                            )}
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Box>
+                        ) : (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                <Button variant="contained" onClick={() => setIsPinSectionVisible(true)}>
+                                    {loginPinConfigured ? 'Change PIN' : 'Set PIN'}
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    onClick={() => void handleForgotPinEmail()}
+                                    disabled={forgotPinLoading}
+                                >
+                                    {forgotPinLoading ? (
+                                        <CircularProgress size={20} />
+                                    ) : (
+                                        'Email me a new PIN'
+                                    )}
+                                </Button>
+                            </Box>
+                        )}
+
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+                            Prefer to sign in first?{' '}
+                            <MuiLink component={RouterLink} to="/login">
+                                Go to login
+                            </MuiLink>
+                        </Typography>
+                    </Box>
+                </Paper>
             </Container>
         </UserLayout>
     );

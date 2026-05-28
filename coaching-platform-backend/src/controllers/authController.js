@@ -77,13 +77,20 @@ const sendVerificationOtpEmail = async (user, otp) => {
  * @desc Register — name, email, phone (no password). Sends email OTP.
  */
 export const register = asyncHandler(async (req, res) => {
-    const { name, email, phoneNumber, mobile } = req.body;
+    const { name, email, phoneNumber, mobile, agreedToTerms } = req.body;
     const phoneRaw = phoneNumber || mobile;
 
     if (!name?.trim() || !email?.trim() || !phoneRaw?.trim()) {
         return res.status(400).json({
             status: 'fail',
             message: 'Name, email, and phone number are required.',
+        });
+    }
+
+    if (!agreedToTerms) {
+        return res.status(400).json({
+            status: 'fail',
+            message: 'You must accept the privacy policy and terms & conditions to register.',
         });
     }
 
@@ -120,6 +127,9 @@ export const register = asyncHandler(async (req, res) => {
             existing.authProvider = 'phone_pin';
             existing.emailVerificationToken = hashedOTP;
             existing.emailVerificationExpires = otpExpires;
+            if (!existing.termsAcceptedAt) {
+                existing.termsAcceptedAt = new Date();
+            }
             await existing.save();
             await sendVerificationOtpEmail(existing, otp);
             return res.status(201).json(successPayload);
@@ -147,6 +157,7 @@ export const register = asyncHandler(async (req, res) => {
         isEmailVerified: false,
         emailVerificationToken: hashedOTP,
         emailVerificationExpires: otpExpires,
+        termsAcceptedAt: new Date(),
         role: 'user',
     });
 
