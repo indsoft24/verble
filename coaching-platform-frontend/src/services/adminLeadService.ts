@@ -19,7 +19,17 @@ interface AdminLeadsResponse {
 }
 
 export const getRecentLeadsAdmin = async (limit = 20): Promise<AdminLead[]> => {
-    const response = await apiClient.get<AdminLeadsResponse>(`/admin/leads?limit=${limit}`);
-    return response.data?.data?.leads || [];
+    try {
+        const response = await apiClient.get<AdminLeadsResponse>(`/admin/leads?limit=${limit}`);
+        if (response.data?.status === 'success' && Array.isArray(response.data.data?.leads)) {
+            return response.data.data.leads;
+        }
+        return [];
+    } catch (error: unknown) {
+        const axiosErr = error as { response?: { data?: { message?: string } }; message?: string };
+        throw new Error(
+            axiosErr.response?.data?.message || axiosErr.message || 'Failed to load leads.'
+        );
+    }
 };
 

@@ -49,6 +49,7 @@ import leaderboardRoutes from './leaderboardRoutes.js';
 import offerRoutes from './offerRoutes.js';
 import promoBannerRoutes from './promoBannerRoutes.js';
 import promoBannerAdminRoutes from './promoBannerAdminRoutes.js';
+import leadAdminRoutes from './leadAdminRoutes.js';
 import recentJoinersRoutes from './recentJoinersRoutes.js';
 import sentenceValidationRoutes from './sentenceValidationRoutes.js';
 import databaseManagerRoutes from './databaseManagerRoutes.js';
@@ -90,6 +91,7 @@ router.use('/admin/exam-categories', examCategoryAdminRoutes); // Handles /api/a
 router.use('/exam-categories', examCategoryRoutes); // Handles /api/exam-categories/*
 router.use('/admin/gated-content', gatedContentAdminRoutes); // Handles /api/admin/gated-content/*
 router.use('/leads', leadRoutes);
+router.use('/admin/leads', leadAdminRoutes);
 router.use('/downloads', downloadRoutes);
 router.use('/admin/knowledge-base', knowledgeBaseAdminRoutes);
 router.use('/admin/notifications', dailyNotificationAdminRoutes);

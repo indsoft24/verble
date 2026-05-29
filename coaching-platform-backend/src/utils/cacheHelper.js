@@ -7,6 +7,22 @@ const CACHE_TTL = {
     VERY_LONG: 7200  // 2 hours - for very static data
 };
 
+const REDIS_OP_TIMEOUT_MS = 3000;
+
+function withRedisTimeout(promise, label) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`Redis ${label} timed out`)), REDIS_OP_TIMEOUT_MS)
+        ),
+    ]);
+}
+
+async function ensureConnected() {
+    if (redisClient.isOpen) return;
+    await withRedisTimeout(redisClient.connect(), 'connect');
+}
+
 /**
  * Get cached data from Redis
  * @param {string} key - Cache key
@@ -14,17 +30,15 @@ const CACHE_TTL = {
  */
 export const getCache = async (key) => {
     try {
-        if (!redisClient.isOpen) {
-            await redisClient.connect();
-        }
-        const cached = await redisClient.get(key);
+        await ensureConnected();
+        const cached = await withRedisTimeout(redisClient.get(key), 'get');
         if (cached) {
             return JSON.parse(cached);
         }
         return null;
     } catch (error) {
         console.error(`[Cache] Error getting cache for key ${key}:`, error.message);
-        return null; // Return null on error to allow fallback to database
+        return null;
     }
 };
 
@@ -37,16 +51,31 @@ export const getCache = async (key) => {
  */
 export const setCache = async (key, data, ttl = CACHE_TTL.MEDIUM) => {
     try {
-        if (!redisClient.isOpen) {
-            await redisClient.connect();
-        }
-        await redisClient.setEx(key, ttl, JSON.stringify(data));
+        await ensureConnected();
+        await withRedisTimeout(redisClient.setEx(key, ttl, JSON.stringify(data)), 'setEx');
         return true;
     } catch (error) {
         console.error(`[Cache] Error setting cache for key ${key}:`, error.message);
-        return false; // Return false on error but don't throw
+        return false;
     }
 };
+
+async function scanKeys(pattern) {
+    const keys = [];
+    const iter = redisClient.scanIterator({ MATCH: pattern, COUNT: 100 });
+    const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Redis scan timed out')), REDIS_OP_TIMEOUT_MS * 3)
+    );
+    await Promise.race([
+        (async () => {
+            for await (const key of iter) {
+                keys.push(key);
+            }
+        })(),
+        timeout,
+    ]);
+    return keys;
+}
 
 /**
  * Delete cached data from Redis
@@ -55,17 +84,14 @@ export const setCache = async (key, data, ttl = CACHE_TTL.MEDIUM) => {
  */
 export const deleteCache = async (key) => {
     try {
-        if (!redisClient.isOpen) {
-            await redisClient.connect();
-        }
-        // Handle wildcard patterns
+        await ensureConnected();
         if (key.includes('*')) {
-            const keys = await redisClient.keys(key);
+            const keys = await scanKeys(key);
             if (keys.length > 0) {
-                await redisClient.del(keys);
+                await withRedisTimeout(redisClient.del(keys), 'del');
             }
         } else {
-            await redisClient.del(key);
+            await withRedisTimeout(redisClient.del(key), 'del');
         }
         return true;
     } catch (error) {
@@ -83,10 +109,9 @@ export const deleteCache = async (key) => {
 export const generateCacheKey = (prefix, params = {}) => {
     const sortedParams = Object.keys(params)
         .sort()
-        .map(key => `${key}:${params[key]}`)
+        .map(k => `${k}:${params[k]}`)
         .join('|');
     return sortedParams ? `${prefix}:${sortedParams}` : prefix;
 };
 
 export { CACHE_TTL };
-

@@ -20,7 +20,6 @@ import {
 } from '@mui/material';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import CampaignIcon from '@mui/icons-material/Campaign';
 import PeopleIcon from '@mui/icons-material/People';
 import TranslateIcon from '@mui/icons-material/Translate';
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
@@ -60,7 +59,7 @@ import {
 } from '../utils/userAccessState';
 import { getFreeLeaderboard, getPaidLeaderboard, getMyRank, type LeaderboardEntry } from '../services/leaderboardService';
 import LeaderboardPanel from '../components/dashboard/LeaderboardPanel';
-import { getActiveOffers, type Offer } from '../services/offerService';
+import DashboardSeminarPromoCard from '../components/dashboard/DashboardSeminarPromoCard';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
 
 type ActivityKind =
@@ -86,7 +85,6 @@ const UserDashboardPage: React.FC = () => {
     const [activityKind, setActivityKind] = useState<ActivityKind | null>(null);
     const [levelDialogOpen, setLevelDialogOpen] = useState(false);
     const [selectedLevel, setSelectedLevel] = useState<'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE' | null>(null);
-    const [offers, setOffers] = useState<Offer[]>([]);
     const [recentJoiners, setRecentJoiners] = useState<RecentJoiner[]>([]);
     const [freeLeaderboard, setFreeLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [paidLeaderboard, setPaidLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -112,14 +110,12 @@ const UserDashboardPage: React.FC = () => {
         if (!user) return;
         setIsLoadingAdditional(true);
         try {
-            const [offersData, joinersData, freeLb, paidLb, rank] = await Promise.all([
-                getActiveOffers().catch(() => []),
+            const [joinersData, freeLb, paidLb, rank] = await Promise.all([
                 getRecentJoiners(10).catch(() => []),
                 getFreeLeaderboard(10).catch(() => []),
                 getPaidLeaderboard(10).catch(() => []),
                 getMyRank().catch(() => null),
             ]);
-            setOffers(offersData);
             setRecentJoiners(joinersData);
             setFreeLeaderboard(freeLb);
             setPaidLeaderboard(paidLb);
@@ -494,29 +490,7 @@ const UserDashboardPage: React.FC = () => {
 
                 <Grid container spacing={3} sx={{ mt: 2, mb: 4 }}>
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                <CampaignIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                <Typography variant="h6" fontWeight={700}>
-                                    Active Offers
-                                </Typography>
-                            </Box>
-                            {isLoadingAdditional ? (
-                                <CircularProgress size={24} />
-                            ) : offers.length > 0 ? (
-                                <List dense>
-                                    {offers.slice(0, 3).map((offer, index) => (
-                                        <ListItem key={index} sx={{ px: 0 }}>
-                                            <ListItemText primary={offer.title} secondary={offer.description} />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                    No active offers
-                                </Typography>
-                            )}
-                        </Paper>
+                        <DashboardSeminarPromoCard isLoading={isLoadingAdditional} />
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
                         <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>

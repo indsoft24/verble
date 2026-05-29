@@ -16,6 +16,7 @@ import { getLanguageChoiceMade } from './i18n/config';
 // --- Layout Component Imports (Keep these eager - used on most pages) ---
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import PromoBanner from './components/layout/PromoBanner';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { isUserAppRoute } from './constants/userAppRoutes';
 
@@ -122,7 +123,13 @@ function AppContent() {
             {/* Only show Navbar and Footer for non-admin and non-user dashboard routes */}
             {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <Navbar />}
 
-            <Box component="main" sx={{ flexGrow: 1 }}>
+            <Box
+                component="main"
+                sx={{
+                    flexGrow: 1,
+                    pb: 'var(--verble-promo-banner-height, 0px)',
+                }}
+            >
                 <Suspense fallback={<PageLoader />}>
                     <Routes>
                         {/* Public Routes */}
@@ -216,6 +223,7 @@ function AppContent() {
 
             {/* Only show Footer for non-admin and non-user dashboard routes */}
             {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <Footer />}
+            {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <PromoBanner />}
             {/* Chatbot: keep code, hide it from dashboards/admin */}
             {!location.pathname.startsWith('/admin') &&
                 location.pathname !== '/dashboard' && (

@@ -7,6 +7,7 @@ import {
     getVideoById,
     updateVideo,
     deleteVideo,
+    cleanupOrphanVideoStorageAdmin,
     updateVideoStatusAdmin, 
     getVideosForModuleAdmin,
     removeVideoFromModuleAdmin,
@@ -22,6 +23,7 @@ router.use(protect);
 router.use(restrictTo('admin'));
 
 router.post('/initiate-upload', initiateUpload);
+router.post('/cleanup-orphan-storage', cleanupOrphanVideoStorageAdmin);
 
 router.post(
     '/:id/upload-file',

@@ -11,9 +11,6 @@ import {
     Card,
     Paper,
     Chip,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
     Table,
     TableBody,
     TableCell,
@@ -27,7 +24,6 @@ import {
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import StarIcon from '@mui/icons-material/Star';
 import SchoolIcon from '@mui/icons-material/School';
 
@@ -51,6 +47,7 @@ import MicNoneOutlinedIcon from '@mui/icons-material/MicNoneOutlined';
 import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import { brandAssets } from '../assets/brandAssets';
+import FullCourseSyllabusSection from '../components/marketing/FullCourseSyllabusSection';
 
 const heroPatternIcons = [
     MenuBookOutlinedIcon,
@@ -296,29 +293,6 @@ const LandingPage: React.FC = () => {
         { name: "Sneha R.", location: "Mumbai", text: "As a housewife, I wanted to build confidence. Verble's daily practice helped me speak confidently at social events!", rating: 5 },
         { name: "Vikram P.", location: "Hyderabad", text: "Preparing for US visa interview. Airport English module was a lifesaver. Got the visa!", rating: 5 },
         { name: "Anjali K.", location: "Chennai", text: "From struggling with basic sentences to giving presentations at work. Verble transformed my career!", rating: 5 }
-    ];
-
-    const faqs = [
-        {
-            question: "Is this for complete beginners?",
-            answer: "YES! Zero English? No problem. Hindi explanations everywhere."
-        },
-        {
-            question: "How long it will take to become confident?",
-            answer: "Daily Practice as learning any language is a journey not a destination. One year subscription will make you learn the way you want."
-        },
-        {
-            question: "Mobile app or laptop?",
-            answer: "Both! Verble Web App works perfectly on laptop/ desktop/ Android phone or Apple phone"
-        },
-        {
-            question: "How do I practice daily?",
-            answer: "Daily practice activities and use AI as much as possible."
-        },
-        {
-            question: "Hindi support available?",
-            answer: "Complete Hindi translations for all content."
-        }
     ];
 
     return (
@@ -1138,54 +1112,7 @@ const LandingPage: React.FC = () => {
                 </Container>
             </Box>
 
-            {/* Course Syllabus - Modern Interactive Accordion */}
-            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#ffffff' }}>
-                <Container maxWidth="md">
-                    <Box sx={{ textAlign: 'center', mb: 8 }}>
-                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#0f172a' }}>
-                            Full Course Syllabus
-                        </Typography>
-                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
-                            A step-by-step roadmap to English fluency.
-                        </Typography>
-                    </Box>
-                    <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '24px', overflow: 'hidden' }}>
-                        {[
-                            { title: "Module 00: Introductions", items: ["Why English?", "Meet your coach", "Our Mission"] },
-                            { title: "Module 01: Foundations (Week 01-05)", items: ["Alphabets & Phonetics", "Consonant Sounds", "Silent Letters", "Vowel Sounds"] },
-                            { title: "Module 02: Language Basics (Week 06)", items: ["Genders", "Singular/Plural", "Opposites", "Confusing Words"] },
-                            { title: "Module 03-05: Parts of Speech", items: ["Nouns & Pronouns", "Verbs & Adverbs", "Conjunctions & Prepositions"] },
-                            { title: "Module 06-08: Advanced Structures", items: ["Punctuation Mastery", "Article Usage", "Tenses & Modals"] },
-                            { title: "Bonus Resources", items: ["situational Vocabulary (50+ categories)", "Famous Speech Analysis", "PDF Downloads"] }
-                        ].map((module, index) => (
-                            <Accordion key={index} elevation={0} sx={{
-                                '&:not(:last-child)': { borderBottom: '1px solid #e2e8f0' },
-                                '&:before': { display: 'none' },
-                                bgcolor: 'transparent'
-                            }}>
-                                <AccordionSummary
-                                    expandIcon={<ExpandMoreIcon sx={{ color: '#6366f1' }} />}
-                                    sx={{ py: 2, '&:hover': { bgcolor: '#f8fafc' } }}
-                                >
-                                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>{module.title}</Typography>
-                                </AccordionSummary>
-                                <AccordionDetails sx={{ pb: 3, pt: 0, bgcolor: '#f8fafc' }}>
-                                    <Grid container spacing={2}>
-                                        {module.items.map((item, idx) => (
-                                            <Grid size={{ xs: 12, sm: 6 }} key={idx}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    <CheckCircleIcon sx={{ color: '#22c55e', fontSize: 18, mr: 1.5 }} />
-                                                    <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>{item}</Typography>
-                                                </Box>
-                                            </Grid>
-                                        ))}
-                                    </Grid>
-                                </AccordionDetails>
-                            </Accordion>
-                        ))}
-                    </Box>
-                </Container>
-            </Box>
+            <FullCourseSyllabusSection />
 
             {/* Meet Your Guide - Executive Profile */}
             <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#0f172a' }}>
@@ -1232,130 +1159,7 @@ const LandingPage: React.FC = () => {
                 </Container>
             </Box>
 
-            {/* FAQ - Modern Clean Design */}
-            < Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#ffffff' }}>
-                <Container maxWidth="md">
-                    <Box sx={{ textAlign: 'center', mb: 8 }}>
-                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#0f172a' }}>
-                            Frequently Asked Questions
-                        </Typography>
-                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
-                            Everything you need to know about starting your journey with Verble.
-                        </Typography>
-                    </Box>
-                    <Stack spacing={2}>
-                        {faqs.map((faq, index) => (
-                            <Accordion
-                                key={index}
-                                elevation={0}
-                                sx={{
-                                    borderRadius: '16px !important',
-                                    border: '1px solid #e2e8f0',
-                                    '&:before': { display: 'none' },
-                                    '&.Mui-expanded': { boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }
-                                }}
-                            >
-                                <AccordionSummary
-                                    expandIcon={<ExpandMoreIcon sx={{ color: '#6366f1' }} />}
-                                    sx={{ px: 3, py: 1 }}
-                                >
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b' }}>{faq.question}</Typography>
-                                </AccordionSummary>
-                                <AccordionDetails sx={{ px: 3, pb: 2 }}>
-                                    <Typography variant="body1" sx={{ lineHeight: 1.7, color: '#475569' }}>{faq.answer}</Typography>
-                                </AccordionDetails>
-                            </Accordion>
-                        ))}
-                    </Stack>
-                </Container>
-            </Box >
-
-            {/* Final CTA - High Conversion Section */}
-            < Box sx={{
-                py: { xs: 10, md: 12 },
-                bgcolor: '#0f172a',
-                color: 'white',
-                position: 'relative',
-                overflow: 'hidden',
-                textAlign: 'center'
-            }}>
-                <Box sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
-                    pointerEvents: 'none'
-                }} />
-                <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
-                    <LocalFireDepartmentIcon sx={{ fontSize: 64, mb: 3, color: '#f87171' }} />
-                    <Typography
-                        variant="h2"
-                        sx={{
-                            fontWeight: 900,
-                            mb: 3,
-                            fontSize: { xs: '2.5rem', md: '3.5rem' },
-                            background: 'linear-gradient(to right, #fff, #94a3b8)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent'
-                        }}
-                    >
-                        Ready to Transform Your English?
-                    </Typography>
-                    <Typography variant="h5" sx={{ mb: 6, fontWeight: 400, color: '#94a3b8', maxWidth: '600px', mx: 'auto' }}>
-                        Join 10,000+ others who are already mastering fluent English with AI. Your journey to confidence starts here.
-                    </Typography>
-                    <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        spacing={2}
-                        justifyContent="center"
-                    >
-                        <Button
-                            onClick={handleStartFreeModule}
-                            variant="contained"
-                            size="large"
-                            endIcon={<ArrowForwardIcon />}
-                            sx={{
-                                bgcolor: '#6366f1',
-                                color: 'white',
-                                px: 6,
-                                py: 2,
-                                fontSize: '1.2rem',
-                                fontWeight: 800,
-                                borderRadius: '16px',
-                                boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)',
-                                '&:hover': { bgcolor: '#4f46e5', transform: 'translateY(-2px)' },
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            Start Free Module
-                        </Button>
-                        <Button
-                            component={RouterLink}
-                            to="/subscription-plans"
-                            variant="outlined"
-                            size="large"
-                            sx={{
-                                borderColor: 'rgba(255,255,255,0.2)',
-                                color: 'white',
-                                px: 6,
-                                py: 2,
-                                fontSize: '1.2rem',
-                                fontWeight: 800,
-                                borderRadius: '16px',
-                                '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.05)' }
-                            }}
-                        >
-                            View All Plans
-                        </Button>
-                    </Stack>
-                    <Typography variant="body2" sx={{ mt: 4, color: '#64748b', fontWeight: 600 }}>
-                        7-Day Money Back Guarantee • No Credit Card Required for Free Trial
-                    </Typography>
-                </Container>
-            </Box >
-        </Box >
+        </Box>
     );
 };
 

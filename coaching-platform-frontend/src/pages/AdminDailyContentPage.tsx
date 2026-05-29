@@ -59,7 +59,6 @@ import {
     LEVEL_CARD_COLORS,
     contentMatchesCatalogSlot,
     getAdminCardDisplayTitle,
-    apiTypeForAdminKey,
     resolveAdminKeyFromContent,
     getCatalogEntry,
     findContentForSlot,
@@ -277,49 +276,47 @@ const AdminDailyContentPage: React.FC = () => {
         setFormError(null);
     }, []);
 
-    const checkForExistingSlot = useCallback(
-        (adminKey: AdminContentTypeKey, dateStr: string, currentId?: string) => {
+    /** Resolve one catalog slot for a date: load existing item or blank create form. */
+    const applySlotSelection = useCallback(
+        (adminKey: AdminContentTypeKey, dateStr: string) => {
             if (!dateStr) return;
-            const slot = getCatalogEntry(adminKey);
-            const existing = findContentForSlot(content, dateStr, slot);
-            if (existing && existing._id !== currentId) {
-                loadContentIntoEditForm(existing);
-                return true;
-            }
-            if (!existing) {
-                setSlotDuplicateMessage(null);
-            }
-            return false;
-        },
-        [content, loadContentIntoEditForm]
-    );
 
-    const handleOpenDialog = (contentItem?: DailyContent) => {
-        setFormError(null);
-        if (contentItem) {
-            loadContentIntoEditForm(contentItem);
-            setSlotDuplicateMessage(null);
-        } else {
-            setIsEditMode(false);
-            const adminKey: AdminContentTypeKey = 'WORD';
-            const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
-            setCurrentContent({
-                adminKey,
-                type: apiTypeForAdminKey(adminKey),
-                date: dateStr,
-                title: '',
-                metadata: defaultMetadataForAdminKey(adminKey),
-                isActive: true,
-            });
-            setSlotDuplicateMessage(null);
             const slot = getCatalogEntry(adminKey);
             const existing = findContentForSlot(content, dateStr, slot);
+
             if (existing) {
                 loadContentIntoEditForm(
                     existing,
                     `Content for "${slot.label}" is already scheduled on ${dateStr}. Edit the existing entry below.`
                 );
+                return;
             }
+
+            setIsEditMode(false);
+            setSlotDuplicateMessage(null);
+            setFormError(null);
+            const entry = getCatalogEntry(adminKey);
+            setCurrentContent({
+                adminKey,
+                type: entry.apiType,
+                date: dateStr,
+                title: '',
+                metadata: defaultMetadataForAdminKey(adminKey),
+                isActive: true,
+            });
+        },
+        [content, loadContentIntoEditForm]
+    );
+
+    const handleOpenDialog = (contentItem?: DailyContent, initialAdminKey?: AdminContentTypeKey) => {
+        setFormError(null);
+        const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+
+        if (contentItem) {
+            loadContentIntoEditForm(contentItem);
+            setSlotDuplicateMessage(null);
+        } else {
+            applySlotSelection(initialAdminKey ?? 'WORD', dateStr);
         }
         setOpenDialog(true);
     };
@@ -493,29 +490,11 @@ const AdminDailyContentPage: React.FC = () => {
         return grouped;
     }, [content]);
 
-    useEffect(() => {
-        if (!openDialog || isEditMode || !currentContent?.date || !currentContent.adminKey) return;
-        checkForExistingSlot(currentContent.adminKey, currentContent.date);
-    }, [
-        openDialog,
-        isEditMode,
-        currentContent?.adminKey,
-        currentContent?.date,
-        checkForExistingSlot,
-    ]);
-
     const handleAdminKeyChange = (adminKey: AdminContentTypeKey) => {
-        const entry = getCatalogEntry(adminKey);
-        setCurrentContent((prev) => {
-            if (!prev) return null;
-            return {
-                ...prev,
-                adminKey,
-                type: entry.apiType,
-                metadata: defaultMetadataForAdminKey(adminKey),
-                title: entry.apiType === 'SCENE' ? '' : prev.title,
-            };
-        });
+        const dateStr =
+            currentContent?.date ||
+            (selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+        applySlotSelection(adminKey, dateStr);
     };
 
     // Render dynamic form based on type
@@ -643,17 +622,7 @@ const AdminDailyContentPage: React.FC = () => {
                                             if (item) {
                                                 handleOpenDialog(item);
                                             } else {
-                                                setIsEditMode(false);
-                                                setCurrentContent({
-                                                    adminKey: slot.adminKey,
-                                                    type: apiTypeForAdminKey(slot.adminKey),
-                                                    date: dateKey,
-                                                    title: '',
-                                                    metadata: defaultMetadataForAdminKey(slot.adminKey),
-                                                    isActive: true,
-                                                });
-                                                setFormError(null);
-                                                setOpenDialog(true);
+                                                handleOpenDialog(undefined, slot.adminKey);
                                             }
                                         }}
                                     >
@@ -780,7 +749,12 @@ const AdminDailyContentPage: React.FC = () => {
                     maxWidth={currentContent?.type === 'PUZZLE' ? 'lg' : 'md'}
                     fullWidth
                 >
-                    <DialogTitle>{isEditMode ? 'Edit Daily Content' : 'Add New Daily Content'}</DialogTitle>
+                    <DialogTitle>
+                        {isEditMode ? 'Edit' : 'Add'} —{' '}
+                        {currentContent
+                            ? getCatalogEntry(currentContent.adminKey).label
+                            : 'Daily Content'}
+                    </DialogTitle>
                     <DialogContent dividers sx={{ pt: 2 }}>
                         {slotDuplicateMessage && (
                             <Alert severity="warning" sx={{ mb: 2 }}>
@@ -801,11 +775,35 @@ const AdminDailyContentPage: React.FC = () => {
                                                 handleAdminKeyChange(e.target.value as AdminContentTypeKey)
                                             }
                                         >
-                                            {DAILY_CONTENT_CATALOG.map((slot) => (
-                                                <MenuItem key={slot.adminKey} value={slot.adminKey}>
-                                                    {slot.label}
-                                                </MenuItem>
-                                            ))}
+                                            {DAILY_CONTENT_CATALOG.map((slot) => {
+                                                const dateKey = currentContent.date;
+                                                const scheduled =
+                                                    dateKey &&
+                                                    findContentForSlot(content, dateKey, slot);
+                                                return (
+                                                    <MenuItem key={slot.adminKey} value={slot.adminKey}>
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
+                                                                width: '100%',
+                                                                gap: 1,
+                                                            }}
+                                                        >
+                                                            <span>{slot.label}</span>
+                                                            {scheduled ? (
+                                                                <Chip
+                                                                    label="Scheduled"
+                                                                    size="small"
+                                                                    color="success"
+                                                                    sx={{ height: 22 }}
+                                                                />
+                                                            ) : null}
+                                                        </Box>
+                                                    </MenuItem>
+                                                );
+                                            })}
                                         </Select>
                                     </FormControl>
                                 </Grid>
@@ -815,18 +813,11 @@ const AdminDailyContentPage: React.FC = () => {
                                             label="Date"
                                             value={currentContent.date ? parseISO(currentContent.date) : null}
                                             onChange={(newValue) => {
-                                                if (newValue && isValid(newValue)) {
-                                                    const dateStr = format(newValue, 'yyyy-MM-dd');
-                                                    handleFormChange('date', dateStr);
-                                                    if (
-                                                        !isEditMode &&
-                                                        currentContent?.adminKey
-                                                    ) {
-                                                        checkForExistingSlot(
-                                                            currentContent.adminKey,
-                                                            dateStr
-                                                        );
-                                                    }
+                                                if (newValue && isValid(newValue) && currentContent?.adminKey) {
+                                                    applySlotSelection(
+                                                        currentContent.adminKey,
+                                                        format(newValue, 'yyyy-MM-dd')
+                                                    );
                                                 }
                                             }}
                                             sx={{ width: '100%' }}

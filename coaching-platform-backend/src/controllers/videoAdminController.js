@@ -6,10 +6,10 @@ import { createNotificationsForNewVideo } from '../utils/notificationManager.js'
 import Module from "../models/Module.js";
 import mongoose from "mongoose";
 import { randomUUID } from "crypto";
-import fs from "fs/promises";
 import path from "path";
-import { ensureVideoStorageDirs, getIncomingDir, getProcessedDir } from "../config/videoStorageConfig.js";
-import { runVideoTranscodeJob } from "../services/videoTranscodeService.js";
+import { ensureVideoStorageDirs } from "../config/videoStorageConfig.js";
+import { queueVideoTranscodeJob } from "../services/videoTranscodeService.js";
+import { deleteVideoStorageAssets, cleanupOrphanVideoStorage } from "../utils/videoStorageCleanup.js";
 import { getStreamProvider } from "../utils/videoStreamProvider.js";
 
 /**
@@ -105,18 +105,7 @@ export const uploadLocalVideoAndTranscode = async (req, res) => {
             },
         });
 
-        setImmediate(() => {
-            runVideoTranscodeJob(videoId).catch((err) => {
-                console.error(`[Transcode] Job failed for ${videoId}:`, err);
-                Video.findByIdAndUpdate(videoId, {
-                    $set: {
-                        videoStatus: "FAILED",
-                        transcodeStep: "failed",
-                        processingError: err.message || "Transcode failed",
-                    },
-                }).catch(() => {});
-            });
-        });
+        queueVideoTranscodeJob(videoId);
 
         const populatedVideo = await Video.findById(videoId)
             .populate("courses", "title _id")
@@ -494,22 +483,7 @@ export const deleteVideo = async (req, res, next) => {
         .json({ status: "fail", message: "Video not found." });
     }
 
-    if (getStreamProvider(video) === "local" && video.localStorageId) {
-      try {
-        await fs.rm(getIncomingDir(video.localStorageId), { recursive: true, force: true });
-      } catch (e) {
-        console.warn("Could not remove incoming video folder:", e.message);
-      }
-      try {
-        await fs.rm(getProcessedDir(video.localStorageId), { recursive: true, force: true });
-      } catch (e) {
-        console.warn("Could not remove processed video folder:", e.message);
-      }
-    } else {
-      console.warn(
-        `Video ${videoId} is not local storage; removing DB row only (no external CDN delete).`
-      );
-    }
+    await deleteVideoStorageAssets(video);
 
     // Store module IDs before deletion for cache invalidation
     const moduleIds = video.modules || [];
@@ -524,12 +498,30 @@ export const deleteVideo = async (req, res, next) => {
         await invalidateModuleCache(moduleId.toString());
     }
 
-    res.status(204).json({ status: "success", data: null });
+    res.status(204).send();
   } catch (error) {
     console.error("ADMIN DELETE VIDEO ERROR:", error.stack);
     res
       .status(500)
       .json({ status: "error", message: "Failed to delete video metadata." });
+  }
+};
+
+/**
+ * @desc    Remove orphan incoming/processed folders not tied to any video record
+ * @route   POST /api/admin/videos/cleanup-orphan-storage
+ */
+export const cleanupOrphanVideoStorageAdmin = async (req, res) => {
+  try {
+    const removed = await cleanupOrphanVideoStorage();
+    res.status(200).json({
+      status: "success",
+      message: "Orphan video storage cleanup completed.",
+      data: { removed },
+    });
+  } catch (error) {
+    console.error("cleanupOrphanVideoStorageAdmin:", error);
+    res.status(500).json({ status: "error", message: "Failed to clean orphan video storage." });
   }
 };
 

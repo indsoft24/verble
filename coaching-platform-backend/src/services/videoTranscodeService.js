@@ -122,6 +122,32 @@ async function writeMasterPlaylist(processedDir, variantsUsed) {
   await fs.writeFile(path.join(processedDir, 'master.m3u8'), lines.join('\n') + '\n', 'utf8');
 }
 
+const MAX_CONCURRENT_TRANSCODES = Math.max(
+  1,
+  parseInt(process.env.MAX_CONCURRENT_TRANSCODES || '1', 10)
+);
+let transcodeChain = Promise.resolve();
+let activeTranscodes = 0;
+
+/** Queue transcode jobs so FFmpeg does not starve the API under load. */
+export function queueVideoTranscodeJob(videoMongoId) {
+  transcodeChain = transcodeChain
+    .then(async () => {
+      while (activeTranscodes >= MAX_CONCURRENT_TRANSCODES) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      activeTranscodes += 1;
+      try {
+        await runVideoTranscodeJob(videoMongoId);
+      } finally {
+        activeTranscodes -= 1;
+      }
+    })
+    .catch((err) => {
+      console.error(`[Transcode] Queued job failed for ${videoMongoId}:`, err);
+    });
+}
+
 let throttleTimers = new Map();
 function throttledUpdate(videoId, fn) {
   const existing = throttleTimers.get(videoId);
