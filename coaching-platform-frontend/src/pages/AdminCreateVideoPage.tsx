@@ -106,6 +106,7 @@ const AdminCreateVideoPage: React.FC = () => {
             const { video } = await initiateVideoUpload(payload);
 
             setUploadPhase('uploading');
+            setUploadProgress(1);
             await uploadVideoFileAdmin(video._id, selectedFile, setUploadProgress);
 
             setUploadPhase('done');
@@ -150,6 +151,7 @@ const AdminCreateVideoPage: React.FC = () => {
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Videos are stored on this server and transcoded automatically after upload (HLS).
+                Keep this tab open and in the foreground until the upload bar reaches 100%.
             </Typography>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 

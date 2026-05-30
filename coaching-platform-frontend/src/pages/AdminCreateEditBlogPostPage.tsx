@@ -11,7 +11,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import slugify from 'slugify';
 
-import TiptapEditor from '../components/features/blog/TiptapEditor';
+import TiptapEditor from '../components/features/blog/LazyTiptapEditor';
 import { useAuth } from '../contexts/AuthContext';
 import {
     createBlogPostAdmin,

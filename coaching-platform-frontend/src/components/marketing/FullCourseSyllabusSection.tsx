@@ -3,7 +3,6 @@ import {
     Box,
     Chip,
     Container,
-    Grid,
     Paper,
     Stack,
     Typography,
@@ -12,83 +11,207 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import { FULL_COURSE_SYLLABUS } from '../../data/fullCourseSyllabus';
 
+const sectionTitleSx = {
+    fontWeight: 800,
+    mb: { xs: 1, md: 2 },
+    color: '#0f172a',
+    fontSize: { xs: '1.375rem', sm: '1.625rem', md: '2.25rem' },
+    lineHeight: { xs: 1.3, md: 1.2 },
+    px: { xs: 0.5, sm: 0 },
+} as const;
+
+const cardPadding = {
+    xs: '20px 18px',
+    sm: '24px 22px',
+    md: '28px 24px',
+} as const;
+
 const FullCourseSyllabusSection: React.FC = () => (
-    <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#f8fafc' }}>
-        <Container maxWidth="lg">
-            <Box sx={{ textAlign: 'center', mb: { xs: 5, md: 6 } }}>
+    <Box sx={{ py: { xs: 3, sm: 5, md: 10 }, bgcolor: '#f8fafc' }}>
+        <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
+            <Box sx={{ textAlign: 'center', mb: { xs: 2.5, sm: 3, md: 6 } }}>
                 <Chip
-                    icon={<MenuBookIcon />}
+                    icon={<MenuBookIcon sx={{ fontSize: { xs: 16, md: 18 } }} />}
                     label="Structured curriculum"
-                    sx={{ mb: 2, fontWeight: 700, bgcolor: 'rgba(99,102,241,0.1)', color: '#4f46e5' }}
+                    sx={{
+                        mb: { xs: 1.5, md: 2 },
+                        fontWeight: 700,
+                        bgcolor: 'rgba(99,102,241,0.1)',
+                        color: '#4f46e5',
+                        height: 'auto',
+                        '& .MuiChip-label': { px: 1.25, py: 0.5, fontSize: { xs: '0.72rem', md: '0.8125rem' } },
+                    }}
                 />
-                <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#0f172a' }}>
+                <Typography variant="h3" sx={sectionTitleSx}>
                     Full Course Syllabus
                 </Typography>
-                <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400, maxWidth: 640, mx: 'auto' }}>
+                <Typography
+                    variant="h6"
+                    sx={{
+                        color: '#64748b',
+                        fontWeight: 400,
+                        maxWidth: 640,
+                        mx: 'auto',
+                        fontSize: { xs: '0.875rem', sm: '1rem', md: '1.25rem' },
+                        lineHeight: 1.55,
+                        px: { xs: 0.5, sm: 0 },
+                    }}
+                >
                     A two-track roadmap from first sounds to fluent conversation — every module with clear outcomes.
                 </Typography>
             </Box>
 
-            <Grid container spacing={3}>
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+                    gap: { xs: '24px', sm: '26px', md: '28px' },
+                    width: '100%',
+                }}
+            >
                 {FULL_COURSE_SYLLABUS.map((module) => (
-                    <Grid key={module.id} size={{ xs: 12, md: 6 }}>
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                height: '100%',
-                                p: { xs: 2.5, md: 3 },
-                                borderRadius: 3,
-                                border: '1px solid #e2e8f0',
-                                bgcolor: '#fff',
-                                transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+                    <Paper
+                        key={module.id}
+                        elevation={0}
+                        sx={{
+                            height: '100%',
+                            p: cardPadding,
+                            borderRadius: { xs: '12px', md: '16px' },
+                            border: '1px solid #e2e8f0',
+                            bgcolor: '#fff',
+                            boxSizing: 'border-box',
+                            transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+                            '@media (hover: hover)': {
                                 '&:hover': {
                                     boxShadow: '0 12px 40px -12px rgba(15,23,42,0.15)',
                                     transform: 'translateY(-2px)',
                                 },
+                            },
+                        }}
+                    >
+                        <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 1, mb: 2 }}>
+                            <Chip
+                                label={module.duration}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                                sx={{
+                                    height: 'auto',
+                                    '& .MuiChip-label': {
+                                        px: 1.25,
+                                        py: 0.5,
+                                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                        whiteSpace: 'normal',
+                                        lineHeight: 1.3,
+                                    },
+                                }}
+                            />
+                            <Chip
+                                label={module.phase}
+                                size="small"
+                                sx={{
+                                    fontWeight: 600,
+                                    height: 'auto',
+                                    '& .MuiChip-label': {
+                                        px: 1.25,
+                                        py: 0.5,
+                                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                        whiteSpace: 'normal',
+                                        lineHeight: 1.3,
+                                    },
+                                }}
+                            />
+                        </Stack>
+
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                fontWeight: 800,
+                                color: '#0f172a',
+                                mb: 1,
+                                fontSize: { xs: '0.95rem', sm: '1.05rem', md: '1.25rem' },
+                                lineHeight: 1.35,
                             }}
                         >
-                            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1.5 }}>
-                                <Chip label={module.duration} size="small" color="primary" variant="outlined" />
-                                <Chip label={module.phase} size="small" sx={{ fontWeight: 600 }} />
-                            </Stack>
-                            <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a', mb: 1 }}>
-                                {module.title}
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: '#64748b', mb: 2, lineHeight: 1.7 }}>
-                                {module.summary}
-                            </Typography>
-                            <Stack spacing={1.25} component="ul" sx={{ m: 0, p: 0, listStyle: 'none' }}>
-                                {module.topics.map((topic) => (
-                                    <Box
-                                        key={topic.title}
-                                        component="li"
+                            {module.title}
+                        </Typography>
+
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: '#64748b',
+                                mb: 2,
+                                lineHeight: 1.65,
+                                fontSize: { xs: '0.8rem', sm: '0.825rem', md: '0.875rem' },
+                            }}
+                        >
+                            {module.summary}
+                        </Typography>
+
+                        <Stack
+                            component="ul"
+                            spacing={0}
+                            sx={{
+                                m: 0,
+                                p: 0,
+                                listStyle: 'none',
+                                borderTop: '1px solid #f1f5f9',
+                            }}
+                        >
+                            {module.topics.map((topic, topicIndex) => (
+                                <Box
+                                    key={topic.title}
+                                    component="li"
+                                    sx={{
+                                        display: 'flex',
+                                        gap: 1.25,
+                                        alignItems: 'flex-start',
+                                        py: 1.25,
+                                        borderBottom:
+                                            topicIndex < module.topics.length - 1
+                                                ? '1px solid #f1f5f9'
+                                                : 'none',
+                                    }}
+                                >
+                                    <CheckCircleIcon
                                         sx={{
-                                            display: 'flex',
-                                            gap: 1.25,
-                                            alignItems: 'flex-start',
-                                            py: 0.75,
-                                            borderTop: '1px solid #f1f5f9',
-                                            '&:first-of-type': { borderTop: 'none', pt: 0 },
+                                            color: '#22c55e',
+                                            fontSize: { xs: 18, md: 20 },
+                                            mt: 0.2,
+                                            flexShrink: 0,
                                         }}
-                                    >
-                                        <CheckCircleIcon
-                                            sx={{ color: '#22c55e', fontSize: 20, mt: 0.15, flexShrink: 0 }}
-                                        />
-                                        <Box>
-                                            <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>
-                                                {topic.title}
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: '#64748b', lineHeight: 1.5 }}>
-                                                {topic.detail}
-                                            </Typography>
-                                        </Box>
+                                    />
+                                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontWeight: 700,
+                                                color: '#1e293b',
+                                                fontSize: { xs: '0.8rem', sm: '0.825rem', md: '0.875rem' },
+                                                lineHeight: 1.4,
+                                            }}
+                                        >
+                                            {topic.title}
+                                        </Typography>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: '#64748b',
+                                                lineHeight: 1.5,
+                                                display: 'block',
+                                                mt: 0.35,
+                                                fontSize: { xs: '0.7rem', sm: '0.72rem', md: '0.75rem' },
+                                            }}
+                                        >
+                                            {topic.detail}
+                                        </Typography>
                                     </Box>
-                                ))}
-                            </Stack>
-                        </Paper>
-                    </Grid>
+                                </Box>
+                            ))}
+                        </Stack>
+                    </Paper>
                 ))}
-            </Grid>
+            </Box>
         </Container>
     </Box>
 );

@@ -2,8 +2,30 @@
 import asyncHandler from 'express-async-handler';
 import User from '../models/User.js';
 
+function buildLeaderboard(users) {
+    let currentRank = 1;
+    let previousPoints = null;
+    return users.map((user, index) => {
+        const points = user.points || 0;
+        if (previousPoints !== null && points < previousPoints) {
+            currentRank = index + 1;
+        }
+        previousPoints = points;
+
+        return {
+            rank: currentRank,
+            userId: user._id.toString(),
+            name: user.name,
+            points,
+            membershipLevel: user.membershipLevel || 'FREE',
+        };
+    });
+}
+
+const SCORED_USER_FILTER = { points: { $gt: 0 } };
+
 /**
- * @desc    Get leaderboard for free challenges
+ * @desc    Get leaderboard for free challenges (scored users only)
  * @route   GET /api/leaderboard/free
  * @access  Private
  */
@@ -13,43 +35,24 @@ export const getFreeLeaderboard = asyncHandler(async (req, res) => {
     const users = await User.find({
         role: 'user',
         membershipLevel: { $in: ['FREE', 'BRONZE', 'SILVER', 'GOLD'] },
+        ...SCORED_USER_FILTER,
     })
         .select('name points membershipLevel')
         .sort({ points: -1 })
-        .limit(parseInt(limit))
+        .limit(parseInt(limit, 10))
         .lean();
-
-    // Calculate ranks with proper tie handling
-    let currentRank = 1;
-    let previousPoints = null;
-    const leaderboard = users.map((user, index) => {
-        const points = user.points || 0;
-        // If points are different from previous, update rank
-        if (previousPoints !== null && points < previousPoints) {
-            currentRank = index + 1;
-        }
-        previousPoints = points;
-        
-        return {
-            rank: currentRank,
-            userId: user._id.toString(),
-            name: user.name,
-            points: points,
-            membershipLevel: user.membershipLevel || 'FREE',
-        };
-    });
 
     res.status(200).json({
         status: 'success',
         data: {
-            leaderboard,
+            leaderboard: buildLeaderboard(users),
             type: 'free',
         },
     });
 });
 
 /**
- * @desc    Get leaderboard for paid challenges (Full Course users)
+ * @desc    Get leaderboard for paid challenges (scored Full Course users only)
  * @route   GET /api/leaderboard/paid
  * @access  Private
  */
@@ -59,43 +62,24 @@ export const getPaidLeaderboard = asyncHandler(async (req, res) => {
     const users = await User.find({
         role: 'user',
         membershipLevel: 'FULL_COURSE',
+        ...SCORED_USER_FILTER,
     })
         .select('name points membershipLevel')
         .sort({ points: -1 })
-        .limit(parseInt(limit))
+        .limit(parseInt(limit, 10))
         .lean();
-
-    // Calculate ranks with proper tie handling
-    let currentRank = 1;
-    let previousPoints = null;
-    const leaderboard = users.map((user, index) => {
-        const points = user.points || 0;
-        // If points are different from previous, update rank
-        if (previousPoints !== null && points < previousPoints) {
-            currentRank = index + 1;
-        }
-        previousPoints = points;
-        
-        return {
-            rank: currentRank,
-            userId: user._id.toString(),
-            name: user.name,
-            points: points,
-            membershipLevel: user.membershipLevel,
-        };
-    });
 
     res.status(200).json({
         status: 'success',
         data: {
-            leaderboard,
+            leaderboard: buildLeaderboard(users),
             type: 'paid',
         },
     });
 });
 
 /**
- * @desc    Get user's rank in leaderboard
+ * @desc    Get user's rank in leaderboard (only meaningful when points > 0)
  * @route   GET /api/leaderboard/my-rank
  * @access  Private
  */
@@ -108,16 +92,29 @@ export const getMyRank = asyncHandler(async (req, res) => {
         throw new Error('User not found');
     }
 
-    // Get rank in appropriate leaderboard
+    const userPoints = user.points || 0;
     const leaderboardType = user.membershipLevel === 'FULL_COURSE' ? 'paid' : 'free';
-    
-    const query = leaderboardType === 'paid'
-        ? { role: 'user', membershipLevel: 'FULL_COURSE' }
-        : { role: 'user', membershipLevel: { $in: ['FREE', 'BRONZE', 'SILVER', 'GOLD'] } };
+
+    const query =
+        leaderboardType === 'paid'
+            ? { role: 'user', membershipLevel: 'FULL_COURSE', ...SCORED_USER_FILTER }
+            : { role: 'user', membershipLevel: { $in: ['FREE', 'BRONZE', 'SILVER', 'GOLD'] }, ...SCORED_USER_FILTER };
+
+    if (userPoints <= 0) {
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                rank: null,
+                points: 0,
+                membershipLevel: user.membershipLevel,
+                leaderboardType,
+            },
+        });
+    }
 
     const usersWithHigherPoints = await User.countDocuments({
         ...query,
-        points: { $gt: user.points || 0 },
+        points: { $gt: userPoints },
     });
 
     const rank = usersWithHigherPoints + 1;
@@ -126,7 +123,7 @@ export const getMyRank = asyncHandler(async (req, res) => {
         status: 'success',
         data: {
             rank,
-            points: user.points || 0,
+            points: userPoints,
             membershipLevel: user.membershipLevel,
             leaderboardType,
         },

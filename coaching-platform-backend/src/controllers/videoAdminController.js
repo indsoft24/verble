@@ -6,8 +6,9 @@ import { createNotificationsForNewVideo } from '../utils/notificationManager.js'
 import Module from "../models/Module.js";
 import mongoose from "mongoose";
 import { randomUUID } from "crypto";
+import fs from "fs/promises";
 import path from "path";
-import { ensureVideoStorageDirs } from "../config/videoStorageConfig.js";
+import { ensureVideoStorageDirs, getIncomingDir } from "../config/videoStorageConfig.js";
 import { queueVideoTranscodeJob } from "../services/videoTranscodeService.js";
 import { deleteVideoStorageAssets, cleanupOrphanVideoStorage } from "../utils/videoStorageCleanup.js";
 import { getStreamProvider } from "../utils/videoStreamProvider.js";
@@ -84,6 +85,35 @@ export const initiateUpload = async (req, res) => {
     }
 };
 
+async function startTranscodeAfterUpload(videoId, ext) {
+    await Video.findByIdAndUpdate(videoId, {
+        $set: {
+            sourceFileExt: ext,
+            videoStatus: "PROCESSING",
+            transcodeStep: "queued",
+            processingProgress: 0,
+            processingError: null,
+        },
+    });
+
+    queueVideoTranscodeJob(videoId);
+
+    const populatedVideo = await Video.findById(videoId)
+        .populate("courses", "title _id")
+        .populate("modules", "title _id course")
+        .populate("requiredPlans", "_id name isActive");
+
+    const { invalidateVideoCache, invalidateModuleCache } = await import("../utils/cacheInvalidation.js");
+    await invalidateVideoCache(videoId);
+    if (populatedVideo?.modules?.length) {
+        for (const m of populatedVideo.modules) {
+            await invalidateModuleCache(typeof m === "object" && m._id ? m._id.toString() : String(m));
+        }
+    }
+
+    return populatedVideo;
+}
+
 /**
  * @route POST /api/admin/videos/:id/upload-file
  */
@@ -94,31 +124,7 @@ export const uploadLocalVideoAndTranscode = async (req, res) => {
         }
         const ext = req._localUploadExt || path.extname(req.file.originalname || "") || ".mp4";
         const videoId = req._localUpload.videoDocId;
-
-        await Video.findByIdAndUpdate(videoId, {
-            $set: {
-                sourceFileExt: ext,
-                videoStatus: "PROCESSING",
-                transcodeStep: "queued",
-                processingProgress: 0,
-                processingError: null,
-            },
-        });
-
-        queueVideoTranscodeJob(videoId);
-
-        const populatedVideo = await Video.findById(videoId)
-            .populate("courses", "title _id")
-            .populate("modules", "title _id course")
-            .populate("requiredPlans", "_id name isActive");
-
-        const { invalidateVideoCache, invalidateModuleCache } = await import("../utils/cacheInvalidation.js");
-        await invalidateVideoCache(videoId);
-        if (populatedVideo?.modules?.length) {
-            for (const m of populatedVideo.modules) {
-                await invalidateModuleCache(typeof m === "object" && m._id ? m._id.toString() : String(m));
-            }
-        }
+        const populatedVideo = await startTranscodeAfterUpload(videoId, ext);
 
         res.status(200).json({
             status: "success",
@@ -128,6 +134,84 @@ export const uploadLocalVideoAndTranscode = async (req, res) => {
     } catch (error) {
         console.error("uploadLocalVideoAndTranscode:", error);
         res.status(500).json({ status: "error", message: "Failed to process upload." });
+    }
+};
+
+/**
+ * @route POST /api/admin/videos/:id/upload-chunk
+ * Reliable chunked upload for slow/mobile connections and large class recordings.
+ */
+export const uploadVideoChunk = async (req, res) => {
+    try {
+        if (!req.file?.buffer) {
+            console.warn("[uploadVideoChunk] Missing file buffer", {
+                videoId: req._localUpload?.videoDocId,
+                contentType: req.headers["content-type"],
+                bodyKeys: req.body ? Object.keys(req.body) : [],
+            });
+            return res.status(400).json({ status: "fail", message: 'No chunk received (field name: chunk).' });
+        }
+
+        const chunkIndex = parseInt(req.body.chunkIndex, 10);
+        const totalChunks = parseInt(req.body.totalChunks, 10);
+        const originalName = String(req.body.originalName || req.file.originalname || "video.mp4");
+
+        if (!Number.isFinite(chunkIndex) || !Number.isFinite(totalChunks) || totalChunks < 1) {
+            return res.status(400).json({ status: "fail", message: "chunkIndex and totalChunks are required." });
+        }
+        if (chunkIndex < 0 || chunkIndex >= totalChunks) {
+            return res.status(400).json({ status: "fail", message: "Invalid chunkIndex for totalChunks." });
+        }
+
+        const videoId = req._localUpload.videoDocId;
+        const localId = req._localUpload.localStorageId;
+        const ext = (path.extname(originalName) || ".mp4").toLowerCase();
+        const dir = getIncomingDir(localId);
+        const chunkPath = path.join(dir, `chunk_${String(chunkIndex).padStart(6, "0")}`);
+
+        if (chunkIndex === 0) {
+            await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+            await fs.mkdir(dir, { recursive: true });
+            await Video.findByIdAndUpdate(videoId, {
+                $set: { videoStatus: "UPLOADING", processingError: null },
+            });
+        }
+
+        await fs.writeFile(chunkPath, req.file.buffer);
+
+        const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+
+        if (chunkIndex < totalChunks - 1) {
+            return res.status(200).json({
+                status: "success",
+                message: `Chunk ${chunkIndex + 1} of ${totalChunks} saved.`,
+                data: { progress, complete: false },
+            });
+        }
+
+        const sourcePath = path.join(dir, `source${ext}`);
+        const handle = await fs.open(sourcePath, "w");
+        try {
+            for (let i = 0; i < totalChunks; i += 1) {
+                const partPath = path.join(dir, `chunk_${String(i).padStart(6, "0")}`);
+                const part = await fs.readFile(partPath);
+                await handle.write(part);
+                await fs.unlink(partPath).catch(() => {});
+            }
+        } finally {
+            await handle.close();
+        }
+
+        const populatedVideo = await startTranscodeAfterUpload(videoId, ext);
+
+        res.status(200).json({
+            status: "success",
+            message: "All chunks received. FFmpeg transcoding started.",
+            data: { video: populatedVideo, progress: 100, complete: true },
+        });
+    } catch (error) {
+        console.error("uploadVideoChunk:", error);
+        res.status(500).json({ status: "error", message: "Failed to save upload chunk." });
     }
 };
 

@@ -135,9 +135,9 @@ const PromoBanner: React.FC = () => {
                     color: '#fff',
                     borderTop: '1px solid rgba(148,163,184,0.25)',
                     boxShadow: '0 -8px 32px rgba(0,0,0,0.35)',
-                    py: { xs: 1, sm: 1.25 },
-                    px: { xs: 1.5, sm: 2 },
+                    pt: '8px',
                     pb: 'max(8px, env(safe-area-inset-bottom))',
+                    paddingInline: '10px',
                 }}
             >
                 <Box

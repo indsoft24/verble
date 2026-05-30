@@ -89,9 +89,6 @@ const FaqsPage = lazy(() => import('./pages/static/FaqsPage'));
 const HelpPage = lazy(() => import('./pages/HelpPage'));
 const WebinarPage = lazy(() => import('./pages/WebinarPage'));
 
-// Chatbot Widget (Lazy load - not critical for initial render)
-const ChatbotWidget = lazy(() => import('./components/features/chatbot/ChatbotWidget'));
-
 // Loading Component
 const PageLoader = () => (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
@@ -123,13 +120,7 @@ function AppContent() {
             {/* Only show Navbar and Footer for non-admin and non-user dashboard routes */}
             {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <Navbar />}
 
-            <Box
-                component="main"
-                sx={{
-                    flexGrow: 1,
-                    pb: 'var(--verble-promo-banner-height, 0px)',
-                }}
-            >
+            <Box component="main" sx={{ flexGrow: 1 }}>
                 <Suspense fallback={<PageLoader />}>
                     <Routes>
                         {/* Public Routes */}
@@ -224,13 +215,6 @@ function AppContent() {
             {/* Only show Footer for non-admin and non-user dashboard routes */}
             {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <Footer />}
             {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <PromoBanner />}
-            {/* Chatbot: keep code, hide it from dashboards/admin */}
-            {!location.pathname.startsWith('/admin') &&
-                location.pathname !== '/dashboard' && (
-                    <Suspense fallback={null}>
-                        <ChatbotWidget />
-                    </Suspense>
-                )}
         </Box>
     );
 }

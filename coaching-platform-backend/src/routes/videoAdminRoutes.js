@@ -3,6 +3,7 @@ import express from 'express';
 import {
     initiateUpload,
     uploadLocalVideoAndTranscode,
+    uploadVideoChunk,
     getAllVideos,
     getVideoById,
     updateVideo,
@@ -16,6 +17,10 @@ import {
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
 import multerErrorHandler from '../middleware/multerErrorHandler.js';
 import { loadLocalVideoForUpload, uploadLocalVideoFile } from '../middleware/uploadLocalVideoMiddleware.js';
+import {
+    loadLocalVideoForChunkUpload,
+    uploadVideoChunkMulter,
+} from '../middleware/uploadVideoChunkMiddleware.js';
 
 const router = express.Router();
 
@@ -31,6 +36,14 @@ router.post(
     uploadLocalVideoFile.single('video'),
     multerErrorHandler,
     uploadLocalVideoAndTranscode
+);
+
+router.post(
+    '/:id/upload-chunk',
+    loadLocalVideoForChunkUpload,
+    uploadVideoChunkMulter.single('chunk'),
+    multerErrorHandler,
+    uploadVideoChunk
 );
 
 router.route('/')

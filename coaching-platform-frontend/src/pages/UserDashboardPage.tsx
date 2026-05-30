@@ -88,7 +88,7 @@ const UserDashboardPage: React.FC = () => {
     const [recentJoiners, setRecentJoiners] = useState<RecentJoiner[]>([]);
     const [freeLeaderboard, setFreeLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [paidLeaderboard, setPaidLeaderboard] = useState<LeaderboardEntry[]>([]);
-    const [myRank, setMyRank] = useState<{ rank: number; points: number; leaderboardType: string } | null>(null);
+    const [myRank, setMyRank] = useState<{ rank: number | null; points: number; leaderboardType: string } | null>(null);
     const [isLoadingAdditional, setIsLoadingAdditional] = useState(true);
 
     const fetchDailyContent = useCallback(async () => {
@@ -533,7 +533,9 @@ const UserDashboardPage: React.FC = () => {
                             isLoading={isLoadingAdditional}
                             accentColor="#14b8a6"
                             myRank={
-                                myRank?.leaderboardType === 'free'
+                                myRank?.leaderboardType === 'free' &&
+                                myRank.rank != null &&
+                                myRank.points > 0
                                     ? { rank: myRank.rank, points: myRank.points }
                                     : null
                             }
@@ -547,7 +549,9 @@ const UserDashboardPage: React.FC = () => {
                             isLoading={isLoadingAdditional}
                             accentColor="#7c3aed"
                             myRank={
-                                myRank?.leaderboardType === 'paid'
+                                myRank?.leaderboardType === 'paid' &&
+                                myRank.rank != null &&
+                                myRank.points > 0
                                     ? { rank: myRank.rank, points: myRank.points }
                                     : null
                             }

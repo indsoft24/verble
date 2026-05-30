@@ -26,6 +26,7 @@ import {
     Tabs,
     Tab,
     Tooltip,
+    TablePagination,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SubscriptionsIcon from '@mui/icons-material/Subscriptions';
@@ -39,15 +40,26 @@ import {
     deleteUser,
     resendLoginPinForUser,
     type AdminUserView,
+    type AdminUsersPagination,
 } from '../services/adminService';
 import { useAuth } from '../contexts/AuthContext';
 import CreateUserDialog from '../components/admin/CreateUserDialog';
 import { getUserPhone, getUserPlanDisplay } from '../utils/adminUserDisplay';
 
-type UserListTab = 'free' | 'premium' | 'search';
+type UserListTab = 'all' | 'free' | 'premium' | 'search';
+
+const DEFAULT_ROWS_PER_PAGE = 25;
 
 const AdminUsersListPage: React.FC = () => {
     const [users, setUsers] = useState<AdminUserView[]>([]);
+    const [pagination, setPagination] = useState<AdminUsersPagination>({
+        page: 1,
+        limit: DEFAULT_ROWS_PER_PAGE,
+        total: 0,
+        totalPages: 1,
+    });
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [updateStatus, setUpdateStatus] = useState<{
@@ -59,7 +71,7 @@ const AdminUsersListPage: React.FC = () => {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [activeTab, setActiveTab] = useState<UserListTab>('free');
+    const [activeTab, setActiveTab] = useState<UserListTab>('all');
     const [resendLoadingId, setResendLoadingId] = useState<string | null>(null);
 
     const { user: currentAdmin } = useAuth();
@@ -74,32 +86,27 @@ const AdminUsersListPage: React.FC = () => {
         if (debouncedSearch) {
             setActiveTab('search');
         } else {
-            setActiveTab((t) => (t === 'search' ? 'free' : t));
+            setActiveTab((t) => (t === 'search' ? 'all' : t));
         }
+        setPage(0);
     }, [debouncedSearch]);
 
     const fetchUsers = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const query =
-                debouncedSearch.length > 0
-                    ? { search: debouncedSearch, limit: 100 }
-                    : activeTab === 'search'
-                      ? { segment: 'free' as const, limit: 50 }
-                      : { segment: activeTab, limit: 50 };
+            const segment =
+                debouncedSearch.length > 0 ? 'all' : activeTab === 'search' ? 'all' : activeTab;
 
-            const fetchedUsersArray = await getAllUsers(query);
-            if (Array.isArray(fetchedUsersArray)) {
-                setUsers(
-                    fetchedUsersArray.map((u) => ({
-                        ...u,
-                        subscriptions: Array.isArray(u.subscriptions) ? u.subscriptions : [],
-                    }))
-                );
-            } else {
-                throw new Error('Invalid data structure received for users from service.');
-            }
+            const result = await getAllUsers({
+                search: debouncedSearch || undefined,
+                segment,
+                page: page + 1,
+                limit: rowsPerPage,
+            });
+
+            setUsers(result.users);
+            setPagination(result.pagination);
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'An error occurred while fetching users.';
             setError(message);
@@ -107,11 +114,26 @@ const AdminUsersListPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [debouncedSearch, activeTab]);
+    }, [debouncedSearch, activeTab, page, rowsPerPage]);
 
     useEffect(() => {
         fetchUsers();
     }, [fetchUsers]);
+
+    const handleTabChange = (_: React.SyntheticEvent, value: UserListTab) => {
+        if (value === 'search') return;
+        setActiveTab(value);
+        setPage(0);
+    };
+
+    const handleChangePage = (_: unknown, newPage: number) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
 
     const executeRoleChange = async (userId: string, currentRole: string) => {
         const newRole = currentRole === 'user' ? 'admin' : 'user';
@@ -211,154 +233,170 @@ const AdminUsersListPage: React.FC = () => {
         }
     };
 
-    const listTitle =
-        debouncedSearch.length > 0
-            ? `Search results (${users.length})`
-            : activeTab === 'free'
-              ? 'Last 50 — Free Foundation'
-              : 'Last 50 — Premium';
+    const listTitle = (() => {
+        if (debouncedSearch.length > 0) {
+            return `Search results — ${pagination.total} user${pagination.total === 1 ? '' : 's'}`;
+        }
+        if (activeTab === 'free') return `Free Foundation — ${pagination.total} user${pagination.total === 1 ? '' : 's'}`;
+        if (activeTab === 'premium') return `Premium — ${pagination.total} user${pagination.total === 1 ? '' : 's'}`;
+        return `All users — ${pagination.total} user${pagination.total === 1 ? '' : 's'}`;
+    })();
 
     const renderUserTable = () => (
-        <TableContainer component={Paper} elevation={2} sx={{ maxHeight: 'calc(100vh - 280px)' }}>
-            <Table stickyHeader size="small" sx={{ minWidth: 720 }} aria-label="users table">
-                <TableHead>
-                    <TableRow>
-                        <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Name</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Phone</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Role</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Plan</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Joined</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1, textAlign: 'center' }}>
-                            Actions
-                        </TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {users.map((user) => {
-                        const statusUpdateInfo = updateStatus[user._id] || { loading: false };
-                        const isAdminUser = user.role === 'admin';
-                        const isCurrentUser = user._id === currentAdmin?._id;
-                        const { planName, statusColor } = getUserPlanDisplay(user);
-                        const busy = resendLoadingId === user._id;
+        <Paper elevation={2}>
+            <TableContainer sx={{ maxHeight: 'calc(100vh - 320px)' }}>
+                <Table stickyHeader size="small" sx={{ minWidth: 720 }} aria-label="users table">
+                    <TableHead>
+                        <TableRow>
+                            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Name</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Phone</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Role</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Plan</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1 }}>Joined</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', py: 1, px: 1, textAlign: 'center' }}>
+                                Actions
+                            </TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {users.map((user) => {
+                            const statusUpdateInfo = updateStatus[user._id] || { loading: false };
+                            const isAdminUser = user.role === 'admin';
+                            const isCurrentUser = user._id === currentAdmin?._id;
+                            const { planName, statusColor } = getUserPlanDisplay(user);
+                            const busy = resendLoadingId === user._id;
 
-                        return (
-                            <TableRow
-                                key={user._id}
-                                sx={{
-                                    backgroundColor: isCurrentUser ? '#e3f2fd' : 'transparent',
-                                    '&:hover': { backgroundColor: '#f1f1f1' },
-                                }}
-                            >
-                                <TableCell sx={{ padding: '6px 8px', fontSize: '0.8rem' }}>
-                                    <Tooltip title={user.email} placement="top-start">
-                                        <span>
-                                            {user.name}
-                                            {isCurrentUser ? ' (You)' : ''}
-                                        </span>
-                                    </Tooltip>
-                                </TableCell>
-                                <TableCell sx={{ padding: '6px 8px', fontSize: '0.8rem' }}>{getUserPhone(user)}</TableCell>
-                                <TableCell sx={{ padding: '6px 8px' }}>
-                                    <Chip
-                                        label={user.role.toUpperCase()}
-                                        color={isAdminUser ? 'secondary' : 'primary'}
-                                        size="small"
-                                        sx={{ fontSize: '0.7rem', height: '22px' }}
-                                    />
-                                </TableCell>
-                                <TableCell sx={{ padding: '6px 8px' }}>
-                                    <Chip
-                                        label={planName}
-                                        color={statusColor}
-                                        size="small"
-                                        variant="outlined"
-                                        sx={{ fontSize: '0.7rem', height: '22px' }}
-                                    />
-                                </TableCell>
-                                <TableCell sx={{ padding: '6px 8px', fontSize: '0.8rem' }}>
-                                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-                                </TableCell>
-                                <TableCell sx={{ padding: '6px 8px', textAlign: 'center' }}>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            gap: 0.5,
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            flexWrap: 'wrap',
-                                        }}
-                                    >
-                                        {!isCurrentUser && (
+                            return (
+                                <TableRow
+                                    key={user._id}
+                                    sx={{
+                                        backgroundColor: isCurrentUser ? '#e3f2fd' : 'transparent',
+                                        '&:hover': { backgroundColor: '#f1f1f1' },
+                                    }}
+                                >
+                                    <TableCell sx={{ padding: '6px 8px', fontSize: '0.8rem' }}>
+                                        <Tooltip title={user.email} placement="top-start">
+                                            <span>
+                                                {user.name}
+                                                {isCurrentUser ? ' (You)' : ''}
+                                            </span>
+                                        </Tooltip>
+                                    </TableCell>
+                                    <TableCell sx={{ padding: '6px 8px', fontSize: '0.8rem' }}>{getUserPhone(user)}</TableCell>
+                                    <TableCell sx={{ padding: '6px 8px' }}>
+                                        <Chip
+                                            label={user.role.toUpperCase()}
+                                            color={isAdminUser ? 'secondary' : 'primary'}
+                                            size="small"
+                                            sx={{ fontSize: '0.7rem', height: '22px' }}
+                                        />
+                                    </TableCell>
+                                    <TableCell sx={{ padding: '6px 8px' }}>
+                                        <Chip
+                                            label={planName}
+                                            color={statusColor}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{ fontSize: '0.7rem', height: '22px' }}
+                                        />
+                                    </TableCell>
+                                    <TableCell sx={{ padding: '6px 8px', fontSize: '0.8rem' }}>
+                                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                                    </TableCell>
+                                    <TableCell sx={{ padding: '6px 8px', textAlign: 'center' }}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                gap: 0.5,
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                flexWrap: 'wrap',
+                                            }}
+                                        >
+                                            {!isCurrentUser && (
+                                                <MuiButton
+                                                    variant="outlined"
+                                                    size="small"
+                                                    startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
+                                                    onClick={() =>
+                                                        confirmAndChangeRole(user._id, user.name, user.role as 'user' | 'admin')
+                                                    }
+                                                    disabled={statusUpdateInfo.loading}
+                                                    sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', px: 1, py: 0.5 }}
+                                                >
+                                                    {statusUpdateInfo.loading ? (
+                                                        <CircularProgress size={14} />
+                                                    ) : isAdminUser ? (
+                                                        'Make User'
+                                                    ) : (
+                                                        'Make Admin'
+                                                    )}
+                                                </MuiButton>
+                                            )}
                                             <MuiButton
                                                 variant="outlined"
                                                 size="small"
-                                                startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
-                                                onClick={() =>
-                                                    confirmAndChangeRole(user._id, user.name, user.role as 'user' | 'admin')
-                                                }
-                                                disabled={statusUpdateInfo.loading}
+                                                color="warning"
+                                                startIcon={<MailOutlineIcon sx={{ fontSize: '0.9rem' }} />}
+                                                onClick={() => handleResendPin(user._id, user.name)}
+                                                disabled={busy}
                                                 sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', px: 1, py: 0.5 }}
                                             >
-                                                {statusUpdateInfo.loading ? (
-                                                    <CircularProgress size={14} />
-                                                ) : isAdminUser ? (
-                                                    'Make User'
-                                                ) : (
-                                                    'Make Admin'
-                                                )}
+                                                {busy ? <CircularProgress size={14} /> : 'Resend PIN'}
                                             </MuiButton>
-                                        )}
-                                        <MuiButton
-                                            variant="outlined"
-                                            size="small"
-                                            color="warning"
-                                            startIcon={<MailOutlineIcon sx={{ fontSize: '0.9rem' }} />}
-                                            onClick={() => handleResendPin(user._id, user.name)}
-                                            disabled={busy}
-                                            sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', px: 1, py: 0.5 }}
-                                        >
-                                            {busy ? <CircularProgress size={14} /> : 'Resend PIN'}
-                                        </MuiButton>
-                                        <MuiButton
-                                            variant="outlined"
-                                            size="small"
-                                            color="info"
-                                            startIcon={<SubscriptionsIcon sx={{ fontSize: '0.9rem' }} />}
-                                            onClick={() => handleManageSubscription(user._id)}
-                                            sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', px: 1, py: 0.5 }}
-                                        >
-                                            Manage Subs
-                                        </MuiButton>
-                                        {!isCurrentUser && (
                                             <MuiButton
                                                 variant="outlined"
                                                 size="small"
-                                                color="error"
-                                                startIcon={<DeleteIcon sx={{ fontSize: '0.9rem' }} />}
-                                                onClick={() => handleDeleteClick(user._id, user.name, user.email)}
+                                                color="info"
+                                                startIcon={<SubscriptionsIcon sx={{ fontSize: '0.9rem' }} />}
+                                                onClick={() => handleManageSubscription(user._id)}
                                                 sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', px: 1, py: 0.5 }}
                                             >
-                                                Delete
+                                                Manage Subs
                                             </MuiButton>
+                                            {!isCurrentUser && (
+                                                <MuiButton
+                                                    variant="outlined"
+                                                    size="small"
+                                                    color="error"
+                                                    startIcon={<DeleteIcon sx={{ fontSize: '0.9rem' }} />}
+                                                    onClick={() => handleDeleteClick(user._id, user.name, user.email)}
+                                                    sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', px: 1, py: 0.5 }}
+                                                >
+                                                    Delete
+                                                </MuiButton>
+                                            )}
+                                        </Box>
+                                        {statusUpdateInfo.error && (
+                                            <Typography color="error" variant="caption" display="block" sx={{ mt: 0.5, fontSize: '0.65rem' }}>
+                                                {statusUpdateInfo.error}
+                                            </Typography>
                                         )}
-                                    </Box>
-                                    {statusUpdateInfo.error && (
-                                        <Typography color="error" variant="caption" display="block" sx={{ mt: 0.5, fontSize: '0.65rem' }}>
-                                            {statusUpdateInfo.error}
-                                        </Typography>
-                                    )}
-                                    {statusUpdateInfo.success && (
-                                        <Typography color="success.main" variant="caption" display="block" sx={{ mt: 0.5, fontSize: '0.65rem' }}>
-                                            {statusUpdateInfo.success}
-                                        </Typography>
-                                    )}
-                                </TableCell>
-                            </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
-        </TableContainer>
+                                        {statusUpdateInfo.success && (
+                                            <Typography color="success.main" variant="caption" display="block" sx={{ mt: 0.5, fontSize: '0.65rem' }}>
+                                                {statusUpdateInfo.success}
+                                            </Typography>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+            <TablePagination
+                component="div"
+                count={pagination.total}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                rowsPerPageOptions={[10, 25, 50, 100]}
+                labelDisplayedRows={({ from, to, count }) =>
+                    `${from}–${to} of ${count !== -1 ? count : `more than ${to}`}`
+                }
+            />
+        </Paper>
     );
 
     if (isLoading && users.length === 0) {
@@ -408,12 +446,13 @@ const AdminUsersListPage: React.FC = () => {
 
                 {!debouncedSearch && (
                     <Tabs
-                        value={activeTab}
-                        onChange={(_, v) => setActiveTab(v as UserListTab)}
+                        value={activeTab === 'search' ? 'all' : activeTab}
+                        onChange={handleTabChange}
                         sx={{ mb: 2, minHeight: 40 }}
                     >
-                        <Tab label="Last 50 — Free Foundation" value="free" sx={{ textTransform: 'none', minHeight: 40 }} />
-                        <Tab label="Last 50 — Premium" value="premium" sx={{ textTransform: 'none', minHeight: 40 }} />
+                        <Tab label="All Users" value="all" sx={{ textTransform: 'none', minHeight: 40 }} />
+                        <Tab label="Free Foundation" value="free" sx={{ textTransform: 'none', minHeight: 40 }} />
+                        <Tab label="Premium" value="premium" sx={{ textTransform: 'none', minHeight: 40 }} />
                     </Tabs>
                 )}
 

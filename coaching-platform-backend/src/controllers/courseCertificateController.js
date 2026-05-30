@@ -2,11 +2,21 @@ import asyncHandler from 'express-async-handler';
 import CourseCertificate from '../models/CourseCertificate.js';
 import Course from '../models/Course.js';
 import fs from 'fs/promises';
+import { createReadStream } from 'fs';
 import {
     generateCourseCertificate,
     getCourseEligibility,
     getOrCreateCourseRule,
+    ensureDemoCertificatePdf,
+    invalidateDemoCertificatePdf,
 } from '../services/courseCertificateService.js';
+import {
+    getCertificateBranding,
+    updateCertificateBranding,
+    setSignatureImagePath,
+    setLogoImagePath,
+    brandingForApi,
+} from '../services/certificateBrandingService.js';
 
 export const getCourseCertificateEligibility = asyncHandler(async (req, res) => {
     const { courseId } = req.params;
@@ -63,6 +73,83 @@ export const updateAdminCertificateRule = asyncHandler(async (req, res) => {
     rule.updatedBy = req.user._id;
     await rule.save();
     res.status(200).json({ status: 'success', data: { rule } });
+});
+
+export const getAdminCertificateBranding = asyncHandler(async (_req, res) => {
+    const branding = await getCertificateBranding();
+    const data = await brandingForApi(branding);
+    res.status(200).json({ status: 'success', data: { branding: data } });
+});
+
+export const updateAdminCertificateBranding = asyncHandler(async (req, res) => {
+    const { signatoryName, signatoryTitle, issuerTagline } = req.body;
+    const branding = await updateCertificateBranding(
+        { signatoryName, signatoryTitle, issuerTagline },
+        req.user._id
+    );
+    await invalidateDemoCertificatePdf();
+    const data = await brandingForApi(branding);
+    res.status(200).json({ status: 'success', data: { branding: data } });
+});
+
+export const uploadAdminCertificateSignature = asyncHandler(async (req, res) => {
+    if (!req.file?.path) {
+        res.status(400);
+        throw new Error('Signature image file is required.');
+    }
+    const branding = await setSignatureImagePath(req.file.path, req.user._id);
+    await invalidateDemoCertificatePdf();
+    const data = await brandingForApi(branding);
+    res.status(200).json({ status: 'success', data: { branding: data } });
+});
+
+export const uploadAdminCertificateLogo = asyncHandler(async (req, res) => {
+    if (!req.file?.path) {
+        res.status(400);
+        throw new Error('Logo image file is required.');
+    }
+    const branding = await setLogoImagePath(req.file.path, req.user._id);
+    await invalidateDemoCertificatePdf();
+    const data = await brandingForApi(branding);
+    res.status(200).json({ status: 'success', data: { branding: data } });
+});
+
+export const streamAdminCertificateSignature = asyncHandler(async (_req, res) => {
+    const branding = await getCertificateBranding();
+    if (!branding.signatureImagePath) {
+        res.status(404);
+        throw new Error('No signature uploaded.');
+    }
+    const exists = await fs.access(branding.signatureImagePath).then(() => true).catch(() => false);
+    if (!exists) {
+        res.status(404);
+        throw new Error('Signature file missing.');
+    }
+    res.setHeader('Content-Type', 'image/png');
+    createReadStream(branding.signatureImagePath).pipe(res);
+});
+
+export const streamAdminCertificateLogo = asyncHandler(async (_req, res) => {
+    const { getDefaultLogoPath } = await import('../services/certificateBrandingService.js');
+    const logoPath = await getDefaultLogoPath();
+    if (!logoPath) {
+        res.status(404);
+        throw new Error('Logo not available.');
+    }
+    res.setHeader('Content-Type', 'image/png');
+    createReadStream(logoPath).pipe(res);
+});
+
+export const downloadDemoCertificateAdmin = asyncHandler(async (req, res) => {
+    const forceRegenerate = req.query.refresh === '1' || req.query.refresh === 'true';
+    const pdfPath = await ensureDemoCertificatePdf({ forceRegenerate });
+    const asDownload = req.query.download === '1' || req.query.download === 'true';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+        'Content-Disposition',
+        `${asDownload ? 'attachment' : 'inline'}; filename="verble-course-certificate-demo.pdf"`
+    );
+    createReadStream(pdfPath).pipe(res);
 });
 
 export const getAdminIssuedCertificates = asyncHandler(async (req, res) => {

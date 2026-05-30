@@ -70,9 +70,10 @@ const Footer: React.FC = () => {
                 backgroundImage:
                     'radial-gradient(circle at 15% 20%, rgba(59,130,246,0.18), transparent 40%), radial-gradient(circle at 85% 10%, rgba(14,165,233,0.15), transparent 35%)',
                 color: 'white',
-                py: { xs: 3.5, md: 4.5 },
-                mt: 'auto',
+                py: { xs: 2, md: 4 },
+                mt: 0,
                 borderTop: '1px solid rgba(148,163,184,0.18)',
+                pb: 'calc(var(--verble-promo-banner-height, 0px) + 16px)',
             }}
         >
             <Container maxWidth="lg">
@@ -82,49 +83,89 @@ const Footer: React.FC = () => {
                         border: '1px solid rgba(148,163,184,0.2)',
                         bgcolor: 'rgba(15,23,42,0.72)',
                         backdropFilter: 'blur(8px)',
-                        p: { xs: 2, sm: 2.25, md: 2.75 },
+                        p: { xs: 1.5, sm: 2.25, md: 2.75 },
                     }}
                 >
-                    <Grid container spacing={{ xs: 2.4, md: 3 }} alignItems="flex-start">
+                    <Grid container spacing={{ xs: 2, md: 3 }} alignItems="flex-start">
                         <Grid size={{ xs: 12, md: 3.4 }}>
-                            <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                                Verble
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: 'rgba(226,232,240,0.82)', maxWidth: 320 }}>
-                                {t('footer.tagline')}
-                            </Typography>
-                            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                                <IconButton
-                                    href="https://youtube.com/@verble"
-                                    aria-label="Youtube"
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 1.5,
+                                }}
+                            >
+                                <Box sx={{ minWidth: 0, flex: 1 }}>
+                                    <Typography
+                                        variant="h5"
+                                        sx={{
+                                            fontWeight: 800,
+                                            mb: 0.5,
+                                            fontSize: { xs: '1.15rem', md: '1.5rem' },
+                                            lineHeight: 1.2,
+                                        }}
+                                    >
+                                        Verble
+                                    </Typography>
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            color: 'rgba(226,232,240,0.82)',
+                                            maxWidth: 320,
+                                            fontSize: { xs: '0.8rem', md: '0.875rem' },
+                                            lineHeight: 1.45,
+                                        }}
+                                    >
+                                        {t('footer.tagline')}
+                                    </Typography>
+                                    <Box sx={{ mt: 1, display: 'flex', gap: 0.75 }}>
+                                        <IconButton
+                                            href="https://youtube.com/@verble"
+                                            aria-label="Youtube"
+                                            size="small"
+                                            sx={{
+                                                color: '#F8FAFC',
+                                                bgcolor: 'rgba(239,68,68,0.16)',
+                                                border: '1px solid rgba(239,68,68,0.38)',
+                                                '&:hover': { bgcolor: 'rgba(239,68,68,0.25)' },
+                                            }}
+                                        >
+                                            <YouTubeIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                            href="https://www.instagram.com/verble_official"
+                                            aria-label="Instagram"
+                                            size="small"
+                                            sx={{
+                                                color: '#F8FAFC',
+                                                bgcolor: 'rgba(236,72,153,0.16)',
+                                                border: '1px solid rgba(236,72,153,0.38)',
+                                                '&:hover': { bgcolor: 'rgba(236,72,153,0.25)' },
+                                            }}
+                                        >
+                                            <InstagramIcon fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+                                <Box
+                                    component="img"
+                                    src={brandAssets.primaryLogo}
+                                    alt="Verble"
                                     sx={{
-                                        color: '#F8FAFC',
-                                        bgcolor: 'rgba(239,68,68,0.16)',
-                                        border: '1px solid rgba(239,68,68,0.38)',
-                                        '&:hover': { bgcolor: 'rgba(239,68,68,0.25)' },
+                                        width: { xs: 64, sm: 72, md: 80 },
+                                        height: 'auto',
+                                        flexShrink: 0,
                                     }}
-                                >
-                                    <YouTubeIcon />
-                                </IconButton>
-                                <IconButton
-                                    href="https://www.instagram.com/verble_official"
-                                    aria-label="Instagram"
-                                    sx={{
-                                        color: '#F8FAFC',
-                                        bgcolor: 'rgba(236,72,153,0.16)',
-                                        border: '1px solid rgba(236,72,153,0.38)',
-                                        '&:hover': { bgcolor: 'rgba(236,72,153,0.25)' },
-                                    }}
-                                >
-                                    <InstagramIcon />
-                                </IconButton>
+                                />
                             </Box>
                             <MuiLink
                                 href={appStoreListingUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 sx={{
-                                    mt: 2,
+                                    mt: { xs: 1.25, md: 1.5 },
                                     display: 'inline-block',
                                     lineHeight: 0,
                                     borderRadius: 1,
@@ -139,7 +180,7 @@ const Footer: React.FC = () => {
                                     component="img"
                                     src={brandAssets.appStoreIcon}
                                     alt=""
-                                    sx={{ height: 44, width: 'auto', display: 'block', maxWidth: '100%' }}
+                                    sx={{ height: { xs: 40, md: 44 }, width: 'auto', display: 'block', maxWidth: '100%' }}
                                 />
                             </MuiLink>
                         </Grid>
@@ -159,8 +200,8 @@ const Footer: React.FC = () => {
 
                     <Box
                         sx={{
-                            mt: { xs: 2.4, md: 3 },
-                            pt: { xs: 1.6, md: 2 },
+                            mt: { xs: 2, md: 2.5 },
+                            pt: { xs: 1.25, md: 1.75 },
                             borderTop: '1px solid rgba(148,163,184,0.16)',
                             display: 'flex',
                             alignItems: 'center',

@@ -152,8 +152,25 @@ export const updateDailyContentAdmin = async (
     id: string,
     payload: UpdateDailyContentPayload
 ): Promise<DailyContent> => {
-    const response = await apiClient.patch<DailyContentAdminResponse>(`/admin/daily-content/${id}`, payload);
-    return response.data.data.content as DailyContent;
+    try {
+        const response = await apiClient.patch<DailyContentAdminResponse>(
+            `/admin/daily-content/${id}`,
+            payload
+        );
+        return response.data.data.content as DailyContent;
+    } catch (error: unknown) {
+        const axiosErr = error as {
+            response?: { status?: number; data?: { message?: string; data?: { content?: DailyContent } } };
+        };
+        if (axiosErr.response?.status === 409 && axiosErr.response.data?.data?.content) {
+            throw new DailyContentDuplicateError(
+                axiosErr.response.data.message ||
+                    'Content for this type is already scheduled on this date.',
+                axiosErr.response.data.data.content
+            );
+        }
+        throw error;
+    }
 };
 
 /**

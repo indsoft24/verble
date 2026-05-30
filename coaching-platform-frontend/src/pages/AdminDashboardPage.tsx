@@ -82,9 +82,9 @@ const AdminDashboardPage: React.FC = () => {
             const today = format(new Date(), 'yyyy-MM-dd');
 
             const [usersData, contentResult, offersData, joinersData] = await Promise.all([
-                getAllUsers().catch((err) => {
+                getAllUsers({ limit: 20, page: 1 }).catch((err) => {
                     console.error('Failed to fetch users:', err);
-                    return [];
+                    return { users: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 1 } };
                 }),
                 getAllDailyContentAdmin({ date: today }).catch((err) => {
                     console.error('Failed to fetch daily content:', err);
@@ -101,11 +101,11 @@ const AdminDashboardPage: React.FC = () => {
             ]);
 
             // Get recent users (last 10)
-            const sortedUsers = Array.isArray(usersData) ? usersData.sort((a, b) => {
+            const sortedUsers = [...(usersData?.users ?? [])].sort((a, b) => {
                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
                 const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
                 return dateB - dateA;
-            }) : [];
+            });
             setRecentUsers(sortedUsers.slice(0, 10));
 
             const contentList = Array.isArray(contentResult)

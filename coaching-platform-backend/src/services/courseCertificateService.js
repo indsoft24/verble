@@ -1,9 +1,8 @@
 import fs from 'fs/promises';
-import { createWriteStream } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import PDFDocument from 'pdfkit';
 import { v4 as uuidv4 } from 'uuid';
+import { renderCourseCertificatePdf } from './certificatePdfRenderer.js';
 import Course from '../models/Course.js';
 import Module from '../models/Module.js';
 import ModuleCompletion from '../models/ModuleCompletion.js';
@@ -66,37 +65,29 @@ export const getCourseEligibility = async (userId, courseId) => {
     };
 };
 
-const generateCoursePdf = async ({ userName, courseTitle, certificateNumber, verificationCode, completionPercent, assessmentScore }) => {
+const generateCoursePdf = async ({
+    userName,
+    courseTitle,
+    certificateNumber,
+    verificationCode,
+    completionPercent,
+    assessmentScore,
+    issuedAt,
+}) => {
     const certificatesDir = path.join(__dirname, '../../uploads/certificates');
     await fs.mkdir(certificatesDir, { recursive: true });
     const fileName = `course-certificate-${Date.now()}-${uuidv4().slice(0, 6)}.pdf`;
     const pdfPath = path.join(certificatesDir, fileName);
 
-    const doc = new PDFDocument({
-        size: 'A4',
-        layout: 'landscape',
-        margins: { top: 50, bottom: 50, left: 50, right: 50 },
-    });
-    const stream = createWriteStream(pdfPath);
-    doc.pipe(stream);
-
-    doc.rect(50, 50, 740, 500).lineWidth(3).stroke('#0f172a');
-    doc.fontSize(34).fillColor('#0f172a').text('COURSE COMPLETION CERTIFICATE', 0, 110, { align: 'center' });
-    doc.fontSize(17).fillColor('#334155').text('Awarded to', 0, 180, { align: 'center' });
-    doc.fontSize(30).fillColor('#1d4ed8').font('Helvetica-Bold').text(userName.toUpperCase(), 0, 215, { align: 'center' });
-    doc.fontSize(15).fillColor('#334155').font('Helvetica').text('for successfully completing', 0, 275, { align: 'center' });
-    doc.fontSize(22).fillColor('#0f172a').font('Helvetica-Bold').text(courseTitle, 0, 305, { align: 'center' });
-    doc.fontSize(13).fillColor('#475569').font('Helvetica').text(`Course completion: ${completionPercent}%`, 0, 350, { align: 'center' });
-    if (typeof assessmentScore === 'number') {
-        doc.text(`Final assessment score: ${assessmentScore}%`, 0, 372, { align: 'center' });
-    }
-    doc.fontSize(11).fillColor('#64748b').text(`Certificate Number: ${certificateNumber}`, 0, 440, { align: 'center' });
-    doc.text(`Verification Code: ${verificationCode}`, 0, 460, { align: 'center' });
-    doc.end();
-
-    await new Promise((resolve, reject) => {
-        stream.on('finish', resolve);
-        stream.on('error', reject);
+    await renderCourseCertificatePdf({
+        outputPath: pdfPath,
+        userName,
+        courseTitle,
+        certificateNumber,
+        verificationCode,
+        completionPercent,
+        assessmentScore,
+        issuedAt,
     });
 
     return { pdfPath };
@@ -125,6 +116,7 @@ export const generateCourseCertificate = async (userId, courseId) => {
         verificationCode,
         completionPercent: eligibility.completionPercent,
         assessmentScore: eligibility.assessmentScore,
+        issuedAt: new Date(),
     });
 
     certificate = await CourseCertificate.findOneAndUpdate(
@@ -150,4 +142,45 @@ export const generateCourseCertificate = async (userId, courseId) => {
     await certificate.save();
 
     return certificate;
+};
+
+export const DEMO_CERTIFICATE_FILENAME = 'DEMO-course-certificate-preview.pdf';
+
+export const getDemoCertificatePath = () =>
+    path.join(__dirname, '../../uploads/certificates', DEMO_CERTIFICATE_FILENAME);
+
+export const invalidateDemoCertificatePdf = async () => {
+    try {
+        await fs.unlink(getDemoCertificatePath());
+    } catch {
+        /* not present */
+    }
+};
+
+/** Sample PDF for admin preview (regenerated to reflect latest branding). */
+export const ensureDemoCertificatePdf = async ({ forceRegenerate = false } = {}) => {
+    const pdfPath = getDemoCertificatePath();
+    if (!forceRegenerate) {
+        try {
+            await fs.access(pdfPath);
+            return pdfPath;
+        } catch {
+            /* generate */
+        }
+    }
+    await fs.mkdir(path.dirname(pdfPath), { recursive: true });
+    const { pdfPath: tempPath } = await generateCoursePdf({
+        userName: 'Demo Learner',
+        courseTitle: 'Verble English Mastery - Zero to Hero',
+        certificateNumber: 'CCERT-DEMO-2026-VERBLE',
+        verificationCode: 'DEMOVERIFY12345678',
+        completionPercent: 100,
+        assessmentScore: 85,
+        issuedAt: new Date(),
+    });
+    await fs.rename(tempPath, pdfPath).catch(async () => {
+        await fs.copyFile(tempPath, pdfPath);
+        await fs.unlink(tempPath).catch(() => {});
+    });
+    return pdfPath;
 };

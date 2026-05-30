@@ -20,7 +20,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 
-import TiptapEditor from '../components/features/blog/TiptapEditor';
+import TiptapEditor from '../components/features/blog/LazyTiptapEditor';
 
 import {
     getModulesForCourseAdmin,

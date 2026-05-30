@@ -9,6 +9,7 @@ import {
     DialogContent,
     DialogTitle,
     Paper,
+    Stack,
     TextField,
     Typography,
 } from '@mui/material';
@@ -21,6 +22,21 @@ function formatCountdown(secondsLeft: number): string {
     const m = Math.floor(secondsLeft / 60);
     const s = secondsLeft % 60;
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/** Normalize admin-entered prices so "5000" + "2999" don't visually merge. */
+function formatPromoPrice(value: string | undefined): string {
+    const v = (value || '').trim();
+    if (!v) return '';
+    if (/[₹$€£]|free/i.test(v)) return v;
+    const digits = v.replace(/,/g, '');
+    if (/^\d+(\.\d+)?$/.test(digits)) {
+        const n = Number(digits);
+        if (Number.isFinite(n)) {
+            return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+        }
+    }
+    return v;
 }
 
 interface DashboardSeminarPromoCardProps {
@@ -106,117 +122,197 @@ const DashboardSeminarPromoCard: React.FC<DashboardSeminarPromoCardProps> = ({ i
     };
 
     const showSpinner = parentLoading || loading;
+    const originalPrice = formatPromoPrice(banner?.originalPrice);
+    const offerPrice = formatPromoPrice(banner?.offerPrice);
+    const showPricing = Boolean(originalPrice || offerPrice);
+    const metaLine =
+        banner &&
+        [banner.batchText, banner.urgencyText].filter(Boolean).join(' · ');
 
     return (
         <>
             <Paper
                 elevation={0}
                 sx={{
-                    p: 2.5,
+                    p: { xs: 2, sm: 2.5 },
                     borderRadius: 2,
                     height: '100%',
+                    minHeight: { xs: 'auto', md: 200 },
+                    display: 'flex',
+                    flexDirection: 'column',
                     border: '1px solid',
-                    borderColor: banner ? 'rgba(99,102,241,0.35)' : 'divider',
+                    borderColor: banner ? 'rgba(129,140,248,0.4)' : 'divider',
                     background: banner
-                        ? 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)'
+                        ? 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #0f172a 100%)'
                         : 'background.paper',
                     color: banner ? '#fff' : 'text.primary',
+                    boxShadow: banner ? '0 8px 24px rgba(15,23,42,0.25)' : undefined,
                 }}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                    <EventAvailableIcon sx={{ color: banner ? '#a5b4fc' : 'primary.main', fontSize: 22 }} />
-                    <Typography variant="subtitle1" fontWeight={800}>
-                        Live webinar
-                    </Typography>
-                </Box>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+                    <Box
+                        sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: banner ? 'rgba(99,102,241,0.25)' : 'action.hover',
+                        }}
+                    >
+                        <EventAvailableIcon sx={{ color: banner ? '#c7d2fe' : 'primary.main', fontSize: 20 }} />
+                    </Box>
+                    <Box>
+                        <Typography variant="overline" sx={{ lineHeight: 1.2, letterSpacing: 1, opacity: 0.85, fontSize: '0.65rem' }}>
+                            Limited time
+                        </Typography>
+                        <Typography variant="subtitle1" fontWeight={800} lineHeight={1.2}>
+                            Live webinar
+                        </Typography>
+                    </Box>
+                </Stack>
 
                 {showSpinner ? (
-                    <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
-                        <CircularProgress size={24} sx={{ color: banner ? '#a5b4fc' : undefined }} />
+                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 3 }}>
+                        <CircularProgress size={28} sx={{ color: banner ? '#a5b4fc' : undefined }} />
                     </Box>
                 ) : !banner ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, flex: 1 }}>
                         No live session scheduled right now. Check back soon or explore subscription plans.
                     </Typography>
                 ) : (
-                    <>
-                        <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5, lineHeight: 1.35 }}>
-                            {banner.title || 'English learning webinar'}
-                        </Typography>
-                        <Typography
-                            variant="caption"
-                            sx={{ display: 'block', color: 'rgba(255,255,255,0.75)', mb: 1.5, lineHeight: 1.4 }}
-                        >
-                            {[banner.batchText, banner.urgencyText].filter(Boolean).join(' · ') ||
-                                'Limited seats · enroll now'}
-                        </Typography>
+                    <Stack spacing={2} sx={{ flex: 1, justifyContent: 'space-between' }}>
+                        <Box>
+                            <Typography
+                                variant="subtitle1"
+                                fontWeight={800}
+                                sx={{
+                                    lineHeight: 1.35,
+                                    mb: 0.75,
+                                    fontSize: { xs: '1rem', sm: '1.05rem' },
+                                }}
+                            >
+                                {banner.title || 'English learning webinar'}
+                            </Typography>
+                            {metaLine && (
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        color: 'rgba(255,255,255,0.78)',
+                                        lineHeight: 1.45,
+                                        fontSize: '0.8rem',
+                                    }}
+                                >
+                                    {metaLine}
+                                </Typography>
+                            )}
+                        </Box>
 
-                        <Box
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            alignItems={{ xs: 'stretch', sm: 'center' }}
+                            spacing={1.5}
                             sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: 1,
-                                flexWrap: 'wrap',
+                                pt: 0.5,
+                                borderTop: '1px solid rgba(255,255,255,0.1)',
                             }}
                         >
                             <Box
                                 sx={{
-                                    px: 1.25,
-                                    py: 0.5,
-                                    borderRadius: 1,
+                                    px: 1.5,
+                                    py: 0.75,
+                                    borderRadius: 1.5,
                                     bgcolor: 'rgba(0,0,0,0.35)',
-                                    border: '1px solid rgba(254,240,138,0.35)',
+                                    border: '1px solid rgba(254,240,138,0.45)',
                                     textAlign: 'center',
-                                    minWidth: 64,
+                                    minWidth: 76,
+                                    alignSelf: { xs: 'flex-start', sm: 'center' },
                                 }}
                             >
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.65rem' }}>
+                                <Typography
+                                    variant="caption"
+                                    sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.65rem', display: 'block' }}
+                                >
                                     Ends in
                                 </Typography>
                                 <Typography
                                     sx={{
-                                        fontFamily: 'monospace',
+                                        fontFamily: 'ui-monospace, monospace',
                                         fontWeight: 800,
-                                        fontSize: '1.1rem',
+                                        fontSize: '1.25rem',
                                         color: '#fef08a',
                                         lineHeight: 1.2,
+                                        letterSpacing: 1,
                                     }}
                                 >
                                     {formatCountdown(countdownSeconds)}
                                 </Typography>
                             </Box>
+
+                            {showPricing && (
+                                <Stack
+                                    direction="row"
+                                    alignItems="baseline"
+                                    spacing={1}
+                                    sx={{
+                                        px: 1,
+                                        flex: { sm: 1 },
+                                        minWidth: 0,
+                                    }}
+                                >
+                                    {originalPrice && (
+                                        <Typography
+                                            component="span"
+                                            sx={{
+                                                textDecoration: 'line-through',
+                                                color: 'rgba(255,255,255,0.45)',
+                                                fontSize: '0.85rem',
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            {originalPrice}
+                                        </Typography>
+                                    )}
+                                    {offerPrice && (
+                                        <Typography
+                                            component="span"
+                                            sx={{
+                                                fontWeight: 800,
+                                                fontSize: '1rem',
+                                                color: '#bbf7d0',
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            {offerPrice}
+                                        </Typography>
+                                    )}
+                                </Stack>
+                            )}
+
                             <Button
                                 variant="contained"
-                                size="small"
+                                size="medium"
+                                fullWidth={false}
                                 onClick={() => setDialogOpen(true)}
                                 sx={{
                                     bgcolor: '#84cc16',
                                     color: '#0f172a',
                                     fontWeight: 800,
-                                    px: 2,
+                                    px: 3,
+                                    py: 1,
+                                    minHeight: 44,
+                                    whiteSpace: 'nowrap',
+                                    alignSelf: { xs: 'stretch', sm: 'center' },
+                                    ml: { sm: 'auto' },
+                                    boxShadow: '0 4px 14px rgba(132,204,22,0.45)',
                                     '&:hover': { bgcolor: '#a3e635' },
                                 }}
                             >
-                                {banner.ctaText || 'Enroll now'}
+                                {banner.ctaText || 'Join now'}
                             </Button>
-                        </Box>
-
-                        {(banner.originalPrice || banner.offerPrice) && (
-                            <Typography variant="caption" sx={{ display: 'block', mt: 1.25, color: 'rgba(255,255,255,0.7)' }}>
-                                {banner.originalPrice && (
-                                    <Box component="span" sx={{ textDecoration: 'line-through', mr: 0.75 }}>
-                                        {banner.originalPrice}
-                                    </Box>
-                                )}
-                                {banner.offerPrice && (
-                                    <Box component="span" sx={{ fontWeight: 700 }}>
-                                        {banner.offerPrice}
-                                    </Box>
-                                )}
-                            </Typography>
-                        )}
-                    </>
+                        </Stack>
+                    </Stack>
                 )}
             </Paper>
 

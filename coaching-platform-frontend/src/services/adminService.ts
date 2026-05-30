@@ -195,7 +195,35 @@ export interface InitiateUploadResponse {
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
     if (error && typeof error === 'object') {
-        const err = error as { message?: string; response?: { data?: { message?: string } } };
+        const err = error as {
+            message?: string;
+            code?: string;
+            response?: { data?: { message?: string }; status?: number };
+        };
+        const msg = (err.message || '').toLowerCase();
+        const isNetworkFailure =
+            err.code === 'ERR_NETWORK' ||
+            msg.includes('network error') ||
+            msg.includes('network_io_suspended') ||
+            msg.includes('err_network_io_suspended');
+
+        if (err.response?.status === 502 || err.response?.status === 504) {
+            return (
+                'Upload failed at the server gateway (502). The connection was cut before the file finished. ' +
+                'Try again on stable Wi‑Fi, keep this tab open, or use Edit Video to re-upload. ' +
+                'If this repeats, the server disk may be full — contact support.'
+            );
+        }
+        if (isNetworkFailure) {
+            return (
+                'Upload was interrupted before the server finished receiving the file. ' +
+                'Keep this browser tab active and in the foreground until upload reaches 100%, ' +
+                'then try again. Avoid switching tabs, minimizing the window, or locking your device during upload.'
+            );
+        }
+        if (err.response?.status === 413) {
+            return 'File is too large for the server limit. Contact support if this persists.';
+        }
         return err.response?.data?.message || err.message || fallback;
     }
     return fallback;
@@ -213,36 +241,82 @@ export const initiateVideoUpload = async (payload: InitiateUploadPayload): Promi
     }
 };
 
-/** Upload video file to server storage; FFmpeg transcoding starts after upload completes. */
+/** 4 MB chunks — each request is small and survives mobile/proxy timeouts. */
+const VIDEO_UPLOAD_CHUNK_BYTES = 4 * 1024 * 1024;
+const CHUNK_UPLOAD_TIMEOUT_MS = 180_000;
+
+/** Upload video in chunks; FFmpeg starts after the last chunk is merged on the server. */
 export const uploadVideoFileAdmin = async (
     videoId: string,
     file: File,
     onProgress?: (percent: number) => void
 ): Promise<VideoMetadata> => {
-    const formData = new FormData();
-    formData.append('video', file);
+    const totalChunks = Math.max(1, Math.ceil(file.size / VIDEO_UPLOAD_CHUNK_BYTES));
 
-    try {
-        const response = await apiClient.post<ApiResponse<{ video: VideoMetadata }>>(
-            `/admin/videos/${videoId}/upload-file`,
-            formData,
-            {
-                headers: { 'Content-Type': 'multipart/form-data' },
-                timeout: 0,
-                onUploadProgress: (event) => {
-                    if (event.total && onProgress) {
-                        onProgress(Math.round((event.loaded * 100) / event.total));
-                    }
-                },
+    let lastError: unknown;
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+        const start = chunkIndex * VIDEO_UPLOAD_CHUNK_BYTES;
+        const end = Math.min(start + VIDEO_UPLOAD_CHUNK_BYTES, file.size);
+        const blob = file.slice(start, end);
+
+        const formData = new FormData();
+        formData.append('chunkIndex', String(chunkIndex));
+        formData.append('totalChunks', String(totalChunks));
+        formData.append('originalName', file.name);
+        formData.append('chunk', blob, file.name);
+
+        let chunkOk = false;
+        for (let attempt = 0; attempt < 3 && !chunkOk; attempt += 1) {
+            try {
+                const response = await apiClient.post<
+                    ApiResponse<{ video?: VideoMetadata; progress?: number; complete?: boolean }>
+                >(`/admin/videos/${videoId}/upload-chunk`, formData, {
+                    timeout: CHUNK_UPLOAD_TIMEOUT_MS,
+                    onUploadProgress: (event) => {
+                        if (!event.total || !onProgress) return;
+                        const chunkFraction = event.loaded / event.total;
+                        const overall = ((chunkIndex + chunkFraction) / totalChunks) * 100;
+                        onProgress(Math.min(99, Math.round(overall)));
+                    },
+                });
+
+                if (response.data.status !== 'success') {
+                    throw new Error(response.data?.message || 'Chunk upload failed.');
+                }
+
+                const pct = response.data.data?.progress ?? Math.round(((chunkIndex + 1) / totalChunks) * 100);
+                onProgress?.(pct);
+
+                if (response.data.data?.complete && response.data.data?.video) {
+                    return response.data.data.video;
+                }
+                if (chunkIndex === totalChunks - 1 && response.data.data?.video) {
+                    return response.data.data.video;
+                }
+
+                chunkOk = true;
+            } catch (error: unknown) {
+                lastError = error;
+                const status =
+                    error && typeof error === 'object' && 'response' in error
+                        ? (error as { response?: { status?: number } }).response?.status
+                        : undefined;
+                if (status === 400 || status === 401 || status === 403 || status === 404) {
+                    break;
+                }
+                if (attempt < 2) {
+                    await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+                }
             }
-        );
-        if (response.data.status === 'success' && response.data.data?.video) {
-            return response.data.data.video;
         }
-        throw new Error(response.data?.message || 'Failed to upload video file.');
-    } catch (error: unknown) {
-        throw new Error(getApiErrorMessage(error, 'Failed to upload video file.'));
+
+        if (!chunkOk) {
+            throw new Error(getApiErrorMessage(lastError, 'Failed to upload video file.'));
+        }
     }
+
+    throw new Error(getApiErrorMessage(lastError, 'Upload finished but server did not confirm completion.'));
 };
 
 export const finalizeVideoCreationAdmin = async (payload: FinalizeVideoPayload): Promise<VideoMetadata> => {
@@ -262,24 +336,50 @@ export const finalizeVideoCreationAdmin = async (payload: FinalizeVideoPayload):
 export type AdminUsersQuery = {
     search?: string;
     segment?: 'all' | 'free' | 'premium';
+    page?: number;
     limit?: number;
 };
 
-export const getAllUsers = async (query: AdminUsersQuery = {}): Promise<AdminUserView[]> => {
+export type AdminUsersPagination = {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+};
+
+export type AdminUsersListResult = {
+    users: AdminUserView[];
+    pagination: AdminUsersPagination;
+};
+
+const normalizeAdminUsers = (users: AdminUserView[]): AdminUserView[] =>
+    users.map((user) => ({
+        ...user,
+        subscriptions: Array.isArray(user.subscriptions) ? user.subscriptions : [],
+    }));
+
+export const getAllUsers = async (query: AdminUsersQuery = {}): Promise<AdminUsersListResult> => {
     try {
         const params = new URLSearchParams();
         if (query.search?.trim()) params.set('search', query.search.trim());
         if (query.segment && query.segment !== 'all') params.set('segment', query.segment);
+        if (query.page) params.set('page', String(query.page));
         if (query.limit) params.set('limit', String(query.limit));
         const qs = params.toString();
-        const response = await apiClient.get<ApiResponse<{ users: AdminUserView[] }>>(
-            `/admin/users${qs ? `?${qs}` : ''}`
-        );
+        const response = await apiClient.get<
+            ApiResponse<{ users: AdminUserView[]; pagination?: AdminUsersPagination }>
+        >(`/admin/users${qs ? `?${qs}` : ''}`);
         if (response.data.status === 'success' && response.data.data?.users) {
-            return response.data.data.users.map(user => ({
-                ...user,
-                subscriptions: Array.isArray(user.subscriptions) ? user.subscriptions : []
-            }));
+            const pagination = response.data.data.pagination ?? {
+                page: query.page ?? 1,
+                limit: query.limit ?? 25,
+                total: response.data.data.users.length,
+                totalPages: 1,
+            };
+            return {
+                users: normalizeAdminUsers(response.data.data.users),
+                pagination,
+            };
         }
         throw new Error(response.data?.message || 'Failed to fetch users');
     } catch (error: any) {

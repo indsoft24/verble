@@ -104,7 +104,7 @@ const endOfLocalDayExclusive = (dateStr) => {
 };
 
 /** One slot per calendar day (type + level + puzzle variant for PUZZLE). */
-const findExistingForDaySlot = async (payload) => {
+const findExistingForDaySlot = async (payload, excludeId = null) => {
     const dateValue = payload.date;
     if (!dateValue) return null;
 
@@ -120,6 +120,10 @@ const findExistingForDaySlot = async (payload) => {
     if (payload.type === 'PUZZLE') {
         const puzzleType = payload.metadata?.puzzleType || 'SPOT_CORRECT_SENTENCE';
         query['metadata.puzzleType'] = puzzleType;
+    }
+
+    if (excludeId) {
+        query._id = { $ne: excludeId };
     }
 
     return DailyContent.findOne(query).sort({ createdAt: -1 });
@@ -311,6 +315,15 @@ export const updateDailyContentAdmin = asyncHandler(async (req, res) => {
     };
 
     const payload = await prepareBody(merged, true);
+    const conflict = await findExistingForDaySlot(payload, req.params.id);
+    if (conflict) {
+        return res.status(409).json({
+            status: 'fail',
+            message: 'Content for this type is already scheduled on this date. Edit the existing entry instead.',
+            data: { content: conflict, duplicate: true },
+        });
+    }
+
     const doc = await DailyContent.findByIdAndUpdate(req.params.id, payload, {
         new: true,
         runValidators: true,

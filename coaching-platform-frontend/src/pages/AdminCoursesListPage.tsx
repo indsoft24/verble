@@ -28,7 +28,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 
-import TiptapEditor from '../components/features/blog/TiptapEditor';
+import TiptapEditor from '../components/features/blog/LazyTiptapEditor';
 
 import {
     getAllCoursesAdmin,

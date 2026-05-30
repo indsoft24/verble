@@ -47,7 +47,7 @@ const HomePage: React.FC = () => {
     const [recentJoiners, setRecentJoiners] = useState<RecentJoiner[]>([]);
     const [freeLeaderboard, setFreeLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [paidLeaderboard, setPaidLeaderboard] = useState<LeaderboardEntry[]>([]);
-    const [myRank, setMyRank] = useState<{ rank: number; points: number; leaderboardType: string } | null>(null);
+    const [myRank, setMyRank] = useState<{ rank: number | null; points: number; leaderboardType: string } | null>(null);
     const [isLoadingAdditional, setIsLoadingAdditional] = useState(true);
 
     // Redirect to login if not authenticated
@@ -627,7 +627,7 @@ const HomePage: React.FC = () => {
                             <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                                 Free Challenges
                             </Typography>
-                            {myRank && myRank.leaderboardType === 'free' && (
+                            {myRank && myRank.leaderboardType === 'free' && myRank.rank != null && myRank.points > 0 && (
                                 <Alert severity="info" sx={{ mb: 2 }}>
                                     Your Rank: #{myRank.rank} ({myRank.points} points)
                                 </Alert>
@@ -698,7 +698,7 @@ const HomePage: React.FC = () => {
                             <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                                 Paid Challenges
                             </Typography>
-                            {myRank && myRank.leaderboardType === 'paid' && (
+                            {myRank && myRank.leaderboardType === 'paid' && myRank.rank != null && myRank.points > 0 && (
                                 <Alert severity="info" sx={{ mb: 2 }}>
                                     Your Rank: #{myRank.rank} ({myRank.points} points)
                                 </Alert>

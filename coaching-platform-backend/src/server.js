@@ -36,8 +36,18 @@ app.use(videoSecurityHeaders);
 // CORS configuration
 app.use(cors({ origin: '*' }));
 
-// Compression middleware - compress all responses
-app.use(compression());
+// Compression — skip video upload routes (large binary bodies)
+app.use(
+    compression({
+        filter: (req, res) => {
+            const p = req.path || '';
+            if (p.includes('/upload-file') || p.includes('/upload-chunk')) {
+                return false;
+            }
+            return compression.filter(req, res);
+        },
+    })
+);
 
 // Body parsing
 app.use(express.json());
@@ -103,7 +113,12 @@ connectDB().then(async () => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
+// Allow multi-hour uploads (chunked or single); default Node timeouts can drop slow clients.
+server.timeout = 0;
+server.requestTimeout = 0;
+server.keepAliveTimeout = 120_000;
+server.headersTimeout = 125_000;
 

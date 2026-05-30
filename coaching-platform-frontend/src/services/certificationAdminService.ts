@@ -53,3 +53,67 @@ export const getIssuedCertificatesAdmin = async (params: { page: number; limit: 
     }>>('/admin/certificates/issued', { params });
     return response.data.data;
 };
+
+export interface CertificateBranding {
+    signatoryName: string;
+    signatoryTitle: string;
+    issuerTagline: string;
+    hasSignature: boolean;
+    hasLogo: boolean;
+    signatureUrl: string | null;
+    logoUrl: string | null;
+    updatedAt?: string;
+}
+
+export const getCertificateBrandingAdmin = async (): Promise<CertificateBranding> => {
+    const response = await apiClient.get<ApiResponse<{ branding: CertificateBranding }>>(
+        '/admin/certificates/branding'
+    );
+    return response.data.data.branding;
+};
+
+export const updateCertificateBrandingAdmin = async (payload: {
+    signatoryName?: string;
+    signatoryTitle?: string;
+    issuerTagline?: string;
+}): Promise<CertificateBranding> => {
+    const response = await apiClient.patch<ApiResponse<{ branding: CertificateBranding }>>(
+        '/admin/certificates/branding',
+        payload
+    );
+    return response.data.data.branding;
+};
+
+export const uploadCertificateSignatureAdmin = async (file: File): Promise<CertificateBranding> => {
+    const formData = new FormData();
+    formData.append('signature', file);
+    const response = await apiClient.post<ApiResponse<{ branding: CertificateBranding }>>(
+        '/admin/certificates/branding/signature',
+        formData
+    );
+    return response.data.data.branding;
+};
+
+export const uploadCertificateLogoAdmin = async (file: File): Promise<CertificateBranding> => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    const response = await apiClient.post<ApiResponse<{ branding: CertificateBranding }>>(
+        '/admin/certificates/branding/logo',
+        formData
+    );
+    return response.data.data.branding;
+};
+
+export const fetchBrandingImageBlob = async (relativeUrl: string): Promise<Blob> => {
+    const path = relativeUrl.startsWith('/api') ? relativeUrl.replace(/^\/api/, '') : relativeUrl;
+    const response = await apiClient.get<Blob>(path, { responseType: 'blob' });
+    return response.data;
+};
+
+export const fetchDemoCertificatePdf = async (download = false): Promise<Blob> => {
+    const response = await apiClient.get<Blob>('/admin/certificates/demo-preview', {
+        params: download ? { download: '1' } : undefined,
+        responseType: 'blob',
+    });
+    return response.data;
+};

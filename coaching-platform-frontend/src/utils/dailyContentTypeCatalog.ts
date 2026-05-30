@@ -196,3 +196,17 @@ export function findContentForSlot(
         (c) => format(parseISO(c.date), 'yyyy-MM-dd') === dateKey && contentMatchesCatalogSlot(c, slot)
     );
 }
+
+/** True when another item (not excludeId) already occupies this catalog slot on dateKey. */
+export function findSlotConflictOnDate(
+    items: DailyContent[],
+    dateKey: string,
+    adminKey: AdminContentTypeKey,
+    excludeId?: string
+): DailyContent | undefined {
+    const slot = getCatalogEntry(adminKey);
+    const existing = findContentForSlot(items, dateKey, slot);
+    if (!existing) return undefined;
+    if (excludeId && existing._id === excludeId) return undefined;
+    return existing;
+}

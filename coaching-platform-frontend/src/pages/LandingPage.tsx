@@ -20,7 +20,8 @@ import {
     Checkbox,
     Divider,
     Stack,
-    Avatar
+    Avatar,
+    alpha,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -67,6 +68,30 @@ const trustedProfessions = [
 type MasterTierStat = { value: string; label: string };
 type MasterTierFeature = { title: string; detail: string };
 
+/** Section headings — readable on mobile without dominating the viewport */
+const landingSectionTitleSx = {
+    fontWeight: 800,
+    color: '#0f172a',
+    fontSize: { xs: '1.375rem', sm: '1.625rem', md: '2.25rem' },
+    lineHeight: { xs: 1.3, md: 1.2 },
+    mb: { xs: 1, md: 2 },
+    px: { xs: 0.5, sm: 0 },
+} as const;
+
+const landingSectionSubtitleSx = {
+    color: '#64748b',
+    fontWeight: 400,
+    fontSize: { xs: '0.875rem', sm: '1rem', md: '1.25rem' },
+    lineHeight: 1.55,
+    maxWidth: 640,
+    mx: 'auto',
+    px: { xs: 1, sm: 0 },
+} as const;
+
+/** Tighter vertical rhythm on mobile home page */
+const landingSectionPy = { xs: 3, sm: 5, md: 10 } as const;
+const landingSectionHeaderMb = { xs: 2, sm: 3, md: 6 } as const;
+
 type MasterTierCardProps = {
     badge: string;
     headerIcon: React.ReactNode;
@@ -99,8 +124,8 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
     <Card
         elevation={4}
         sx={{
-            p: { xs: 2.5, md: 3 },
-            borderRadius: '20px',
+            p: { xs: 3, sm: 2.75, md: 3 },
+            borderRadius: { xs: '16px', md: '20px' },
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -120,10 +145,17 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
                 height: 160,
                 borderRadius: '50%',
                 bgcolor: 'rgba(255,255,255,0.1)',
+                pointerEvents: 'none',
             }}
         />
-        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.5 }}>
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0 }}>
+            <Stack
+                direction="row"
+                alignItems="flex-start"
+                justifyContent="space-between"
+                spacing={1}
+                sx={{ mb: { xs: 1.75, md: 2.5 } }}
+            >
                 <Chip
                     label={badge}
                     size="small"
@@ -131,13 +163,22 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
                         bgcolor: 'rgba(255,255,255,0.18)',
                         color: 'white',
                         fontWeight: 700,
-                        height: 28,
+                        height: 'auto',
+                        maxWidth: 'calc(100% - 52px)',
+                        '& .MuiChip-label': {
+                            whiteSpace: 'normal',
+                            px: 1.25,
+                            py: 0.5,
+                            lineHeight: 1.3,
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                        },
                     }}
                 />
                 <Box
                     sx={{
-                        width: 44,
-                        height: 44,
+                        width: { xs: 40, md: 44 },
+                        height: { xs: 40, md: 44 },
+                        flexShrink: 0,
                         borderRadius: '12px',
                         bgcolor: 'rgba(255,255,255,0.15)',
                         display: 'flex',
@@ -149,10 +190,27 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
                 </Box>
             </Stack>
 
-            <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.75, lineHeight: 1.25 }}>
+            <Typography
+                variant="h5"
+                sx={{
+                    fontWeight: 800,
+                    mb: 0.75,
+                    lineHeight: 1.25,
+                    fontSize: { xs: '1.05rem', sm: '1.2rem', md: '1.5rem' },
+                    pr: 0.5,
+                }}
+            >
                 {title}
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.92, lineHeight: 1.55, mb: 3 }}>
+            <Typography
+                variant="body2"
+                sx={{
+                    opacity: 0.92,
+                    lineHeight: 1.55,
+                    mb: { xs: 2, md: 3 },
+                    fontSize: { xs: '0.78rem', sm: '0.85rem', md: '0.875rem' },
+                }}
+            >
                 {subtitle}
             </Typography>
 
@@ -160,34 +218,68 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
                 sx={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: 1,
-                    p: 2,
-                    mb: 3,
+                    gap: { xs: 0.5, md: 1 },
+                    p: { xs: 1.25, sm: 1.5, md: 2 },
+                    mb: { xs: 2, md: 3 },
                     borderRadius: '14px',
                     bgcolor: 'rgba(255,255,255,0.12)',
                 }}
             >
                 {stats.map((stat) => (
-                    <Box key={stat.label} sx={{ textAlign: 'center' }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                    <Box key={stat.label} sx={{ textAlign: 'center', minWidth: 0, px: 0.25 }}>
+                        <Typography
+                            variant="subtitle1"
+                            sx={{
+                                fontWeight: 800,
+                                lineHeight: 1.2,
+                                fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' },
+                            }}
+                        >
                             {stat.value}
                         </Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.88, display: 'block', mt: 0.25 }}>
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                opacity: 0.88,
+                                display: 'block',
+                                mt: 0.25,
+                                lineHeight: 1.25,
+                                fontSize: { xs: '0.62rem', sm: '0.68rem', md: '0.75rem' },
+                                wordBreak: 'break-word',
+                            }}
+                        >
                             {stat.label}
                         </Typography>
                     </Box>
                 ))}
             </Box>
 
-            <Stack spacing={2.25} sx={{ flex: 1 }}>
+            <Stack spacing={{ xs: 1.5, md: 2.25 }} sx={{ flex: 1 }}>
                 {features.map((feature) => (
-                    <Box key={feature.title} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                        <CheckCircleIcon sx={{ fontSize: 22, mt: 0.15, flexShrink: 0, opacity: 0.95 }} />
-                        <Box>
-                            <Typography variant="body1" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
+                    <Box key={feature.title} sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 } }}>
+                        <CheckCircleIcon
+                            sx={{ fontSize: { xs: 18, md: 22 }, mt: 0.2, flexShrink: 0, opacity: 0.95 }}
+                        />
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography
+                                variant="body1"
+                                sx={{
+                                    fontWeight: 600,
+                                    lineHeight: 1.35,
+                                    fontSize: { xs: '0.82rem', sm: '0.875rem', md: '1rem' },
+                                }}
+                            >
                                 {feature.title}
                             </Typography>
-                            <Typography variant="body2" sx={{ opacity: 0.85, mt: 0.35, lineHeight: 1.5 }}>
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    opacity: 0.85,
+                                    mt: 0.35,
+                                    lineHeight: 1.5,
+                                    fontSize: { xs: '0.72rem', sm: '0.78rem', md: '0.875rem' },
+                                }}
+                            >
                                 {feature.detail}
                             </Typography>
                         </Box>
@@ -195,9 +287,18 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
                 ))}
             </Stack>
 
-            <Box sx={{ mt: 3.5, pt: 2.5, borderTop: '1px solid rgba(255,255,255,0.22)' }}>
-                <Typography variant="body2" sx={{ opacity: 0.9, mb: 1.5 }}>
-                    <Box component="span" sx={{ textDecoration: 'line-through', mr: 1 }}>
+            <Box sx={{ mt: { xs: 2.5, md: 3.5 }, pt: { xs: 2, md: 2.5 }, borderTop: '1px solid rgba(255,255,255,0.22)' }}>
+                <Typography
+                    variant="body2"
+                    sx={{
+                        opacity: 0.9,
+                        mb: 1.5,
+                        lineHeight: 1.55,
+                        fontSize: { xs: '0.72rem', sm: '0.8rem', md: '0.875rem' },
+                        wordBreak: 'break-word',
+                    }}
+                >
+                    <Box component="span" sx={{ textDecoration: 'line-through', mr: 0.75 }}>
                         {strikethroughPrice}
                     </Box>
                     Included in all-access bundle from{' '}
@@ -212,8 +313,9 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
                     fullWidth
                     endIcon={<ArrowForwardIcon />}
                     sx={{
-                        py: 1.35,
+                        py: { xs: 1.1, md: 1.35 },
                         fontWeight: 700,
+                        fontSize: { xs: '0.8rem', md: '0.875rem' },
                         borderRadius: '12px',
                         bgcolor: 'white',
                         color: ctaTextColor,
@@ -489,7 +591,7 @@ const LandingPage: React.FC = () => {
             </Box>
 
             {/* Trusted learners by profession */}
-            <Box sx={{ py: { xs: 4, md: 5 }, bgcolor: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
+            <Box sx={{ py: { xs: 3, md: 5 }, bgcolor: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
                 <Container maxWidth="lg">
                     <Typography
                         variant="body2"
@@ -542,101 +644,128 @@ const LandingPage: React.FC = () => {
             </Box>
 
             {/* Proven Results - Modern Featured Section */}
-            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#ffffff' }}>
+            <Box sx={{ py: landingSectionPy, bgcolor: '#ffffff' }}>
                 <Container maxWidth="lg">
-                    <Box sx={{ textAlign: 'center', mb: 8 }}>
-                        <Typography
-                            variant="h3"
-                            sx={{
-                                fontWeight: 800,
-                                mb: 2,
-                                color: '#0f172a',
-                                fontSize: { xs: '2rem', md: '2.5rem' }
-                            }}
-                        >
+                    <Box sx={{ textAlign: 'center', mb: landingSectionHeaderMb, maxWidth: 720, mx: 'auto' }}>
+                        <Typography variant="h3" sx={landingSectionTitleSx}>
                             Practical Tools for Rapid Learning
                         </Typography>
-                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400, maxWidth: '700px', mx: 'auto' }}>
+                        <Typography variant="h6" sx={{ ...landingSectionSubtitleSx, maxWidth: 560 }}>
                             Our platform is built on proven pedagogical methods, enhanced by cutting-edge AI to make learning English natural and fast.
                         </Typography>
                     </Box>
-                    <Grid container spacing={3}>
-                        {provenResults.map((result, index) => (
-                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        p: 4,
-                                        borderRadius: '24px',
-                                        height: '100%',
-                                        border: '1px solid #f1f5f9',
-                                        bgcolor: '#f8fafc',
-                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: {
+                                xs: 'repeat(2, minmax(0, 1fr))',
+                                md: 'repeat(3, minmax(0, 1fr))',
+                            },
+                            gap: { xs: '16px', sm: '18px', md: '24px' },
+                            justifyItems: 'stretch',
+                            alignItems: 'stretch',
+                            width: '100%',
+                        }}
+                    >
+                        {provenResults.map((result) => (
+                            <Paper
+                                key={result.title}
+                                elevation={0}
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: { xs: 'center', md: 'flex-start' },
+                                    textAlign: { xs: 'center', md: 'left' },
+                                    justifyContent: 'flex-start',
+                                    minHeight: { xs: 148, sm: 160, md: 'auto' },
+                                    height: '100%',
+                                    p: { xs: '16px 14px', sm: '18px', md: '24px' },
+                                    borderRadius: { xs: 2, md: 3 },
+                                    border: '1px solid #e2e8f0',
+                                    bgcolor: '#ffffff',
+                                    boxSizing: 'border-box',
+                                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
+                                    '@media (hover: hover)': {
                                         '&:hover': {
-                                            transform: 'translateY(-8px)',
-                                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)',
-                                            bgcolor: 'white',
+                                            transform: 'translateY(-4px)',
+                                            boxShadow: '0 12px 32px -8px rgba(15, 23, 42, 0.12)',
                                             borderColor: result.color,
-                                            '& .icon-box': {
+                                            '& .feature-icon': {
                                                 bgcolor: result.color,
-                                                color: 'white',
-                                                transform: 'scale(1.1) rotate(5deg)',
-                                            }
-                                        }
+                                                color: '#fff',
+                                            },
+                                        },
+                                    },
+                                }}
+                            >
+                                <Box
+                                    className="feature-icon"
+                                    sx={{
+                                        width: { xs: 44, md: 48 },
+                                        height: { xs: 44, md: 48 },
+                                        flexShrink: 0,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: 2,
+                                        mb: { xs: 1, md: 2 },
+                                        color: result.color,
+                                        bgcolor: alpha(result.color, 0.1),
+                                        transition: 'background-color 0.2s ease, color 0.2s ease',
+                                        '& .MuiSvgIcon-root': {
+                                            fontSize: { xs: 22, md: 26 },
+                                        },
                                     }}
                                 >
-                                    <Box
-                                        className="icon-box"
-                                        sx={{
-                                            color: result.color,
-                                            mb: 3,
-                                            width: 64,
-                                            height: 64,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            borderRadius: '16px',
-                                            bgcolor: 'white',
-                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                            fontSize: '2rem',
-                                            transition: 'all 0.3s ease'
-                                        }}
-                                    >
-                                        {result.icon}
-                                    </Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5, color: '#1e293b' }}>
-                                        {result.title}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ color: '#64748b', lineHeight: 1.6 }}>
-                                        {result.desc}
-                                    </Typography>
-                                </Paper>
-                            </Grid>
+                                    {result.icon}
+                                </Box>
+
+                                <Typography
+                                    component="h3"
+                                    sx={{
+                                        fontWeight: 700,
+                                        color: '#0f172a',
+                                        fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1.0625rem' },
+                                        lineHeight: 1.35,
+                                        mb: 0.5,
+                                        px: { xs: 0.5, md: 0 },
+                                        width: '100%',
+                                    }}
+                                >
+                                    {result.title}
+                                </Typography>
+
+                                <Typography
+                                    sx={{
+                                        color: '#64748b',
+                                        lineHeight: 1.45,
+                                        fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                                        px: { xs: 0.5, md: 0 },
+                                        width: '100%',
+                                        mt: 'auto',
+                                    }}
+                                >
+                                    {result.desc}
+                                </Typography>
+                            </Paper>
                         ))}
-                    </Grid>
+                    </Box>
                 </Container>
             </Box>
 
             {/* Membership Tiers - Strategic Learning Path */}
-            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#f1f5f9' }}>
+            <Box sx={{ py: landingSectionPy, bgcolor: '#f1f5f9' }}>
                 <Container maxWidth="lg">
-                    <Box sx={{ textAlign: 'center', mb: 8 }}>
-                        <Typography
-                            variant="h3"
-                            sx={{
-                                fontWeight: 800,
-                                mb: 2,
-                                color: '#0f172a',
-                                fontSize: { xs: '2rem', md: '2.5rem' }
-                            }}
-                        >
+                    <Box sx={{ textAlign: 'center', mb: landingSectionHeaderMb }}>
+                        <Typography variant="h3" sx={landingSectionTitleSx}>
                             Your Path to English Mastery
                         </Typography>
-                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
+                        <Typography variant="h6" sx={landingSectionSubtitleSx}>
                             Choose a plan that fits your current level and goals.
                         </Typography>
                     </Box>
-                    <Grid container spacing={4} alignItems="stretch">
+                    <Grid container spacing={{ xs: 2, md: 4 }} alignItems="stretch">
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Card
                                 elevation={0}
@@ -764,7 +893,7 @@ const LandingPage: React.FC = () => {
             </Box>
 
             {/* Who's This App For - Compact 2 Column */}
-            <Box sx={{ py: { xs: 4, md: 5 } }}>
+            <Box sx={{ py: { xs: 3, md: 5 } }}>
                 <Container maxWidth="lg">
                     <Box sx={{ textAlign: 'center', mb: 4 }}>
                         <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
@@ -812,9 +941,9 @@ const LandingPage: React.FC = () => {
             </Box>
 
             {/* Everything You Will Master - Full Width Equal Height 3 Column */}
-            <Box sx={{ py: { xs: 4, md: 5 }, bgcolor: 'grey.50' }}>
+            <Box sx={{ py: { xs: 3, md: 5 }, bgcolor: 'grey.50' }}>
                 <Container maxWidth="xl">
-                    <Box sx={{ textAlign: 'center', mb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Box sx={{ textAlign: 'center', mb: { xs: 2, md: 4 }, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary', width: '100%' }}>
                             Everything You Will Master
                         </Typography>
@@ -822,7 +951,7 @@ const LandingPage: React.FC = () => {
                             Comprehensive learning modules for complete English mastery
                         </Typography>
                     </Box>
-                    <Grid container spacing={3} sx={{ width: '100%' }}>
+                    <Grid container spacing={{ xs: 2, md: 3 }} sx={{ width: '100%' }}>
                         <Grid size={{ xs: 12, md: 4 }}>
                             <Card
                                 elevation={2}
@@ -976,13 +1105,13 @@ const LandingPage: React.FC = () => {
             </Box>
 
             {/* Course Value Breakdown - Modern Pricing Section */}
-            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#ffffff' }}>
+            <Box sx={{ py: landingSectionPy, bgcolor: '#ffffff' }}>
                 <Container maxWidth="lg">
-                    <Box sx={{ textAlign: 'center', mb: 6 }}>
-                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#0f172a' }}>
+                    <Box sx={{ textAlign: 'center', mb: landingSectionHeaderMb }}>
+                        <Typography variant="h3" sx={landingSectionTitleSx}>
                             Incredible Value, Unbeatable Price
                         </Typography>
-                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
+                        <Typography variant="h6" sx={landingSectionSubtitleSx}>
                             Invest in your future with our comprehensive learning modules.
                         </Typography>
                     </Box>
@@ -1060,13 +1189,13 @@ const LandingPage: React.FC = () => {
             </Box>
 
             {/* Testimonials - Premium Social Proof */}
-            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#f8fafc' }}>
+            <Box sx={{ py: landingSectionPy, bgcolor: '#f8fafc' }}>
                 <Container maxWidth="lg">
-                    <Box sx={{ textAlign: 'center', mb: 8 }}>
-                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#0f172a' }}>
+                    <Box sx={{ textAlign: 'center', mb: landingSectionHeaderMb }}>
+                        <Typography variant="h3" sx={landingSectionTitleSx}>
                             Real Stories, Real Results
                         </Typography>
-                        <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>
+                        <Typography variant="h6" sx={landingSectionSubtitleSx}>
                             Join 10,000+ learners who have transformed their lives with Verble.
                         </Typography>
                     </Box>
@@ -1115,42 +1244,91 @@ const LandingPage: React.FC = () => {
             <FullCourseSyllabusSection />
 
             {/* Meet Your Guide - Executive Profile */}
-            <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: '#0f172a' }}>
+            <Box sx={{ pt: landingSectionPy, pb: { xs: 2, sm: 3, md: 5 }, bgcolor: '#0f172a' }}>
                 <Container maxWidth="lg">
-                    <Card elevation={0} sx={{ p: { xs: 4, md: 8 }, borderRadius: '40px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', position: 'relative' }}>
+                    <Card
+                        elevation={0}
+                        sx={{
+                            p: { xs: 3, sm: 3.5, md: 8 },
+                            borderRadius: { xs: '24px', md: '40px' },
+                            bgcolor: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            overflow: 'hidden',
+                            position: 'relative',
+                        }}
+                    >
                         <Box sx={{ position: 'absolute', bottom: -50, right: -50, width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%)' }} />
-                        <Grid container spacing={6} alignItems="center">
-                            <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: 'center' }}>
+                        <Grid container spacing={{ xs: 2, md: 6 }} alignItems="center">
+                            <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: 'center', px: { xs: 1, md: 0 } }}>
                                 <Avatar
                                     src={brandAssets.indianCoach}
                                     alt="Narendra Singh — Lead English Coach"
                                     sx={{
-                                        width: 240,
-                                        height: 240,
+                                        width: { xs: 160, sm: 200, md: 240 },
+                                        height: { xs: 160, sm: 200, md: 240 },
                                         mx: 'auto',
                                         border: '8px solid rgba(99, 102, 241, 0.35)',
                                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                                         '& img': { objectFit: 'cover', objectPosition: 'top center' },
                                     }}
                                 />
-                                <Typography variant="h4" sx={{ mt: 3, fontWeight: 800, color: 'white' }}>Narendra Singh</Typography>
-                                <Typography variant="h6" sx={{ color: '#818cf8', fontWeight: 600 }}>Lead English Coach</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 8 }}>
-                                <Typography variant="h3" sx={{ fontWeight: 800, mb: 3, color: 'white', lineHeight: 1.2 }}>
-                                    "I believe everyone has the potential to speak English confidently."
+                                <Typography
+                                    variant="h4"
+                                    sx={{
+                                        mt: 2,
+                                        fontWeight: 800,
+                                        color: 'white',
+                                        fontSize: { xs: '1.25rem', md: '2.125rem' },
+                                    }}
+                                >
+                                    Narendra Singh
                                 </Typography>
-                                <Typography variant="h6" sx={{ color: '#94a3b8', fontWeight: 400, lineHeight: 1.8, mb: 4 }}>
+                                <Typography
+                                    variant="h6"
+                                    sx={{
+                                        color: '#818cf8',
+                                        fontWeight: 600,
+                                        fontSize: { xs: '0.9rem', md: '1.25rem' },
+                                    }}
+                                >
+                                    Lead English Coach
+                                </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 8 }} sx={{ px: { xs: 1.5, sm: 2, md: 0 }, pb: { xs: 1, md: 0 } }}>
+                                <Typography
+                                    variant="h3"
+                                    sx={{
+                                        fontWeight: 800,
+                                        mb: { xs: 1.5, md: 3 },
+                                        color: 'white',
+                                        lineHeight: { xs: 1.35, md: 1.2 },
+                                        fontSize: { xs: '1.15rem', sm: '1.35rem', md: '2rem' },
+                                        px: { xs: 0.5, md: 0 },
+                                    }}
+                                >
+                                    &ldquo;I believe everyone has the potential to speak English confidently.&rdquo;
+                                </Typography>
+                                <Typography
+                                    variant="h6"
+                                    sx={{
+                                        color: '#94a3b8',
+                                        fontWeight: 400,
+                                        lineHeight: 1.75,
+                                        mb: { xs: 2, md: 4 },
+                                        fontSize: { xs: '0.85rem', sm: '0.95rem', md: '1.25rem' },
+                                        px: { xs: 0.5, md: 0 },
+                                    }}
+                                >
                                     With over 15 years of experience in language coaching, I've developed a methodology that focuses on natural acquisition rather than rote memorization. My goal is to help you break the barrier of hesitation and speak with authority.
                                 </Typography>
-                                <Stack direction="row" spacing={3}>
+                                <Stack direction="row" spacing={{ xs: 2, md: 3 }}>
                                     <Box>
-                                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white' }}>15+</Typography>
-                                        <Typography variant="body2" sx={{ color: '#64748b' }}>Years Experience</Typography>
+                                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white', fontSize: { xs: '1.35rem', md: '2.125rem' } }}>15+</Typography>
+                                        <Typography variant="body2" sx={{ color: '#64748b', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Years Experience</Typography>
                                     </Box>
                                     <Box>
-                                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white' }}>50k+</Typography>
-                                        <Typography variant="body2" sx={{ color: '#64748b' }}>Students Mentored</Typography>
+                                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white', fontSize: { xs: '1.35rem', md: '2.125rem' } }}>50k+</Typography>
+                                        <Typography variant="body2" sx={{ color: '#64748b', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Students Mentored</Typography>
                                     </Box>
                                 </Stack>
                             </Grid>

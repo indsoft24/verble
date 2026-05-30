@@ -26,6 +26,8 @@ services:
       dockerfile: Dockerfile
     image: verble-backend
     container_name: verble-backend
+    ports:
+      - "127.0.0.1:5001:5000"
     environment:
       NODE_ENV: production
       PORT: 5000

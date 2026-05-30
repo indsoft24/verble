@@ -20,25 +20,28 @@ export interface LeaderboardResponse {
 export interface MyRankResponse {
     status: string;
     data: {
-        rank: number;
+        rank: number | null;
         points: number;
         membershipLevel: string;
         leaderboardType: 'free' | 'paid';
     };
 }
 
+const scoredEntriesOnly = (entries: LeaderboardEntry[]) =>
+    entries.filter((e) => (e.points ?? 0) > 0);
+
 export const getFreeLeaderboard = async (limit = 100): Promise<LeaderboardEntry[]> => {
     const response = await apiClient.get<LeaderboardResponse>('/leaderboard/free', {
         params: { limit },
     });
-    return response.data.data.leaderboard;
+    return scoredEntriesOnly(response.data.data.leaderboard);
 };
 
 export const getPaidLeaderboard = async (limit = 100): Promise<LeaderboardEntry[]> => {
     const response = await apiClient.get<LeaderboardResponse>('/leaderboard/paid', {
         params: { limit },
     });
-    return response.data.data.leaderboard;
+    return scoredEntriesOnly(response.data.data.leaderboard);
 };
 
 export const getMyRank = async (): Promise<MyRankResponse['data']> => {

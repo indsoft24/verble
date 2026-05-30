@@ -207,7 +207,7 @@ const TableCreator: React.FC<TableCreatorProps> = ({ anchorEl, onClose, onSelect
   );
 };
 
-interface TiptapEditorProps {
+export interface TiptapEditorProps {
   content: string;
   onChange: (newContent: string) => void;
   readOnly?: boolean;

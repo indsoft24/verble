@@ -73,25 +73,20 @@ const getActiveSubscriptions = (user) => {
     );
 };
 
-const userMatchesSegment = (user, segment) => {
-    if (!segment || segment === 'all') return true;
-    const active = getActiveSubscriptions(user);
-    if (segment === 'free') {
-        const hasFree = active.some((s) => s.planName === FREE_FOUNDATION_NAME);
-        const hasPremium = active.some((s) => s.planName !== FREE_FOUNDATION_NAME);
-        return hasFree && !hasPremium;
-    }
-    if (segment === 'premium') {
-        return active.some((s) => s.planName !== FREE_FOUNDATION_NAME);
-    }
-    return true;
+const activeSubscriptionElemMatch = (extra = {}) => {
+    const now = new Date();
+    return {
+        status: 'active',
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+        ...extra,
+    };
 };
 
-export const getAllUsers = asyncHandler(async (req, res) => {
-    const { search, segment, limit } = req.query;
-    const maxLimit = Math.min(parseInt(limit, 10) || 500, 500);
-
+/** MongoDB filter for admin user list segments (pagination-friendly). */
+const buildUserListQuery = (search, segment) => {
     const query = {};
+
     if (search && String(search).trim()) {
         const term = String(search).trim();
         const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -99,23 +94,61 @@ export const getAllUsers = asyncHandler(async (req, res) => {
         query.$or = [{ name: regex }, { email: regex }, { phoneNumber: regex }, { mobile: regex }];
     }
 
-    let users = await User.find(query)
-        .select('-password -loginPin')
-        .populate({
-            path: 'subscriptions.planId',
-            model: 'SubscriptionPlan',
-            select: 'name price currency duration isActive _id',
-        })
-        .sort({ createdAt: -1 })
-        .limit(maxLimit);
-
-    if (segment === 'free' || segment === 'premium') {
-        users = users.filter((u) => userMatchesSegment(u, segment)).slice(0, 50);
+    if (segment === 'premium') {
+        query.subscriptions = {
+            $elemMatch: activeSubscriptionElemMatch({ planName: { $ne: FREE_FOUNDATION_NAME } }),
+        };
+    } else if (segment === 'free') {
+        query.$and = [
+            {
+                subscriptions: {
+                    $elemMatch: activeSubscriptionElemMatch({ planName: FREE_FOUNDATION_NAME }),
+                },
+            },
+            {
+                subscriptions: {
+                    $not: {
+                        $elemMatch: activeSubscriptionElemMatch({ planName: { $ne: FREE_FOUNDATION_NAME } }),
+                    },
+                },
+            },
+        ];
     }
+
+    return query;
+};
+
+export const getAllUsers = asyncHandler(async (req, res) => {
+    const { search, segment, page: pageRaw, limit: limitRaw } = req.query;
+    const page = Math.max(1, parseInt(pageRaw, 10) || 1);
+    const limit = Math.min(Math.max(parseInt(limitRaw, 10) || 25, 1), 100);
+    const skip = (page - 1) * limit;
+
+    const seg = segment === 'free' || segment === 'premium' ? segment : 'all';
+    const query = buildUserListQuery(search, search ? 'all' : seg);
+
+    const [total, users] = await Promise.all([
+        User.countDocuments(query),
+        User.find(query)
+            .select('-password -loginPin')
+            .populate({
+                path: 'subscriptions.planId',
+                model: 'SubscriptionPlan',
+                select: 'name price currency duration isActive _id',
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
 
     res.status(200).json({
         status: 'success',
-        data: { users: users.map(sanitizeUser) },
+        data: {
+            users: users.map(sanitizeUser),
+            pagination: { page, limit, total, totalPages },
+        },
     });
 });
 

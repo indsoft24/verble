@@ -62,6 +62,7 @@ import {
     resolveAdminKeyFromContent,
     getCatalogEntry,
     findContentForSlot,
+    findSlotConflictOnDate,
     type AdminContentTypeKey,
 } from '../utils/dailyContentTypeCatalog';
 import { defaultMetadataForAdminKey } from '../utils/adminDailyContentDefaults';
@@ -308,6 +309,72 @@ const AdminDailyContentPage: React.FC = () => {
         [content, loadContentIntoEditForm]
     );
 
+    const formatSlotConflictMessage = useCallback((adminKey: AdminContentTypeKey, dateStr: string) => {
+        const label = getCatalogEntry(adminKey).label;
+        const displayDate = format(parseISO(dateStr), 'MMMM d, yyyy');
+        return `${label} is already scheduled on ${displayDate}. Choose a different date.`;
+    }, []);
+
+    const resolveItemsForSlotCheck = useCallback(
+        async (dateStr: string): Promise<DailyContent[]> => {
+            const merged = [...content, ...browseContent];
+            const seen = new Set<string>();
+            const local = merged.filter((item) => {
+                if (!item._id || seen.has(item._id)) return false;
+                seen.add(item._id);
+                return true;
+            });
+            const hasDateLocally = local.some(
+                (item) => format(parseISO(item.date), 'yyyy-MM-dd') === dateStr
+            );
+            if (hasDateLocally) return local;
+            const { content: fetched } = await getAllDailyContentAdmin({ date: dateStr });
+            return fetched;
+        },
+        [content, browseContent]
+    );
+
+    const checkSlotAssignable = useCallback(
+        async (
+            dateStr: string,
+            adminKey: AdminContentTypeKey,
+            excludeId?: string
+        ): Promise<DailyContent | undefined> => {
+            const items = await resolveItemsForSlotCheck(dateStr);
+            return findSlotConflictOnDate(items, dateStr, adminKey, excludeId);
+        },
+        [resolveItemsForSlotCheck]
+    );
+
+    const handleDatePickerChange = useCallback(
+        async (newValue: Date | null) => {
+            if (!newValue || !isValid(newValue) || !currentContent?.adminKey) return;
+
+            const dateStr = format(newValue, 'yyyy-MM-dd');
+            if (currentContent.date === dateStr) return;
+
+            try {
+                const conflict = await checkSlotAssignable(
+                    dateStr,
+                    currentContent.adminKey,
+                    currentContent._id
+                );
+                if (conflict) {
+                    setFormError(formatSlotConflictMessage(currentContent.adminKey, dateStr));
+                    setSlotDuplicateMessage(null);
+                    return;
+                }
+
+                setFormError(null);
+                setSlotDuplicateMessage(null);
+                setCurrentContent((prev) => (prev ? { ...prev, date: dateStr } : null));
+            } catch {
+                setFormError('Could not verify date availability. Please try again.');
+            }
+        },
+        [currentContent, checkSlotAssignable, formatSlotConflictMessage]
+    );
+
     const handleOpenDialog = (contentItem?: DailyContent, initialAdminKey?: AdminContentTypeKey) => {
         setFormError(null);
         const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
@@ -449,7 +516,6 @@ const AdminDailyContentPage: React.FC = () => {
             handleCloseDialog();
         } catch (err: unknown) {
             if (err instanceof DailyContentDuplicateError) {
-                loadContentIntoEditForm(err.existing, err.message);
                 setFormError(err.message);
                 refreshCurrentView();
                 return;
@@ -490,11 +556,59 @@ const AdminDailyContentPage: React.FC = () => {
         return grouped;
     }, [content]);
 
-    const handleAdminKeyChange = (adminKey: AdminContentTypeKey) => {
+    const handleAdminKeyChange = async (adminKey: AdminContentTypeKey) => {
+        if (!currentContent) return;
+
         const dateStr =
-            currentContent?.date ||
+            currentContent.date ||
             (selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-        applySlotSelection(adminKey, dateStr);
+
+        try {
+            const conflict = await checkSlotAssignable(dateStr, adminKey, currentContent._id);
+            if (conflict) {
+                setFormError(formatSlotConflictMessage(adminKey, dateStr));
+                setSlotDuplicateMessage(null);
+                return;
+            }
+
+            setFormError(null);
+            setSlotDuplicateMessage(null);
+            const entry = getCatalogEntry(adminKey);
+
+            if (isEditMode && currentContent._id) {
+                setCurrentContent((prev) =>
+                    prev
+                        ? {
+                              ...prev,
+                              adminKey,
+                              type: entry.apiType,
+                              level: entry.level,
+                              metadata: {
+                                  ...defaultMetadataForAdminKey(adminKey),
+                                  ...(prev.metadata || {}),
+                              },
+                          }
+                        : null
+                );
+                return;
+            }
+
+            setCurrentContent((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          adminKey,
+                          type: entry.apiType,
+                          level: entry.level,
+                          date: dateStr,
+                          title: '',
+                          metadata: defaultMetadataForAdminKey(adminKey),
+                      }
+                    : null
+            );
+        } catch {
+            setFormError('Could not verify type availability for this date. Please try again.');
+        }
     };
 
     // Render dynamic form based on type
@@ -813,12 +927,7 @@ const AdminDailyContentPage: React.FC = () => {
                                             label="Date"
                                             value={currentContent.date ? parseISO(currentContent.date) : null}
                                             onChange={(newValue) => {
-                                                if (newValue && isValid(newValue) && currentContent?.adminKey) {
-                                                    applySlotSelection(
-                                                        currentContent.adminKey,
-                                                        format(newValue, 'yyyy-MM-dd')
-                                                    );
-                                                }
+                                                void handleDatePickerChange(newValue);
                                             }}
                                             sx={{ width: '100%' }}
                                         />
