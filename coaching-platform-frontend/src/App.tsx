@@ -64,7 +64,6 @@ const AdminModuleVideosPage = lazy(() => import('./pages/AdminModuleVideosPage')
 const AdminBlogListPage = lazy(() => import('./pages/AdminBlogListPage'));
 const AdminCreateEditBlogPostPage = lazy(() => import('./pages/AdminCreateEditBlogPostPage'));
 const AdminExamCategoriesPage = lazy(() => import('./pages/AdminExamCategoriesPage'));
-const AdminKnowledgeBasePage = lazy(() => import('./pages/AdminKnowledgeBasePage'));
 const AdminSentenceValidationPage = lazy(() => import('./pages/AdminSentenceValidationPage'));
 const AdminDailyContentPage = lazy(() => import('./pages/AdminDailyContentPage'));
 const AdminDatabaseManagerPage = lazy(() => import('./pages/AdminDatabaseManagerPage'));
@@ -196,7 +195,6 @@ function AppContent() {
                             <Route path="/admin/blog/new" element={<AdminCreateEditBlogPostPage />} />
                             <Route path="/admin/blog/edit/:postId" element={<AdminCreateEditBlogPostPage />} />
                             <Route path="/admin/exam-categories" element={<AdminExamCategoriesPage />} />
-                            <Route path='/admin/knowledgebase' element={<AdminKnowledgeBasePage />} />
                             <Route path='/admin/sentence-validation' element={<AdminSentenceValidationPage />} />
                             <Route path='/admin/daily-content' element={<AdminDailyContentPage />} />
                             <Route path='/admin/database-manager' element={<AdminDatabaseManagerPage />} />

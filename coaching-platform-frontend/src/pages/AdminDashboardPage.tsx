@@ -37,7 +37,6 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import AssessmentIcon from '@mui/icons-material/Assessment';
-import HelpIcon from '@mui/icons-material/Help';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
 const initialStats: PlatformStats = {
@@ -538,14 +537,6 @@ const AdminDashboardPage: React.FC = () => {
                                         description="Review user submissions"
                                         to="/admin/sentence-validation"
                                         icon={<AssessmentIcon />}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 12, sm: 6 }}>
-                                    <QuickActionCard
-                                        title="Help Section"
-                                        description="Manage help articles"
-                                        to="/admin/knowledgebase"
-                                        icon={<HelpIcon />}
                                     />
                                 </Grid>
                             </Grid>

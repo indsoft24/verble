@@ -26,7 +26,6 @@ import {
     Folder as FolderIcon,
     Article as ArticleIcon,
     Category as CategoryIcon,
-    Psychology as PsychologyIcon,
     ChevronLeft as ChevronLeftIcon,
     ChevronRight as ChevronRightIcon,
     ExpandLess,
@@ -73,7 +72,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
             { name: 'Content Management', paths: ['/admin/daily-content', '/admin/promo-banner', '/admin/blog', '/admin/videos', '/admin/courses', '/admin/modules', '/admin/exam-categories'] },
             { name: 'User Management', paths: ['/admin/users'] },
             { name: 'Subscriptions', paths: ['/admin/subscription-plans'] },
-            { name: 'AI & Knowledge', paths: ['/admin/knowledgebase'] },
             { name: 'Validation', paths: ['/admin/sentence-validation'] },
             { name: 'Platform Tools', paths: ['/admin/database-manager', '/admin/certification-management'] },
         ];
@@ -171,17 +169,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
                     title: 'Subscription Plans',
                     path: '/admin/subscription-plans',
                     icon: <PlaylistPlayIcon />,
-                },
-            ],
-        },
-        {
-            title: 'AI & Knowledge',
-            icon: <PsychologyIcon />,
-            children: [
-                {
-                    title: 'Knowledge Base',
-                    path: '/admin/knowledgebase',
-                    icon: <PsychologyIcon />,
                 },
             ],
         },

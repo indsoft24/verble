@@ -25,11 +25,8 @@ import examCategoryAdminRoutes from './examCategoryAdminRoutes.js';
 import gatedContentAdminRoutes from './gatedContentAdminRoutes.js';
 import leadRoutes from './leadRoutes.js';
 import downloadRoutes from './downloadRoutes.js';
-import knowledgeBaseAdminRoutes from './knowledgeBaseAdminRoutes.js';
-import helpRoutes from './helpRoutes.js';
 import dailyContentAdminRoutes from './dailyContentAdminRoutes.js';
 import dailyNotificationAdminRoutes from './dailyNotificationAdminRoutes.js';
-import aiRoutes from './aiRoutes.js';
 import sitemapRoutes from './sitemapRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import webhookRoutes from './webhookRoutes.js';
@@ -93,11 +90,8 @@ router.use('/admin/gated-content', gatedContentAdminRoutes); // Handles /api/adm
 router.use('/leads', leadRoutes);
 router.use('/admin/leads', leadAdminRoutes);
 router.use('/downloads', downloadRoutes);
-router.use('/admin/knowledge-base', knowledgeBaseAdminRoutes);
 router.use('/admin/notifications', dailyNotificationAdminRoutes);
-router.use('/help', helpRoutes);
 router.use('/admin/daily-content', dailyContentAdminRoutes); // Handles /api/admin/daily-content/*
-router.use('/ai', aiRoutes);
 router.use('/notifications', notificationRoutes); // Handles /api/notifications/*
 router.use('/daily-quote', dailyQuoteRoutes); // Handles /api/daily-quote/*
 router.use('/daily-content', dailyContentRoutes); // Handles /api/daily-content/*

@@ -12,7 +12,6 @@ const COLLECTION_LABELS: Record<string, string> = {
     dailycontents: 'Daily Contents',
     databaseauditlogs: 'Database Audit Logs',
     examcategories: 'Exam Categories',
-    knowledgebasearticles: 'Knowledge Base Articles',
     leads: 'Leads',
     modules: 'Modules',
     notifications: 'Notifications',
