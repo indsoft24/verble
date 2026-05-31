@@ -164,7 +164,7 @@ export const validateSentenceSubmission = asyncHandler(async (req, res) => {
  */
 export const validateStorySentences = asyncHandler(async (req, res) => {
     const { submissionId } = req.params;
-    const { sentenceValidations } = req.body;
+    const { sentenceValidations, feedback } = req.body;
 
     if (!Array.isArray(sentenceValidations)) {
         res.status(400);
@@ -184,19 +184,27 @@ export const validateStorySentences = asyncHandler(async (req, res) => {
 
     let sentencesCorrect = 0;
     const summary = submission.summary || [];
+    const normalized = sentenceValidations.map((v, index) => ({
+        sentenceIndex: v.sentenceIndex ?? index,
+        isCorrect: Boolean(v.isCorrect),
+    }));
 
-    sentenceValidations.forEach((validation, index) => {
-        if (validation.isCorrect && index < summary.length) {
+    normalized.forEach((validation) => {
+        if (validation.isCorrect && validation.sentenceIndex < summary.length) {
             sentencesCorrect++;
         }
     });
 
     const evaluationPoints = sentencesCorrect > 0 ? 10 + sentencesCorrect * 2 : 0;
 
+    submission.sentenceValidations = normalized;
     submission.sentencesCorrect = sentencesCorrect;
     submission.isCorrect = sentencesCorrect === summary.length && summary.length > 0;
     submission.reviewedBy = req.user._id;
     submission.reviewedAt = new Date();
+    if (feedback !== undefined) {
+        submission.feedback = feedback;
+    }
 
     const { delta } = await applyEvaluationToSubmission(
         submission,
@@ -215,6 +223,83 @@ export const validateStorySentences = asyncHandler(async (req, res) => {
                 evaluationPoints: submission.evaluationPoints,
                 pointsEarned: submission.evaluationPoints,
                 isCorrect: submission.isCorrect,
+                feedback: submission.feedback,
+                sentenceValidations: submission.sentenceValidations,
+                reviewedAt: submission.reviewedAt,
+                evaluationDelta: delta,
+            },
+        },
+    });
+});
+
+/**
+ * @desc    Validate individual sentences in a vocab submission
+ * @route   PUT /api/validate-sentence/vocab/:submissionId/sentences
+ * @access  Private (Admin)
+ */
+export const validateVocabSentences = asyncHandler(async (req, res) => {
+    const { submissionId } = req.params;
+    const { sentenceValidations, feedback } = req.body;
+
+    if (!Array.isArray(sentenceValidations)) {
+        res.status(400);
+        throw new Error('sentenceValidations must be an array.');
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(submissionId)) {
+        res.status(400);
+        throw new Error('Invalid submission ID format.');
+    }
+
+    const submission = await UserVocabSubmission.findById(submissionId);
+    if (!submission) {
+        res.status(404);
+        throw new Error('Vocabulary submission not found.');
+    }
+
+    let sentencesCorrect = 0;
+    const sentences = submission.sentences || [];
+    const normalized = sentenceValidations.map((v, index) => ({
+        sentenceIndex: v.sentenceIndex ?? index,
+        isCorrect: Boolean(v.isCorrect),
+    }));
+
+    normalized.forEach((validation) => {
+        if (validation.isCorrect && validation.sentenceIndex < sentences.length) {
+            sentencesCorrect++;
+        }
+    });
+
+    const evaluationPoints = sentencesCorrect * 10;
+
+    submission.sentenceValidations = normalized;
+    submission.sentencesCorrect = sentencesCorrect;
+    submission.isCorrect = sentencesCorrect === sentences.length && sentences.length > 0;
+    submission.reviewedBy = req.user._id;
+    submission.reviewedAt = new Date();
+    if (feedback !== undefined) {
+        submission.feedback = feedback;
+    }
+
+    const { delta } = await applyEvaluationToSubmission(
+        submission,
+        'vocab',
+        evaluationPoints,
+        sentencesCorrect
+    );
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Vocabulary sentences validated successfully.',
+        data: {
+            submission: {
+                _id: submission._id,
+                sentencesCorrect,
+                evaluationPoints: submission.evaluationPoints,
+                pointsEarned: submission.evaluationPoints,
+                isCorrect: submission.isCorrect,
+                feedback: submission.feedback,
+                sentenceValidations: submission.sentenceValidations,
                 reviewedAt: submission.reviewedAt,
                 evaluationDelta: delta,
             },

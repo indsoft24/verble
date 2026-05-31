@@ -1,31 +1,45 @@
-// src/components/features/ConversationChat.tsx — two fixed participants, no roleplay toggle
+// WhatsApp-style practical conversation — chronological thread, two fixed participants
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Paper, Typography, Tooltip, CircularProgress } from '@mui/material';
+import {
+    Box,
+    Paper,
+    Typography,
+    Tooltip,
+    CircularProgress,
+    IconButton,
+    alpha,
+} from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import MicIcon from '@mui/icons-material/Mic';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { keyframes } from '@emotion/react';
+import { isParticipant2Speaker, type DialogueLine } from '../../utils/conversationDialogueUtils';
 
-interface DialogueItem {
-    speaker: string;
-    text_en: string;
-    text_hi: string;
-    audio?: string;
-}
-
-interface ConversationChatProps {
-    dialogue: DialogueItem[];
-    participant1: string;
-    participant2: string;
-}
+const SILVER_ACCENT = '#3b82f6';
+const WA_HEADER = '#075e54';
+const WA_BG = '#e5ddd5';
+const BUBBLE_USER = '#dcf8c6';
+const BUBBLE_OTHER = '#ffffff';
 
 const pulse = keyframes`
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    50% { opacity: 0.65; }
 `;
+
+interface ConversationChatProps {
+    dialogue: DialogueLine[];
+    participant1: string;
+    participant2: string;
+    scenarioTitle?: string;
+    scenarioTitleHi?: string;
+}
 
 const ConversationChat: React.FC<ConversationChatProps> = ({
     dialogue,
     participant1,
     participant2,
+    scenarioTitle,
+    scenarioTitleHi,
 }) => {
     const [showHindi, setShowHindi] = useState<Record<number, boolean>>({});
     const [playingAudio, setPlayingAudio] = useState<number | null>(null);
@@ -33,9 +47,6 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
     const audioRefs = useRef<Record<number, HTMLAudioElement | null>>({});
     const synthRef = useRef<SpeechSynthesis | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    const isParticipant1 = (speaker: string) =>
-        speaker.trim().toLowerCase() === participant1.trim().toLowerCase();
 
     useEffect(() => {
         synthRef.current = window.speechSynthesis;
@@ -60,9 +71,14 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
 
     const playTTS = (index: number, text: string) => {
         if (!synthRef.current) return;
+        synthRef.current.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-US';
         utterance.onend = () => {
+            setPlayingAudio(null);
+            setAudioLoading((prev) => ({ ...prev, [index]: false }));
+        };
+        utterance.onerror = () => {
             setPlayingAudio(null);
             setAudioLoading((prev) => ({ ...prev, [index]: false }));
         };
@@ -76,6 +92,10 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
             setPlayingAudio(null);
             return;
         }
+
+        Object.values(audioRefs.current).forEach((a) => a?.pause());
+        synthRef.current?.cancel();
+
         setPlayingAudio(index);
         setAudioLoading((prev) => ({ ...prev, [index]: true }));
 
@@ -97,102 +117,139 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
         }
     };
 
-    const p1Lines = dialogue.filter((d) => isParticipant1(d.speaker));
-    const p2Lines = dialogue.filter((d) => !isParticipant1(d.speaker));
-
-    const renderColumn = (title: string, lines: DialogueItem[], alignRight: boolean) => (
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <Typography
-                variant="subtitle2"
-                sx={{
-                    fontWeight: 800,
-                    textAlign: 'center',
-                    py: 1,
-                    bgcolor: alignRight ? '#dcf8c6' : '#fff',
-                    borderRadius: 1,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                }}
-            >
-                {title}
-            </Typography>
-            <Box sx={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {lines.map((item, idx) => {
-                    const globalIndex = dialogue.indexOf(item);
-                    const isPlaying = playingAudio === globalIndex;
-                    return (
-                        <Paper
-                            key={`${title}-${idx}`}
-                            elevation={0}
-                            onClick={() => {
-                                toggleHindi(globalIndex);
-                                handlePlayAudio(globalIndex, item.text_en, item.audio);
-                            }}
-                            sx={{
-                                p: 1.5,
-                                cursor: 'pointer',
-                                bgcolor: alignRight ? '#dcf8c6' : '#fff',
-                                borderRadius: 2,
-                                animation: isPlaying ? `${pulse} 1s infinite` : 'none',
-                            }}
-                        >
-                            <Typography variant="body2">{item.text_en}</Typography>
-                            {showHindi[globalIndex] && item.text_hi && (
-                                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                                    {item.text_hi}
-                                </Typography>
-                            )}
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
-                                {audioLoading[globalIndex] ? (
-                                    <CircularProgress size={14} />
-                                ) : (
-                                    <Tooltip title="Play / translate">
-                                        <VolumeUpIcon fontSize="small" color="action" />
-                                    </Tooltip>
-                                )}
-                            </Box>
-                        </Paper>
-                    );
-                })}
-            </Box>
-        </Box>
-    );
+    const headerTitle = scenarioTitle?.trim() || 'Practical Conversation';
 
     return (
-        <Box
+        <Paper
+            elevation={0}
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
-                minHeight: 480,
-                bgcolor: '#e5ddd5',
-                borderRadius: 2,
+                minHeight: { xs: 520, md: 560 },
+                maxWidth: 520,
+                margin: '0 auto',
+                borderRadius: 3,
                 overflow: 'hidden',
+                border: `2px solid ${SILVER_ACCENT}`,
+                boxShadow: `0 0 24px ${alpha(SILVER_ACCENT, 0.25)}`,
             }}
         >
-            <Box sx={{ bgcolor: '#075e54', color: 'white', p: 2 }}>
-                <Typography variant="h6" fontWeight={700}>
-                    Practical Conversation
+            <Box sx={{ bgcolor: WA_HEADER, color: '#fff', px: 2, py: 1.75 }}>
+                <Typography variant="overline" sx={{ opacity: 0.85, letterSpacing: 1.2 }}>
+                    Silver · Practical conversation
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                <Typography variant="h6" fontWeight={800}>
+                    {headerTitle}
+                </Typography>
+                {scenarioTitleHi && (
+                    <Typography variant="body2" sx={{ opacity: 0.92, mt: 0.25 }}>
+                        {scenarioTitleHi}
+                    </Typography>
+                )}
+                <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mt: 0.75 }}>
                     {participant1} · {participant2}
                 </Typography>
             </Box>
+
             <Box
                 sx={{
                     flex: 1,
-                    display: 'flex',
-                    flexDirection: { xs: 'column', md: 'row' },
-                    gap: 2,
+                    overflowY: 'auto',
+                    bgcolor: WA_BG,
                     p: 2,
-                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
                 }}
             >
-                {renderColumn(participant1, p1Lines, false)}
-                {renderColumn(participant2, p2Lines, true)}
+                {dialogue.length === 0 && (
+                    <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 4 }}>
+                        No dialogue available for this scenario yet.
+                    </Typography>
+                )}
+
+                {dialogue.map((item, index) => {
+                    const isUser = isParticipant2Speaker(item.speaker, participant1, participant2);
+                    const isPlaying = playingAudio === index;
+                    const hindiVisible = showHindi[index];
+
+                    return (
+                        <Box
+                            key={index}
+                            sx={{
+                                display: 'flex',
+                                justifyContent: isUser ? 'flex-end' : 'flex-start',
+                                animation: isPlaying ? `${pulse} 1.2s infinite` : 'none',
+                            }}
+                        >
+                            <Box sx={{ maxWidth: '88%', minWidth: 0 }}>
+                                {!isUser && (
+                                    <Typography
+                                        variant="caption"
+                                        sx={{ ml: 0.5, mb: 0.25, display: 'block', color: WA_HEADER, fontWeight: 700 }}
+                                    >
+                                        {item.speaker || participant1}
+                                    </Typography>
+                                )}
+                                <Paper
+                                    elevation={0}
+                                    sx={{
+                                        px: 1.5,
+                                        py: 1,
+                                        borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                                        bgcolor: isUser ? BUBBLE_USER : BUBBLE_OTHER,
+                                        boxShadow: '0 1px 1px rgba(0,0,0,0.12)',
+                                    }}
+                                >
+                                    <Typography variant="body2" sx={{ color: '#111', whiteSpace: 'pre-wrap' }}>
+                                        {item.text_en}
+                                    </Typography>
+                                    {hindiVisible && item.text_hi && (
+                                        <Typography variant="body2" sx={{ color: '#334155', mt: 0.75 }}>
+                                            {item.text_hi}
+                                        </Typography>
+                                    )}
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.25, mt: 0.5 }}>
+                                        {item.text_hi && (
+                                            <Tooltip title={hindiVisible ? 'Hide Hindi' : 'Show Hindi'}>
+                                                <IconButton size="small" onClick={() => toggleHindi(index)}>
+                                                    <TranslateIcon sx={{ fontSize: 16 }} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+                                        <Tooltip title="Play English">
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handlePlayAudio(index, item.text_en, item.audio)}
+                                            >
+                                                {audioLoading[index] ? (
+                                                    <CircularProgress size={14} />
+                                                ) : (
+                                                    <VolumeUpIcon sx={{ fontSize: 18 }} />
+                                                )}
+                                            </IconButton>
+                                        </Tooltip>
+                                        {isUser && (
+                                            <Tooltip title="Practice speaking">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handlePlayAudio(index, item.text_en, item.audio)}
+                                                    sx={{ bgcolor: alpha(WA_HEADER, 0.12) }}
+                                                >
+                                                    <MicIcon sx={{ fontSize: 18, color: WA_HEADER }} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+                                    </Box>
+                                </Paper>
+                            </Box>
+                        </Box>
+                    );
+                })}
+                <div ref={messagesEndRef} />
             </Box>
-            <div ref={messagesEndRef} />
-        </Box>
+        </Paper>
     );
 };
 

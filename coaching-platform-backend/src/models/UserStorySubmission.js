@@ -51,6 +51,10 @@ const userStorySubmissionSchema = new mongoose.Schema({
     reviewedAt: {
         type: Date,
     },
+    sentenceValidations: [{
+        sentenceIndex: { type: Number, required: true },
+        isCorrect: { type: Boolean, required: true },
+    }],
 }, {
     timestamps: true
 });

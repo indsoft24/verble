@@ -460,11 +460,33 @@ const AdminDailyContentPage: React.FC = () => {
                 return;
             }
         } else if (currentContent.type === 'CONVERSATION') {
-            if (!currentContent.metadata?.dialogue || !Array.isArray(currentContent.metadata.dialogue) || currentContent.metadata.dialogue.length === 0) {
-                setFormError('At least one dialogue entry is required for conversations.');
+            const dialogue = (currentContent.metadata?.dialogue || []) as {
+                speaker?: string;
+                text_en?: string;
+            }[];
+            const filled = dialogue.filter(
+                (l) => String(l.text_en || '').trim() && String(l.speaker || '').trim()
+            );
+            if (filled.length === 0) {
+                setFormError('Add at least one dialogue line with speaker and English text.');
                 return;
             }
+            if (currentContent.adminKey !== 'PROFESSIONAL_CONVERSATION') {
+                if (!String(currentContent.metadata?.participant1 || '').trim() ||
+                    !String(currentContent.metadata?.participant2 || '').trim()) {
+                    setFormError('Person 1 and Person 2 are required.');
+                    return;
+                }
+                if (!String(currentContent.metadata?.scenarioTitle || currentContent.title || '').trim()) {
+                    setFormError('Scenario title is required.');
+                    return;
+                }
+            }
         } else if (currentContent.type === 'VOCAB_SET') {
+            if (!String(currentContent.metadata?.theme || '').trim()) {
+                setFormError('Theme is required for vocabulary sets.');
+                return;
+            }
             const items = currentContent.metadata?.vocabItems || [];
             if (!Array.isArray(items) || !items.some((v: { word?: string }) => String(v?.word || '').trim())) {
                 setFormError('Add at least one vocabulary word.');
@@ -500,6 +522,35 @@ const AdminDailyContentPage: React.FC = () => {
             const storyTitle = String(payload.metadata?.title || '').trim();
             if (storyTitle) {
                 payload.title = storyTitle;
+            }
+        }
+        if (payload.type === 'CONVERSATION' && payload.metadata) {
+            const p1 = String(payload.metadata.participant1 || '').trim();
+            const p2 = String(payload.metadata.participant2 || '').trim();
+            const rawDialogue = (payload.metadata.dialogue || []) as {
+                speaker?: string;
+                text_en?: string;
+                text_hi?: string;
+                audio?: string;
+            }[];
+            payload.metadata = {
+                ...payload.metadata,
+                dialogue: rawDialogue
+                    .filter((l) => String(l.text_en || '').trim())
+                    .map((l) => ({
+                        speaker: String(l.speaker || p1).trim(),
+                        text_en: String(l.text_en || '').trim(),
+                        text_hi: String(l.text_hi || '').trim(),
+                        ...(l.audio ? { audio: String(l.audio).trim() } : {}),
+                    })),
+                participants: [p1, p2].filter(Boolean),
+            };
+            if (payload.adminKey !== 'PROFESSIONAL_CONVERSATION') {
+                const scenario = String(payload.metadata.scenarioTitle || payload.title || '').trim();
+                if (scenario) {
+                    payload.title = scenario;
+                    payload.metadata.scenarioTitle = scenario;
+                }
             }
         }
 

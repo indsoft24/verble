@@ -42,14 +42,16 @@ export interface SentenceSubmission {
     };
     word?: string;
     sentence?: string;
-    sentences?: string[];
+    sentences?: string[] | Array<{ sentence: string; vocabWordsUsed?: string[] }>;
     summary?: string[];
+    sentenceValidations?: Array<{ sentenceIndex: number; isCorrect: boolean }>;
+    totalVocabWordsUsed?: number;
     description?: string;
     isCorrect: boolean | null;
     feedback?: string;
     pointsEarned?: number;
     sentencesCorrect?: number;
-    reviewedBy?: string;
+    reviewedBy?: string | { _id: string; name?: string; email?: string };
     reviewedAt?: string;
     createdAt: string;
     updatedAt: string;
@@ -80,6 +82,15 @@ export interface ValidateStorySentencesRequest {
         sentenceIndex: number;
         isCorrect: boolean;
     }>;
+    feedback?: string;
+}
+
+export interface ValidateVocabSentencesRequest {
+    sentenceValidations: Array<{
+        sentenceIndex: number;
+        isCorrect: boolean;
+    }>;
+    feedback?: string;
 }
 
 export interface ValidateSubmissionResponse {
@@ -137,6 +148,17 @@ export const validateStorySentences = async (
 ): Promise<ValidateSubmissionResponse> => {
     const response = await apiClient.put<ValidateSubmissionResponse>(
         `/validate-sentence/story/${submissionId}/sentences`,
+        data
+    );
+    return response.data;
+};
+
+export const validateVocabSentences = async (
+    submissionId: string,
+    data: ValidateVocabSentencesRequest
+): Promise<ValidateSubmissionResponse> => {
+    const response = await apiClient.put<ValidateSubmissionResponse>(
+        `/validate-sentence/vocab/${submissionId}/sentences`,
         data
     );
     return response.data;

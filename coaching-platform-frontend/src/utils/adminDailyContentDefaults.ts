@@ -91,13 +91,32 @@ export function getDefaultMetadataForType(
                 important_words: Array.from({ length: 5 }, emptyImportantWord),
             };
         case 'VOCAB_SET':
-            return { vocabItems: [emptyVocabItem(), emptyVocabItem(), emptyVocabItem()] };
-        case 'CONVERSATION':
             return {
-                participant1: '',
-                participant2: '',
-                dialogue: [emptyDialogueLine()],
-                ...(adminKey === 'PROFESSIONAL_CONVERSATION' ? { isProfessionalLibrary: true } : {}),
+                theme: '',
+                vocabSetNumber: '',
+                themeImageDescription: '',
+                themeImageUrl: '',
+                vocabItems: Array.from({ length: 10 }, emptyVocabItem),
+            };
+        case 'CONVERSATION':
+            if (adminKey === 'PROFESSIONAL_CONVERSATION') {
+                return {
+                    isProfessionalLibrary: true,
+                    topicName: '',
+                    tags: [] as string[],
+                    dialogue: Array.from({ length: 5 }, emptyDialogueLine),
+                };
+            }
+            return {
+                scenarioTitle: '',
+                scenarioTitle_hi: '',
+                participant1: 'Waiter',
+                participant2: 'You',
+                participants: ['Waiter', 'You'],
+                dialogue: Array.from({ length: 6 }, () => ({
+                    ...emptyDialogueLine(),
+                    speaker: 'Waiter',
+                })),
             };
         case 'PUZZLE':
             return {

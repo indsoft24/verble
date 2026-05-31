@@ -46,8 +46,11 @@ import {
     getAllSubmissions,
     validateSubmission,
     validateStorySentences,
+    validateVocabSentences,
     type SentenceSubmission,
 } from '../services/sentenceValidationService';
+import VocabSubmissionPreview from '../components/admin/VocabSubmissionPreview';
+import { formatVocabSubmissionPlain, normalizeVocabSentences } from '../utils/vocabSubmissionDisplay';
 import { format } from 'date-fns';
 import {
     VALIDATION_ACTIVITY_TABS,
@@ -78,6 +81,7 @@ const AdminSentenceValidationPage: React.FC = () => {
     const [validationFeedback, setValidationFeedback] = useState('');
     const [isCorrect, setIsCorrect] = useState<boolean>(true);
     const [storySentenceValidations, setStorySentenceValidations] = useState<boolean[]>([]);
+    const [vocabSentenceValidations, setVocabSentenceValidations] = useState<boolean[]>([]);
 
     const fetchSubmissions = useCallback(async () => {
         setIsLoading(true);
@@ -135,7 +139,7 @@ const AdminSentenceValidationPage: React.FC = () => {
             case 'story':
                 return submission.summary?.join('\n') || '';
             case 'vocab':
-                return submission.sentences?.join('\n') || '';
+                return formatVocabSubmissionPlain(submission.sentences);
             case 'scene':
             case 'speech':
                 return submission.description || submission.sentences?.join('\n') || '';
@@ -151,9 +155,29 @@ const AdminSentenceValidationPage: React.FC = () => {
         );
         setSelectedSubmission(submission);
         setIsCorrect(true);
-        setValidationFeedback('');
+        setValidationFeedback(submission.feedback || '');
         if (submission.submissionType === 'story' && submission.summary) {
-            setStorySentenceValidations(new Array(submission.summary.length).fill(true));
+            const existing = submission.sentenceValidations || [];
+            setStorySentenceValidations(
+                submission.summary.map((_, idx) => {
+                    const found = existing.find((v) => v.sentenceIndex === idx);
+                    return found ? found.isCorrect : true;
+                })
+            );
+            setVocabSentenceValidations([]);
+        } else if (submission.submissionType === 'vocab') {
+            const entries = normalizeVocabSentences(submission.sentences);
+            const existing = submission.sentenceValidations || [];
+            setVocabSentenceValidations(
+                entries.map((_, idx) => {
+                    const found = existing.find((v) => v.sentenceIndex === idx);
+                    return found ? found.isCorrect : true;
+                })
+            );
+            setStorySentenceValidations([]);
+        } else {
+            setStorySentenceValidations([]);
+            setVocabSentenceValidations([]);
         }
         setValidationDialogOpen(true);
     };
@@ -163,10 +187,11 @@ const AdminSentenceValidationPage: React.FC = () => {
         setSelectedSubmission(null);
         setValidationFeedback('');
         setStorySentenceValidations([]);
+        setVocabSentenceValidations([]);
     };
 
     const handleQuickValidate = async (submission: SentenceSubmission, correct: boolean) => {
-        if (submission.submissionType === 'story') {
+        if (submission.submissionType === 'story' || submission.submissionType === 'vocab') {
             handleOpenValidationDialog(submission);
             return;
         }
@@ -192,7 +217,19 @@ const AdminSentenceValidationPage: React.FC = () => {
                     sentenceIndex: index,
                     isCorrect: ok,
                 }));
-                await validateStorySentences(selectedSubmission._id, { sentenceValidations });
+                await validateStorySentences(selectedSubmission._id, {
+                    sentenceValidations,
+                    feedback: validationFeedback || undefined,
+                });
+            } else if (selectedSubmission.submissionType === 'vocab') {
+                const sentenceValidations = vocabSentenceValidations.map((ok, index) => ({
+                    sentenceIndex: index,
+                    isCorrect: ok,
+                }));
+                await validateVocabSentences(selectedSubmission._id, {
+                    sentenceValidations,
+                    feedback: validationFeedback || undefined,
+                });
             } else {
                 await validateSubmission(selectedSubmission._id, {
                     isCorrect,
@@ -406,16 +443,25 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                 <Typography variant="body2">{getUserPhone(submission)}</Typography>
                                             </TableCell>
                                             <TableCell>
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        whiteSpace: 'pre-wrap',
-                                                        wordBreak: 'break-word',
-                                                        maxWidth: 280,
-                                                    }}
-                                                >
-                                                    {getSubmissionContent(submission) || '—'}
-                                                </Typography>
+                                                {submission.submissionType === 'vocab' ? (
+                                                    <Box sx={{ maxWidth: 300 }}>
+                                                        <VocabSubmissionPreview
+                                                            sentences={submission.sentences}
+                                                            compact
+                                                        />
+                                                    </Box>
+                                                ) : (
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            whiteSpace: 'pre-wrap',
+                                                            wordBreak: 'break-word',
+                                                            maxWidth: 280,
+                                                        }}
+                                                    >
+                                                        {getSubmissionContent(submission) || '—'}
+                                                    </Typography>
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <Box sx={{ maxWidth: 320 }}>
@@ -583,9 +629,28 @@ const AdminSentenceValidationPage: React.FC = () => {
                                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
                                     Student submission
                                 </Typography>
-                                <Typography variant="body2" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
-                                    {getSubmissionContent(selectedSubmission) || '—'}
-                                </Typography>
+                                {selectedSubmission.submissionType === 'vocab' ? (
+                                    <Box sx={{ mb: 2 }}>
+                                        <VocabSubmissionPreview sentences={selectedSubmission.sentences} />
+                                    </Box>
+                                ) : (
+                                    <Typography variant="body2" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+                                        {getSubmissionContent(selectedSubmission) || '—'}
+                                    </Typography>
+                                )}
+                                {selectedSubmission.reviewedAt && (
+                                    <Alert severity="info" sx={{ mb: 2 }}>
+                                        Reviewed{' '}
+                                        {format(new Date(selectedSubmission.reviewedAt), 'PPp')}
+                                        {typeof selectedSubmission.reviewedBy === 'object' &&
+                                        selectedSubmission.reviewedBy?.name
+                                            ? ` by ${selectedSubmission.reviewedBy.name}`
+                                            : ''}
+                                        {selectedSubmission.feedback
+                                            ? ` — Feedback: ${selectedSubmission.feedback}`
+                                            : ''}
+                                    </Alert>
+                                )}
                                 <Divider sx={{ my: 2 }} />
                                 {selectedSubmission.submissionType === 'story' &&
                                 selectedSubmission.summary ? (
@@ -616,6 +681,35 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                 />
                                             </ListItem>
                                         ))}
+                                    </List>
+                                ) : selectedSubmission.submissionType === 'vocab' ? (
+                                    <List dense>
+                                        {normalizeVocabSentences(selectedSubmission.sentences).map(
+                                            (entry, idx) => (
+                                                <ListItem key={idx} disablePadding sx={{ mb: 1, flexDirection: 'column', alignItems: 'stretch' }}>
+                                                    <FormControlLabel
+                                                        control={
+                                                            <Checkbox
+                                                                checked={vocabSentenceValidations[idx] || false}
+                                                                onChange={(e) => {
+                                                                    const next = [...vocabSentenceValidations];
+                                                                    next[idx] = e.target.checked;
+                                                                    setVocabSentenceValidations(next);
+                                                                }}
+                                                            />
+                                                        }
+                                                        label={
+                                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                                                {idx + 1}. {entry.sentence}
+                                                                {entry.vocabWordsUsed.length > 0
+                                                                    ? ` [${entry.vocabWordsUsed.join(', ')}]`
+                                                                    : ''}
+                                                            </Typography>
+                                                        }
+                                                    />
+                                                </ListItem>
+                                            )
+                                        )}
                                     </List>
                                 ) : (
                                     <FormControlLabel

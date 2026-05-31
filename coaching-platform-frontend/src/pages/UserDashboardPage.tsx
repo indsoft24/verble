@@ -44,6 +44,10 @@ import PhraseOfTheDayCard from '../components/features/PhraseOfTheDayCard';
 import StoryCard from '../components/features/StoryCard';
 import VocabularySetCard from '../components/features/VocabularySetCard';
 import ConversationChat from '../components/features/ConversationChat';
+import {
+    getConversationParticipants,
+    normalizeDialogue,
+} from '../utils/conversationDialogueUtils';
 import PuzzleCard from '../components/features/PuzzleCard';
 import SceneCard from '../components/features/SceneCard';
 import SpeechCard from '../components/features/SpeechCard';
@@ -365,12 +369,26 @@ const UserDashboardPage: React.FC = () => {
                         />
                     )}
                     {activityKind === 'conversation' && Array.isArray(meta.dialogue) && (
-                        <Box sx={{ minHeight: '70vh' }}>
-                            <ConversationChat
-                                dialogue={meta.dialogue}
-                                participant1={String(meta.participant1 || meta.participants?.[0] || 'Speaker 1')}
-                                participant2={String(meta.participant2 || meta.participants?.[1] || 'Speaker 2')}
-                            />
+                        <Box sx={{ minHeight: '70vh', py: 2 }}>
+                            {(() => {
+                                const { participant1, participant2 } =
+                                    getConversationParticipants(meta);
+                                return (
+                                    <ConversationChat
+                                        dialogue={normalizeDialogue(
+                                            meta.dialogue,
+                                            participant1,
+                                            participant2
+                                        )}
+                                        participant1={participant1}
+                                        participant2={participant2}
+                                        scenarioTitle={String(
+                                            meta.scenarioTitle || selectedActivity.title || ''
+                                        )}
+                                        scenarioTitleHi={String(meta.scenarioTitle_hi || '')}
+                                    />
+                                );
+                            })()}
                         </Box>
                     )}
                     {(activityKind === 'puzzle_spot' || activityKind === 'puzzle_grammar') && (

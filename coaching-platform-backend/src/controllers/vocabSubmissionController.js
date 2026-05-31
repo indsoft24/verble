@@ -5,6 +5,7 @@ import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
 import { isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
+import { getMinVocabWordsRequired } from '../utils/vocabPracticeRules.js';
 
 /**
  * @desc    Submit sentences using vocabulary words
@@ -83,10 +84,12 @@ export const submitVocabSentences = asyncHandler(async (req, res) => {
         });
     }
 
-    // Check if at least 5 different vocab words are used across all sentences
-    if (allVocabWordsUsed.size < 5) {
+    const minWordsRequired = getMinVocabWordsRequired(vocabItems);
+    if (allVocabWordsUsed.size < minWordsRequired) {
         res.status(400);
-        throw new Error(`You must use at least 5 different vocabulary words across all sentences. Currently using ${allVocabWordsUsed.size}.`);
+        throw new Error(
+            `You must use at least ${minWordsRequired} different vocabulary word${minWordsRequired === 1 ? '' : 's'} across all sentences. Currently using ${allVocabWordsUsed.size}.`
+        );
     }
 
     // Check if user already submitted for this vocab set

@@ -14,15 +14,16 @@ import {
 } from '@mui/material';
 import type { AdminContentTypeKey } from '../../utils/dailyContentTypeCatalog';
 import AdminImageUploadField from './AdminImageUploadField';
+import AdminPracticalConversationForm from './AdminPracticalConversationForm';
+import AdminProfessionalConversationForm from './AdminProfessionalConversationForm';
+import AdminVocabSetMetadataForm from './AdminVocabSetMetadataForm';
 import {
-    emptyDialogueLine,
     emptyImportantWord,
     emptyInstagramPost,
     emptyPuzzleQuestion,
     emptySceneKeyword,
     emptySpeechKeyword,
     emptySpeechPhrase,
-    emptyVocabItem,
 } from '../../utils/adminDailyContentDefaults';
 
 export interface AdminDailyContentMetadataFormProps {
@@ -314,82 +315,13 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
     }
 
     if (type === 'VOCAB_SET') {
-        const vocabItems =
-            (metadata.vocabItems as ReturnType<typeof emptyVocabItem>[])?.length > 0
-                ? (metadata.vocabItems as ReturnType<typeof emptyVocabItem>[])
-                : [emptyVocabItem()];
         return (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid size={{ xs: 12 }}>
-                    <Typography variant="subtitle2">Vocabulary words</Typography>
-                    <Button size="small" sx={{ ml: 1 }} onClick={() => onChange('vocabItems', [...vocabItems, emptyVocabItem()])}>
-                        Add word
-                    </Button>
-                </Grid>
-                {vocabItems.map((item, idx) => (
-                    <Grid size={{ xs: 12 }} key={idx}>
-                        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                            <Typography variant="caption" color="text.secondary">
-                                Word {idx + 1}
-                            </Typography>
-                            <Grid container spacing={1} sx={{ mt: 0.5 }}>
-                                <Grid size={{ xs: 12, md: 3 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Word"
-                                        value={item.word || ''}
-                                        onChange={(e) => {
-                                            const next = [...vocabItems];
-                                            next[idx] = { ...next[idx], word: e.target.value };
-                                            onChange('vocabItems', next);
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 12, md: 3 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Pronunciation (Hindi)"
-                                        value={item.pronunciation_hi || ''}
-                                        onChange={(e) => {
-                                            const next = [...vocabItems];
-                                            next[idx] = { ...next[idx], pronunciation_hi: e.target.value };
-                                            onChange('vocabItems', next);
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 12, md: 3 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Meaning (Hindi)"
-                                        value={item.meaning_hi || ''}
-                                        onChange={(e) => {
-                                            const next = [...vocabItems];
-                                            next[idx] = { ...next[idx], meaning_hi: e.target.value };
-                                            onChange('vocabItems', next);
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 12, md: 3 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Audio URL"
-                                        value={item.audio || ''}
-                                        onChange={(e) => {
-                                            const next = [...vocabItems];
-                                            next[idx] = { ...next[idx], audio: e.target.value };
-                                            onChange('vocabItems', next);
-                                        }}
-                                    />
-                                </Grid>
-                            </Grid>
-                        </Box>
-                    </Grid>
-                ))}
-            </Grid>
+            <AdminVocabSetMetadataForm
+                metadata={metadata}
+                onChange={onChange}
+                displayTitle={displayTitle}
+                onDisplayTitleChange={onDisplayTitleChange}
+            />
         );
     }
 
@@ -524,72 +456,25 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
         );
     }
 
-    if (type === 'CONVERSATION') {
-        const dialogue = (metadata.dialogue as ReturnType<typeof emptyDialogueLine>[]) || [];
+    if (type === 'CONVERSATION' && adminKey === 'PROFESSIONAL_CONVERSATION') {
         return (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                        fullWidth
-                        label="Participant 1"
-                        value={(metadata.participant1 as string) || ''}
-                        onChange={(e) => onChange('participant1', e.target.value)}
-                    />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                        fullWidth
-                        label="Participant 2"
-                        value={(metadata.participant2 as string) || ''}
-                        onChange={(e) => onChange('participant2', e.target.value)}
-                    />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                    <Button size="small" onClick={() => onChange('dialogue', [...dialogue, emptyDialogueLine()])}>
-                        Add dialogue line
-                    </Button>
-                    {dialogue.map((line, idx) => (
-                        <Box key={idx} sx={{ mt: 1, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                            <TextField
-                                fullWidth
-                                label="Speaker"
-                                value={line.speaker || ''}
-                                onChange={(e) => {
-                                    const next = [...dialogue];
-                                    next[idx] = { ...next[idx], speaker: e.target.value };
-                                    onChange('dialogue', next);
-                                }}
-                                sx={{ mb: 1 }}
-                            />
-                            <TextField
-                                fullWidth
-                                label="English"
-                                value={line.text_en || ''}
-                                onChange={(e) => {
-                                    const next = [...dialogue];
-                                    next[idx] = { ...next[idx], text_en: e.target.value };
-                                    onChange('dialogue', next);
-                                }}
-                                multiline
-                                rows={2}
-                                sx={{ mb: 1 }}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Hindi"
-                                value={line.text_hi || ''}
-                                onChange={(e) => {
-                                    const next = [...dialogue];
-                                    next[idx] = { ...next[idx], text_hi: e.target.value };
-                                    onChange('dialogue', next);
-                                }}
-                                multiline
-                                rows={2}
-                            />
-                        </Box>
-                    ))}
-                </Grid>
-            </Grid>
+            <AdminProfessionalConversationForm
+                metadata={metadata}
+                onChange={onChange}
+                displayTitle={displayTitle}
+                onDisplayTitleChange={onDisplayTitleChange}
+            />
+        );
+    }
+
+    if (type === 'CONVERSATION') {
+        return (
+            <AdminPracticalConversationForm
+                metadata={metadata}
+                onChange={onChange}
+                displayTitle={displayTitle}
+                onDisplayTitleChange={onDisplayTitleChange}
+            />
         );
     }
 

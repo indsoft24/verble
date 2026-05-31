@@ -181,17 +181,24 @@ export function getValidationContentDetails(
     if (submission.submissionType === 'vocab') {
         const theme = String(meta.theme ?? '').trim();
         if (theme) lines.push({ label: 'Theme', value: theme });
-        const items = meta.vocabItems as { word?: string; meaning_en?: string; meaning_hi?: string }[] | undefined;
+        const items = meta.vocabItems as {
+            word?: string;
+            pronunciation_hi?: string;
+            meaning_hi?: string;
+            meaning_en?: string;
+        }[] | undefined;
         if (Array.isArray(items) && items.length > 0) {
             const vocabList = items
                 .map((v, i) => {
                     const w = String(v.word ?? '').trim();
-                    const en = String(v.meaning_en ?? '').trim();
+                    const pron = String(v.pronunciation_hi ?? '').trim();
                     const hi = String(v.meaning_hi ?? '').trim();
+                    const en = String(v.meaning_en ?? '').trim();
                     if (!w) return '';
                     const parts = [w];
-                    if (en) parts.push(en);
-                    if (hi) parts.push(`(${hi})`);
+                    if (pron) parts.push(pron);
+                    if (hi) parts.push(hi);
+                    else if (en) parts.push(en);
                     return `${i + 1}. ${parts.join(' — ')}`;
                 })
                 .filter(Boolean)

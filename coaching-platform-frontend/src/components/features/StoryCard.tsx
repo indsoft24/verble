@@ -27,6 +27,28 @@ import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import { getUserStorySubmission, type UserStorySubmission } from '../../services/storySubmissionService';
+import EvaluationStatusBanner from './EvaluationStatusBanner';
+import { isContentScheduledToday, canShowNextNavigation } from '../../utils/dailyActivityUi';
+
+function normalizeStoryWords(metadata: Record<string, unknown> | undefined) {
+    const raw = metadata?.important_words;
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((w) => {
+            if (!w || typeof w !== 'object') return null;
+            const o = w as { word?: string; meaning_en?: string; meaning_hi?: string };
+            const word = String(o.word ?? '').trim();
+            if (!word) return null;
+            return {
+                word,
+                meaning_en: String(o.meaning_en ?? '').trim(),
+                meaning_hi: String(o.meaning_hi ?? '').trim(),
+            };
+        })
+        .filter((w): w is { word: string; meaning_en: string; meaning_hi: string } => w !== null);
+}
+
 interface StoryCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
@@ -100,6 +122,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
     const [hasPrevious, setHasPrevious] = useState(false);
     const [hasNext, setHasNext] = useState(false);
     const [showHindiTranslation, setShowHindiTranslation] = useState<{ [key: number]: boolean }>({});
+    const [existingSubmission, setExistingSubmission] = useState<UserStorySubmission | null>(null);
     const titleAudioRef = useRef<HTMLAudioElement | null>(null);
     const storyAudioRef = useRef<HTMLAudioElement | null>(null);
     const moralAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -108,7 +131,11 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
     useEffect(() => {
         synthRef.current = window.speechSynthesis;
         setCurrentContent(data);
+        setExistingSubmission(null);
         checkNavigationAvailability();
+        if (user) {
+            void getUserStorySubmission(data._id).then(setExistingSubmission);
+        }
         return () => {
             [titleAudioRef, storyAudioRef, moralAudioRef].forEach(ref => {
                 if (ref.current) {
@@ -120,7 +147,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                 synthRef.current.cancel();
             }
         };
-    }, [data]);
+    }, [data, user]);
 
     const checkNavigationAvailability = async () => {
         try {
@@ -259,10 +286,10 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
         e.preventDefault();
 
         const validSentences = sentences.filter(s => s.trim());
-        if (validSentences.length < 1) {
+        if (validSentences.length < 2) {
             setSubmitStatus({
                 type: 'error',
-                message: 'Please submit at least 1 sentence (maximum 5).'
+                message: 'Please submit at least 2 sentences (maximum 5).',
             });
             return;
         }
@@ -294,6 +321,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                 setSentences(['']);
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
+                void getUserStorySubmission(currentContent._id).then(setExistingSubmission);
                 onSubmissionSuccess?.();
             } else {
                 setSubmitStatus({
@@ -336,7 +364,18 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
     const moralEn = currentContent.metadata?.moral_en || '';
     const moralHi = currentContent.metadata?.moral_hi || '';
     const keywords = currentContent.metadata?.keywords || [];
+    const importantWords = normalizeStoryWords(
+        (currentContent.metadata || {}) as Record<string, unknown>
+    );
     const sentenceTranslations = getSentenceTranslations();
+    const isToday = isContentScheduledToday(currentContent.date);
+    const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
+
+    const getSummaryReviewState = (index: number): boolean | null => {
+        if (!existingSubmission?.sentenceValidations?.length) return null;
+        const found = existingSubmission.sentenceValidations.find((v) => v.sentenceIndex === index);
+        return found ? found.isCorrect : null;
+    };
 
     return (
         <Card
@@ -466,6 +505,33 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
 
                 <Divider sx={{ my: 4 }} />
 
+                {importantWords.length > 0 && (
+                    <Box sx={{ mb: 4 }}>
+                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
+                            Important words
+                        </Typography>
+                        <List>
+                            {importantWords.map((item, index) => (
+                                <ListItem key={index} sx={{ flexDirection: 'column', alignItems: 'flex-start', pb: 1 }}>
+                                    <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                                        {item.word}
+                                    </Typography>
+                                    {item.meaning_en && (
+                                        <Typography variant="body2" color="text.secondary">
+                                            {item.meaning_en}
+                                        </Typography>
+                                    )}
+                                    {item.meaning_hi && (
+                                        <Typography variant="body2" color="text.secondary">
+                                            {item.meaning_hi}
+                                        </Typography>
+                                    )}
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Box>
+                )}
+
                 {/* Keywords Section */}
                 {keywords.length > 0 && (
                     <Box sx={{ mb: 4 }}>
@@ -543,7 +609,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                         variant="outlined"
                         endIcon={<ArrowForwardIcon />}
                         onClick={() => handleNavigation('next')}
-                        disabled={!hasNext || isLoadingNav}
+                        disabled={!canGoNext || isLoadingNav}
                     >
                         Next Story
                     </Button>
@@ -552,17 +618,69 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                 {/* Summary Submission Section */}
                 <Box>
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                        Summarize the story in your own words (max 5 sentences)
+                        Summarize the story in your own words (2–5 sentences)
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         +10 participation points when you submit (leaderboard). After review, evaluation score: up to
                         10 + 2 per correct sentence.
                     </Typography>
+                    {!isToday && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            Past story — browse only. Submit summary on today&apos;s story.
+                        </Alert>
+                    )}
+                    {existingSubmission && isToday && (
+                        <>
+                            <Alert severity="success" sx={{ mb: 2 }}>
+                                You already submitted your summary for this story.
+                            </Alert>
+                            <EvaluationStatusBanner
+                                isCorrect={existingSubmission.isCorrect}
+                                evaluationPoints={existingSubmission.evaluationPoints}
+                                pointsEarned={existingSubmission.pointsEarned}
+                                feedback={existingSubmission.feedback}
+                                reviewedAt={existingSubmission.reviewedAt}
+                            />
+                            <Box sx={{ mb: 2 }}>
+                                {existingSubmission.summary.map((sentence, idx) => {
+                                    const review = getSummaryReviewState(idx);
+                                    return (
+                                        <Box
+                                            key={idx}
+                                            sx={{
+                                                p: 1.5,
+                                                mb: 1,
+                                                borderRadius: 1,
+                                                border: '1px solid',
+                                                borderColor:
+                                                    review === true
+                                                        ? 'success.main'
+                                                        : review === false
+                                                          ? 'error.main'
+                                                          : 'divider',
+                                                bgcolor:
+                                                    review === true
+                                                        ? 'success.50'
+                                                        : review === false
+                                                          ? 'error.50'
+                                                          : 'grey.50',
+                                            }}
+                                        >
+                                            <Typography variant="body2">
+                                                {idx + 1}. {sentence}
+                                            </Typography>
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        </>
+                    )}
                     {submitStatus && (
                         <Alert severity={submitStatus.type} sx={{ mb: 2 }}>
                             {submitStatus.message}
                         </Alert>
                     )}
+                    {isToday && !existingSubmission && (
                     <Box component="form" onSubmit={handleSubmitSummary}>
                         {sentences.map((sentence, index) => (
                             <Box key={index} sx={{ mb: 2, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
@@ -607,7 +725,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                                 size="large"
                                 endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
                                 disabled={
-                                    sentences.filter(s => s.trim()).length < 1 ||
+                                    sentences.filter(s => s.trim()).length < 2 ||
                                     isSubmitting ||
                                     !user
                                 }
@@ -625,6 +743,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                             </Typography>
                         )}
                     </Box>
+                    )}
                 </Box>
             </CardContent>
         </Card>

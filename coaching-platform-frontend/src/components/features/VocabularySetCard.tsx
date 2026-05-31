@@ -33,6 +33,12 @@ import {
     canShowNextNavigation,
 } from '../../utils/dailyActivityUi';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import { getMinVocabWordsRequired } from '../../utils/vocabPracticeRules';
+import {
+    getUserVocabSubmission,
+    type UserVocabSubmission,
+} from '../../services/vocabSubmissionService';
+import EvaluationStatusBanner from './EvaluationStatusBanner';
 
 
 interface VocabularySetCardProps {
@@ -118,8 +124,21 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
     const [hasPrevious, setHasPrevious] = useState(false);
     const [hasNext, setHasNext] = useState(false);
     const [playingAudio, setPlayingAudio] = useState<{ [key: string]: boolean }>({});
+    const [existingSubmission, setExistingSubmission] = useState<UserVocabSubmission | null>(null);
+    const [submissionLoading, setSubmissionLoading] = useState(false);
     const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
     const synthRef = useRef<SpeechSynthesis | null>(null);
+
+    const loadSubmission = useCallback(async (vocabSetId: string) => {
+        if (!user) {
+            setExistingSubmission(null);
+            return;
+        }
+        setSubmissionLoading(true);
+        const sub = await getUserVocabSubmission(vocabSetId);
+        setExistingSubmission(sub);
+        setSubmissionLoading(false);
+    }, [user]);
 
     const checkAdjacent = useCallback(async (contentId: string) => {
         const flags = await refreshAdjacentFlags(contentId);
@@ -133,7 +152,9 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
         setSentences([{ sentence: '', vocabWordsUsed: [] }]);
         setSelectedVocabWords({});
         setSubmitStatus(null);
+        setExistingSubmission(null);
         void checkAdjacent(data._id);
+        void loadSubmission(data._id);
         return () => {
             Object.values(audioRefs.current).forEach(audio => {
                 if (audio) {
@@ -144,7 +165,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                 synthRef.current.cancel();
             }
         };
-    }, [data, checkAdjacent]);
+    }, [data, checkAdjacent, loadSubmission]);
 
     const handleNavigation = async (direction: 'prev' | 'next') => {
         setIsLoadingNav(true);
@@ -156,10 +177,12 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                 setSentences([{ sentence: '', vocabWordsUsed: [] }]);
                 setSelectedVocabWords({});
                 setSubmitStatus(null);
+                setExistingSubmission(null);
                 if (onContentChange) {
                     onContentChange(adjacentContent);
                 }
                 await checkAdjacent(adjacentContent._id);
+                void loadSubmission(adjacentContent._id);
             } else {
                 setSubmitStatus({
                     type: 'error',
@@ -314,10 +337,12 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
             s.vocabWordsUsed.forEach(word => allVocabWordsUsed.add(word.toLowerCase()));
         });
 
-        if (allVocabWordsUsed.size < 5) {
+        const items = (currentContent.metadata?.vocabItems as VocabItem[]) || [];
+        const minWordsRequired = getMinVocabWordsRequired(items.length);
+        if (allVocabWordsUsed.size < minWordsRequired) {
             setSubmitStatus({
                 type: 'error',
-                message: `You must use at least 5 different vocabulary words across all sentences. Currently using ${allVocabWordsUsed.size}.`
+                message: `You must use at least ${minWordsRequired} different vocabulary word${minWordsRequired === 1 ? '' : 's'} across all sentences. Currently using ${allVocabWordsUsed.size}.`,
             });
             return;
         }
@@ -343,6 +368,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                 setSelectedVocabWords({});
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
+                void loadSubmission(currentContent._id);
                 onSubmissionSuccess?.();
             } else {
                 setSubmitStatus({
@@ -366,12 +392,22 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
 
     const theme = currentContent.metadata?.theme || currentContent.title;
     const vocabItems: VocabItem[] = currentContent.metadata?.vocabItems || [];
+    const themeImageUrl =
+        (currentContent.metadata?.themeImageUrl as string) ||
+        (currentContent.metadata?.themeImage as string) ||
+        '';
+    const minWordsRequired = getMinVocabWordsRequired(vocabItems.length);
 
-    // Count total unique vocab words used across all sentences
     const allVocabWordsUsed = new Set<string>();
     sentences.forEach(s => {
         s.vocabWordsUsed.forEach(word => allVocabWordsUsed.add(word.toLowerCase()));
     });
+
+    const getSentenceReviewState = (index: number): boolean | null => {
+        if (!existingSubmission?.sentenceValidations?.length) return null;
+        const found = existingSubmission.sentenceValidations.find((v) => v.sentenceIndex === index);
+        return found ? found.isCorrect : null;
+    };
 
     return (
         <Card
@@ -490,17 +526,76 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                         Create sentences using vocabulary words (2-5 sentences)
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Use at least 5 different vocabulary words. +10 participation points on submit; evaluation: 10 per
-                        correct sentence after review.
+                        Use at least {minWordsRequired} different vocabulary word{minWordsRequired === 1 ? '' : 's'}.
+                        +10 participation points on submit; evaluation: 10 per correct sentence after review.
                     </Typography>
                     {!isToday && (
                         <Alert severity="info" sx={{ mb: 2 }}>
                             Past vocabulary set — browse only. Submit sentences on today&apos;s set.
                         </Alert>
                     )}
-                    {isToday && (
+                    {themeImageUrl ? (
+                        <Box
+                            component="img"
+                            src={themeImageUrl}
+                            alt={String(currentContent.metadata?.themeImageDescription || theme)}
+                            sx={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 2, mb: 2 }}
+                        />
+                    ) : null}
+                    {existingSubmission && isToday && (
+                        <>
+                            <Alert severity="success" sx={{ mb: 2 }}>
+                                You already submitted sentences for this vocabulary set.
+                            </Alert>
+                            <EvaluationStatusBanner
+                                isCorrect={existingSubmission.isCorrect}
+                                evaluationPoints={existingSubmission.evaluationPoints}
+                                pointsEarned={existingSubmission.pointsEarned}
+                                feedback={existingSubmission.feedback}
+                                reviewedAt={existingSubmission.reviewedAt}
+                            />
+                            <Box sx={{ mb: 2 }}>
+                                {existingSubmission.sentences.map((entry, idx) => {
+                                    const review = getSentenceReviewState(idx);
+                                    return (
+                                        <Box
+                                            key={idx}
+                                            sx={{
+                                                p: 1.5,
+                                                mb: 1,
+                                                borderRadius: 1,
+                                                border: '1px solid',
+                                                borderColor:
+                                                    review === true
+                                                        ? 'success.main'
+                                                        : review === false
+                                                          ? 'error.main'
+                                                          : 'divider',
+                                                bgcolor:
+                                                    review === true
+                                                        ? 'success.50'
+                                                        : review === false
+                                                          ? 'error.50'
+                                                          : 'grey.50',
+                                            }}
+                                        >
+                                            <Typography variant="body2" fontWeight={600}>
+                                                {idx + 1}. {entry.sentence}
+                                            </Typography>
+                                            {entry.vocabWordsUsed?.length > 0 && (
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Words: {entry.vocabWordsUsed.join(', ')}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        </>
+                    )}
+                    {isToday && !existingSubmission && !submissionLoading && (
                         <Typography variant="body2" color="primary" sx={{ mb: 2, fontWeight: 'medium' }}>
-                            Vocabulary words used: {allVocabWordsUsed.size} / 5 minimum
+                            Vocabulary words used: {allVocabWordsUsed.size} / {minWordsRequired} minimum
                         </Typography>
                     )}
                     {submitStatus && (
@@ -508,7 +603,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                             {submitStatus.message}
                         </Alert>
                     )}
-                    {isToday && (
+                    {isToday && !existingSubmission && !submissionLoading && (
                     <Box component="form" onSubmit={handleSubmitSentences}>
                         {sentences.map((sentenceData, index) => (
                             <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
@@ -598,7 +693,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                                 endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
                                 disabled={
                                     sentences.filter(s => s.sentence.trim() && s.vocabWordsUsed.length > 0).length < 2 ||
-                                    allVocabWordsUsed.size < 5 ||
+                                    allVocabWordsUsed.size < minWordsRequired ||
                                     isSubmitting ||
                                     !user
                                 }
