@@ -48,7 +48,7 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
     onChange,
 }) => {
     if (type === 'WORD' || type === 'PHRASE') {
-        const examples = (metadata.examples as { en?: string; hi?: string; audio?: string }[]) || [];
+        const examples = (metadata.examples as { en?: string; hi?: string }[]) || [];
         return (
             <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid size={{ xs: 12 }}>
@@ -82,14 +82,6 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                         rows={2}
                     />
                 </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                        fullWidth
-                        label="Audio URL (optional)"
-                        value={(metadata.audio as string) || ''}
-                        onChange={(e) => onChange('audio', e.target.value)}
-                    />
-                </Grid>
                 {type === 'WORD' && (
                     <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
@@ -104,7 +96,7 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                         Examples (optional)
                     </Typography>
-                    <Button size="small" onClick={() => onChange('examples', [...examples, { en: '', hi: '', audio: '' }])}>
+                    <Button size="small" onClick={() => onChange('examples', [...examples, { en: '', hi: '' }])}>
                         Add example
                     </Button>
                     {examples.map((ex, idx) => (
@@ -208,14 +200,6 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                         required
                         multiline
                         rows={8}
-                    />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                    <TextField
-                        fullWidth
-                        label="Audio URL (optional)"
-                        value={(metadata.audio as string) || ''}
-                        onChange={(e) => onChange('audio', e.target.value)}
                     />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -532,14 +516,6 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
-                    <TextField
-                        fullWidth
-                        label="Narration audio URL (optional)"
-                        value={(metadata.audio as string) || ''}
-                        onChange={(e) => onChange('audio', e.target.value)}
-                    />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
                     <Button size="small" onClick={() => onChange('keywords', [...keywords, emptySceneKeyword()])}>
                         Add keyword
                     </Button>
@@ -706,15 +682,6 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                         label="Artist"
                         value={(metadata.artist as string) || ''}
                         onChange={(e) => onChange('artist', e.target.value)}
-                    />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                        fullWidth
-                        label="Audio file URL"
-                        value={(metadata.audio as string) || ''}
-                        onChange={(e) => onChange('audio', e.target.value)}
-                        helperText="Direct MP3/audio URL — not a YouTube embed"
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>

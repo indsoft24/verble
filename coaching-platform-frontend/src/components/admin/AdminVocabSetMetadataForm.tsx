@@ -194,7 +194,6 @@ const AdminVocabSetMetadataForm: React.FC<AdminVocabSetMetadataFormProps> = ({
                             <TableCell>Word (English)</TableCell>
                             <TableCell>Pronunciation (Hindi)</TableCell>
                             <TableCell>Meaning (Hindi)</TableCell>
-                            <TableCell>Audio URL</TableCell>
                             <TableCell width={48} />
                         </TableRow>
                     </TableHead>
@@ -233,15 +232,6 @@ const AdminVocabSetMetadataForm: React.FC<AdminVocabSetMetadataFormProps> = ({
                                         placeholder="चाकू"
                                         value={item.meaning_hi || ''}
                                         onChange={(e) => updateItem(idx, { meaning_hi: e.target.value })}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        placeholder="https://…"
-                                        value={item.audio || ''}
-                                        onChange={(e) => updateItem(idx, { audio: e.target.value })}
                                     />
                                 </TableCell>
                                 <TableCell>

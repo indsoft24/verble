@@ -1,5 +1,5 @@
 // src/components/features/StoryCard.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Card,
     CardContent,
@@ -10,11 +10,8 @@ import {
     IconButton,
     CircularProgress,
     Alert,
-    Divider,
     Chip,
-    List,
-    ListItem,
-
+    alpha,
 } from '@mui/material';
 import { keyframes } from '@emotion/react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
@@ -26,10 +23,16 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
 import { getUserStorySubmission, type UserStorySubmission } from '../../services/storySubmissionService';
 import EvaluationStatusBanner from './EvaluationStatusBanner';
-import { isContentScheduledToday, canShowNextNavigation } from '../../utils/dailyActivityUi';
+import {
+    activityCardShell,
+    getContentDisplayNumber,
+    isContentScheduledToday,
+    canShowNextNavigation,
+    refreshAdjacentFlags,
+    GOLD_ACCENT,
+} from '../../utils/dailyActivityUi';
 
 function normalizeStoryWords(metadata: Record<string, unknown> | undefined) {
     const raw = metadata?.important_words;
@@ -110,7 +113,7 @@ const ConfettiEffect: React.FC = () => {
 
 const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
     const { user } = useAuth();
-    const [sentences, setSentences] = useState<string[]>(['']);
+    const [sentences, setSentences] = useState<string[]>(['', '']);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [isPlayingTitle, setIsPlayingTitle] = useState(false);
@@ -128,14 +131,29 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
     const moralAudioRef = useRef<HTMLAudioElement | null>(null);
     const synthRef = useRef<SpeechSynthesis | null>(null);
 
+    const loadSubmission = useCallback(async (storyId: string) => {
+        if (!user) {
+            setExistingSubmission(null);
+            return;
+        }
+        const sub = await getUserStorySubmission(storyId);
+        setExistingSubmission(sub);
+    }, [user]);
+
+    const checkAdjacent = useCallback(async (contentId: string) => {
+        const flags = await refreshAdjacentFlags(contentId);
+        setHasPrevious(flags.hasPrevious);
+        setHasNext(flags.hasNext);
+    }, []);
+
     useEffect(() => {
         synthRef.current = window.speechSynthesis;
         setCurrentContent(data);
+        setSentences(['', '']);
         setExistingSubmission(null);
-        checkNavigationAvailability();
-        if (user) {
-            void getUserStorySubmission(data._id).then(setExistingSubmission);
-        }
+        setSubmitStatus(null);
+        void checkAdjacent(data._id);
+        void loadSubmission(data._id);
         return () => {
             [titleAudioRef, storyAudioRef, moralAudioRef].forEach(ref => {
                 if (ref.current) {
@@ -147,22 +165,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                 synthRef.current.cancel();
             }
         };
-    }, [data, user]);
-
-    const checkNavigationAvailability = async () => {
-        try {
-            const [prevContent, nextContent] = await Promise.all([
-                getAdjacentContent(data._id, 'prev'),
-                getAdjacentContent(data._id, 'next')
-            ]);
-
-            setHasPrevious(!!prevContent);
-            setHasNext(!!nextContent);
-        } catch (error) {
-            setHasPrevious(false);
-            setHasNext(false);
-        }
-    };
+    }, [data, user, checkAdjacent, loadSubmission]);
 
     const handleNavigation = async (direction: 'prev' | 'next') => {
         setIsLoadingNav(true);
@@ -171,13 +174,15 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
 
             if (adjacentContent) {
                 setCurrentContent(adjacentContent);
-                setSentences(['']);
+                setSentences(['', '']);
                 setSubmitStatus(null);
+                setExistingSubmission(null);
                 setShowHindiTranslation({});
                 if (onContentChange) {
                     onContentChange(adjacentContent);
                 }
-                await checkNavigationAvailability();
+                await checkAdjacent(adjacentContent._id);
+                void loadSubmission(adjacentContent._id);
             } else {
                 setSubmitStatus({
                     type: 'error',
@@ -207,9 +212,8 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
     };
 
     const removeSentenceField = (index: number) => {
-        if (sentences.length > 1) {
-            const newSentences = sentences.filter((_, i) => i !== index);
-            setSentences(newSentences);
+        if (sentences.length > 2) {
+            setSentences(sentences.filter((_, i) => i !== index));
         }
     };
 
@@ -358,7 +362,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
         }));
     };
 
-    const storyDisplayTag = getDisplayTag(currentContent.sequenceNumber);
+    const displayNumber = getContentDisplayNumber(currentContent.sequenceNumber);
     const storyTitle = currentContent.title || '';
     // const storyContent = currentContent.metadata?.text_content || '';
     const moralEn = currentContent.metadata?.moral_en || '';
@@ -377,122 +381,101 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
         return found ? found.isCorrect : null;
     };
 
-    return (
-        <Card
-            elevation={4}
-            sx={{
-                maxWidth: 900,
-                margin: '0 auto',
-                borderRadius: 3,
-                overflow: 'hidden',
-                position: 'relative',
-            }}
+    const AudioBtn: React.FC<{ playing: boolean; onClick: () => void; label: string }> = ({
+        playing,
+        onClick,
+        label,
+    }) => (
+        <IconButton
+            onClick={onClick}
+            sx={{ color: GOLD_ACCENT, bgcolor: alpha(GOLD_ACCENT, 0.12) }}
+            aria-label={label}
         >
-            {/* Confetti Effect */}
+            {playing ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
+        </IconButton>
+    );
+
+    return (
+        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
             {showConfetti && <ConfettiEffect />}
 
-            <CardContent sx={{ p: 4 }}>
-                {/* Header with Story Number */}
-                <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {storyDisplayTag ? `One Minute Read ${storyDisplayTag}` : 'One Minute Read'}
+            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                        <Typography variant="overline" sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2 }}>
+                            One Minute Read
                         </Typography>
-                        <Chip label={currentContent.level} size="small" color="primary" />
+                        {displayNumber && (
+                            <Chip
+                                label={displayNumber}
+                                size="small"
+                                variant="outlined"
+                                sx={{ borderColor: alpha(GOLD_ACCENT, 0.6), color: GOLD_ACCENT }}
+                            />
+                        )}
+                        <Chip label={currentContent.level} size="small" variant="outlined" sx={{ color: alpha('#e2e8f0', 0.8) }} />
                     </Box>
 
-                    {/* Title with Audio */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
                         <Typography
                             variant="h4"
                             component="h1"
                             sx={{
-                                fontWeight: 'bold',
-                                color: 'primary.main',
                                 flex: 1,
+                                fontWeight: 900,
+                                background: `linear-gradient(135deg, #e2e8f0, ${GOLD_ACCENT})`,
+                                backgroundClip: 'text',
+                                WebkitBackgroundClip: 'text',
+                                color: 'transparent',
                             }}
                         >
                             {storyTitle}
                         </Typography>
-                        <IconButton
-                            onClick={handlePlayTitle}
-                            sx={{
-                                backgroundColor: 'primary.main',
-                                color: 'white',
-                                '&:hover': {
-                                    backgroundColor: 'primary.dark',
-                                },
-                            }}
-                            aria-label="Play title"
-                        >
-                            {isPlayingTitle ? (
-                                <VolumeOffIcon />
-                            ) : (
-                                <VolumeUpIcon />
-                            )}
-                        </IconButton>
+                        <AudioBtn playing={isPlayingTitle} onClick={handlePlayTitle} label="Play title" />
                     </Box>
-                </Box>
 
-                <Divider sx={{ my: 3 }} />
-
-                {/* Story Content with Audio */}
-                <Box sx={{ mb: 4 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
-                            Story Content
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', flex: 1 }}>
+                            Story
                         </Typography>
-                        <IconButton
-                            onClick={handlePlayStory}
-                            sx={{
-                                backgroundColor: 'primary.main',
-                                color: 'white',
-                                '&:hover': {
-                                    backgroundColor: 'primary.dark',
-                                },
-                            }}
-                            aria-label="Play story"
-                        >
-                            {isPlayingStory ? (
-                                <VolumeOffIcon />
-                            ) : (
-                                <VolumeUpIcon />
-                            )}
-                        </IconButton>
+                        <AudioBtn playing={isPlayingStory} onClick={handlePlayStory} label="Play story" />
                     </Box>
-
-                    {/* Sentence-by-sentence display with Hindi translation toggle */}
-                    <Box>
+                    <Box sx={{ mb: 2 }}>
                         {sentenceTranslations.map((item, index) => (
-                            <Box key={index} sx={{ mb: 2 }}>
+                            <Box key={index} sx={{ mb: 1.5 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                    <Typography variant="body1" sx={{ flex: 1, mb: 1 }}>
+                                    <Typography variant="body2" sx={{ flex: 1, color: alpha('#e2e8f0', 0.92), lineHeight: 1.7 }}>
                                         {item.en}
                                     </Typography>
                                     {item.hi && (
-                                        <IconButton
+                                        <Button
                                             size="small"
-                                            onClick={() => setShowHindiTranslation({
-                                                ...showHindiTranslation,
-                                                [index]: !showHindiTranslation[index]
-                                            })}
-                                            sx={{ mt: -0.5 }}
+                                            variant="outlined"
+                                            onClick={() =>
+                                                setShowHindiTranslation({
+                                                    ...showHindiTranslation,
+                                                    [index]: !showHindiTranslation[index],
+                                                })
+                                            }
+                                            sx={{
+                                                minWidth: 36,
+                                                borderColor: alpha(GOLD_ACCENT, 0.5),
+                                                color: GOLD_ACCENT,
+                                            }}
                                         >
-                                            <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                                                {showHindiTranslation[index] ? 'HI' : 'EN'}
-                                            </Typography>
-                                        </IconButton>
+                                            {showHindiTranslation[index] ? 'EN' : 'HI'}
+                                        </Button>
                                     )}
                                 </Box>
                                 {item.hi && showHindiTranslation[index] && (
                                     <Typography
                                         variant="body2"
                                         sx={{
-                                            color: 'text.secondary',
+                                            color: alpha('#e2e8f0', 0.65),
                                             fontStyle: 'italic',
                                             pl: 2,
-                                            borderLeft: '2px solid',
-                                            borderColor: 'primary.light',
+                                            mt: 0.5,
+                                            borderLeft: `2px solid ${alpha(GOLD_ACCENT, 0.5)}`,
                                         }}
                                     >
                                         {item.hi}
@@ -501,128 +484,119 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                             </Box>
                         ))}
                     </Box>
-                </Box>
 
-                <Divider sx={{ my: 4 }} />
-
-                {importantWords.length > 0 && (
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                            Important words
-                        </Typography>
-                        <List>
+                    {importantWords.length > 0 && (
+                        <Box
+                            sx={{
+                                mb: 2,
+                                p: 2,
+                                borderRadius: 2,
+                                bgcolor: alpha('#1a1f2e', 0.85),
+                                border: `1px solid ${alpha(GOLD_ACCENT, 0.25)}`,
+                            }}
+                        >
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', mb: 1 }}>
+                                Important words
+                            </Typography>
                             {importantWords.map((item, index) => (
-                                <ListItem key={index} sx={{ flexDirection: 'column', alignItems: 'flex-start', pb: 1 }}>
-                                    <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                                <Box key={index} sx={{ mb: index < importantWords.length - 1 ? 1 : 0 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#f8fafc' }}>
                                         {item.word}
                                     </Typography>
                                     {item.meaning_en && (
-                                        <Typography variant="body2" color="text.secondary">
+                                        <Typography variant="caption" sx={{ color: alpha('#e2e8f0', 0.75), display: 'block' }}>
                                             {item.meaning_en}
                                         </Typography>
                                     )}
                                     {item.meaning_hi && (
-                                        <Typography variant="body2" color="text.secondary">
+                                        <Typography variant="caption" sx={{ color: alpha('#e2e8f0', 0.65), display: 'block' }}>
                                             {item.meaning_hi}
                                         </Typography>
                                     )}
-                                </ListItem>
+                                </Box>
                             ))}
-                        </List>
-                    </Box>
-                )}
-
-                {/* Keywords Section */}
-                {keywords.length > 0 && (
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                            Keywords
-                        </Typography>
-                        <List>
-                            {keywords.map((keyword: any, index: number) => (
-                                <ListItem key={index} sx={{ flexDirection: 'column', alignItems: 'flex-start', pb: 1 }}>
-                                    <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                                        {keyword.word}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {keyword.meaning_hi}
-                                    </Typography>
-                                </ListItem>
-                            ))}
-                        </List>
-                    </Box>
-                )}
-
-                <Divider sx={{ my: 4 }} />
-
-                {/* Moral Section */}
-                {(moralEn || moralHi) && (
-                    <Box sx={{ mb: 4 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
-                                Moral of the Story
-                            </Typography>
-                            <IconButton
-                                onClick={handlePlayMoral}
-                                sx={{
-                                    backgroundColor: 'primary.main',
-                                    color: 'white',
-                                    '&:hover': {
-                                        backgroundColor: 'primary.dark',
-                                    },
-                                }}
-                                aria-label="Play moral"
-                            >
-                                {isPlayingMoral ? (
-                                    <VolumeOffIcon />
-                                ) : (
-                                    <VolumeUpIcon />
-                                )}
-                            </IconButton>
                         </Box>
-                        {moralEn && (
-                            <Typography variant="body1" paragraph sx={{ mb: 2 }}>
-                                {moralEn}
+                    )}
+
+                    {keywords.length > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: alpha('#e2e8f0', 0.8), mb: 0.75 }}>
+                                Keywords
                             </Typography>
-                        )}
-                        {moralHi && (
-                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                {moralHi}
-                            </Typography>
-                        )}
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                {keywords.map((keyword: { word?: string; meaning_hi?: string }, index: number) => (
+                                    <Chip
+                                        key={index}
+                                        label={`${keyword.word}${keyword.meaning_hi ? ` — ${keyword.meaning_hi}` : ''}`}
+                                        size="small"
+                                        sx={{ bgcolor: alpha(GOLD_ACCENT, 0.12), color: '#f1f5f9' }}
+                                    />
+                                ))}
+                            </Box>
+                        </Box>
+                    )}
+
+                    {(moralEn || moralHi) && (
+                        <Box
+                            sx={{
+                                p: 2,
+                                borderRadius: 2,
+                                bgcolor: alpha('#1a1f2e', 0.6),
+                                border: `1px solid ${alpha(GOLD_ACCENT, 0.2)}`,
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: GOLD_ACCENT, flex: 1 }}>
+                                    Moral
+                                </Typography>
+                                <AudioBtn playing={isPlayingMoral} onClick={handlePlayMoral} label="Play moral" />
+                            </Box>
+                            {moralEn && (
+                                <Typography variant="body2" sx={{ color: '#f1f5f9', mb: moralHi ? 0.5 : 0 }}>
+                                    {moralEn}
+                                </Typography>
+                            )}
+                            {moralHi && (
+                                <Typography variant="caption" sx={{ color: alpha('#e2e8f0', 0.65), fontStyle: 'italic' }}>
+                                    {moralHi}
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mt: 3 }}>
+                        <Button
+                            variant="text"
+                            startIcon={<ArrowBackIcon />}
+                            onClick={() => handleNavigation('prev')}
+                            disabled={!hasPrevious || isLoadingNav}
+                            sx={{ color: alpha('#e2e8f0', 0.85) }}
+                        >
+                            Previous Story
+                        </Button>
+                        <Button
+                            variant="text"
+                            endIcon={<ArrowForwardIcon />}
+                            onClick={() => handleNavigation('next')}
+                            disabled={!canGoNext || isLoadingNav}
+                            sx={{ color: alpha('#e2e8f0', 0.85) }}
+                        >
+                            Next Story
+                        </Button>
                     </Box>
-                )}
+                </CardContent>
+            </Card>
 
-                <Divider sx={{ my: 4 }} />
-
-                {/* Navigation Buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<ArrowBackIcon />}
-                        onClick={() => handleNavigation('prev')}
-                        disabled={!hasPrevious || isLoadingNav}
+            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+                    <Typography
+                        variant="overline"
+                        sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2, display: 'block', mb: 1 }}
                     >
-                        Previous Story
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        endIcon={<ArrowForwardIcon />}
-                        onClick={() => handleNavigation('next')}
-                        disabled={!canGoNext || isLoadingNav}
-                    >
-                        Next Story
-                    </Button>
-                </Box>
-
-                {/* Summary Submission Section */}
-                <Box>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                        Summarize the story in your own words (2–5 sentences)
+                        Summarize in your own words
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        +10 participation points when you submit (leaderboard). After review, evaluation score: up to
-                        10 + 2 per correct sentence.
+                    <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65), mb: 2 }}>
+                        Write 2–5 sentences. +10 participation on submit; up to 10 + 2 per correct sentence after review.
                     </Typography>
                     {!isToday && (
                         <Alert severity="info" sx={{ mb: 2 }}>
@@ -650,23 +624,23 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                                             sx={{
                                                 p: 1.5,
                                                 mb: 1,
-                                                borderRadius: 1,
+                                                borderRadius: 1.5,
                                                 border: '1px solid',
                                                 borderColor:
                                                     review === true
-                                                        ? 'success.main'
+                                                        ? alpha('#22c55e', 0.7)
                                                         : review === false
-                                                          ? 'error.main'
-                                                          : 'divider',
+                                                          ? alpha('#ef4444', 0.7)
+                                                          : alpha(GOLD_ACCENT, 0.25),
                                                 bgcolor:
                                                     review === true
-                                                        ? 'success.50'
+                                                        ? alpha('#22c55e', 0.12)
                                                         : review === false
-                                                          ? 'error.50'
-                                                          : 'grey.50',
+                                                          ? alpha('#ef4444', 0.12)
+                                                          : alpha('#1a1f2e', 0.6),
                                             }}
                                         >
-                                            <Typography variant="body2">
+                                            <Typography variant="body2" sx={{ color: '#f1f5f9' }}>
                                                 {idx + 1}. {sentence}
                                             </Typography>
                                         </Box>
@@ -681,72 +655,77 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                         </Alert>
                     )}
                     {isToday && !existingSubmission && (
-                    <Box component="form" onSubmit={handleSubmitSummary}>
-                        {sentences.map((sentence, index) => (
-                            <Box key={index} sx={{ mb: 2, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    rows={2}
-                                    placeholder={`Sentence ${index + 1}...`}
-                                    value={sentence}
-                                    onChange={(e) => handleSentenceChange(index, e.target.value)}
-                                    disabled={isSubmitting || !user}
-                                    label={`Sentence ${index + 1}`}
-                                />
-                                {sentences.length > 1 && (
-                                    <IconButton
-                                        onClick={() => removeSentenceField(index)}
-                                        disabled={isSubmitting}
-                                        color="error"
-                                        sx={{ mt: 1 }}
+                        <Box component="form" onSubmit={handleSubmitSummary}>
+                            {sentences.map((sentence, index) => (
+                                <Box key={index} sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'flex-start' }}>
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={2}
+                                        placeholder={`Sentence ${index + 1}…`}
+                                        value={sentence}
+                                        onChange={(e) => handleSentenceChange(index, e.target.value)}
+                                        disabled={isSubmitting || !user}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                bgcolor: alpha('#1a1f2e', 0.9),
+                                                color: '#f1f5f9',
+                                                '& fieldset': { borderColor: alpha(GOLD_ACCENT, 0.45) },
+                                            },
+                                        }}
+                                    />
+                                    {sentences.length > 2 && (
+                                        <Button
+                                            type="button"
+                                            color="error"
+                                            variant="outlined"
+                                            size="small"
+                                            onClick={() => removeSentenceField(index)}
+                                            disabled={isSubmitting}
+                                            sx={{ mt: 0.5 }}
+                                        >
+                                            Remove
+                                        </Button>
+                                    )}
+                                </Box>
+                            ))}
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+                                {sentences.length < 5 && (
+                                    <Button
+                                        type="button"
+                                        variant="outlined"
+                                        onClick={addSentenceField}
+                                        disabled={isSubmitting || !user}
+                                        sx={{ borderColor: alpha(GOLD_ACCENT, 0.6), color: GOLD_ACCENT }}
                                     >
-                                        ×
-                                    </IconButton>
+                                        + Add sentence
+                                    </Button>
                                 )}
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                                    disabled={
+                                        sentences.filter((s) => s.trim()).length < 2 || isSubmitting || !user
+                                    }
+                                    sx={{ bgcolor: GOLD_ACCENT, color: '#0f172a', fontWeight: 800, minWidth: 160 }}
+                                >
+                                    {isSubmitting ? 'Submitting…' : 'Submit summary'}
+                                </Button>
+                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.6) }}>
+                                    {sentences.filter((s) => s.trim()).length} / 5
+                                </Typography>
                             </Box>
-                        ))}
-                        {sentences.length < 5 && (
-                            <Button
-                                type="button"
-                                variant="outlined"
-                                onClick={addSentenceField}
-                                disabled={isSubmitting || !user}
-                                sx={{ mb: 2 }}
-                            >
-                                + Add Another Sentence
-                            </Button>
-                        )}
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                color="primary"
-                                size="large"
-                                endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-                                disabled={
-                                    sentences.filter(s => s.trim()).length < 2 ||
-                                    isSubmitting ||
-                                    !user
-                                }
-                                sx={{ minWidth: 150 }}
-                            >
-                                {isSubmitting ? 'Submitting...' : 'Submit Summary'}
-                            </Button>
-                            <Typography variant="body2" color="text.secondary">
-                                {sentences.filter(s => s.trim()).length} / 5 sentences
-                            </Typography>
+                            {!user && (
+                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.6), mt: 1 }}>
+                                    Please log in to submit.
+                                </Typography>
+                            )}
                         </Box>
-                        {!user && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Please log in to submit a summary.
-                            </Typography>
-                        )}
-                    </Box>
                     )}
-                </Box>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </Box>
     );
 };
 

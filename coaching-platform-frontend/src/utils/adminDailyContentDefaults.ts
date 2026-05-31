@@ -103,7 +103,9 @@ export function getDefaultMetadataForType(
                 return {
                     isProfessionalLibrary: true,
                     topicName: '',
+                    description: '',
                     tags: [] as string[],
+                    relatedContentIds: [] as string[],
                     dialogue: Array.from({ length: 5 }, emptyDialogueLine),
                 };
             }

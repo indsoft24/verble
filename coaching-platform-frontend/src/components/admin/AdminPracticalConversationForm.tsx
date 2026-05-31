@@ -183,7 +183,6 @@ const AdminPracticalConversationForm: React.FC<AdminPracticalConversationFormPro
                             <TableCell width="22%">Speaker</TableCell>
                             <TableCell>English</TableCell>
                             <TableCell>Hindi</TableCell>
-                            <TableCell width="14%">Audio</TableCell>
                             <TableCell width={44} />
                         </TableRow>
                     </TableHead>
@@ -239,14 +238,6 @@ const AdminPracticalConversationForm: React.FC<AdminPracticalConversationFormPro
                                         placeholder="शुभ संध्या सर! कितने लोगों के लिए टेबल?"
                                         value={line.text_hi || ''}
                                         onChange={(e) => updateLine(idx, { text_hi: e.target.value })}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        value={line.audio || ''}
-                                        onChange={(e) => updateLine(idx, { audio: e.target.value })}
                                     />
                                 </TableCell>
                                 <TableCell>

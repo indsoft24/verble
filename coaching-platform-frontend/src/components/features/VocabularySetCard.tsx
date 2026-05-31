@@ -10,13 +10,11 @@ import {
     IconButton,
     CircularProgress,
     Alert,
-    Divider,
     Chip,
-    List,
-    ListItem,
     Checkbox,
     FormControlLabel,
-    Grid
+    Grid,
+    alpha,
 } from '@mui/material';
 import { keyframes } from '@emotion/react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
@@ -28,11 +26,13 @@ import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import {
+    activityCardShell,
+    getContentDisplayNumber,
     isContentScheduledToday,
     refreshAdjacentFlags,
     canShowNextNavigation,
+    GOLD_ACCENT,
 } from '../../utils/dailyActivityUi';
-import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
 import { getMinVocabWordsRequired } from '../../utils/vocabPracticeRules';
 import {
     getUserVocabSubmission,
@@ -386,7 +386,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
         }
     };
 
-    const vocabDisplayTag = getDisplayTag(currentContent.sequenceNumber);
+    const displayNumber = getContentDisplayNumber(currentContent.sequenceNumber);
     const isToday = isContentScheduledToday(currentContent.date);
     const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
 
@@ -409,139 +409,175 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
         return found ? found.isCorrect : null;
     };
 
-    return (
-        <Card
-            elevation={4}
-            sx={{
-                maxWidth: 900,
-                margin: '0 auto',
-                borderRadius: 3,
-                overflow: 'hidden',
-                position: 'relative',
-            }}
+    const filledVocabItems = vocabItems.filter((v) => String(v.word || '').trim());
+    const themeDescription = String(currentContent.metadata?.themeImageDescription || '').trim();
+
+    const SpeakerButton: React.FC<{ word: string; audio?: string }> = ({ word, audio }) => (
+        <IconButton
+            size="small"
+            onClick={() => playAudio(word, audio)}
+            sx={{ color: GOLD_ACCENT, bgcolor: alpha(GOLD_ACCENT, 0.12) }}
+            aria-label={`Play ${word}`}
         >
-            {/* Confetti Effect */}
+            {playingAudio[word.toLowerCase()] ? (
+                <VolumeOffIcon fontSize="small" />
+            ) : (
+                <VolumeUpIcon fontSize="small" />
+            )}
+        </IconButton>
+    );
+
+    return (
+        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
             {showConfetti && <ConfettiEffect />}
 
-            <CardContent sx={{ p: 4 }}>
-                {/* Header with Vocab Set Number and Theme */}
-                <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {vocabDisplayTag ? `Vocabulary Set ${vocabDisplayTag}` : 'Vocabulary Set'}
+            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                        <Typography variant="overline" sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2 }}>
+                            Weekly Essential Vocab
                         </Typography>
-                        <Chip label={currentContent.level} size="small" color="primary" />
+                        {displayNumber && (
+                            <Chip
+                                label={displayNumber}
+                                size="small"
+                                variant="outlined"
+                                sx={{ borderColor: alpha(GOLD_ACCENT, 0.6), color: GOLD_ACCENT }}
+                            />
+                        )}
+                        <Chip label={currentContent.level} size="small" variant="outlined" sx={{ color: alpha('#e2e8f0', 0.8) }} />
                     </Box>
 
                     <Typography
                         variant="h4"
                         component="h1"
                         sx={{
-                            fontWeight: 'bold',
-                            color: 'primary.main',
+                            fontWeight: 900,
+                            mb: 2,
+                            background: `linear-gradient(135deg, #e2e8f0, ${GOLD_ACCENT})`,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            color: 'transparent',
                         }}
                     >
                         {theme}
                     </Typography>
-                </Box>
 
-                <Divider sx={{ my: 3 }} />
-
-                {/* Vocabulary Items */}
-                <Box sx={{ mb: 4 }}>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                        Vocabulary ({vocabItems.length} words)
-                    </Typography>
-                    <List>
-                        {vocabItems.map((item: VocabItem, index: number) => (
-                            <ListItem
-                                key={index}
-                                sx={{
-                                    flexDirection: 'column',
-                                    alignItems: 'flex-start',
-                                    pb: 2,
-                                    borderBottom: index < vocabItems.length - 1 ? '1px solid' : 'none',
-                                    borderColor: 'divider'
-                                }}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', mb: 0.5 }}>
-                                    <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
-                                        {item.word}
-                                    </Typography>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => playAudio(item.word, item.audio)}
-                                        sx={{
-                                            backgroundColor: 'primary.main',
-                                            color: 'white',
-                                            '&:hover': {
-                                                backgroundColor: 'primary.dark',
-                                            },
-                                        }}
-                                        aria-label={`Play pronunciation for ${item.word}`}
-                                    >
-                                        {playingAudio[item.word.toLowerCase()] ? (
-                                            <VolumeOffIcon fontSize="small" />
-                                        ) : (
-                                            <VolumeUpIcon fontSize="small" />
-                                        )}
-                                    </IconButton>
-                                </Box>
-                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 0.5 }}>
-                                    {item.pronunciation_hi}
-                                </Typography>
-                                <Typography variant="body1">
-                                    {item.meaning_hi}
-                                </Typography>
-                            </ListItem>
-                        ))}
-                    </List>
-                </Box>
-
-                <Divider sx={{ my: 4 }} />
-
-                {/* Navigation Buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<ArrowBackIcon />}
-                        onClick={() => handleNavigation('prev')}
-                        disabled={!hasPrevious || isLoadingNav}
-                    >
-                        Previous Set
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        endIcon={<ArrowForwardIcon />}
-                        onClick={() => handleNavigation('next')}
-                        disabled={!canGoNext || isLoadingNav}
-                    >
-                        Next Set
-                    </Button>
-                </Box>
-
-                {/* Sentence Submission Section — today only */}
-                <Box>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 1 }}>
-                        Create sentences using vocabulary words (2-5 sentences)
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Use at least {minWordsRequired} different vocabulary word{minWordsRequired === 1 ? '' : 's'}.
-                        +10 participation points on submit; evaluation: 10 per correct sentence after review.
-                    </Typography>
-                    {!isToday && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                            Past vocabulary set — browse only. Submit sentences on today&apos;s set.
-                        </Alert>
-                    )}
                     {themeImageUrl ? (
                         <Box
                             component="img"
                             src={themeImageUrl}
-                            alt={String(currentContent.metadata?.themeImageDescription || theme)}
-                            sx={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 2, mb: 2 }}
+                            alt={themeDescription || theme}
+                            sx={{
+                                width: '100%',
+                                maxHeight: 240,
+                                objectFit: 'cover',
+                                borderRadius: 2,
+                                mb: 2,
+                                border: `1px solid ${alpha(GOLD_ACCENT, 0.3)}`,
+                            }}
                         />
+                    ) : themeDescription ? (
+                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7), mb: 2, fontStyle: 'italic' }}>
+                            {themeDescription}
+                        </Typography>
                     ) : null}
+
+                    <Box
+                        sx={{
+                            p: 2,
+                            borderRadius: 2,
+                            bgcolor: alpha('#1a1f2e', 0.85),
+                            border: `1px solid ${alpha(GOLD_ACCENT, 0.25)}`,
+                        }}
+                    >
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', mb: 1.5 }}>
+                            Vocabulary ({filledVocabItems.length} words)
+                        </Typography>
+                        {filledVocabItems.map((item, index) => (
+                            <Box
+                                key={`${item.word}-${index}`}
+                                sx={{
+                                    display: 'flex',
+                                    gap: 1,
+                                    alignItems: 'flex-start',
+                                    py: 1.25,
+                                    borderBottom:
+                                        index < filledVocabItems.length - 1
+                                            ? `1px solid ${alpha(GOLD_ACCENT, 0.15)}`
+                                            : 'none',
+                                }}
+                            >
+                                <Typography variant="caption" sx={{ color: alpha(GOLD_ACCENT, 0.9), fontWeight: 800, minWidth: 20 }}>
+                                    {index + 1}
+                                </Typography>
+                                <Box sx={{ flex: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Typography variant="body1" sx={{ fontWeight: 800, color: '#f8fafc' }}>
+                                            {item.word}
+                                        </Typography>
+                                        <SpeakerButton word={item.word} audio={item.audio} />
+                                    </Box>
+                                    {item.pronunciation_hi && (
+                                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65), fontStyle: 'italic' }}>
+                                            {item.pronunciation_hi}
+                                        </Typography>
+                                    )}
+                                    {item.meaning_hi && (
+                                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.85) }}>
+                                            {item.meaning_hi}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Box>
+                        ))}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mt: 3 }}>
+                        <Button
+                            variant="text"
+                            startIcon={<ArrowBackIcon />}
+                            onClick={() => handleNavigation('prev')}
+                            disabled={!hasPrevious || isLoadingNav}
+                            sx={{ color: alpha('#e2e8f0', 0.85) }}
+                        >
+                            Previous Set
+                        </Button>
+                        <Button
+                            variant="text"
+                            endIcon={<ArrowForwardIcon />}
+                            onClick={() => handleNavigation('next')}
+                            disabled={!canGoNext || isLoadingNav}
+                            sx={{ color: alpha('#e2e8f0', 0.85) }}
+                        >
+                            Next Set
+                        </Button>
+                    </Box>
+                </CardContent>
+            </Card>
+
+            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+                    <Typography
+                        variant="overline"
+                        sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2, display: 'block', mb: 1 }}
+                    >
+                        Practice — Make Sentences
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65), mb: 2 }}>
+                        Write 2–5 sentences using this week&apos;s words. Use at least {minWordsRequired} different word
+                        {minWordsRequired === 1 ? '' : 's'}. +10 participation on submit; 10 points per correct sentence after review.
+                    </Typography>
+                    {!isToday && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            Past vocabulary set — browse only. Submit on today&apos;s set.
+                        </Alert>
+                    )}
+                    {submissionLoading && (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                            <CircularProgress size={28} sx={{ color: GOLD_ACCENT }} />
+                        </Box>
+                    )}
                     {existingSubmission && isToday && (
                         <>
                             <Alert severity="success" sx={{ mb: 2 }}>
@@ -563,29 +599,40 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                                             sx={{
                                                 p: 1.5,
                                                 mb: 1,
-                                                borderRadius: 1,
+                                                borderRadius: 1.5,
                                                 border: '1px solid',
                                                 borderColor:
                                                     review === true
-                                                        ? 'success.main'
+                                                        ? alpha('#22c55e', 0.7)
                                                         : review === false
-                                                          ? 'error.main'
-                                                          : 'divider',
+                                                          ? alpha('#ef4444', 0.7)
+                                                          : alpha(GOLD_ACCENT, 0.25),
                                                 bgcolor:
                                                     review === true
-                                                        ? 'success.50'
+                                                        ? alpha('#22c55e', 0.12)
                                                         : review === false
-                                                          ? 'error.50'
-                                                          : 'grey.50',
+                                                          ? alpha('#ef4444', 0.12)
+                                                          : alpha('#1a1f2e', 0.6),
                                             }}
                                         >
-                                            <Typography variant="body2" fontWeight={600}>
+                                            <Typography variant="body2" sx={{ color: '#f1f5f9', fontWeight: 600 }}>
                                                 {idx + 1}. {entry.sentence}
                                             </Typography>
                                             {entry.vocabWordsUsed?.length > 0 && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Words: {entry.vocabWordsUsed.join(', ')}
-                                                </Typography>
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75 }}>
+                                                    {entry.vocabWordsUsed.map((w) => (
+                                                        <Chip
+                                                            key={w}
+                                                            label={w}
+                                                            size="small"
+                                                            sx={{
+                                                                height: 22,
+                                                                bgcolor: alpha(GOLD_ACCENT, 0.15),
+                                                                color: GOLD_ACCENT,
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
                                             )}
                                         </Box>
                                     );
@@ -594,8 +641,8 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                         </>
                     )}
                     {isToday && !existingSubmission && !submissionLoading && (
-                        <Typography variant="body2" color="primary" sx={{ mb: 2, fontWeight: 'medium' }}>
-                            Vocabulary words used: {allVocabWordsUsed.size} / {minWordsRequired} minimum
+                        <Typography variant="body2" sx={{ color: GOLD_ACCENT, mb: 2, fontWeight: 700 }}>
+                            Words used in draft: {allVocabWordsUsed.size} / {minWordsRequired} minimum
                         </Typography>
                     )}
                     {submitStatus && (
@@ -604,43 +651,58 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                         </Alert>
                     )}
                     {isToday && !existingSubmission && !submissionLoading && (
-                    <Box component="form" onSubmit={handleSubmitSentences}>
-                        {sentences.map((sentenceData, index) => (
-                            <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                                    Sentence {index + 1}
-                                </Typography>
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    rows={2}
-                                    placeholder={`Write a sentence using vocabulary words from the list above...`}
-                                    value={sentenceData.sentence}
-                                    onChange={(e) => handleSentenceChange(index, e.target.value)}
-                                    disabled={isSubmitting || !user}
-                                    sx={{ mb: 2 }}
-                                />
-
-                                {/* Vocabulary word selection for this sentence */}
-                                <Box sx={{ mb: 1 }}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                                        Select vocabulary words used in this sentence:
+                        <Box component="form" onSubmit={handleSubmitSentences}>
+                            {sentences.map((sentenceData, index) => (
+                                <Box
+                                    key={index}
+                                    sx={{
+                                        mb: 2,
+                                        p: 2,
+                                        borderRadius: 2,
+                                        bgcolor: alpha('#1a1f2e', 0.7),
+                                        border: `1px solid ${alpha(GOLD_ACCENT, 0.25)}`,
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 800, color: GOLD_ACCENT }}>
+                                        Sentence {index + 1}
                                     </Typography>
-                                    <Grid container spacing={1}>
-                                        {vocabItems.map((item: VocabItem) => {
-                                            const isSelected = selectedVocabWords[index]?.has(item.word.toLowerCase()) || false;
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={2}
+                                        placeholder="Write a sentence using words from the list above…"
+                                        value={sentenceData.sentence}
+                                        onChange={(e) => handleSentenceChange(index, e.target.value)}
+                                        disabled={isSubmitting || !user}
+                                        sx={{
+                                            mb: 1.5,
+                                            '& .MuiOutlinedInput-root': {
+                                                bgcolor: alpha('#0f172a', 0.8),
+                                                color: '#f1f5f9',
+                                                '& fieldset': { borderColor: alpha(GOLD_ACCENT, 0.45) },
+                                            },
+                                        }}
+                                    />
+                                    <Typography variant="caption" sx={{ color: alpha('#e2e8f0', 0.65), display: 'block', mb: 0.75 }}>
+                                        Words used in this sentence:
+                                    </Typography>
+                                    <Grid container spacing={0.5}>
+                                        {filledVocabItems.map((item) => {
+                                            const key = item.word.toLowerCase();
+                                            const isSelected = selectedVocabWords[index]?.has(key) || false;
                                             return (
-                                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.word}>
+                                                <Grid size={{ xs: 6, sm: 4 }} key={item.word}>
                                                     <FormControlLabel
                                                         control={
                                                             <Checkbox
                                                                 checked={isSelected}
-                                                                onChange={() => handleVocabWordToggle(index, item.word.toLowerCase())}
+                                                                onChange={() => handleVocabWordToggle(index, key)}
                                                                 size="small"
+                                                                sx={{ color: alpha(GOLD_ACCENT, 0.7), '&.Mui-checked': { color: GOLD_ACCENT } }}
                                                             />
                                                         }
                                                         label={
-                                                            <Typography variant="body2">
+                                                            <Typography variant="body2" sx={{ color: '#e2e8f0' }}>
                                                                 {item.word}
                                                             </Typography>
                                                         }
@@ -649,72 +711,61 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                                             );
                                         })}
                                     </Grid>
-                                    {selectedVocabWords[index] && selectedVocabWords[index].size > 0 && (
-                                        <Typography variant="caption" color="primary" sx={{ mt: 1, display: 'block' }}>
-                                            {selectedVocabWords[index].size} word(s) selected for this sentence
-                                        </Typography>
+                                    {sentences.length > 2 && (
+                                        <Button
+                                            type="button"
+                                            variant="outlined"
+                                            size="small"
+                                            color="error"
+                                            onClick={() => removeSentenceField(index)}
+                                            disabled={isSubmitting}
+                                            sx={{ mt: 1 }}
+                                        >
+                                            Remove
+                                        </Button>
                                     )}
                                 </Box>
-
-                                {sentences.length > 2 && (
+                            ))}
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+                                {sentences.length < 5 && (
                                     <Button
                                         type="button"
                                         variant="outlined"
-                                        color="error"
-                                        size="small"
-                                        onClick={() => removeSentenceField(index)}
-                                        disabled={isSubmitting}
-                                        sx={{ mt: 1 }}
+                                        onClick={addSentenceField}
+                                        disabled={isSubmitting || !user}
+                                        sx={{ borderColor: alpha(GOLD_ACCENT, 0.6), color: GOLD_ACCENT }}
                                     >
-                                        Remove Sentence
+                                        + Add sentence
                                     </Button>
                                 )}
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                                    disabled={
+                                        sentences.filter((s) => s.sentence.trim() && s.vocabWordsUsed.length > 0).length < 2 ||
+                                        allVocabWordsUsed.size < minWordsRequired ||
+                                        isSubmitting ||
+                                        !user
+                                    }
+                                    sx={{ bgcolor: GOLD_ACCENT, color: '#0f172a', fontWeight: 800, minWidth: 160 }}
+                                >
+                                    {isSubmitting ? 'Submitting…' : 'Submit'}
+                                </Button>
+                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.6) }}>
+                                    {sentences.filter((s) => s.sentence.trim() && s.vocabWordsUsed.length > 0).length} / 5
+                                </Typography>
                             </Box>
-                        ))}
-
-                        {sentences.length < 5 && (
-                            <Button
-                                type="button"
-                                variant="outlined"
-                                onClick={addSentenceField}
-                                disabled={isSubmitting || !user}
-                                sx={{ mb: 2 }}
-                            >
-                                + Add Another Sentence
-                            </Button>
-                        )}
-
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 2 }}>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                color="primary"
-                                size="large"
-                                endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-                                disabled={
-                                    sentences.filter(s => s.sentence.trim() && s.vocabWordsUsed.length > 0).length < 2 ||
-                                    allVocabWordsUsed.size < minWordsRequired ||
-                                    isSubmitting ||
-                                    !user
-                                }
-                                sx={{ minWidth: 150 }}
-                            >
-                                {isSubmitting ? 'Submitting...' : 'Submit Sentences'}
-                            </Button>
-                            <Typography variant="body2" color="text.secondary">
-                                {sentences.filter(s => s.sentence.trim() && s.vocabWordsUsed.length > 0).length} / 5 sentences
-                            </Typography>
+                            {!user && (
+                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.6), mt: 1 }}>
+                                    Please log in to submit.
+                                </Typography>
+                            )}
                         </Box>
-                        {!user && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Please log in to submit sentences.
-                            </Typography>
-                        )}
-                    </Box>
                     )}
-                </Box>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </Box>
     );
 };
 

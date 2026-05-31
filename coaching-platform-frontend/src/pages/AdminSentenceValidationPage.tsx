@@ -29,6 +29,7 @@ import {
     Tooltip,
     Tabs,
     Tab,
+    alpha,
     Table,
     TableBody,
     TableCell,
@@ -595,9 +596,21 @@ const AdminSentenceValidationPage: React.FC = () => {
                     onClose={handleCloseValidationDialog}
                     maxWidth="md"
                     fullWidth
+                    PaperProps={{
+                        sx: { borderRadius: 2, maxHeight: '90vh' },
+                    }}
                 >
-                    <DialogTitle>Review submission</DialogTitle>
-                    <DialogContent>
+                    <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
+                        Review submission
+                        {selectedSubmission && (
+                            <Chip
+                                label={getContentTypeLabel(selectedSubmission)}
+                                size="small"
+                                sx={{ ml: 1.5, fontWeight: 600 }}
+                            />
+                        )}
+                    </DialogTitle>
+                    <DialogContent dividers>
                         {selectedSubmission && (
                             <Box>
                                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
@@ -608,7 +621,15 @@ const AdminSentenceValidationPage: React.FC = () => {
                                     {getActivityRowLabel(selectedSubmission)} ·{' '}
                                     {format(new Date(selectedSubmission.createdAt), 'PPp')}
                                 </Typography>
-                                <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
+                                <Paper
+                                    variant="outlined"
+                                    sx={{
+                                        p: 2,
+                                        mb: 2,
+                                        bgcolor: alpha('#0f172a', 0.04),
+                                        borderColor: 'divider',
+                                    }}
+                                >
                                     <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
                                         Daily content students responded to
                                     </Typography>
