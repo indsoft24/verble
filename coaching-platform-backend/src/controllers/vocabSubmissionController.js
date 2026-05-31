@@ -100,51 +100,49 @@ export const submitVocabSentences = asyncHandler(async (req, res) => {
         throw new Error('You have already submitted sentences for this vocabulary set.');
     }
 
-    // Create the submission
-    // Initial points: 0 (will be calculated when sentences are reviewed: 10 points per correct sentence)
+    const PARTICIPATION_POINTS = 10;
+
     const submission = await UserVocabSubmission.create({
         userId: req.user._id,
         vocabSetId: vocabSetId,
         sentences: validatedSentences,
         totalVocabWordsUsed: allVocabWordsUsed.size,
+        evaluationPoints: 0,
+        pointsEarned: 0,
     });
 
-    // Record activity in gamification system (base points for submission)
-    // Note: additional points can still be awarded after review if desired.
+    let participationPointsAwarded = 0;
+    let levelUpResult;
+
     try {
-        await GamificationService.recordActivity(req.user._id.toString(), vocabSetId, 10);
-        
-        // Check for level up
-        const levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
-        
-        res.status(201).json({
-            status: 'success',
-            message: 'Sentences submitted successfully! Points will be awarded after review.',
-            data: {
-                submission: {
-                    _id: submission._id,
-                    sentences: submission.sentences,
-                    totalVocabWordsUsed: submission.totalVocabWordsUsed,
-                    submittedAt: submission.createdAt
-                },
-                levelUp: levelUpResult
-            }
-        });
-    } catch (error) {
-        // Even if gamification fails, the submission is saved
-        res.status(201).json({
-            status: 'success',
-            message: 'Sentences submitted successfully!',
-            data: {
-                submission: {
-                    _id: submission._id,
-                    sentences: submission.sentences,
-                    totalVocabWordsUsed: submission.totalVocabWordsUsed,
-                    submittedAt: submission.createdAt
-                }
-            }
-        });
+        const gamificationResult = await GamificationService.recordActivity(
+            req.user._id.toString(),
+            vocabSetId,
+            PARTICIPATION_POINTS
+        );
+        participationPointsAwarded = gamificationResult?.success ? PARTICIPATION_POINTS : 0;
+        levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
+    } catch {
+        // submission saved even if gamification fails
     }
+
+    res.status(201).json({
+        status: 'success',
+        message: 'Sentences submitted successfully!',
+        data: {
+            submission: {
+                _id: submission._id,
+                sentences: submission.sentences,
+                totalVocabWordsUsed: submission.totalVocabWordsUsed,
+                evaluationPoints: 0,
+                submittedAt: submission.createdAt,
+                isCorrect: submission.isCorrect,
+            },
+            participationPointsAwarded,
+            evaluationPoints: 0,
+            levelUp: levelUpResult,
+        },
+    });
 });
 
 /**

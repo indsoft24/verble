@@ -6,10 +6,12 @@ import { createReadStream } from 'fs';
 import {
     generateCourseCertificate,
     getCourseEligibility,
+    getCourseReportCard,
     getOrCreateCourseRule,
     ensureDemoCertificatePdf,
     invalidateDemoCertificatePdf,
 } from '../services/courseCertificateService.js';
+import { evaluateCourseCertification } from '../services/courseCertificationEvaluator.js';
 import {
     getCertificateBranding,
     updateCertificateBranding,
@@ -22,6 +24,18 @@ export const getCourseCertificateEligibility = asyncHandler(async (req, res) => 
     const { courseId } = req.params;
     const eligibility = await getCourseEligibility(req.user._id, courseId);
     res.status(200).json({ status: 'success', data: eligibility });
+});
+
+export const getCourseCertificationEvaluation = asyncHandler(async (req, res) => {
+    const { courseId } = req.params;
+    const evaluation = await evaluateCourseCertification(req.user._id, courseId);
+    res.status(200).json({ status: 'success', data: evaluation });
+});
+
+export const getCourseReportCardController = asyncHandler(async (req, res) => {
+    const { courseId } = req.params;
+    const result = await getCourseReportCard(req.user._id, courseId);
+    res.status(200).json({ status: 'success', data: result });
 });
 
 export const generateMyCourseCertificate = asyncHandler(async (req, res) => {
@@ -63,13 +77,37 @@ export const getAdminCertificateRules = asyncHandler(async (_req, res) => {
 
 export const updateAdminCertificateRule = asyncHandler(async (req, res) => {
     const { courseId } = req.params;
-    const { isEnabled, requireAssessment, passingScore, minimumCompletionPercent, readOnlyMode } = req.body;
+    const {
+        isEnabled,
+        requireAssessment,
+        passingScore,
+        minimumCompletionPercent,
+        readOnlyMode,
+        requireModuleQuizzes,
+        minimumModuleQuizScore,
+        requireDailySubmissions,
+        minimumDailySubmissionPercent,
+        dailySubmissionLookbackDays,
+        minimumOverallSubmissionPercent,
+    } = req.body;
     const rule = await getOrCreateCourseRule(courseId);
     if (typeof isEnabled === 'boolean') rule.isEnabled = isEnabled;
     if (typeof requireAssessment === 'boolean') rule.requireAssessment = requireAssessment;
     if (typeof readOnlyMode === 'boolean') rule.readOnlyMode = readOnlyMode;
     if (typeof passingScore === 'number') rule.passingScore = passingScore;
     if (typeof minimumCompletionPercent === 'number') rule.minimumCompletionPercent = minimumCompletionPercent;
+    if (typeof requireModuleQuizzes === 'boolean') rule.requireModuleQuizzes = requireModuleQuizzes;
+    if (typeof minimumModuleQuizScore === 'number') rule.minimumModuleQuizScore = minimumModuleQuizScore;
+    if (typeof requireDailySubmissions === 'boolean') rule.requireDailySubmissions = requireDailySubmissions;
+    if (typeof minimumDailySubmissionPercent === 'number') {
+        rule.minimumDailySubmissionPercent = minimumDailySubmissionPercent;
+    }
+    if (typeof dailySubmissionLookbackDays === 'number') {
+        rule.dailySubmissionLookbackDays = dailySubmissionLookbackDays;
+    }
+    if (typeof minimumOverallSubmissionPercent === 'number') {
+        rule.minimumOverallSubmissionPercent = minimumOverallSubmissionPercent;
+    }
     rule.updatedBy = req.user._id;
     await rule.save();
     res.status(200).json({ status: 'success', data: { rule } });

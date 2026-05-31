@@ -2,9 +2,11 @@
 import asyncHandler from 'express-async-handler';
 import User from '../models/User.js';
 
-function buildLeaderboard(users) {
+function buildLeaderboard(users, viewerUserId) {
     let currentRank = 1;
     let previousPoints = null;
+    const viewerId = viewerUserId?.toString();
+
     return users.map((user, index) => {
         const points = user.points || 0;
         if (previousPoints !== null && points < previousPoints) {
@@ -12,13 +14,21 @@ function buildLeaderboard(users) {
         }
         previousPoints = points;
 
-        return {
+        const userId = user._id.toString();
+        const entry = {
             rank: currentRank,
-            userId: user._id.toString(),
+            userId,
             name: user.name,
-            points,
             membershipLevel: user.membershipLevel || 'FREE',
         };
+
+        if (viewerId && userId === viewerId) {
+            entry.points = points;
+        } else {
+            entry.points = null;
+        }
+
+        return entry;
     });
 }
 
@@ -45,7 +55,7 @@ export const getFreeLeaderboard = asyncHandler(async (req, res) => {
     res.status(200).json({
         status: 'success',
         data: {
-            leaderboard: buildLeaderboard(users),
+            leaderboard: buildLeaderboard(users, req.user._id),
             type: 'free',
         },
     });
@@ -72,7 +82,7 @@ export const getPaidLeaderboard = asyncHandler(async (req, res) => {
     res.status(200).json({
         status: 'success',
         data: {
-            leaderboard: buildLeaderboard(users),
+            leaderboard: buildLeaderboard(users, req.user._id),
             type: 'paid',
         },
     });
@@ -85,7 +95,7 @@ export const getPaidLeaderboard = asyncHandler(async (req, res) => {
  */
 export const getMyRank = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const user = await User.findById(userId).select('points membershipLevel role');
+    const user = await User.findById(userId).select('points evaluationScore membershipLevel role');
 
     if (!user) {
         res.status(404);
@@ -106,6 +116,7 @@ export const getMyRank = asyncHandler(async (req, res) => {
             data: {
                 rank: null,
                 points: 0,
+                evaluationScore: user.evaluationScore || 0,
                 membershipLevel: user.membershipLevel,
                 leaderboardType,
             },
@@ -124,6 +135,7 @@ export const getMyRank = asyncHandler(async (req, res) => {
         data: {
             rank,
             points: userPoints,
+            evaluationScore: user.evaluationScore || 0,
             membershipLevel: user.membershipLevel,
             leaderboardType,
         },

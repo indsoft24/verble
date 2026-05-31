@@ -90,6 +90,7 @@ export interface ValidateSubmissionResponse {
             _id: string;
             isCorrect: boolean;
             pointsEarned: number;
+            evaluationPoints?: number;
             sentencesCorrect?: number;
             feedback?: string;
             reviewedAt: string;

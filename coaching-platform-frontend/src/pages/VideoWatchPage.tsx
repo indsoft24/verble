@@ -38,6 +38,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { saveAs } from 'file-saver';
 
 import { getVideoByIdForUser, getVideoPlayToken, getVideoNavigation, downloadMaterialForUser, markVideoCompleted } from '../services/videoService';
+import { getModuleQuizAvailability } from '../services/moduleQuizService';
 import type { VideoDetail, VideoPlayTokenData } from '../services/videoService';
 import LocalHlsPlayer from '../components/features/video/LocalHlsPlayer';
 import {
@@ -229,6 +230,7 @@ const VideoWatchPage: React.FC = () => {
     const [isDownloading, setIsDownloading] = useState<string | null>(null);
     const [isMarkingComplete, setIsMarkingComplete] = useState(false);
     const [completionMessage, setCompletionMessage] = useState<string | null>(null);
+    const [quizPrompt, setQuizPrompt] = useState<{ moduleId: string; hasQuiz: boolean } | null>(null);
     const hasMarkedCompleteRef = useRef(false);
 
     const [navRefreshKey, setNavRefreshKey] = useState(0);
@@ -367,7 +369,7 @@ const VideoWatchPage: React.FC = () => {
                 message += ' Set completed!';
             }
             if (result.moduleComplete) {
-                message += ' Module completed!';
+                message += ' All videos watched!';
             }
             if (result.nextCycleStarted) {
                 message += ' New cycle started!';
@@ -375,7 +377,23 @@ const VideoWatchPage: React.FC = () => {
             setCompletionMessage(message);
             setNavRefreshKey((k) => k + 1);
 
-            if (result.moduleComplete) {
+            if (result.moduleComplete && video) {
+                const modId = collectModuleIds(video).filter(isMongoObjectId)[0];
+                if (modId) {
+                    try {
+                        const availability = await getModuleQuizAvailability(modId);
+                        if (availability.hasQuiz && !availability.isModuleComplete) {
+                            setQuizPrompt({ moduleId: modId, hasQuiz: true });
+                            message += ' Take the module quiz to finish this module.';
+                            setCompletionMessage(message);
+                        } else if (!availability.hasQuiz && availability.isModuleComplete) {
+                            message += ' Module completed!';
+                            setCompletionMessage(message);
+                        }
+                    } catch {
+                        /* optional */
+                    }
+                }
                 setTimeout(() => {
                     fetchVideoAndToken();
                 }, 5000);
@@ -895,11 +913,29 @@ const VideoWatchPage: React.FC = () => {
 
             <Snackbar
                 open={!!completionMessage}
-                autoHideDuration={6000}
+                autoHideDuration={quizPrompt ? null : 6000}
                 onClose={() => setCompletionMessage(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
-                <Alert onClose={() => setCompletionMessage(null)} severity="success" sx={{ width: '100%' }}>
+                <Alert
+                    onClose={() => {
+                        setCompletionMessage(null);
+                        setQuizPrompt(null);
+                    }}
+                    severity="success"
+                    sx={{ width: '100%' }}
+                    action={
+                        quizPrompt ? (
+                            <Button
+                                color="inherit"
+                                size="small"
+                                onClick={() => navigate(`/modules/${quizPrompt.moduleId}/quiz`)}
+                            >
+                                Take quiz
+                            </Button>
+                        ) : undefined
+                    }
+                >
                     {completionMessage}
                 </Alert>
             </Snackbar>

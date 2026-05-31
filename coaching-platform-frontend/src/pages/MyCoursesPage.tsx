@@ -231,10 +231,31 @@ const MyCoursesPage: React.FC = () => {
                                                         <Chip size="small" label="Assessment required" color="warning" />
                                                     )}
                                                 </Box>
-                                                {!eligibility.isEligible && eligibility.reasons?.[0] && (
-                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-                                                        {eligibility.reasons[0]}
-                                                    </Typography>
+                                                {!eligibility.isEligible && (
+                                                    <Box sx={{ mt: 0.75 }}>
+                                                        {eligibility.reasons?.map((reason) => (
+                                                            <Typography
+                                                                key={reason}
+                                                                variant="caption"
+                                                                color="text.secondary"
+                                                                sx={{ display: 'block' }}
+                                                            >
+                                                                {reason}
+                                                            </Typography>
+                                                        ))}
+                                                    </Box>
+                                                )}
+                                                {eligibility.reportCardAvailable && (
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        sx={{ mt: 1 }}
+                                                        component={RouterLink}
+                                                        to={`/my-courses/${courseId}/report-card`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        View report card
+                                                    </Button>
                                                 )}
                                             </Box>
                                         )}

@@ -38,6 +38,10 @@ const userSentenceSubmissionSchema = new mongoose.Schema({
     reviewedAt: {
         type: Date,
     },
+    evaluationPoints: {
+        type: Number,
+        default: 0,
+    },
 }, {
     timestamps: true
 });

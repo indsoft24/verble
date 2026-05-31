@@ -73,6 +73,8 @@ const userSchema = new mongoose.Schema(
         googleProfile: { type: mongoose.Schema.Types.Mixed },
         stripeCustomerId: String,
         points: { type: Number, default: 0 },
+        /** Admin-reviewed quality score; separate from participation points (leaderboard). */
+        evaluationScore: { type: Number, default: 0 },
         coins: { type: Number, default: 0 },
         membershipLevel: {
             type: String,

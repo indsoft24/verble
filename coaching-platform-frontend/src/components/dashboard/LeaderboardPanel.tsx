@@ -74,7 +74,7 @@ const LeaderboardPanel: React.FC<LeaderboardPanelProps> = ({
                     icon={<EmojiEventsIcon fontSize="small" />}
                     sx={{ mb: 2, borderRadius: 2, fontWeight: 600 }}
                 >
-                    Your rank: #{myRank.rank} · {myRank.points} points
+                    Your rank: #{myRank.rank} · {myRank.points} participation pts
                 </Alert>
             )}
 
@@ -129,15 +129,17 @@ const LeaderboardPanel: React.FC<LeaderboardPanelProps> = ({
                                         Rank #{entry.rank}
                                     </Typography>
                                 </Box>
-                                <Chip
-                                    label={`${entry.points} pts`}
-                                    size="small"
-                                    sx={{
-                                        fontWeight: 800,
-                                        bgcolor: isTopThree ? accentColor : 'grey.200',
-                                        color: isTopThree ? '#fff' : 'text.primary',
-                                    }}
-                                />
+                                {entry.points != null && (
+                                    <Chip
+                                        label={`${entry.points} pts`}
+                                        size="small"
+                                        sx={{
+                                            fontWeight: 800,
+                                            bgcolor: isTopThree ? accentColor : 'grey.200',
+                                            color: isTopThree ? '#fff' : 'text.primary',
+                                        }}
+                                    />
+                                )}
                             </Box>
                         );
                     })}

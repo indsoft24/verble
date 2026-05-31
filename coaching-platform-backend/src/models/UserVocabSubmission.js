@@ -33,7 +33,11 @@ const userVocabSubmissionSchema = new mongoose.Schema({
     },
     pointsEarned: {
         type: Number,
-        default: 0, // 10 points per correct sentence
+        default: 0,
+    },
+    evaluationPoints: {
+        type: Number,
+        default: 0,
     },
     sentencesCorrect: {
         type: Number,

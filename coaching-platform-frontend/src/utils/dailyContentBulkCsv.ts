@@ -14,6 +14,8 @@ export interface BulkColumnSpec {
     label: string;
     required: boolean;
     hint?: string;
+    /** Human label matching the manual admin form */
+    formField?: string;
 }
 
 export interface BulkTypeSchema {
@@ -33,23 +35,20 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                 description: 'One row per word. IPA and Devanagari are optional.',
                 rowMode: 'one_row_per_item',
                 columns: [
-                    { key: 'date', label: 'date', required: true, hint: 'YYYY-MM-DD' },
-                    { key: 'title', label: 'title', required: true },
-                    { key: 'text', label: 'text', required: true },
-                    { key: 'meaning_en', label: 'meaning_en', required: true },
-                    { key: 'meaning_hi', label: 'meaning_hi', required: true },
-                    { key: 'audio', label: 'audio', required: false },
-                    { key: 'part_of_speech', label: 'part_of_speech', required: false },
-                    { key: 'pronunciation_ipa', label: 'pronunciation_ipa', required: false },
-                    { key: 'pronunciation_devanagari', label: 'pronunciation_devanagari', required: false },
-                    { key: 'synonyms', label: 'synonyms', required: false, hint: 'comma-separated' },
-                    { key: 'antonyms', label: 'antonyms', required: false, hint: 'comma-separated' },
-                    { key: 'examples_json', label: 'examples_json', required: false, hint: '[{"en":"","hi":""},…]' },
+                    { key: 'date', label: 'date', required: true, hint: 'YYYY-MM-DD', formField: 'Schedule date' },
+                    { key: 'title', label: 'title', required: true, formField: 'Admin title' },
+                    { key: 'text', label: 'text', required: true, formField: 'Word' },
+                    { key: 'meaning_en', label: 'meaning_en', required: true, hint: 'or en', formField: 'English meaning' },
+                    { key: 'meaning_hi', label: 'meaning_hi', required: true, hint: 'or hi', formField: 'Hindi meaning' },
+                    { key: 'audio', label: 'audio', required: false, formField: 'Audio URL' },
+                    { key: 'part_of_speech', label: 'part_of_speech', required: false, formField: 'Part of speech' },
+                    { key: 'pronunciation_ipa', label: 'pronunciation_ipa', required: false, formField: 'IPA pronunciation' },
+                    { key: 'pronunciation_devanagari', label: 'pronunciation_devanagari', required: false, formField: 'Devanagari pronunciation' },
+                    { key: 'synonyms', label: 'synonyms', required: false, hint: 'comma-separated', formField: 'Synonyms' },
+                    { key: 'antonyms', label: 'antonyms', required: false, hint: 'comma-separated', formField: 'Antonyms' },
+                    { key: 'examples_json', label: 'examples_json', required: false, hint: '[{"en":"","hi":""}]', formField: 'Example sentences (advanced)' },
                 ],
-                exampleRows: [
-                    ['date', 'title', 'text', 'meaning_en', 'meaning_hi', 'audio', 'part_of_speech'],
-                    ['2026-04-01', 'Word of the Day – curious', 'curious', 'eager to know', 'जिज्ञासु', '', 'adjective'],
-                ],
+                exampleRows: [],
             };
         case 'PHRASE':
             return {
@@ -57,22 +56,19 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                 description: 'One row per phrase.',
                 rowMode: 'one_row_per_item',
                 columns: [
-                    { key: 'date', label: 'date', required: true, hint: 'YYYY-MM-DD' },
-                    { key: 'title', label: 'title', required: true },
-                    { key: 'text', label: 'text', required: true },
-                    { key: 'meaning_en', label: 'meaning_en', required: true },
-                    { key: 'meaning_hi', label: 'meaning_hi', required: true },
-                    { key: 'audio', label: 'audio', required: false },
-                    { key: 'pronunciation_ipa', label: 'pronunciation_ipa', required: false },
-                    { key: 'pronunciation_devanagari', label: 'pronunciation_devanagari', required: false },
-                    { key: 'synonyms', label: 'synonyms', required: false },
-                    { key: 'antonyms', label: 'antonyms', required: false },
-                    { key: 'examples_json', label: 'examples_json', required: false },
+                    { key: 'date', label: 'date', required: true, hint: 'YYYY-MM-DD', formField: 'Schedule date' },
+                    { key: 'title', label: 'title', required: true, formField: 'Admin title' },
+                    { key: 'text', label: 'text', required: true, formField: 'Phrase' },
+                    { key: 'meaning_en', label: 'meaning_en', required: true, hint: 'or en', formField: 'English meaning' },
+                    { key: 'meaning_hi', label: 'meaning_hi', required: true, hint: 'or hi', formField: 'Hindi meaning' },
+                    { key: 'audio', label: 'audio', required: false, formField: 'Audio URL' },
+                    { key: 'pronunciation_ipa', label: 'pronunciation_ipa', required: false, formField: 'IPA pronunciation' },
+                    { key: 'pronunciation_devanagari', label: 'pronunciation_devanagari', required: false, formField: 'Devanagari pronunciation' },
+                    { key: 'synonyms', label: 'synonyms', required: false, formField: 'Synonyms' },
+                    { key: 'antonyms', label: 'antonyms', required: false, formField: 'Antonyms' },
+                    { key: 'examples_json', label: 'examples_json', required: false, formField: 'Example sentences (advanced)' },
                 ],
-                exampleRows: [
-                    ['date', 'title', 'text', 'meaning_en', 'meaning_hi'],
-                    ['2026-04-01', 'Phrase – Thank you', 'Thank you for your help.', 'gratitude', 'आपकी मदद के लिए धन्यवाद'],
-                ],
+                exampleRows: [],
             };
         case 'STORY':
             return {
@@ -80,19 +76,16 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                 description: 'One row per story. Use \\n inside text_content for newlines (literal backslash + n).',
                 rowMode: 'one_row_per_item',
                 columns: [
-                    { key: 'date', label: 'date', required: true },
-                    { key: 'title', label: 'title', required: true },
-                    { key: 'text_content', label: 'text_content', required: true },
-                    { key: 'story_title', label: 'story_title', required: false, hint: 'metadata.title' },
-                    { key: 'audio', label: 'audio', required: false },
-                    { key: 'moral_en', label: 'moral_en', required: false },
-                    { key: 'moral_hi', label: 'moral_hi', required: false },
-                    { key: 'sentence_translations', label: 'sentence_translations', required: false, hint: 'pipe | between lines' },
+                    { key: 'date', label: 'date', required: true, formField: 'Schedule date' },
+                    { key: 'title', label: 'title', required: true, formField: 'Admin title' },
+                    { key: 'text_content', label: 'text_content', required: true, formField: 'Story body', hint: 'Use \\n for newlines' },
+                    { key: 'story_title', label: 'story_title', required: false, formField: 'Story headline' },
+                    { key: 'audio', label: 'audio', required: false, formField: 'Audio URL' },
+                    { key: 'moral_en', label: 'moral_en', required: false, formField: 'Moral (English)' },
+                    { key: 'moral_hi', label: 'moral_hi', required: false, formField: 'Moral (Hindi)' },
+                    { key: 'sentence_translations', label: 'sentence_translations', required: false, hint: 'pipe | between lines', formField: 'Sentence translations' },
                 ],
-                exampleRows: [
-                    ['date', 'title', 'text_content', 'moral_en'],
-                    ['2026-04-01', 'The honest boy', 'Once there was a boy.\\nHe returned a wallet.', 'Honesty matters'],
-                ],
+                exampleRows: [],
             };
         case 'VOCAB_SET':
             return {
@@ -142,20 +135,26 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
             return {
                 type: contentType,
                 description:
-                    'One row per puzzle day. questions_json must be a JSON array of exactly 5 objects: {question, options[], correct_idx}.',
-                rowMode: 'one_row_per_item',
+                    'Five rows per puzzle day: same date (and title if used). One row per question with four options.',
+                rowMode: 'grouped',
+                groupHint: 'Group exactly 5 rows with the same date (+ title). Each row is one puzzle question.',
                 columns: [
-                    { key: 'date', label: 'date', required: true },
-                    { key: 'title', label: 'title', required: false, hint: 'Optional; auto-assigned if blank' },
-                    { key: 'questions_json', label: 'questions_json', required: true, hint: 'JSON array of 5 questions' },
+                    { key: 'date', label: 'date', required: true, formField: 'Schedule date' },
+                    { key: 'title', label: 'title', required: false, formField: 'Admin title' },
+                    { key: 'question', label: 'question', required: true, formField: 'Question text' },
+                    { key: 'option_1', label: 'option_1', required: true, formField: 'Choice A' },
+                    { key: 'option_2', label: 'option_2', required: true, formField: 'Choice B' },
+                    { key: 'option_3', label: 'option_3', required: false, formField: 'Choice C' },
+                    { key: 'option_4', label: 'option_4', required: false, formField: 'Choice D' },
+                    { key: 'correct_option', label: 'correct_option', required: true, hint: '1–4', formField: 'Correct choice' },
+                    { key: 'questions_json', label: 'questions_json', required: false, hint: 'Optional legacy JSON override', formField: 'Advanced JSON (skip if using columns)' },
                 ],
                 exampleRows: [
-                    ['date', 'title', 'questions_json'],
-                    [
-                        '2026-04-01',
-                        '',
-                        '[{"question":"Pick the correct sentence.","options":["I goes","I go"],"correct_idx":1}]',
-                    ],
+                    ['2026-04-01', 'Daily puzzle', 'Which sentence is correct?', 'I goes to school.', 'I go to school.', 'I going school.', 'I gone school.', '2'],
+                    ['2026-04-01', '', 'Pick the right verb.', 'She go', 'She goes', 'She going', 'She gone', '2'],
+                    ['2026-04-01', '', 'Question 3…', '', '', '', '', '1'],
+                    ['2026-04-01', '', 'Question 4…', '', '', '', '', '1'],
+                    ['2026-04-01', '', 'Question 5…', '', '', '', '', '1'],
                 ],
             };
         case 'PROFESSIONAL_CONVERSATION':
@@ -180,21 +179,74 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                 ],
             };
         case 'SCENE':
-        case 'SPEECH':
-        case 'LYRICS':
-        case 'FEED':
             return {
-                type: contentType,
-                description: `Each row needs a JSON object in metadata_json for ${contentType} (structure must match the app).`,
+                type: 'SCENE',
+                description: 'One row per scene. Use flat columns below; leave optional fields empty if not needed.',
                 rowMode: 'one_row_per_item',
                 columns: [
-                    { key: 'date', label: 'date', required: true },
-                    { key: 'title', label: 'title', required: true },
-                    { key: 'metadata_json', label: 'metadata_json', required: true, hint: 'Valid JSON object' },
+                    { key: 'date', label: 'date', required: true, formField: 'Schedule date' },
+                    { key: 'title', label: 'title', required: true, formField: 'Admin title' },
+                    { key: 'scene_headline', label: 'scene_headline', required: false, formField: 'Scene headline (learner)' },
+                    { key: 'image_url', label: 'image_url', required: false, formField: 'Scene image URL' },
+                    { key: 'gif_url', label: 'gif_url', required: false, formField: 'Scene GIF URL' },
+                    { key: 'explanation', label: 'explanation', required: false, formField: 'Explanation (English)' },
+                    { key: 'hindi_summary', label: 'hindi_summary', required: false, formField: 'Hindi summary' },
+                    { key: 'audio', label: 'audio', required: false, formField: 'Narration audio URL' },
+                    { key: 'keywords', label: 'keywords', required: false, hint: 'word:meaning_hi|word2:meaning_hi2', formField: 'Keywords' },
+                    { key: 'metadata_json', label: 'metadata_json', required: false, hint: 'Optional override', formField: 'Advanced JSON override' },
+                ],
+                exampleRows: [],
+            };
+        case 'SPEECH':
+            return {
+                type: 'SPEECH',
+                description: 'One row per speech. Pipe-separated lists for keywords and phrases.',
+                rowMode: 'one_row_per_item',
+                columns: [
+                    { key: 'date', label: 'date', required: true, formField: 'Schedule date' },
+                    { key: 'title', label: 'title', required: true, formField: 'Admin title' },
+                    { key: 'speaker', label: 'speaker', required: false, formField: 'Speaker name' },
+                    { key: 'youtube_url', label: 'youtube_url', required: false, formField: 'YouTube URL' },
+                    { key: 'transcript', label: 'transcript', required: false, formField: 'Transcript' },
+                    { key: 'keywords', label: 'keywords', required: false, hint: 'word:en:hi|word2:en2:hi2', formField: 'Keywords' },
+                    { key: 'phrases', label: 'phrases', required: false, hint: 'phrase:en:hi', formField: 'Phrases' },
+                    { key: 'metadata_json', label: 'metadata_json', required: false, formField: 'Advanced JSON override' },
+                ],
+                exampleRows: [],
+            };
+        case 'LYRICS':
+            return {
+                type: 'LYRICS',
+                description: 'One row per lyrics entry. Use \\n inside lyrics for line breaks.',
+                rowMode: 'one_row_per_item',
+                columns: [
+                    { key: 'date', label: 'date', required: true, formField: 'Schedule date' },
+                    { key: 'title', label: 'title', required: true, formField: 'Admin title' },
+                    { key: 'artist', label: 'artist', required: false, formField: 'Artist' },
+                    { key: 'audio', label: 'audio', required: false, formField: 'Audio file URL' },
+                    { key: 'lyrics', label: 'lyrics', required: false, formField: 'Lyrics text' },
+                    { key: 'metadata_json', label: 'metadata_json', required: false, formField: 'Advanced JSON override' },
+                ],
+                exampleRows: [],
+            };
+        case 'FEED':
+            return {
+                type: 'FEED',
+                description: 'Multiple rows per feed day: same date + title; each row is one Instagram post.',
+                rowMode: 'grouped',
+                groupHint: 'Group rows by date + title. Each row is one post.',
+                columns: [
+                    { key: 'date', label: 'date', required: true, formField: 'Schedule date' },
+                    { key: 'title', label: 'title', required: true, formField: 'Admin title' },
+                    { key: 'post_image_url', label: 'post_image_url', required: false, formField: 'Post image URL' },
+                    { key: 'post_credit', label: 'post_credit', required: false, formField: 'Credit / account' },
+                    { key: 'post_link', label: 'post_link', required: false, formField: 'Instagram post link' },
+                    { key: 'post_caption', label: 'post_caption', required: false, formField: 'Caption' },
+                    { key: 'metadata_json', label: 'metadata_json', required: false, formField: 'Advanced JSON override' },
                 ],
                 exampleRows: [
-                    ['date', 'title', 'metadata_json'],
-                    ['2026-04-01', 'Sample', '{"caption_en":"Hello","caption_hi":"नमस्ते"}'],
+                    ['2026-04-01', 'Instagram feed', 'https://example.com/img1.jpg', '@verble', 'https://instagram.com/p/abc', 'Hello learners'],
+                    ['2026-04-01', 'Instagram feed', 'https://example.com/img2.jpg', '@verble', '', ''],
                 ],
             };
         default:
@@ -202,12 +254,34 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
     }
 }
 
+/** Common spreadsheet shortcuts → canonical column keys */
+const HEADER_ALIASES: Record<string, string> = {
+    hi: 'meaning_hi',
+    hindi: 'meaning_hi',
+    meaning_hindi: 'meaning_hi',
+    en: 'meaning_en',
+    english: 'meaning_en',
+    meaning_english: 'meaning_en',
+    moral_hindi: 'moral_hi',
+    moral_english: 'moral_en',
+};
+
 function normalizeHeader(raw: string): string {
-    return raw
+    const base = raw
         .trim()
         .toLowerCase()
         .replace(/\s+/g, '_')
         .replace(/["']/g, '');
+    return HEADER_ALIASES[base] ?? base;
+}
+
+/** Read a cell when headers were not normalized (legacy spreadsheets). */
+function rowCell(row: Record<string, string>, ...keys: string[]): string {
+    for (const key of keys) {
+        const v = row[key];
+        if (v != null && String(v).trim() !== '') return String(v).trim();
+    }
+    return '';
 }
 
 /** Split CSV into physical lines; merge quoted newlines inside fields */
@@ -218,8 +292,9 @@ function splitCsvRecords(text: string): string[] {
     for (let i = 0; i < text.length; i++) {
         const c = text[i];
         if (c === '"') {
+            // Preserve doubled quotes in the record; parseCsvLine unescapes them once.
             if (inQuotes && text[i + 1] === '"') {
-                cur += '"';
+                cur += '""';
                 i++;
             } else {
                 inQuotes = !inQuotes;
@@ -328,6 +403,129 @@ function unescapeTextContent(s: string): string {
     return s.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
 }
 
+function escapeCsvCell(value: string): string {
+    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
+}
+
+const COLUMN_SAMPLE_VALUES: Record<string, string> = {
+    date: '2026-04-01',
+    title: 'Sample title',
+    text: 'curious',
+    meaning_en: 'eager to know',
+    meaning_hi: 'जिज्ञासु',
+    audio: '',
+    part_of_speech: 'adjective',
+    pronunciation_ipa: '/ˈkjʊəriəs/',
+    pronunciation_devanagari: '',
+    synonyms: 'inquisitive, eager',
+    antonyms: 'indifferent',
+    examples_json: '[{"en":"She was curious.","hi":"वह जिज्ञासु थी।"}]',
+    text_content: 'Once there was a boy.\\nHe returned a wallet.',
+    story_title: 'The honest boy',
+    moral_en: 'Honesty matters',
+    moral_hi: 'ईमानदारी महत्वपूर्ण है',
+    sentence_translations: 'Line 1 hi|Line 2 hi',
+    theme: 'Dining',
+    word: 'menu',
+    pronunciation_hi: 'मेन्यू',
+    vocab_set_number: '1',
+    theme_image_description: 'Family at a table',
+    participants: 'Waiter,Customer',
+    speaker: 'Waiter',
+    text_en: 'Good evening!',
+    text_hi: 'शुभ संध्या!',
+    line_audio: '',
+    question: 'Which sentence is correct?',
+    option_1: 'I go to school.',
+    option_2: 'I goes to school.',
+    option_3: 'I going school.',
+    option_4: 'I gone school.',
+    correct_option: '1',
+    questions_json: '',
+    scene_headline: 'At the market',
+    image_url: 'https://example.com/scene.jpg',
+    gif_url: '',
+    explanation: 'A busy market scene.',
+    hindi_summary: 'एक व्यस्त बाजार',
+    keywords: 'stall:दुकान|crowd:भीड',
+    metadata_json: '',
+    youtube_url: 'https://youtube.com/watch?v=example',
+    transcript: 'Speech transcript text…',
+    phrases: 'thank you:Thank you:धन्यवाद',
+    artist: 'Sample Artist',
+    lyrics: 'Line one\\nLine two',
+    post_image_url: 'https://example.com/post.jpg',
+    post_credit: '@verble',
+    post_link: 'https://instagram.com/p/example',
+    post_caption: 'Daily inspiration',
+};
+
+export function buildExampleCsvFromSchema(schema: BulkTypeSchema): string {
+    const header = schema.columns.map((c) => c.label);
+    const sampleRow = schema.columns.map((c) => COLUMN_SAMPLE_VALUES[c.key] ?? '');
+    const lines = [
+        header.map(escapeCsvCell).join(','),
+        sampleRow.map(escapeCsvCell).join(','),
+    ];
+    return lines.join('\n');
+}
+
+function parseSceneKeywords(s: string): { word: string; meaning_hi: string }[] {
+    if (!s.trim()) return [];
+    return s
+        .split('|')
+        .map((part) => {
+            const [word, meaning_hi] = part.split(':').map((x) => x.trim());
+            return { word: word || '', meaning_hi: meaning_hi || '' };
+        })
+        .filter((k) => k.word);
+}
+
+function parseSpeechKeywords(s: string): { word: string; meaning_en: string; meaning_hi: string }[] {
+    if (!s.trim()) return [];
+    return s
+        .split('|')
+        .map((part) => {
+            const bits = part.split(':').map((x) => x.trim());
+            return { word: bits[0] || '', meaning_en: bits[1] || '', meaning_hi: bits[2] || '' };
+        })
+        .filter((k) => k.word);
+}
+
+function parseSpeechPhrases(s: string): { phrase: string; meaning_en: string; meaning_hi: string }[] {
+    if (!s.trim()) return [];
+    return s
+        .split('|')
+        .map((part) => {
+            const bits = part.split(':').map((x) => x.trim());
+            return { phrase: bits[0] || '', meaning_en: bits[1] || '', meaning_hi: bits[2] || '' };
+        })
+        .filter((p) => p.phrase);
+}
+
+function parseMetadataJsonOptional(
+    raw: string,
+    line: number,
+    errors: string[]
+): Record<string, unknown> | null {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    try {
+        const parsed = JSON.parse(trimmed);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            errors.push(`Row ${line}: metadata_json must be a JSON object`);
+            return null;
+        }
+        return parsed as Record<string, unknown>;
+    } catch {
+        errors.push(`Row ${line}: metadata_json is not valid JSON`);
+        return null;
+    }
+}
+
 export interface ValidationResult {
     ok: boolean;
     errors: string[];
@@ -365,9 +563,8 @@ export function validateAndBuildPayloads(
     }
     const extras = extraCols(headers, schema);
     if (extras.length) {
-        errors.push(`Unknown column(s) (remove or fix spelling): ${extras.join(', ')}`);
+        errors.push(`Note: these columns will be ignored: ${extras.join(', ')}`);
     }
-    if (errors.length) return { ok: false, errors, payloads: [] };
 
     const payloads: CreateDailyContentPayload[] = [];
 
@@ -379,8 +576,8 @@ export function validateAndBuildPayloads(
             if (!date) errors.push(`Row ${line}: invalid or empty date`);
             const title = (row.title ?? '').trim();
             const text = (row.text ?? '').trim();
-            const meaning_en = (row.meaning_en ?? '').trim();
-            const meaning_hi = (row.meaning_hi ?? '').trim();
+            const meaning_en = rowCell(row, 'meaning_en', 'en', 'english', 'meaning_english');
+            const meaning_hi = rowCell(row, 'meaning_hi', 'hi', 'hindi', 'meaning_hindi');
             if (!title) errors.push(`Row ${line}: title is required`);
             if (!text) errors.push(`Row ${line}: text is required`);
             if (!meaning_en) errors.push(`Row ${line}: meaning_en is required`);
@@ -464,7 +661,7 @@ export function validateAndBuildPayloads(
                     text_content,
                     audio: (row.audio ?? '').trim() || undefined,
                     moral_en: (row.moral_en ?? '').trim() || undefined,
-                    moral_hi: (row.moral_hi ?? '').trim() || undefined,
+                    moral_hi: rowCell(row, 'moral_hi', 'moral_hindi') || undefined,
                     sentence_translations,
                 },
                 isActive: true,
@@ -494,7 +691,7 @@ export function validateAndBuildPayloads(
                 const lineHint = `"${title}" / "${theme}" row ${i + 1}`;
                 const w = (row.word ?? '').trim();
                 const ph = (row.pronunciation_hi ?? '').trim();
-                const mh = (row.meaning_hi ?? '').trim();
+                const mh = rowCell(row, 'meaning_hi', 'hi', 'hindi', 'meaning_hindi');
                 if (!w || !ph || !mh) {
                     errors.push(`VOCAB_SET ${lineHint}: word, pronunciation_hi, meaning_hi required`);
                     groupFailed = true;
@@ -591,16 +788,25 @@ export function validateAndBuildPayloads(
         }
     } else if (adminKey === 'PUZZLE_SPOT' || adminKey === 'PUZZLE_GRAMMAR') {
         const puzzleType = catalogEntry.puzzleType || 'SPOT_CORRECT_SENTENCE';
-        for (let idx = 0; idx < rows.length; idx++) {
-            const row = rows[idx];
-            const line = idx + 2;
+        const groupMap = new Map<string, Record<string, string>[]>();
+        for (const row of rows) {
             const date = parseFlexibleDate(row.date ?? '');
-            if (!date) errors.push(`Row ${line}: invalid or empty date`);
-            const title = (row.title ?? '').trim();
-            const raw = (row.questions_json ?? '').trim();
-            if (!raw) errors.push(`Row ${line}: questions_json is required`);
-            let questions: { question: string; options: string[]; correct_idx: number }[] | null = null;
-            if (raw) {
+            if (!date) {
+                errors.push('PUZZLE row: invalid or empty date');
+                continue;
+            }
+            const title = (row.title ?? '').trim() || 'bulk-import';
+            const key = `${date}\0${title}`;
+            if (!groupMap.has(key)) groupMap.set(key, []);
+            groupMap.get(key)!.push(row);
+        }
+        for (const [key, grouped] of groupMap) {
+            const [date, title] = key.split('\0');
+            const jsonRow = grouped.find((r) => (r.questions_json ?? '').trim());
+            if (jsonRow) {
+                const line = rows.indexOf(jsonRow) + 2;
+                const raw = (jsonRow.questions_json ?? '').trim();
+                let questions: { question: string; options: string[]; correct_idx: number }[] | null = null;
                 try {
                     const parsed = JSON.parse(raw);
                     if (!Array.isArray(parsed) || parsed.length !== 5) {
@@ -615,7 +821,7 @@ export function validateAndBuildPayloads(
                                 : [];
                             const correct_idx = Number(item?.correct_idx);
                             if (!qText || options.length < 2) {
-                                errors.push(`Row ${line}: question ${q + 1} needs question text and at least 2 options`);
+                                errors.push(`Row ${line}: question ${q + 1} needs text and at least 2 options`);
                                 questions = null;
                                 break;
                             }
@@ -630,62 +836,199 @@ export function validateAndBuildPayloads(
                 } catch {
                     errors.push(`Row ${line}: questions_json is not valid JSON`);
                 }
+                if (questions) {
+                    payloads.push({
+                        type: 'PUZZLE',
+                        date,
+                        level,
+                        title,
+                        metadata: { puzzleType, questions },
+                        isActive: true,
+                    });
+                }
+                continue;
             }
-            if (!date || !raw || !questions) continue;
+
+            if (grouped.length !== 5) {
+                errors.push(`PUZZLE "${title}" on ${date}: need exactly 5 question rows (found ${grouped.length})`);
+                continue;
+            }
+            const questions: { question: string; options: string[]; correct_idx: number }[] = [];
+            let groupFailed = false;
+            grouped.forEach((row, i) => {
+                const qText = (row.question ?? '').trim();
+                const opts = ['option_1', 'option_2', 'option_3', 'option_4']
+                    .map((k) => (row[k] ?? '').trim())
+                    .filter(Boolean);
+                const correctOpt = parseInt((row.correct_option ?? '').trim(), 10);
+                if (!qText || opts.length < 2) {
+                    errors.push(`PUZZLE "${title}" question ${i + 1}: question and at least option_1/option_2 required`);
+                    groupFailed = true;
+                    return;
+                }
+                if (Number.isNaN(correctOpt) || correctOpt < 1 || correctOpt > opts.length) {
+                    errors.push(`PUZZLE "${title}" question ${i + 1}: correct_option must be 1–${opts.length}`);
+                    groupFailed = true;
+                    return;
+                }
+                questions.push({ question: qText, options: opts, correct_idx: correctOpt - 1 });
+            });
+            if (groupFailed) continue;
             payloads.push({
                 type: 'PUZZLE',
                 date,
                 level,
-                title: title || 'bulk-import',
+                title,
                 metadata: { puzzleType, questions },
                 isActive: true,
             });
         }
-    } else if (['SCENE', 'SPEECH', 'LYRICS', 'FEED'].includes(adminKey)) {
+    } else if (adminKey === 'SCENE') {
         for (let idx = 0; idx < rows.length; idx++) {
             const row = rows[idx];
             const line = idx + 2;
             const date = parseFlexibleDate(row.date ?? '');
             if (!date) errors.push(`Row ${line}: invalid or empty date`);
             const title = (row.title ?? '').trim();
-            const raw = (row.metadata_json ?? '').trim();
             if (!title) errors.push(`Row ${line}: title is required`);
-            if (!raw) errors.push(`Row ${line}: metadata_json is required`);
-            let metadata: Record<string, unknown> | null = null;
-            if (raw) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-                        errors.push(`Row ${line}: metadata_json must be a JSON object`);
-                    } else {
-                        metadata = parsed as Record<string, unknown>;
-                    }
-                } catch {
-                    errors.push(`Row ${line}: metadata_json is not valid JSON`);
-                }
+            const override = parseMetadataJsonOptional(row.metadata_json ?? '', line, errors);
+            if (!date || !title) continue;
+            if (override) {
+                payloads.push({ type: apiType, date, level, title, metadata: override, isActive: true });
+                continue;
             }
-            if (!date || !title || !raw || !metadata) continue;
+            const meta: Record<string, unknown> = {
+                title: (row.scene_headline ?? '').trim() || undefined,
+                imageUrl: (row.image_url ?? '').trim() || undefined,
+                gifUrl: (row.gif_url ?? '').trim() || undefined,
+                explanation: (row.explanation ?? '').trim() || undefined,
+                hindiSummary: (row.hindi_summary ?? '').trim() || undefined,
+                audio: (row.audio ?? '').trim() || undefined,
+                keywords: parseSceneKeywords(row.keywords ?? ''),
+            };
+            Object.keys(meta).forEach((k) => {
+                const v = meta[k];
+                if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) delete meta[k];
+            });
+            payloads.push({ type: apiType, date, level, title, metadata: meta, isActive: true });
+        }
+    } else if (adminKey === 'SPEECH') {
+        for (let idx = 0; idx < rows.length; idx++) {
+            const row = rows[idx];
+            const line = idx + 2;
+            const date = parseFlexibleDate(row.date ?? '');
+            if (!date) errors.push(`Row ${line}: invalid or empty date`);
+            const title = (row.title ?? '').trim();
+            if (!title) errors.push(`Row ${line}: title is required`);
+            const override = parseMetadataJsonOptional(row.metadata_json ?? '', line, errors);
+            if (!date || !title) continue;
+            if (override) {
+                payloads.push({ type: apiType, date, level, title, metadata: override, isActive: true });
+                continue;
+            }
+            const meta: Record<string, unknown> = {
+                speaker: (row.speaker ?? '').trim() || undefined,
+                youtubeUrl: (row.youtube_url ?? '').trim() || undefined,
+                transcript: (row.transcript ?? '').trim() || undefined,
+                keywords: parseSpeechKeywords(row.keywords ?? ''),
+                phrases: parseSpeechPhrases(row.phrases ?? ''),
+            };
+            Object.keys(meta).forEach((k) => {
+                const v = meta[k];
+                if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) delete meta[k];
+            });
+            payloads.push({ type: apiType, date, level, title, metadata: meta, isActive: true });
+        }
+    } else if (adminKey === 'LYRICS') {
+        for (let idx = 0; idx < rows.length; idx++) {
+            const row = rows[idx];
+            const line = idx + 2;
+            const date = parseFlexibleDate(row.date ?? '');
+            if (!date) errors.push(`Row ${line}: invalid or empty date`);
+            const title = (row.title ?? '').trim();
+            if (!title) errors.push(`Row ${line}: title is required`);
+            const override = parseMetadataJsonOptional(row.metadata_json ?? '', line, errors);
+            if (!date || !title) continue;
+            if (override) {
+                payloads.push({ type: apiType, date, level, title, metadata: override, isActive: true });
+                continue;
+            }
             payloads.push({
                 type: apiType,
                 date,
                 level,
                 title,
-                metadata,
+                metadata: {
+                    artist: (row.artist ?? '').trim() || undefined,
+                    audio: (row.audio ?? '').trim() || undefined,
+                    lyrics: unescapeTextContent((row.lyrics ?? '').trim()) || undefined,
+                },
+                isActive: true,
+            });
+        }
+    } else if (adminKey === 'FEED') {
+        const groupMap = new Map<string, Record<string, string>[]>();
+        for (const row of rows) {
+            const date = parseFlexibleDate(row.date ?? '');
+            const title = (row.title ?? '').trim();
+            if (!date || !title) {
+                errors.push('FEED row: date and title required on every line');
+                continue;
+            }
+            const key = `${date}\0${title}`;
+            if (!groupMap.has(key)) groupMap.set(key, []);
+            groupMap.get(key)!.push(row);
+        }
+        for (const [key, grouped] of groupMap) {
+            const [date, title] = key.split('\0');
+            const jsonRow = grouped.find((r) => (r.metadata_json ?? '').trim());
+            if (jsonRow) {
+                const line = rows.indexOf(jsonRow) + 2;
+                const override = parseMetadataJsonOptional(jsonRow.metadata_json ?? '', line, errors);
+                if (override) {
+                    payloads.push({ type: apiType, date, level, title, metadata: override, isActive: true });
+                }
+                continue;
+            }
+            const posts = grouped
+                .map((row) => ({
+                    imageUrl: (row.post_image_url ?? '').trim(),
+                    credit: (row.post_credit ?? '').trim(),
+                    postLink: (row.post_link ?? '').trim(),
+                    caption: (row.post_caption ?? '').trim(),
+                }))
+                .filter((p) => p.imageUrl || p.credit || p.postLink || p.caption);
+            if (posts.length === 0) {
+                errors.push(`FEED "${title}": at least one post row with image, credit, link, or caption`);
+                continue;
+            }
+            payloads.push({
+                type: apiType,
+                date,
+                level,
+                title,
+                metadata: { posts },
                 isActive: true,
             });
         }
     }
 
-    if (errors.length > 0) {
+    const hardErrors = errors.filter((e) => !e.startsWith('Note:'));
+    if (hardErrors.length > 0) {
         return { ok: false, errors, payloads: [] };
     }
-    return { ok: true, errors: [], payloads };
+    return { ok: true, errors, payloads };
 }
 
 export function schemaToExampleCsv(schema: BulkTypeSchema): string {
-    const header = schema.exampleRows[0].join(',');
-    const dataLines = schema.exampleRows.slice(1).map((r) =>
-        r.map((c) => (c.includes(',') || c.includes('"') || c.includes('\n') ? `"${c.replace(/"/g, '""')}"` : c)).join(',')
-    );
-    return [header, ...dataLines].join('\n');
+    const main = buildExampleCsvFromSchema(schema);
+    if (schema.rowMode === 'grouped' && schema.exampleRows.length > 0) {
+        const header = schema.columns.map((c) => c.label);
+        const extraLines = schema.exampleRows.map((row) => {
+            const cells = header.map((_, i) => row[i] ?? '');
+            return cells.map(escapeCsvCell).join(',');
+        });
+        return [main, ...extraLines].join('\n');
+    }
+    return main;
 }

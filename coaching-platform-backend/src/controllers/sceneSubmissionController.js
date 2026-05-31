@@ -64,53 +64,49 @@ export const submitSceneDescription = asyncHandler(async (req, res) => {
         .map(s => s.trim())
         .filter(s => s.length > 0);
 
-    // Create the submission
-    // Initial points: 10 for submission (will be updated when sentences are reviewed)
+    const PARTICIPATION_POINTS = 10;
+
     const submission = await UserSceneSubmission.create({
         userId: req.user._id,
         sceneId: sceneId,
         description: description.trim(),
         sentences: sentences,
-        pointsEarned: 10, // Base points for submission
+        evaluationPoints: 0,
+        pointsEarned: 0,
     });
 
-    // Record activity in gamification system (10 points for submission)
+    let participationPointsAwarded = 0;
+    let levelUpResult;
+
     try {
-        await GamificationService.recordActivity(req.user._id.toString(), sceneId, 10);
-        
-        // Check for level up
-        const levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
-        
-        res.status(201).json({
-            status: 'success',
-            message: 'Scene description submitted successfully!',
-            data: {
-                submission: {
-                    _id: submission._id,
-                    description: submission.description,
-                    sentences: submission.sentences,
-                    pointsEarned: submission.pointsEarned,
-                    submittedAt: submission.createdAt
-                },
-                levelUp: levelUpResult
-            }
-        });
-    } catch (error) {
-        // Even if gamification fails, the submission is saved
-        res.status(201).json({
-            status: 'success',
-            message: 'Scene description submitted successfully!',
-            data: {
-                submission: {
-                    _id: submission._id,
-                    description: submission.description,
-                    sentences: submission.sentences,
-                    pointsEarned: submission.pointsEarned,
-                    submittedAt: submission.createdAt
-                }
-            }
-        });
+        const gamificationResult = await GamificationService.recordActivity(
+            req.user._id.toString(),
+            sceneId,
+            PARTICIPATION_POINTS
+        );
+        participationPointsAwarded = gamificationResult?.success ? PARTICIPATION_POINTS : 0;
+        levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
+    } catch {
+        // submission saved even if gamification fails
     }
+
+    res.status(201).json({
+        status: 'success',
+        message: 'Scene description submitted successfully!',
+        data: {
+            submission: {
+                _id: submission._id,
+                description: submission.description,
+                sentences: submission.sentences,
+                evaluationPoints: 0,
+                submittedAt: submission.createdAt,
+                isCorrect: submission.isCorrect,
+            },
+            participationPointsAwarded,
+            evaluationPoints: 0,
+            levelUp: levelUpResult,
+        },
+    });
 });
 
 /**

@@ -23,6 +23,7 @@ import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getUserSceneSubmission } from '../../services/sceneSubmissionService';
+import EvaluationStatusBanner from './EvaluationStatusBanner';
 import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
 import {
     activityCardShell,
@@ -82,7 +83,14 @@ const SceneCard: React.FC<SceneCardProps> = ({
     const [currentContent, setCurrentContent] = useState<DailyContent>(data);
     const [hasPrevious, setHasPrevious] = useState(false);
     const [hasNext, setHasNext] = useState(false);
-    const [existingSubmission, setExistingSubmission] = useState<{ description: string; pointsEarned?: number } | null>(null);
+    const [existingSubmission, setExistingSubmission] = useState<{
+        description: string;
+        evaluationPoints?: number;
+        pointsEarned?: number;
+        isCorrect?: boolean | null;
+        feedback?: string;
+        reviewedAt?: string;
+    } | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const synthRef = useRef<SpeechSynthesis | null>(null);
 
@@ -95,7 +103,18 @@ const SceneCard: React.FC<SceneCardProps> = ({
             return;
         }
         const sub = await getUserSceneSubmission(sceneId);
-        setExistingSubmission(sub ? { description: sub.description, pointsEarned: sub.pointsEarned } : null);
+        setExistingSubmission(
+            sub
+                ? {
+                      description: sub.description,
+                      evaluationPoints: sub.evaluationPoints,
+                      pointsEarned: sub.pointsEarned,
+                      isCorrect: sub.isCorrect,
+                      feedback: sub.feedback,
+                      reviewedAt: sub.reviewedAt,
+                  }
+                : null
+        );
     }, [user]);
 
     const checkAdjacent = useCallback(async (contentId: string) => {
@@ -219,10 +238,11 @@ const SceneCard: React.FC<SceneCardProps> = ({
                 description: description.trim(),
             });
             if (response.data?.status === 'success') {
-                const pts = response.data.data.submission.pointsEarned;
+                const participation =
+                    response.data.data.participationPointsAwarded ?? 10;
                 setSubmitStatus({
                     type: 'success',
-                    message: `Submitted! You earned ${pts} points. Up to 2 more points per correct sentence may be added after review.`,
+                    message: `Submitted! ${participation > 0 ? `+${participation} participation points toward the leaderboard. ` : ''}Pending review for evaluation score.`,
                 });
                 setDescription('');
                 setShowConfetti(true);
@@ -443,8 +463,8 @@ const SceneCard: React.FC<SceneCardProps> = ({
                         Describe the scene in your own words
                     </Typography>
                     <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65), mb: 2 }}>
-                        You earn 10 points when you submit. After review, you may earn 2 additional points for each
-                        correct sentence.
+                        +10 participation points when you submit (leaderboard). After review, evaluation score: up to
+                        10 + 2 per correct sentence.
                     </Typography>
 
                     {!isToday && (
@@ -453,12 +473,18 @@ const SceneCard: React.FC<SceneCardProps> = ({
                         </Alert>
                     )}
                     {existingSubmission && isToday && (
-                        <Alert severity="success" sx={{ mb: 2 }}>
-                            You already submitted this scene
-                            {existingSubmission.pointsEarned != null
-                                ? ` (${existingSubmission.pointsEarned} points earned so far).`
-                                : '.'}
-                        </Alert>
+                        <>
+                            <Alert severity="success" sx={{ mb: 2 }}>
+                                You already submitted this scene.
+                            </Alert>
+                            <EvaluationStatusBanner
+                                isCorrect={existingSubmission.isCorrect}
+                                evaluationPoints={existingSubmission.evaluationPoints}
+                                pointsEarned={existingSubmission.pointsEarned}
+                                feedback={existingSubmission.feedback}
+                                reviewedAt={existingSubmission.reviewedAt}
+                            />
+                        </>
                     )}
                     {submitStatus && (
                         <Alert severity={submitStatus.type} sx={{ mb: 2 }}>

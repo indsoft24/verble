@@ -36,6 +36,7 @@ export interface User {
         locale: string;
     };
     points?: number;
+    evaluationScore?: number;
     coins?: number;
     membershipLevel?: 'FREE' | 'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE';
     unlockedLevels?: string[];
@@ -112,13 +113,23 @@ export const register = async (userData: RegisterData): Promise<RegistrationInit
 export interface VerifyEmailResponse {
     status: string;
     message: string;
-    data?: { email: string };
+    data?: { email: string; loginPin?: string };
 }
 
-export const verifyEmail = async (payload: VerificationPayload): Promise<VerifyEmailResponse> => {
+export interface VerifyEmailResult {
+    message: string;
+    email?: string;
+    loginPin?: string;
+}
+
+export const verifyEmail = async (payload: VerificationPayload): Promise<VerifyEmailResult> => {
     try {
         const response = await apiClient.post<VerifyEmailResponse>(`${API_URL_AUTH}/verify-email`, payload);
-        return response.data;
+        return {
+            message: response.data.message,
+            email: response.data.data?.email,
+            loginPin: response.data.data?.loginPin,
+        };
     } catch (error: any) {
         throw error.response?.data || { status: 'error', message: 'An unknown verification error occurred' };
     }

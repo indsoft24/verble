@@ -5,7 +5,11 @@ export interface UserSceneSubmission {
     description: string;
     sentences: string[];
     pointsEarned?: number;
+    evaluationPoints?: number;
     sentencesCorrect?: number;
+    isCorrect?: boolean | null;
+    feedback?: string;
+    reviewedAt?: string;
     createdAt: string;
 }
 

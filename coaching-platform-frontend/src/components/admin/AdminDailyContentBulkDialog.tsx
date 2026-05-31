@@ -20,6 +20,9 @@ import {
     TableHead,
     TableRow,
     LinearProgress,
+    Stepper,
+    Step,
+    StepLabel,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import GetAppIcon from '@mui/icons-material/GetApp';
@@ -28,6 +31,7 @@ import {
     getBulkSchema,
     parseCsvToObjects,
     schemaToExampleCsv,
+    buildExampleCsvFromSchema,
     validateAndBuildPayloads,
     type BulkDailyContentType,
 } from '../../utils/dailyContentBulkCsv';
@@ -37,14 +41,14 @@ import {
     type CreateDailyContentPayload,
 } from '../../services/dailyContentAdminService';
 
-
 export interface AdminDailyContentBulkDialogProps {
     open: boolean;
     onClose: () => void;
     onImported: () => void;
-    /** Shown in helper text so admins align dates with the calendar filter if they want */
     calendarDate: Date | null;
 }
+
+const STEPS = ['Choose type', 'Columns & template', 'Upload & validate', 'Import'];
 
 const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = ({
     open,
@@ -52,11 +56,13 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
     onImported,
     calendarDate,
 }) => {
+    const [activeStep, setActiveStep] = useState(0);
     const [bulkType, setBulkType] = useState<BulkDailyContentType>('WORD');
     const bulkLevel = levelForAdminKey(bulkType);
     const [fileName, setFileName] = useState<string | null>(null);
     const [csvRaw, setCsvRaw] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [validationNotes, setValidationNotes] = useState<string[]>([]);
     const [validatedPayloads, setValidatedPayloads] = useState<CreateDailyContentPayload[] | null>(null);
     const [parseError, setParseError] = useState<string | null>(null);
     const [importError, setImportError] = useState<string | null>(null);
@@ -69,13 +75,15 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
         if (open) {
             setImportError(null);
             setImportSummary(null);
+            setActiveStep(0);
         }
     }, [open]);
 
-    const resetAll = () => {
+    const resetUpload = () => {
         setFileName(null);
         setCsvRaw(null);
         setValidationErrors([]);
+        setValidationNotes([]);
         setValidatedPayloads(null);
         setParseError(null);
         setImportError(null);
@@ -84,12 +92,14 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
 
     const handleClose = () => {
         if (busy) return;
-        resetAll();
+        resetUpload();
+        setActiveStep(0);
         onClose();
     };
 
-    const onTypeOrLevelChange = () => {
-        resetAll();
+    const onTypeChange = () => {
+        resetUpload();
+        setActiveStep(0);
     };
 
     const handleDownloadTemplate = () => {
@@ -105,7 +115,7 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
     };
 
     const handleFile = (file: File | null) => {
-        resetAll();
+        resetUpload();
         if (!file) return;
         if (!file.name.toLowerCase().endsWith('.csv')) {
             setParseError('Please choose a .csv file.');
@@ -120,6 +130,7 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                 return;
             }
             setCsvRaw(text);
+            setParseError(null);
         };
         reader.onerror = () => setParseError('Could not read the file.');
         reader.readAsText(file, 'UTF-8');
@@ -129,6 +140,7 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
         setImportError(null);
         setImportSummary(null);
         setValidationErrors([]);
+        setValidationNotes([]);
         setValidatedPayloads(null);
         if (!csvRaw) {
             setParseError('Upload a CSV file first.');
@@ -137,15 +149,20 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
         try {
             const { headers, rows } = parseCsvToObjects(csvRaw);
             const result = validateAndBuildPayloads(bulkType, bulkLevel, headers, rows);
+            const notes = result.errors.filter((e) => e.startsWith('Note:'));
+            const hard = result.errors.filter((e) => !e.startsWith('Note:'));
             if (!result.ok) {
-                setValidationErrors(result.errors);
+                setValidationErrors(hard);
+                setValidationNotes(notes);
                 setValidatedPayloads(null);
                 setParseError(null);
                 return;
             }
             setParseError(null);
             setValidationErrors([]);
+            setValidationNotes(notes);
             setValidatedPayloads(result.payloads);
+            setActiveStep(3);
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Could not parse CSV.';
             setParseError(msg);
@@ -174,11 +191,8 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                 setImportSummary(`Successfully imported ${out.createdCount} item(s).`);
             }
             onImported();
-            setFileName(null);
-            setCsvRaw(null);
-            setValidationErrors([]);
-            setValidatedPayloads(null);
-            setParseError(null);
+            resetUpload();
+            setActiveStep(0);
         } catch (err: unknown) {
             const msg =
                 err && typeof err === 'object' && 'response' in err
@@ -190,56 +204,91 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
         }
     };
 
-    const step2Ready = Boolean(bulkType && bulkLevel);
-
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth scroll="paper">
             <DialogTitle>Bulk import daily content (CSV)</DialogTitle>
             <DialogContent dividers>
                 {busy && <LinearProgress sx={{ mb: 2 }} />}
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Choose content type first. Level is assigned automatically from the catalog ({bulkLevel}). Dates in
-                    the CSV determine each row&apos;s schedule
-                    {calendarDate ? ` (calendar is on ${format(calendarDate, 'MMM d, yyyy')} for reference only)` : ''}.
-                </Typography>
 
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-                    <FormControl sx={{ minWidth: 320 }} size="small">
-                        <InputLabel id="bulk-type-label">Type</InputLabel>
-                        <Select
-                            labelId="bulk-type-label"
-                            label="Type"
-                            value={bulkType}
-                            onChange={(e) => {
-                                setBulkType(e.target.value as BulkDailyContentType);
-                                onTypeOrLevelChange();
-                            }}
-                        >
-                            {DAILY_CONTENT_CATALOG.map((slot) => (
-                                <MenuItem key={slot.adminKey} value={slot.adminKey}>
-                                    {slot.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </Box>
+                <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>
+                    {STEPS.map((label) => (
+                        <Step key={label}>
+                            <StepLabel>{label}</StepLabel>
+                        </Step>
+                    ))}
+                </Stepper>
 
-                {step2Ready && schema && (
+                {activeStep === 0 && (
+                    <>
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                                How it works
+                            </Typography>
+                            <Box component="ol" sx={{ m: 0, pl: 2.5 }}>
+                                <li>Choose the content type (membership level is set automatically).</li>
+                                <li>Download the template — it lists every column; leave cells empty if you do not need them.</li>
+                                <li>
+                                    Fill your CSV. For grouped types (vocab, conversations, puzzles, feed), repeat{' '}
+                                    <code>date</code> and <code>title</code> on each line in the group.
+                                </li>
+                                <li>
+                                    Upload, validate, fix any errors, then import. Column headers are flexible:{' '}
+                                    <code>hi</code> works for <code>meaning_hi</code>, <code>en</code> for{' '}
+                                    <code>meaning_en</code> (Excel exports often use short names).
+                                </li>
+                            </Box>
+                            {calendarDate && (
+                                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                                    Calendar filter is on {format(calendarDate, 'MMM d, yyyy')} for reference only — schedule
+                                    dates come from the <code>date</code> column in your file.
+                                </Typography>
+                            )}
+                        </Alert>
+                        <FormControl fullWidth size="small">
+                            <InputLabel id="bulk-type-label">Type</InputLabel>
+                            <Select
+                                labelId="bulk-type-label"
+                                label="Type"
+                                value={bulkType}
+                                onChange={(e) => {
+                                    setBulkType(e.target.value as BulkDailyContentType);
+                                    onTypeChange();
+                                }}
+                            >
+                                {DAILY_CONTENT_CATALOG.map((slot) => (
+                                    <MenuItem key={slot.adminKey} value={slot.adminKey}>
+                                        {slot.label}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Level for this type: <strong>{bulkLevel}</strong>
+                        </Typography>
+                    </>
+                )}
+
+                {activeStep >= 1 && schema && (
                     <>
                         <Alert severity="info" sx={{ mb: 2 }}>
                             {schema.description}
-                            {schema.groupHint ? ` ${schema.groupHint}` : ''}
+                            {schema.groupHint && (
+                                <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
+                                    Grouped import: {schema.groupHint}
+                                </Typography>
+                            )}
                         </Alert>
 
                         <Typography variant="subtitle2" gutterBottom>
-                            Columns (required fields marked with *)
+                            All columns (required fields marked *)
                         </Typography>
                         <TableContainer component={Paper} variant="outlined" sx={{ mb: 2, maxHeight: 280 }}>
                             <Table size="small" stickyHeader>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell width="28%">Column</TableCell>
+                                        <TableCell>Column</TableCell>
                                         <TableCell>Required</TableCell>
+                                        <TableCell>Maps to form</TableCell>
                                         <TableCell>Notes</TableCell>
                                     </TableRow>
                                 </TableHead>
@@ -250,6 +299,7 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                                                 <code>{col.label}</code>
                                             </TableCell>
                                             <TableCell>{col.required ? 'Yes *' : 'No'}</TableCell>
+                                            <TableCell>{col.formField || '—'}</TableCell>
                                             <TableCell>{col.hint || '—'}</TableCell>
                                         </TableRow>
                                     ))}
@@ -258,97 +308,129 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                         </TableContainer>
 
                         <Typography variant="subtitle2" gutterBottom>
-                            Example CSV
+                            Example CSV (single-row template)
                         </Typography>
                         <Paper
                             variant="outlined"
                             sx={{
                                 p: 1.5,
-                                mb: 2,
+                                mb: 1,
                                 bgcolor: 'grey.50',
                                 fontFamily: 'ui-monospace, monospace',
-                                fontSize: 12,
+                                fontSize: 11,
                                 overflowX: 'auto',
                                 whiteSpace: 'pre',
                             }}
                         >
-                            {schemaToExampleCsv(schema)}
+                            {buildExampleCsvFromSchema(schema)}
                         </Paper>
 
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 2 }}>
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                startIcon={<GetAppIcon />}
-                                onClick={handleDownloadTemplate}
-                            >
-                                Download template
-                            </Button>
-                            <Button variant="outlined" component="label" size="small" startIcon={<CloudUploadIcon />}>
-                                Choose CSV
-                                <input
-                                    type="file"
-                                    accept=".csv,text/csv"
-                                    hidden
-                                    onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-                                />
-                            </Button>
-                            {fileName && (
-                                <Typography variant="body2" color="text.secondary">
-                                    {fileName}
-                                </Typography>
-                            )}
-                        </Box>
-
-                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                            <Button variant="contained" color="secondary" onClick={handleValidate} disabled={!csvRaw || busy}>
-                                Validate
-                            </Button>
-                            <Button
-                                variant="contained"
-                                onClick={handleImport}
-                                disabled={!validatedPayloads?.length || busy}
-                            >
-                                Import {validatedPayloads?.length ? `(${validatedPayloads.length})` : ''}
-                            </Button>
-                        </Box>
-
-                        {parseError && (
-                            <Alert severity="error" sx={{ mb: 2 }}>
-                                {parseError}
-                            </Alert>
-                        )}
-
-                        {validationErrors.length > 0 && (
-                            <Alert severity="error" sx={{ mb: 2 }}>
+                        {schema.rowMode === 'grouped' && schema.exampleRows.length > 0 && (
+                            <>
                                 <Typography variant="subtitle2" gutterBottom>
-                                    Fix these issues and validate again:
+                                    Grouped example (additional rows)
                                 </Typography>
-                                <Box component="ul" sx={{ m: 0, pl: 2, maxHeight: 220, overflow: 'auto' }}>
-                                    {validationErrors.map((err, i) => (
-                                        <li key={i}>
-                                            <Typography variant="body2">{err}</Typography>
-                                        </li>
-                                    ))}
-                                </Box>
-                            </Alert>
+                                <Paper
+                                    variant="outlined"
+                                    sx={{
+                                        p: 1.5,
+                                        mb: 2,
+                                        bgcolor: 'grey.50',
+                                        fontFamily: 'ui-monospace, monospace',
+                                        fontSize: 11,
+                                        overflowX: 'auto',
+                                        whiteSpace: 'pre',
+                                    }}
+                                >
+                                    {schemaToExampleCsv(schema)}
+                                </Paper>
+                            </>
                         )}
 
-                        {validatedPayloads && validatedPayloads.length > 0 && validationErrors.length === 0 && !parseError && (
-                            <Alert severity="success" sx={{ mb: 2 }}>
-                                Validation passed. {validatedPayloads.length} record(s) ready to import.
-                            </Alert>
-                        )}
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<GetAppIcon />}
+                            onClick={handleDownloadTemplate}
+                        >
+                            Download full template
+                        </Button>
                     </>
                 )}
 
+                {activeStep >= 2 && schema && (
+                    <Box sx={{ mt: 2 }}>
+                        <Button variant="outlined" component="label" size="small" startIcon={<CloudUploadIcon />}>
+                            Choose CSV
+                            <input
+                                type="file"
+                                accept=".csv,text/csv"
+                                hidden
+                                onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+                            />
+                        </Button>
+                        {fileName && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                Selected: {fileName}
+                            </Typography>
+                        )}
+                        <Box sx={{ mt: 2 }}>
+                            <Button
+                                variant="contained"
+                                color="secondary"
+                                onClick={handleValidate}
+                                disabled={!csvRaw || busy}
+                            >
+                                Validate
+                            </Button>
+                        </Box>
+                    </Box>
+                )}
+
+                {parseError && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                        {parseError}
+                    </Alert>
+                )}
+
+                {validationNotes.length > 0 && (
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                        {validationNotes.map((n, i) => (
+                            <Typography key={i} variant="body2">
+                                {n}
+                            </Typography>
+                        ))}
+                    </Alert>
+                )}
+
+                {validationErrors.length > 0 && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                            Fix these issues and validate again:
+                        </Typography>
+                        <Box component="ul" sx={{ m: 0, pl: 2, maxHeight: 220, overflow: 'auto' }}>
+                            {validationErrors.map((err, i) => (
+                                <li key={i}>
+                                    <Typography variant="body2">{err}</Typography>
+                                </li>
+                            ))}
+                        </Box>
+                    </Alert>
+                )}
+
+                {validatedPayloads && validatedPayloads.length > 0 && validationErrors.length === 0 && (
+                    <Alert severity="success" sx={{ mt: 2 }}>
+                        Validation passed. {validatedPayloads.length} record(s) ready to import.
+                    </Alert>
+                )}
+
                 {importError && (
-                    <Alert severity="error" sx={{ mt: 1 }}>
+                    <Alert severity="error" sx={{ mt: 2 }}>
                         {importError}
                     </Alert>
                 )}
                 {importSummary && (
-                    <Alert severity={importSummary.includes('failed') ? 'warning' : 'success'} sx={{ mt: 1 }}>
+                    <Alert severity={importSummary.includes('failed') ? 'warning' : 'success'} sx={{ mt: 2 }}>
                         {importSummary}
                     </Alert>
                 )}
@@ -357,6 +439,25 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                 <Button onClick={handleClose} disabled={busy}>
                     Close
                 </Button>
+                {activeStep > 0 && activeStep < STEPS.length - 1 && (
+                    <Button onClick={() => setActiveStep((s) => s - 1)} disabled={busy}>
+                        Back
+                    </Button>
+                )}
+                {activeStep < STEPS.length - 1 && (
+                    <Button
+                        variant="contained"
+                        onClick={() => setActiveStep((s) => Math.min(s + 1, STEPS.length - 1))}
+                        disabled={activeStep === 0 && !bulkType}
+                    >
+                        Next
+                    </Button>
+                )}
+                {activeStep === STEPS.length - 1 && validatedPayloads && validatedPayloads.length > 0 && (
+                    <Button variant="contained" onClick={() => void handleImport()} disabled={busy}>
+                        Import {validatedPayloads.length} record(s)
+                    </Button>
+                )}
             </DialogActions>
         </Dialog>
     );

@@ -3,13 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { renderCourseCertificatePdf } from './certificatePdfRenderer.js';
-import Course from '../models/Course.js';
-import Module from '../models/Module.js';
-import ModuleCompletion from '../models/ModuleCompletion.js';
-import CertificateAssessmentSubmission from '../models/CertificateAssessmentSubmission.js';
 import CourseCertificateRule from '../models/CourseCertificateRule.js';
 import CourseCertificate from '../models/CourseCertificate.js';
 import User from '../models/User.js';
+import { evaluateCourseCertification } from './courseCertificationEvaluator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,43 +23,28 @@ export const getOrCreateCourseRule = async (courseId) => {
 };
 
 export const getCourseEligibility = async (userId, courseId) => {
-    const [course, modules, rule, passedSubmission] = await Promise.all([
-        Course.findById(courseId).select('title isPublished'),
-        Module.find({ course: courseId }).select('_id'),
-        getOrCreateCourseRule(courseId),
-        CertificateAssessmentSubmission.findOne({ user: userId, passed: true }).sort({ submittedAt: -1 }),
-    ]);
-
-    if (!course) {
-        throw new Error('Course not found.');
-    }
-
-    const moduleIds = modules.map((m) => m._id);
-    const totalModules = moduleIds.length;
-    const completedModules = totalModules > 0
-        ? await ModuleCompletion.countDocuments({ user: userId, course: courseId, isCompleted: true, module: { $in: moduleIds } })
-        : 0;
-
-    const completionPercent = totalModules === 0 ? 0 : Math.round((completedModules / totalModules) * 100);
-    const meetsCompletion = completionPercent >= rule.minimumCompletionPercent;
-    const meetsAssessment = !rule.requireAssessment || (passedSubmission && passedSubmission.score >= rule.passingScore);
-    const isEligible = rule.isEnabled && !rule.readOnlyMode && meetsCompletion && meetsAssessment;
-
+    const evaluation = await evaluateCourseCertification(userId, courseId);
     return {
-        course,
-        rule,
-        totalModules,
-        completedModules,
-        completionPercent,
-        assessmentScore: passedSubmission?.score || null,
-        isEligible,
-        reasons: [
-            !rule.isEnabled ? 'Certification is disabled for this course.' : null,
-            rule.readOnlyMode ? 'Course certificate is in read-only mode.' : null,
-            !meetsCompletion ? `Complete at least ${rule.minimumCompletionPercent}% of modules.` : null,
-            !meetsAssessment && rule.requireAssessment ? `Pass final assessment with ${rule.passingScore}% score.` : null,
-        ].filter(Boolean),
+        course: evaluation.course,
+        rule: evaluation.rule,
+        totalModules: evaluation.totalModules,
+        completedModules: evaluation.completedModules,
+        completionPercent: evaluation.completionPercent,
+        assessmentScore: evaluation.assessmentScore,
+        isEligible: evaluation.isEligible,
+        passed: evaluation.passed,
+        pillars: evaluation.pillars,
+        reasons: evaluation.reasons,
+        reportCardAvailable: evaluation.passed,
     };
+};
+
+export const getCourseReportCard = async (userId, courseId) => {
+    const evaluation = await evaluateCourseCertification(userId, courseId);
+    if (!evaluation.passed) {
+        return { available: false, reasons: evaluation.reasons, pillars: evaluation.pillars };
+    }
+    return { available: true, reportCard: evaluation.reportCard, pillars: evaluation.pillars };
 };
 
 const generateCoursePdf = async ({

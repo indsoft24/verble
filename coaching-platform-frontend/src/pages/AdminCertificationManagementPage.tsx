@@ -232,6 +232,12 @@ const AdminCertificationManagementPage: React.FC = () => {
                 passingScore: row.rule.passingScore,
                 minimumCompletionPercent: row.rule.minimumCompletionPercent,
                 readOnlyMode: row.rule.readOnlyMode,
+                requireModuleQuizzes: row.rule.requireModuleQuizzes,
+                minimumModuleQuizScore: row.rule.minimumModuleQuizScore,
+                requireDailySubmissions: row.rule.requireDailySubmissions,
+                minimumDailySubmissionPercent: row.rule.minimumDailySubmissionPercent,
+                dailySubmissionLookbackDays: row.rule.dailySubmissionLookbackDays,
+                minimumOverallSubmissionPercent: row.rule.minimumOverallSubmissionPercent,
             });
         } catch (err: any) {
             setError(err?.response?.data?.message || err?.message || 'Failed to save rule');
@@ -424,6 +430,11 @@ const AdminCertificationManagementPage: React.FC = () => {
                                 <TableCell>Require final assessment</TableCell>
                                 <TableCell>Passing score</TableCell>
                                 <TableCell>Min completion %</TableCell>
+                                <TableCell>Req quizzes</TableCell>
+                                <TableCell>Min quiz %</TableCell>
+                                <TableCell>Req daily</TableCell>
+                                <TableCell>Min daily %</TableCell>
+                                <TableCell>Min overall %</TableCell>
                                 <TableCell align="right">Action</TableCell>
                             </TableRow>
                         </TableHead>
@@ -485,6 +496,48 @@ const AdminCertificationManagementPage: React.FC = () => {
                                             inputProps={{ min: 1, max: 100 }}
                                             onChange={(e) => updateLocalRule(row.course._id, { minimumCompletionPercent: Number(e.target.value) })}
                                             sx={{ width: 90 }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Switch
+                                            checked={Boolean(row.rule.requireModuleQuizzes)}
+                                            onChange={(e) => updateLocalRule(row.course._id, { requireModuleQuizzes: e.target.checked })}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            type="number"
+                                            value={row.rule.minimumModuleQuizScore ?? 70}
+                                            inputProps={{ min: 0, max: 100 }}
+                                            onChange={(e) => updateLocalRule(row.course._id, { minimumModuleQuizScore: Number(e.target.value) })}
+                                            sx={{ width: 70 }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Switch
+                                            checked={Boolean(row.rule.requireDailySubmissions)}
+                                            onChange={(e) => updateLocalRule(row.course._id, { requireDailySubmissions: e.target.checked })}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            type="number"
+                                            value={row.rule.minimumDailySubmissionPercent ?? 70}
+                                            inputProps={{ min: 0, max: 100 }}
+                                            onChange={(e) => updateLocalRule(row.course._id, { minimumDailySubmissionPercent: Number(e.target.value) })}
+                                            sx={{ width: 70 }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            type="number"
+                                            value={row.rule.minimumOverallSubmissionPercent ?? 0}
+                                            inputProps={{ min: 0, max: 100 }}
+                                            onChange={(e) => updateLocalRule(row.course._id, { minimumOverallSubmissionPercent: Number(e.target.value) })}
+                                            sx={{ width: 70 }}
                                         />
                                     </TableCell>
                                     <TableCell align="right">

@@ -188,9 +188,11 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange, onSubmis
             });
 
             if (response.data?.status === 'success') {
+                const participation =
+                    response.data.data.participationPointsAwarded ?? 10;
                 setSubmitStatus({
                     type: 'success',
-                    message: `Great job! Your description has been submitted. You earned ${response.data.data.submission.pointsEarned} points! Additional points (2 per correct sentence) will be awarded after review.`
+                    message: `Great job! ${participation > 0 ? `+${participation} participation points toward the leaderboard. ` : ''}Your description is pending review for evaluation score.`,
                 });
                 setDescription('');
                 setShowConfetti(true);
@@ -417,7 +419,8 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange, onSubmis
                         Type the speech in your own words
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        You will earn 10 points for submission, plus 2 points for each correct sentence.
+                        +10 participation points when you submit (leaderboard). After review, evaluation score: up to
+                        10 + 2 per correct sentence.
                     </Typography>
                     {submitStatus && (
                         <Alert severity={submitStatus.type} sx={{ mb: 2 }}>

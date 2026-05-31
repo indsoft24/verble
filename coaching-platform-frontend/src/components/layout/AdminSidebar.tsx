@@ -38,6 +38,7 @@ import {
     Contacts as ContactsIcon,
     Storage as StorageIcon,
     WorkspacePremium as WorkspacePremiumIcon,
+    Quiz as QuizIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -69,10 +70,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
     useEffect(() => {
         const path = location.pathname;
         const sections: { name: string; paths: string[] }[] = [
-            { name: 'Content Management', paths: ['/admin/daily-content', '/admin/promo-banner', '/admin/blog', '/admin/videos', '/admin/courses', '/admin/modules', '/admin/exam-categories'] },
+            { name: 'Content Management', paths: ['/admin/daily-content', '/admin/promo-banner', '/admin/blog', '/admin/videos', '/admin/courses', '/admin/modules', '/admin/module-quizzes', '/admin/exam-categories'] },
             { name: 'User Management', paths: ['/admin/users'] },
             { name: 'Subscriptions', paths: ['/admin/subscription-plans'] },
-            { name: 'Validation', paths: ['/admin/sentence-validation'] },
+            { name: 'Validation', paths: ['/admin/sentence-validation', '/admin/quiz-validation'] },
             { name: 'Platform Tools', paths: ['/admin/database-manager', '/admin/certification-management'] },
         ];
         const toExpand: string[] = [];
@@ -144,6 +145,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
                     icon: <FolderIcon />,
                 },
                 {
+                    title: 'Module Quizzes',
+                    path: '/admin/module-quizzes',
+                    icon: <QuizIcon />,
+                },
+                {
                     title: 'Exam Categories',
                     path: '/admin/exam-categories',
                     icon: <CategoryIcon />,
@@ -180,6 +186,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
                     title: 'Sentence Validation',
                     path: '/admin/sentence-validation',
                     icon: <RateReviewIcon />,
+                },
+                {
+                    title: 'Quiz Validation',
+                    path: '/admin/quiz-validation',
+                    icon: <QuizIcon />,
                 },
             ],
         },

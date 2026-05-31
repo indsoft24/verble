@@ -33,6 +33,38 @@ const courseCertificateRuleSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        requireModuleQuizzes: {
+            type: Boolean,
+            default: false,
+        },
+        minimumModuleQuizScore: {
+            type: Number,
+            default: 70,
+            min: 0,
+            max: 100,
+        },
+        requireDailySubmissions: {
+            type: Boolean,
+            default: false,
+        },
+        minimumDailySubmissionPercent: {
+            type: Number,
+            default: 70,
+            min: 0,
+            max: 100,
+        },
+        dailySubmissionLookbackDays: {
+            type: Number,
+            default: 90,
+            min: 1,
+            max: 365,
+        },
+        minimumOverallSubmissionPercent: {
+            type: Number,
+            default: 0,
+            min: 0,
+            max: 100,
+        },
         updatedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',

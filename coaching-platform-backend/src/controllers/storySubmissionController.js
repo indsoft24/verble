@@ -65,53 +65,48 @@ export const submitStorySummary = asyncHandler(async (req, res) => {
         throw new Error('Summary must contain between 2 and 5 non-empty sentences.');
     }
 
-    // Create the submission
-    // Initial points: 10 for submission (will be updated when sentences are reviewed)
-    // Final points will be: 10 base + (2 * number of correct sentences)
+    const PARTICIPATION_POINTS = 10;
+
     const submission = await UserStorySubmission.create({
         userId: req.user._id,
         storyId: storyId,
         summary: trimmedSummary,
-        pointsEarned: 10, // Base points for submission (will be updated after validation)
-        sentencesCorrect: 0, // Will be updated after validation
+        evaluationPoints: 0,
+        pointsEarned: 0,
+        sentencesCorrect: 0,
     });
 
-    // Record activity in gamification system (10 points for submission)
-    // Additional 2 points per correct sentence will be added after validation
+    let participationPointsAwarded = 0;
+    let levelUpResult;
+
     try {
-        await GamificationService.recordActivity(req.user._id.toString(), storyId, 10);
-        
-        // Check for level up
-        const levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
-        
-        res.status(201).json({
-            status: 'success',
-            message: 'Story summary submitted successfully!',
-            data: {
-                submission: {
-                    _id: submission._id,
-                    summary: submission.summary,
-                    pointsEarned: submission.pointsEarned,
-                    submittedAt: submission.createdAt
-                },
-                levelUp: levelUpResult
-            }
-        });
-    } catch (error) {
-        // Even if gamification fails, the submission is saved
-        res.status(201).json({
-            status: 'success',
-            message: 'Story summary submitted successfully!',
-            data: {
-                submission: {
-                    _id: submission._id,
-                    summary: submission.summary,
-                    pointsEarned: submission.pointsEarned,
-                    submittedAt: submission.createdAt
-                }
-            }
-        });
+        const gamificationResult = await GamificationService.recordActivity(
+            req.user._id.toString(),
+            storyId,
+            PARTICIPATION_POINTS
+        );
+        participationPointsAwarded = gamificationResult?.success ? PARTICIPATION_POINTS : 0;
+        levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
+    } catch {
+        // submission saved even if gamification fails
     }
+
+    res.status(201).json({
+        status: 'success',
+        message: 'Story summary submitted successfully!',
+        data: {
+            submission: {
+                _id: submission._id,
+                summary: submission.summary,
+                evaluationPoints: 0,
+                submittedAt: submission.createdAt,
+                isCorrect: submission.isCorrect,
+            },
+            participationPointsAwarded,
+            evaluationPoints: 0,
+            levelUp: levelUpResult,
+        },
+    });
 });
 
 /**

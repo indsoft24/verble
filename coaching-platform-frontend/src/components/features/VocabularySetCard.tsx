@@ -332,9 +332,12 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
             });
 
             if (response.data?.status === 'success') {
+                const participation =
+                    response.data.data.participationPointsAwarded ?? 10;
+                const vocabCount = response.data.data.submission.totalVocabWordsUsed;
                 setSubmitStatus({
                     type: 'success',
-                    message: `Great job! Your sentences have been submitted. You used ${response.data.data.submission.totalVocabWordsUsed} different vocabulary words. Points will be awarded after review (10 points per correct sentence).`
+                    message: `Great job! You used ${vocabCount} different vocabulary words. ${participation > 0 ? `+${participation} participation points toward the leaderboard. ` : ''}Pending review for evaluation score (10 per correct sentence).`,
                 });
                 setSentences([{ sentence: '', vocabWordsUsed: [] }]);
                 setSelectedVocabWords({});
@@ -487,7 +490,8 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                         Create sentences using vocabulary words (2-5 sentences)
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Use at least 5 different vocabulary words across all sentences. You will earn 10 points per correct sentence.
+                        Use at least 5 different vocabulary words. +10 participation points on submit; evaluation: 10 per
+                        correct sentence after review.
                     </Typography>
                     {!isToday && (
                         <Alert severity="info" sx={{ mb: 2 }}>

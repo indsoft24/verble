@@ -13,7 +13,7 @@ interface AuthContextType {
     login: (credentials: authService.LoginCredentials) => Promise<void>;
     loginWithPhonePin: (payload: authService.PhonePinLoginPayload) => Promise<void>;
     register: (userData: authService.RegisterData) => Promise<{ email: string }>;
-    verifyAndLogin: (payload: authService.VerificationPayload) => Promise<string>;
+    verifyAndLogin: (payload: authService.VerificationPayload) => Promise<authService.VerifyEmailResult>;
     resendOtp: (email: string) => Promise<string>;
     logout: () => Promise<void>;
     setUserContext: (userData: User | null, token?: string | null) => void;
@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(true);
         try {
             const response = await authService.verifyEmail(payload);
-            return response.message || 'Email verified. Check your email for your login PIN.';
+            return response;
         } catch (error) {
             throw error;
         } finally {

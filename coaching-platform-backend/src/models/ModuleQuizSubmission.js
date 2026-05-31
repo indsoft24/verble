@@ -73,6 +73,10 @@ const moduleQuizSubmissionSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    adminNotes: {
+        type: String,
+        trim: true,
+    },
 }, {
     timestamps: true
 });

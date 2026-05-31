@@ -133,43 +133,40 @@ export const submitSentence = asyncHandler(async (req, res) => {
         }
     }
 
+    const PARTICIPATION_POINTS = 10;
+    let participationPointsAwarded = 0;
+    let levelUpResult;
+
     try {
         const gamificationResult = await GamificationService.recordActivity(
             req.user._id.toString(),
             wordId,
-            uniqueSentences.length * 10
+            PARTICIPATION_POINTS
         );
-        
-        const levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
-        
-        res.status(201).json({
-            status: 'success',
-            message: 'Sentence submission saved successfully!',
-            data: {
-                submissions: createdSubmissions.map((submission) => ({
-                    _id: submission._id,
-                    sentence: submission.sentence,
-                    submittedAt: submission.createdAt,
-                    isCorrect: submission.isCorrect,
-                })),
-                pointsAwarded: gamificationResult?.success ? uniqueSentences.length * 10 : 0,
-                levelUp: levelUpResult
-            }
-        });
-    } catch (error) {
-        res.status(201).json({
-            status: 'success',
-            message: 'Sentence submission saved successfully!',
-            data: {
-                submissions: createdSubmissions.map((submission) => ({
-                    _id: submission._id,
-                    sentence: submission.sentence,
-                    submittedAt: submission.createdAt,
-                    isCorrect: submission.isCorrect,
-                }))
-            }
-        });
+        participationPointsAwarded = gamificationResult?.success ? PARTICIPATION_POINTS : 0;
+        levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
+    } catch {
+        // submissions saved even if gamification fails
     }
+
+    res.status(201).json({
+        status: 'success',
+        message: 'Sentence submission saved successfully!',
+        data: {
+            submissions: createdSubmissions.map((submission) => ({
+                _id: submission._id,
+                sentence: submission.sentence,
+                submittedAt: submission.createdAt,
+                isCorrect: submission.isCorrect,
+                evaluationPoints: submission.evaluationPoints ?? 0,
+                feedback: submission.feedback,
+                reviewedAt: submission.reviewedAt,
+            })),
+            participationPointsAwarded,
+            evaluationPoints: 0,
+            levelUp: levelUpResult,
+        },
+    });
 });
 
 /**

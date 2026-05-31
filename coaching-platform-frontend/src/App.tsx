@@ -38,6 +38,8 @@ const SubscriptionPlansPage = lazy(() => import('./pages/SubscriptionPlansPage')
 const SubscriptionPlanDetailPage = lazy(() => import('./pages/SubscriptionPlanDetailPage'));
 const MySubscriptionPage = lazy(() => import('./pages/MySubscriptionPage'));
 const MyCoursesPage = lazy(() => import('./pages/MyCoursesPage'));
+const ModuleQuizPage = lazy(() => import('./pages/ModuleQuizPage'));
+const CourseReportCardPage = lazy(() => import('./pages/CourseReportCardPage'));
 const CoursesListPage = lazy(() => import('./pages/CoursesListPage'));
 const CourseDetailPage = lazy(() => import('./pages/CourseDetailPage'));
 const ModuleVideosPage = lazy(() => import('./pages/ModuleVideosPage'));
@@ -70,6 +72,8 @@ const AdminDatabaseManagerPage = lazy(() => import('./pages/AdminDatabaseManager
 const AdminWebinarLeadsPage = lazy(() => import('./pages/AdminWebinarLeadsPage'));
 const AdminPromoBannerPage = lazy(() => import('./pages/AdminPromoBannerPage'));
 const AdminCertificationManagementPage = lazy(() => import('./pages/AdminCertificationManagementPage'));
+const AdminModuleQuizzesPage = lazy(() => import('./pages/AdminModuleQuizzesPage'));
+const AdminQuizValidationPage = lazy(() => import('./pages/AdminQuizValidationPage'));
 
 // Static Pages (Low priority - lazy load)
 const ContactUsPage = lazy(() => import('./pages/static/ContactUsPage'));
@@ -168,6 +172,7 @@ function AppContent() {
                             <Route path="/dashboard" element={<UserDashboardPage />} />
                             <Route path="/profile" element={<ProfilePage />} />
                             <Route path="/my-courses" element={<MyCoursesPage />} />
+                            <Route path="/my-courses/:courseId/report-card" element={<CourseReportCardPage />} />
                             <Route path="/videos" element={<VideosListPage />} />
                             <Route path="/videos/:videoId" element={<VideoWatchPage />} />
                             <Route path="/subscription-plans" element={<SubscriptionPlansPage />} />
@@ -176,6 +181,7 @@ function AppContent() {
                             <Route path="/notifications" element={<NotificationsPage />} />
                             <Route path="/professional-conversations" element={<ProfessionalConversationsPage />} />
                             <Route path="/modules/:moduleId/videos" element={<ModuleVideosPage />} />
+                            <Route path="/modules/:moduleId/quiz" element={<ModuleQuizPage />} />
                         </Route>
 
                         {/* Protected Admin Routes */}
@@ -201,6 +207,8 @@ function AppContent() {
                             <Route path='/admin/leads' element={<AdminWebinarLeadsPage />} />
                             <Route path='/admin/promo-banner' element={<AdminPromoBannerPage />} />
                             <Route path='/admin/certification-management' element={<AdminCertificationManagementPage />} />
+                            <Route path='/admin/module-quizzes' element={<AdminModuleQuizzesPage />} />
+                            <Route path='/admin/quiz-validation' element={<AdminQuizValidationPage />} />
                         </Route>
 
                         {/* Fallback Routes */}

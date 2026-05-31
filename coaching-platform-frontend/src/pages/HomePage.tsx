@@ -674,12 +674,14 @@ const HomePage: React.FC = () => {
                                                 >
                                                     {entry.name}
                                                 </Typography>
-                                                <Chip
-                                                    label={`${entry.points} pts`}
-                                                    size="small"
-                                                    color={entry.rank === 1 ? 'primary' : entry.rank === 2 ? 'secondary' : entry.rank === 3 ? 'success' : 'default'}
-                                                    sx={{ fontWeight: 'bold' }}
-                                                />
+                                                {entry.points != null && (
+                                                    <Chip
+                                                        label={`${entry.points} pts`}
+                                                        size="small"
+                                                        color={entry.rank === 1 ? 'primary' : entry.rank === 2 ? 'secondary' : entry.rank === 3 ? 'success' : 'default'}
+                                                        sx={{ fontWeight: 'bold' }}
+                                                    />
+                                                )}
                                             </Box>
                                         );
                                     })}
@@ -745,12 +747,14 @@ const HomePage: React.FC = () => {
                                                 >
                                                     {entry.name}
                                                 </Typography>
-                                                <Chip
-                                                    label={`${entry.points} pts`}
-                                                    size="small"
-                                                    color={entry.rank === 1 ? 'primary' : entry.rank === 2 ? 'secondary' : entry.rank === 3 ? 'success' : 'default'}
-                                                    sx={{ fontWeight: 'bold' }}
-                                                />
+                                                {entry.points != null && (
+                                                    <Chip
+                                                        label={`${entry.points} pts`}
+                                                        size="small"
+                                                        color={entry.rank === 1 ? 'primary' : entry.rank === 2 ? 'secondary' : entry.rank === 3 ? 'success' : 'default'}
+                                                        sx={{ fontWeight: 'bold' }}
+                                                    />
+                                                )}
                                             </Box>
                                         );
                                     })}

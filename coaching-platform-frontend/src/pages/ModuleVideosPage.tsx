@@ -24,6 +24,11 @@ import VideoLibraryOutlinedIcon from '@mui/icons-material/VideoLibraryOutlined';
 import parse from 'html-react-parser';
 
 import { getPublishedModuleWithVideosForUser, type ModuleDetailUser, type VideoListItemForModulePage } from '../services/courseUserService';
+import {
+    getModuleCompletionStatus,
+    getModuleQuizAvailability,
+    type ModuleCompletionStatus,
+} from '../services/moduleQuizService';
 import { extractId } from '../utils/idUtils';
 import { getSplashImageUrl, resolveBackendMediaUrl, getImageUrl } from '../utils/imageUtils';
 import UserLayout from '../components/layout/UserLayout';
@@ -64,6 +69,8 @@ const ModuleVideosPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [toast, setToast] = useState<ToastState | null>(null);
+    const [completionStatus, setCompletionStatus] = useState<ModuleCompletionStatus | null>(null);
+    const [quizAvailable, setQuizAvailable] = useState(false);
 
     const getVideoThumbUrl = (video: VideoListItemForModulePage): string => {
         if (video.thumbnailUrl) {
@@ -84,6 +91,17 @@ const ModuleVideosPage: React.FC = () => {
             const { module: fetchedModule, videos: fetchedVideos } = await getPublishedModuleWithVideosForUser(moduleId);
             setModuleDetails(fetchedModule);
             setVideos(fetchedVideos || []);
+            try {
+                const [completion, availability] = await Promise.all([
+                    getModuleCompletionStatus(moduleId),
+                    getModuleQuizAvailability(moduleId),
+                ]);
+                setCompletionStatus(completion);
+                setQuizAvailable(availability.canTakeQuiz);
+            } catch {
+                setCompletionStatus(null);
+                setQuizAvailable(false);
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to load module content.');
             setVideos([]);
@@ -299,6 +317,44 @@ const ModuleVideosPage: React.FC = () => {
                         </Box>
                     ) : null}
                 </Paper>
+
+                {completionStatus && (
+                    <Paper sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                        <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center" sx={{ mb: 1 }}>
+                            <Chip
+                                size="small"
+                                label={`Videos ${completionStatus.videosCompleted}/${completionStatus.totalVideos}`}
+                                color={completionStatus.videosComplete ? 'success' : 'default'}
+                            />
+                            {completionStatus.hasQuiz && (
+                                <Chip
+                                    size="small"
+                                    label={completionStatus.quizPassed ? 'Quiz passed' : 'Quiz pending'}
+                                    color={completionStatus.quizPassed ? 'success' : 'warning'}
+                                />
+                            )}
+                            {completionStatus.isCompleted && (
+                                <Chip size="small" label="Module complete" color="success" variant="outlined" />
+                            )}
+                        </Stack>
+                        {quizAvailable && moduleId && (
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={() => navigate(`/modules/${moduleId}/quiz`)}
+                            >
+                                Take module quiz
+                            </Button>
+                        )}
+                        {completionStatus.hasQuiz &&
+                            completionStatus.videosComplete &&
+                            !completionStatus.quizPassed && (
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                    Watch carefully, then pass the quiz to complete this module.
+                                </Typography>
+                            )}
+                    </Paper>
+                )}
 
                 <Paper
                     elevation={0}

@@ -5,14 +5,16 @@ import {
     submitModuleQuiz,
     getQuizSubmission,
     getModuleCompletion,
+    getModuleQuizAvailability,
 } from '../controllers/moduleQuizController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/:moduleId', protect, getModuleQuiz);
-router.post('/:moduleId/submit', protect, submitModuleQuiz);
-router.get('/:moduleId/submission/:submissionId', protect, getQuizSubmission);
+router.get('/:moduleId/availability', protect, getModuleQuizAvailability);
 router.get('/:moduleId/completion', protect, getModuleCompletion);
+router.get('/:moduleId/submission/:submissionId', protect, getQuizSubmission);
+router.post('/:moduleId/submit', protect, submitModuleQuiz);
+router.get('/:moduleId', protect, getModuleQuiz);
 
 export default router;

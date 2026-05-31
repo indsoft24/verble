@@ -194,8 +194,9 @@ export const verifyEmail = asyncHandler(async (req, res) => {
 
     await assignFreeFoundationToUser(user._id);
 
+    let plainPin;
     try {
-        await issueLoginPinForUser(user);
+        plainPin = await issueLoginPinForUser(user);
     } catch (err) {
         console.error('[verifyEmail] PIN email failed:', err);
         return res.status(500).json({
@@ -207,8 +208,8 @@ export const verifyEmail = asyncHandler(async (req, res) => {
     res.status(200).json({
         status: 'success',
         message:
-            'Email verified! Your 6-digit login PIN has been sent to your email. Sign in with your phone number and PIN. Keep your PIN safe—you can change it from your dashboard.',
-        data: { email: user.email },
+            'Email verified! Save your login PIN below—we also emailed it to you. Sign in with your phone number and PIN.',
+        data: { email: user.email, loginPin: plainPin },
     });
 });
 

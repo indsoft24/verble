@@ -88,7 +88,12 @@ const UserDashboardPage: React.FC = () => {
     const [recentJoiners, setRecentJoiners] = useState<RecentJoiner[]>([]);
     const [freeLeaderboard, setFreeLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [paidLeaderboard, setPaidLeaderboard] = useState<LeaderboardEntry[]>([]);
-    const [myRank, setMyRank] = useState<{ rank: number | null; points: number; leaderboardType: string } | null>(null);
+    const [myRank, setMyRank] = useState<{
+        rank: number | null;
+        points: number;
+        evaluationScore?: number;
+        leaderboardType: string;
+    } | null>(null);
     const [isLoadingAdditional, setIsLoadingAdditional] = useState(true);
 
     const fetchDailyContent = useCallback(async () => {
@@ -435,7 +440,22 @@ const UserDashboardPage: React.FC = () => {
                                 color="warning"
                                 variant="outlined"
                             />
-                            <Chip icon={<EmojiEventsIcon />} label={`${user.points || 0} pts`} size="small" variant="outlined" />
+                            <Chip
+                                icon={<EmojiEventsIcon />}
+                                label={`${user.points || 0} lb pts`}
+                                size="small"
+                                variant="outlined"
+                                title="Participation points (leaderboard)"
+                            />
+                            {(myRank?.evaluationScore ?? user.evaluationScore ?? 0) > 0 && (
+                                <Chip
+                                    label={`Eval ${myRank?.evaluationScore ?? user.evaluationScore}`}
+                                    size="small"
+                                    variant="outlined"
+                                    color="secondary"
+                                    title="Evaluation score after admin review"
+                                />
+                            )}
                         </Box>
                     </Box>
                 </Box>

@@ -52,6 +52,7 @@ import sentenceValidationRoutes from './sentenceValidationRoutes.js';
 import databaseManagerRoutes from './databaseManagerRoutes.js';
 import courseCertificateRoutes from './courseCertificateRoutes.js';
 import courseCertificateAdminRoutes from './courseCertificateAdminRoutes.js';
+import moduleQuizAdminRoutes from './moduleQuizAdminRoutes.js';
 import { serveCourseImage, serveModuleImage, serveSubscriptionImage, serveGeneralImage, getSupportedImageTypes } from '../controllers/imageServingController.js';
 
 
@@ -114,6 +115,7 @@ router.use('/validate-sentence', sentenceValidationRoutes); // Handles /api/vali
 router.use('/admin/database-manager', databaseManagerRoutes); // Handles /api/admin/database-manager/*
 router.use('/course-certificates', courseCertificateRoutes); // Handles /api/course-certificates/*
 router.use('/admin/certificates', courseCertificateAdminRoutes); // Handles /api/admin/certificates/*
+router.use('/admin/module-quizzes', moduleQuizAdminRoutes);
 
 // Image serving routes - General endpoint for Android app
 router.get('/images/types', getSupportedImageTypes);

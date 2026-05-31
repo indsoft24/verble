@@ -3,9 +3,11 @@ import apiClient from './apiClient';
 export interface UserWordSubmission {
     _id: string;
     sentence: string;
-    isCorrect?: boolean;
+    isCorrect?: boolean | null;
     feedback?: string;
     correction?: string;
+    evaluationPoints?: number;
+    reviewedAt?: string;
     createdAt: string;
 }
 

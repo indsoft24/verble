@@ -472,6 +472,11 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
         newCompletionCycle = 1;
     }
 
+    if (moduleComplete) {
+        const { syncModuleProgressFromVideos } = await import('../services/moduleQuizAccessService.js');
+        await syncModuleProgressFromVideos(userId, moduleId);
+    }
+
     return {
         progress: progress,
         setComplete: setComplete,

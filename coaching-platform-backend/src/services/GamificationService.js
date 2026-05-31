@@ -5,11 +5,10 @@ import mongoose from 'mongoose';
 
 class GamificationService {
     /**
-     * Record an activity completion for a user
+     * Record participation activity (leaderboard / streak). Does not affect evaluation score.
      * @param {string} userId - User ID
      * @param {string} contentId - DailyContent ID
-     * @param {number} points - Points to award for this completion (optional; defaults to 10)
-     * @returns {Promise<Object>} Result object with success status and updated user data
+     * @param {number} points - Participation points (defaults to 10)
      */
     static async recordActivity(userId, contentId, points = 10) {
         try {
@@ -86,6 +85,31 @@ class GamificationService {
         } catch (error) {
             throw new Error(`Failed to record activity: ${error.message}`);
         }
+    }
+
+    /**
+     * Apply admin evaluation score delta (separate from participation user.points).
+     * @param {string} userId
+     * @param {number} delta - Change in evaluation points (can be negative on re-review)
+     */
+    static async applyEvaluationDelta(userId, delta) {
+        if (!delta || delta === 0) {
+            return { success: true, delta: 0 };
+        }
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new Error('Invalid userId');
+        }
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+        user.evaluationScore = Math.max(0, (user.evaluationScore || 0) + delta);
+        await user.save();
+        return {
+            success: true,
+            delta,
+            evaluationScore: user.evaluationScore,
+        };
     }
 
     /**

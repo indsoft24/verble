@@ -39,18 +39,25 @@ export const uploadMaterial = async (req, res) => {
         return res.status(404).json({ message: 'Video not found.' });
     }
 
+    if (!file.buffer?.length) {
+        return res.status(400).json({ message: 'File upload failed — no file data received.' });
+    }
+
     const safeName = file.originalname.replace(/\s+/g, '-');
     const storagePath = path.posix.join('materials', `${Date.now()}-${safeName}`);
     const fullPath = localFilePath(storagePath);
+    const materialId = new mongoose.Types.ObjectId();
+    const storageUrl = `${getPublicOrigin()}/api/materials/${videoId}/${materialId}/download`;
 
     try {
         await fsPromises.mkdir(path.dirname(fullPath), { recursive: true });
         await fsPromises.writeFile(fullPath, file.buffer);
 
         const newMaterial = {
+            _id: materialId,
             label,
             fileName: file.originalname,
-            storageUrl: '',
+            storageUrl,
             storagePath,
             fileSize: file.size,
             fileType: file.mimetype,
@@ -59,11 +66,7 @@ export const uploadMaterial = async (req, res) => {
         video.associatedMaterials.push(newMaterial);
         await video.save();
 
-        const createdMaterial = video.associatedMaterials[video.associatedMaterials.length - 1];
-        createdMaterial.storageUrl = `${getPublicOrigin()}/api/materials/${videoId}/${createdMaterial._id}/download`;
-        await video.save();
-
-        const out = video.associatedMaterials.id(createdMaterial._id);
+        const out = video.associatedMaterials.id(materialId);
 
         res.status(201).json({
             status: 'success',

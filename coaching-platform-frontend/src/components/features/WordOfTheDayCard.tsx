@@ -275,7 +275,12 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
             });
 
             if (response.data?.status === 'success') {
-                setSubmitStatus({ type: 'success', message: 'Great job! Your sentences have been submitted.' });
+                const participation =
+                    response.data.data.participationPointsAwarded ?? 10;
+                setSubmitStatus({
+                    type: 'success',
+                    message: `Great job! ${participation > 0 ? `+${participation} participation points toward the leaderboard. ` : ''}Your sentences are pending review for evaluation score.`,
+                });
                 setSentences(['', '']);
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
@@ -895,8 +900,13 @@ const SubmissionHistoryItem: React.FC<{ submission: UserWordSubmission }> = ({ s
             >
                 {submission.sentence}
             </Typography>
-            {isWrong && correction && (
+            {isCorrect && (submission.evaluationPoints ?? 0) > 0 && (
                 <Typography variant="caption" sx={{ display: 'block', color: '#86efac', mt: 0.5 }}>
+                    Evaluation: {submission.evaluationPoints} pts
+                </Typography>
+            )}
+            {isWrong && correction && (
+                <Typography variant="caption" sx={{ display: 'block', color: '#fca5a5', mt: 0.5 }}>
                     {correction}
                 </Typography>
             )}

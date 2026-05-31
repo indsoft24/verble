@@ -26,7 +26,11 @@ const userStorySubmissionSchema = new mongoose.Schema({
     },
     pointsEarned: {
         type: Number,
-        default: 0, // 10 for submission + 2 per correct sentence
+        default: 0,
+    },
+    evaluationPoints: {
+        type: Number,
+        default: 0,
     },
     sentencesCorrect: {
         type: Number,

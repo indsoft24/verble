@@ -24,6 +24,7 @@ export async function ensureVideoStorageDirs() {
   const root = getVideoStorageRoot();
   await fs.mkdir(path.join(root, 'incoming'), { recursive: true });
   await fs.mkdir(path.join(root, 'processed'), { recursive: true });
+  await fs.mkdir(path.join(getUploadsRoot(), 'materials'), { recursive: true });
   return root;
 }
 

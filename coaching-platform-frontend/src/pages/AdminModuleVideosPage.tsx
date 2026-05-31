@@ -188,11 +188,22 @@ const AdminModuleVideosPage: React.FC = () => {
                 <Typography color="text.primary">{moduleDetails?.title || 'Module Videos'}</Typography>
             </Breadcrumbs>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h4" component="h1">Videos in: {moduleDetails?.title || '...'}</Typography>
-                <Button variant="contained" color="primary" startIcon={<AddLinkIcon />} onClick={handleOpenLinkVideoDialog}>
-                    Link Existing Video
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {moduleId && courseOfModule && (
+                        <Button
+                            variant="outlined"
+                            component={RouterLink}
+                            to={`/admin/module-quizzes?courseId=${courseOfModule._id}&moduleId=${moduleId}`}
+                        >
+                            Manage quiz
+                        </Button>
+                    )}
+                    <Button variant="contained" color="primary" startIcon={<AddLinkIcon />} onClick={handleOpenLinkVideoDialog}>
+                        Link Existing Video
+                    </Button>
+                </Box>
             </Box>
 
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

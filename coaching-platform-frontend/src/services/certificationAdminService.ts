@@ -15,6 +15,12 @@ export interface CertificateRuleRow {
         passingScore: number;
         minimumCompletionPercent: number;
         readOnlyMode: boolean;
+        requireModuleQuizzes: boolean;
+        minimumModuleQuizScore: number;
+        requireDailySubmissions: boolean;
+        minimumDailySubmissionPercent: number;
+        dailySubmissionLookbackDays: number;
+        minimumOverallSubmissionPercent: number;
     };
 }
 

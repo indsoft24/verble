@@ -14,6 +14,7 @@ import {
     Alert,
     Link as MuiLink,
 } from '@mui/material';
+import LoginPinRevealDialog from '../components/auth/LoginPinRevealDialog';
 
 const VerifyEmailPage: React.FC = () => {
     const { t } = useTranslation();
@@ -26,6 +27,8 @@ const VerifyEmailPage: React.FC = () => {
     const [otp, setOtp] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [resendCooldown, setResendCooldown] = useState(30);
+    const [revealedPin, setRevealedPin] = useState<string | null>(null);
+    const [pinDialogOpen, setPinDialogOpen] = useState(false);
     const { addNotification } = useNotification();
 
     useEffect(() => {
@@ -42,6 +45,11 @@ const VerifyEmailPage: React.FC = () => {
         return () => window.clearTimeout(timer);
     }, [resendCooldown]);
 
+    const handlePinDialogClose = () => {
+        setPinDialogOpen(false);
+        navigate('/login', { replace: true });
+    };
+
     const handleVerificationSubmit = async (e: FormEvent) => {
         e.preventDefault();
 
@@ -53,12 +61,15 @@ const VerifyEmailPage: React.FC = () => {
 
         setIsLoading(true);
         try {
-            const message = await verifyAndLogin({ email, otp });
-            addNotification(message, 'success');
-            navigate('/login', {
-                state: { pinSent: true },
-                replace: true,
-            });
+            const result = await verifyAndLogin({ email, otp });
+            addNotification(result.message, 'success');
+
+            if (result.loginPin) {
+                setRevealedPin(result.loginPin);
+                setPinDialogOpen(true);
+            } else {
+                navigate('/login', { replace: true });
+            }
         } catch (err: unknown) {
             const error = err as { message?: string };
             addNotification(error.message || t('auth.verificationFailed'), 'error');
@@ -84,60 +95,71 @@ const VerifyEmailPage: React.FC = () => {
     };
 
     return (
-        <Container component="main" maxWidth="xs" sx={{ px: { xs: 2, sm: 3 } }}>
-            <CssBaseline />
-            <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Typography component="h1" variant="h5" gutterBottom>
-                    {t('auth.verifyEmail')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
-                    {t('auth.verifyEmailSubtitle', { email })}
-                </Typography>
+        <>
+            <Container component="main" maxWidth="xs" sx={{ px: { xs: 2, sm: 3 } }}>
+                <CssBaseline />
+                <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Typography component="h1" variant="h5" gutterBottom>
+                        {t('auth.verifyEmail')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
+                        {t('auth.verifyEmailSubtitle', { email })}
+                    </Typography>
 
-                <Alert severity="info" sx={{ mb: 2, width: '100%' }}>
-                    {t('auth.afterVerifyPinEmail')}
-                </Alert>
+                    <Alert severity="info" sx={{ mb: 2, width: '100%' }}>
+                        {t('auth.afterVerifyPinShown')}
+                    </Alert>
 
-                <Box component="form" onSubmit={handleVerificationSubmit} sx={{ width: '100%' }}>
-                    <TextField
-                        margin="normal"
-                        required
-                        fullWidth
-                        label={t('auth.verificationCode')}
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        disabled={isLoading}
-                        inputProps={{
-                            maxLength: 6,
-                            style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem' },
-                        }}
-                    />
-                    <Button
-                        type="submit"
-                        fullWidth
-                        variant="contained"
-                        sx={{ mt: 2, mb: 1 }}
-                        disabled={isLoading || otp.length !== 6}
-                    >
-                        {isLoading ? <CircularProgress size={24} /> : t('auth.verifyAndGetPin')}
-                    </Button>
-                    <Button
-                        fullWidth
-                        variant="text"
-                        onClick={() => void handleResendOtp()}
-                        disabled={resendCooldown > 0 || isLoading}
-                    >
-                        {resendCooldown > 0
-                            ? t('auth.resendIn', { seconds: resendCooldown })
-                            : t('auth.resendCode')}
-                    </Button>
+                    <Box component="form" onSubmit={handleVerificationSubmit} sx={{ width: '100%' }}>
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            label={t('auth.verificationCode')}
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            disabled={isLoading || pinDialogOpen}
+                            inputProps={{
+                                maxLength: 6,
+                                style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem' },
+                            }}
+                        />
+                        <Button
+                            type="submit"
+                            fullWidth
+                            variant="contained"
+                            sx={{ mt: 2, mb: 1 }}
+                            disabled={isLoading || otp.length !== 6 || pinDialogOpen}
+                        >
+                            {isLoading ? <CircularProgress size={24} /> : t('auth.verifyAndGetPin')}
+                        </Button>
+                        <Button
+                            fullWidth
+                            variant="text"
+                            onClick={() => void handleResendOtp()}
+                            disabled={resendCooldown > 0 || isLoading || pinDialogOpen}
+                        >
+                            {resendCooldown > 0
+                                ? t('auth.resendIn', { seconds: resendCooldown })
+                                : t('auth.resendCode')}
+                        </Button>
+                    </Box>
+
+                    <MuiLink component={RouterLink} to="/login" variant="body2" sx={{ mt: 2 }}>
+                        {t('auth.backToLogin')}
+                    </MuiLink>
                 </Box>
+            </Container>
 
-                <MuiLink component={RouterLink} to="/login" variant="body2" sx={{ mt: 2 }}>
-                    {t('auth.backToLogin')}
-                </MuiLink>
-            </Box>
-        </Container>
+            {revealedPin && (
+                <LoginPinRevealDialog
+                    open={pinDialogOpen}
+                    loginPin={revealedPin}
+                    email={email ?? undefined}
+                    onClose={handlePinDialogClose}
+                />
+            )}
+        </>
     );
 };
 

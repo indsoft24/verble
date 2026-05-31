@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
-import { Alert, Box, Container, CssBaseline } from '@mui/material';
+import { Box, Container, CssBaseline } from '@mui/material';
 import PhonePinLoginForm from '../components/auth/PhonePinLoginForm';
 import * as authService from '../services/authService';
 
@@ -15,9 +15,8 @@ const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const locationState = location.state as { from?: { pathname?: string }; pinSent?: boolean } | null;
+    const locationState = location.state as { from?: { pathname?: string } } | null;
     const from = locationState?.from?.pathname || '/dashboard';
-    const pinSent = locationState?.pinSent;
 
     const handleSubmit = async (phoneNumber: string, pin: string) => {
         setIsLoading(true);
@@ -64,11 +63,7 @@ const LoginPage: React.FC = () => {
                     background: 'linear-gradient(160deg, #f0f4ff 0%, #ffffff 45%, #e8f5e9 100%)',
                 }}
             >
-                {pinSent && (
-                    <Alert severity="success" sx={{ mb: 2, width: '100%', maxWidth: 400 }}>
-                        {t('auth.pinEmailedAfterVerify')}
-                    </Alert>
-                )}
+
                 <PhonePinLoginForm
                     onSubmit={handleSubmit}
                     onForgotPin={handleForgotPin}
