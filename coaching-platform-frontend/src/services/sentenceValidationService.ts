@@ -47,9 +47,13 @@ export interface SentenceSubmission {
     sentenceValidations?: Array<{ sentenceIndex: number; isCorrect: boolean }>;
     totalVocabWordsUsed?: number;
     description?: string;
+    summaries?: string[];
+    answers?: Array<{ questionIndex: number; selectedOptionIndex: number }>;
+    questionScores?: Array<{ questionIndex: number; score: number }>;
     isCorrect: boolean | null;
     feedback?: string;
     pointsEarned?: number;
+    evaluationPoints?: number;
     sentencesCorrect?: number;
     reviewedBy?: string | { _id: string; name?: string; email?: string };
     reviewedAt?: string;
@@ -159,6 +163,22 @@ export const validateVocabSentences = async (
 ): Promise<ValidateSubmissionResponse> => {
     const response = await apiClient.put<ValidateSubmissionResponse>(
         `/validate-sentence/vocab/${submissionId}/sentences`,
+        data
+    );
+    return response.data;
+};
+
+export interface ValidateSceneSubmissionRequest {
+    score: number;
+    feedback?: string;
+}
+
+export const validateSceneSubmission = async (
+    submissionId: string,
+    data: ValidateSceneSubmissionRequest
+): Promise<ValidateSubmissionResponse> => {
+    const response = await apiClient.put<ValidateSubmissionResponse>(
+        `/validate-sentence/scene/${submissionId}/score`,
         data
     );
     return response.data;

@@ -213,6 +213,8 @@ export function getValidationContentDetails(
         const explanation = String(meta.explanation ?? '').trim();
         if (headline) lines.push({ label: 'Headline', value: headline });
         if (explanation) lines.push({ label: 'Scene / prompt', value: explanation });
+        const prompt = String(meta.submissionPrompt ?? '').trim();
+        if (prompt) lines.push({ label: 'Learner instructions', value: prompt });
         const keywords = meta.keywords as { word?: string }[] | undefined;
         if (Array.isArray(keywords) && keywords.length > 0) {
             const kw = keywords.map((k) => String(k.word ?? '').trim()).filter(Boolean).join(', ');

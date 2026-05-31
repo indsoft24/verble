@@ -2,8 +2,9 @@ import apiClient from './apiClient';
 
 export interface UserSceneSubmission {
     _id: string;
-    description: string;
-    sentences: string[];
+    summaries?: string[];
+    sentences?: string[];
+    description?: string;
     pointsEarned?: number;
     evaluationPoints?: number;
     sentencesCorrect?: number;
@@ -13,9 +14,7 @@ export interface UserSceneSubmission {
     createdAt: string;
 }
 
-export const getUserSceneSubmission = async (
-    sceneId: string
-): Promise<UserSceneSubmission | null> => {
+export const getUserSceneSubmission = async (sceneId: string): Promise<UserSceneSubmission | null> => {
     try {
         const response = await apiClient.get<{
             status: string;
@@ -25,4 +24,24 @@ export const getUserSceneSubmission = async (
     } catch {
         return null;
     }
+};
+
+export const submitSceneSummaries = async (
+    sceneId: string,
+    summaries: string[]
+): Promise<{
+    participationPointsAwarded?: number;
+    submission: UserSceneSubmission;
+}> => {
+    const response = await apiClient.post<{
+        status: string;
+        data: {
+            participationPointsAwarded?: number;
+            submission: UserSceneSubmission;
+        };
+    }>('/submit-scene-description', { sceneId, summaries });
+    return {
+        participationPointsAwarded: response.data.data.participationPointsAwarded,
+        submission: response.data.data.submission,
+    };
 };

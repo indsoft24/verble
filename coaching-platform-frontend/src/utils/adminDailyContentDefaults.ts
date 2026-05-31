@@ -32,6 +32,7 @@ export const emptyPuzzleQuestion = () => ({
     correct_idx: 0,
 });
 
+
 export const emptyInstagramPost = () => ({
     imageUrl: '',
     credit: '',
@@ -132,7 +133,8 @@ export function getDefaultMetadataForType(
                 gifUrl: '',
                 explanation: '',
                 hindiSummary: '',
-                audio: '',
+                submissionPrompt:
+                    'Write short summaries in your own words. You may submit 2 to 5 summaries about what you understood from the scene.',
                 keywords: [emptySceneKeyword(), emptySceneKeyword(), emptySceneKeyword()],
             };
         case 'SPEECH':

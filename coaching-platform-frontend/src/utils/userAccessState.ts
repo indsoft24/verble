@@ -54,15 +54,26 @@ const STREAK_KEYS: Record<'FREE' | 'BRONZE' | 'SILVER', 'free' | 'bronze' | 'sil
     SILVER: 'silver',
 };
 
+const PAID_SUBSCRIPTION_STATUSES = new Set([
+    'active',
+    'pending_cancellation',
+    'trial',
+    'future_active',
+]);
+
+/** Subscription is within its billing window and still grants access. */
+export const isSubscriptionCurrentlyValid = (sub: UserSubscriptionInstance): boolean => {
+    const now = Date.now();
+    const start = new Date(sub.startDate).getTime();
+    const end = new Date(sub.endDate).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end)) return false;
+    if (start > now || end < now) return false;
+    return PAID_SUBSCRIPTION_STATUSES.has(sub.status);
+};
+
 export const getActiveSubscriptions = (user: User): UserSubscriptionInstance[] => {
     if (!user.subscriptions?.length) return [];
-    const now = Date.now();
-    return user.subscriptions.filter((sub) => {
-        if (sub.status !== 'active') return false;
-        const start = new Date(sub.startDate).getTime();
-        const end = new Date(sub.endDate).getTime();
-        return start <= now && end >= now;
-    });
+    return user.subscriptions.filter(isSubscriptionCurrentlyValid);
 };
 
 export const hasActiveGold = (user: User): boolean =>
@@ -106,6 +117,15 @@ export const getEffectiveUnlockedLevels = (user: User): string[] => {
 export const hasTierAccess = (user: User, tier: MembershipTier): boolean => {
     if (tier === 'FREE') return true;
     return getEffectiveUnlockedLevels(user).includes(tier);
+};
+
+/** Gold-tier daily content (scene, speech, lyrics, feed). */
+export const canAccessGoldTierContent = (user: User | null | undefined): boolean => {
+    if (!user) return false;
+    if (hasTierAccess(user, 'GOLD') || hasTierAccess(user, 'FULL_COURSE')) return true;
+    if (hasActiveGold(user) || hasActiveFullCourse(user)) return true;
+    if (user.membershipLevel === 'GOLD' || user.membershipLevel === 'FULL_COURSE') return true;
+    return false;
 };
 
 /** Header badge — never show FULL_COURSE/GOLD without active paid subscription. */

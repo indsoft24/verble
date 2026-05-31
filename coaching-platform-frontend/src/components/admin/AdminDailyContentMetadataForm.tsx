@@ -470,6 +470,17 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
         return (
             <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid size={{ xs: 12 }}>
+                    <Alert severity="info" sx={{ mb: 1 }}>
+                        <Typography variant="subtitle2" fontWeight={700}>
+                            Explain the Scene — summary submissions
+                        </Typography>
+                        <Typography variant="body2">
+                            Learners write 2–5 short summaries in their own words (no fixed questions). After
+                            submit, an admin awards one overall score from 0–50 points.
+                        </Typography>
+                    </Alert>
+                </Grid>
+                <Grid size={{ xs: 12 }}>
                     <TextField
                         fullWidth
                         label="Scene headline (shown to learners)"
@@ -513,6 +524,17 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                         onChange={(e) => onChange('hindiSummary', e.target.value)}
                         multiline
                         rows={3}
+                    />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                    <TextField
+                        fullWidth
+                        label="Instructions for learners (optional)"
+                        value={(metadata.submissionPrompt as string) || ''}
+                        onChange={(e) => onChange('submissionPrompt', e.target.value)}
+                        multiline
+                        rows={2}
+                        helperText="Shown on the submission card. Default explains 2–5 summaries and 0–50 scoring."
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>

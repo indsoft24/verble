@@ -12,19 +12,35 @@ import {
     Alert,
     Chip,
     alpha,
+    LinearProgress,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import { keyframes } from '@emotion/react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import StopIcon from '@mui/icons-material/Stop';
 import SendIcon from '@mui/icons-material/Send';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
-import { getUserSceneSubmission } from '../../services/sceneSubmissionService';
+import {
+    getUserSceneSubmission,
+    submitSceneSummaries,
+    type UserSceneSubmission,
+} from '../../services/sceneSubmissionService';
 import EvaluationStatusBanner from './EvaluationStatusBanner';
+import {
+    countFilledSummaries,
+    getSceneSubmissionSummaries,
+    isSceneSubmissionReady,
+    SCENE_MAX_EVALUATION_SCORE,
+    SCENE_MAX_SUMMARIES,
+    SCENE_MIN_SUMMARIES,
+} from '../../utils/sceneActivityUtils';
 import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
+import { Link as RouterLink } from 'react-router-dom';
+import { canAccessGoldTierContent } from '../../utils/userAccessState';
 import {
     activityCardShell,
     getContentDisplayNumber,
@@ -38,6 +54,7 @@ interface SceneCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
     onSubmissionSuccess?: () => void;
+    /** Optional override; otherwise derived from the logged-in user's subscription. */
     hasGoldAccess?: boolean;
 }
 
@@ -71,10 +88,10 @@ const SceneCard: React.FC<SceneCardProps> = ({
     data,
     onContentChange,
     onSubmissionSuccess,
-    hasGoldAccess = false,
+    hasGoldAccess: hasGoldAccessProp,
 }) => {
     const { user } = useAuth();
-    const [description, setDescription] = useState('');
+    const [summaryDrafts, setSummaryDrafts] = useState<string[]>(['', '']);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [playingKey, setPlayingKey] = useState<string | null>(null);
@@ -83,18 +100,13 @@ const SceneCard: React.FC<SceneCardProps> = ({
     const [currentContent, setCurrentContent] = useState<DailyContent>(data);
     const [hasPrevious, setHasPrevious] = useState(false);
     const [hasNext, setHasNext] = useState(false);
-    const [existingSubmission, setExistingSubmission] = useState<{
-        description: string;
-        evaluationPoints?: number;
-        pointsEarned?: number;
-        isCorrect?: boolean | null;
-        feedback?: string;
-        reviewedAt?: string;
-    } | null>(null);
+    const [existingSubmission, setExistingSubmission] = useState<UserSceneSubmission | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const synthRef = useRef<SpeechSynthesis | null>(null);
 
     const needsGold = isGoldLikeLevel(currentContent.level);
+    const hasGoldAccess =
+        hasGoldAccessProp ?? (user ? canAccessGoldTierContent(user) : false);
     const canAccessGoldContent = !needsGold || hasGoldAccess;
 
     const loadSubmission = useCallback(async (sceneId: string) => {
@@ -103,18 +115,13 @@ const SceneCard: React.FC<SceneCardProps> = ({
             return;
         }
         const sub = await getUserSceneSubmission(sceneId);
-        setExistingSubmission(
-            sub
-                ? {
-                      description: sub.description,
-                      evaluationPoints: sub.evaluationPoints,
-                      pointsEarned: sub.pointsEarned,
-                      isCorrect: sub.isCorrect,
-                      feedback: sub.feedback,
-                      reviewedAt: sub.reviewedAt,
-                  }
-                : null
-        );
+        setExistingSubmission(sub);
+        if (sub) {
+            const texts = getSceneSubmissionSummaries(sub);
+            if (texts.length > 0) {
+                setSummaryDrafts(texts);
+            }
+        }
     }, [user]);
 
     const checkAdjacent = useCallback(async (contentId: string) => {
@@ -133,7 +140,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
 
     useEffect(() => {
         setCurrentContent(data);
-        setDescription('');
+        setSummaryDrafts(['', '']);
         setSubmitStatus(null);
         void loadSubmission(data._id);
         void checkAdjacent(data._id);
@@ -188,7 +195,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
             const adjacentContent = await getAdjacentContent(currentContent._id, direction);
             if (adjacentContent) {
                 setCurrentContent(adjacentContent);
-                setDescription('');
+                setSummaryDrafts(['', '']);
                 onContentChange?.(adjacentContent);
                 await loadSubmission(adjacentContent._id);
                 await checkAdjacent(adjacentContent._id);
@@ -205,12 +212,37 @@ const SceneCard: React.FC<SceneCardProps> = ({
         }
     };
 
-    const handleSubmitDescription = async (e: React.FormEvent) => {
+    const submissionPrompt =
+        String(currentContent.metadata?.submissionPrompt || '').trim() ||
+        `Write ${SCENE_MIN_SUMMARIES} to ${SCENE_MAX_SUMMARIES} short summaries in your own words about what you understood from the scene. You do not need to fill every box—only submit summaries you are happy with.`;
+
+    const filledCount = countFilledSummaries(summaryDrafts);
+    const canSubmitSummaries = isSceneSubmissionReady(summaryDrafts);
+
+    const updateSummaryDraft = (index: number, value: string) => {
+        setSummaryDrafts((prev) => {
+            const next = [...prev];
+            next[index] = value;
+            return next;
+        });
+    };
+
+    const addSummaryField = () => {
+        if (summaryDrafts.length >= SCENE_MAX_SUMMARIES) return;
+        setSummaryDrafts((prev) => [...prev, '']);
+    };
+
+    const removeSummaryField = (index: number) => {
+        if (summaryDrafts.length <= SCENE_MIN_SUMMARIES) return;
+        setSummaryDrafts((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSubmitSummaries = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!isToday) {
             setSubmitStatus({
                 type: 'error',
-                message: "You can only submit a description for today's scene.",
+                message: "You can only submit summaries for today's scene.",
             });
             return;
         }
@@ -221,45 +253,41 @@ const SceneCard: React.FC<SceneCardProps> = ({
             });
             return;
         }
-        if (!description.trim()) {
-            setSubmitStatus({ type: 'error', message: 'Please describe the scene before submitting.' });
-            return;
-        }
         if (existingSubmission) {
             setSubmitStatus({ type: 'error', message: 'You have already submitted for this scene.' });
+            return;
+        }
+
+        const summaries = summaryDrafts.map((s) => s.trim()).filter(Boolean);
+        if (!isSceneSubmissionReady(summaries)) {
+            setSubmitStatus({
+                type: 'error',
+                message: `Please write at least ${SCENE_MIN_SUMMARIES} summaries (up to ${SCENE_MAX_SUMMARIES}).`,
+            });
             return;
         }
 
         setIsSubmitting(true);
         setSubmitStatus(null);
         try {
-            const response = await apiClient.post('/submit-scene-description', {
-                sceneId: currentContent._id,
-                description: description.trim(),
+            const { participationPointsAwarded } = await submitSceneSummaries(
+                currentContent._id,
+                summaries
+            );
+            const participation = participationPointsAwarded ?? 10;
+            setSubmitStatus({
+                type: 'success',
+                message: `Submitted ${summaries.length} summar${summaries.length === 1 ? 'y' : 'ies'}! ${participation > 0 ? `+${participation} participation points on the leaderboard. ` : ''}An instructor will review your work and award up to ${SCENE_MAX_EVALUATION_SCORE} evaluation points.`,
             });
-            if (response.data?.status === 'success') {
-                const participation =
-                    response.data.data.participationPointsAwarded ?? 10;
-                setSubmitStatus({
-                    type: 'success',
-                    message: `Submitted! ${participation > 0 ? `+${participation} participation points toward the leaderboard. ` : ''}Pending review for evaluation score.`,
-                });
-                setDescription('');
-                setShowConfetti(true);
-                setTimeout(() => setShowConfetti(false), 3000);
-                await loadSubmission(currentContent._id);
-                onSubmissionSuccess?.();
-            } else {
-                setSubmitStatus({
-                    type: 'error',
-                    message: response.data?.message || 'Failed to submit description',
-                });
-            }
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 3000);
+            await loadSubmission(currentContent._id);
+            onSubmissionSuccess?.();
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string } } };
             setSubmitStatus({
                 type: 'error',
-                message: err.response?.data?.message || 'Failed to submit description. Please try again.',
+                message: err.response?.data?.message || 'Failed to submit summaries. Please try again.',
             });
         } finally {
             setIsSubmitting(false);
@@ -279,6 +307,13 @@ const SceneCard: React.FC<SceneCardProps> = ({
         translation_hi?: string;
     }>;
     const narrationAudio = currentContent.metadata?.audio as string | undefined;
+    const reviewedScore =
+        existingSubmission?.evaluationPoints ?? existingSubmission?.pointsEarned ?? 0;
+    const hasReviewScore = Boolean(existingSubmission?.reviewedAt);
+    const locked = Boolean(existingSubmission);
+    const displaySummaries = locked
+        ? getSceneSubmissionSummaries(existingSubmission!)
+        : summaryDrafts;
 
     const SpeakerButton: React.FC<{ text: string; playKey: string; audioUrl?: string }> = ({
         text,
@@ -298,8 +333,36 @@ const SceneCard: React.FC<SceneCardProps> = ({
     if (!canAccessGoldContent) {
         return (
             <Box sx={{ maxWidth: 800, mx: 'auto' }}>
-                <Alert severity="warning">
-                    This scene is part of the Gold track. Upgrade to Gold to view and submit scene descriptions.
+                <Alert
+                    severity="warning"
+                    sx={{ alignItems: 'center' }}
+                    action={
+                        user ? (
+                            <Button
+                                color="inherit"
+                                size="small"
+                                component={RouterLink}
+                                to="/subscription-plans"
+                                sx={{ fontWeight: 700 }}
+                            >
+                                View plans
+                            </Button>
+                        ) : (
+                            <Button
+                                color="inherit"
+                                size="small"
+                                component={RouterLink}
+                                to="/login"
+                                sx={{ fontWeight: 700 }}
+                            >
+                                Log in
+                            </Button>
+                        )
+                    }
+                >
+                    {user
+                        ? 'Explain the Scene is included with a Gold or Full Course subscription. Upgrade to unlock today\'s scene and submit your description.'
+                        : 'Log in with a Gold or Full Course account to view and submit scene descriptions.'}
                 </Alert>
             </Box>
         );
@@ -460,72 +523,178 @@ const SceneCard: React.FC<SceneCardProps> = ({
                         variant="overline"
                         sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2, display: 'block', mb: 1 }}
                     >
-                        Describe the scene in your own words
+                        Your scene summaries
                     </Typography>
                     <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65), mb: 2 }}>
-                        +10 participation points when you submit (leaderboard). After review, evaluation score: up to
-                        10 + 2 per correct sentence.
+                        {submissionPrompt} +10 participation points when you submit. After review, earn up to{' '}
+                        {SCENE_MAX_EVALUATION_SCORE} evaluation points for your overall submission.
                     </Typography>
 
                     {!isToday && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            Past scene — browse only. Submit on today&apos;s scene.
+                            Past scene — browse only. Submit summaries on today&apos;s scene.
                         </Alert>
                     )}
-                    {existingSubmission && isToday && (
+
+                    {existingSubmission && (
                         <>
                             <Alert severity="success" sx={{ mb: 2 }}>
-                                You already submitted this scene.
+                                You submitted {getSceneSubmissionSummaries(existingSubmission).length} summar
+                                {getSceneSubmissionSummaries(existingSubmission).length === 1 ? 'y' : 'ies'}
+                                {existingSubmission.createdAt
+                                    ? ` on ${new Date(existingSubmission.createdAt).toLocaleDateString()}`
+                                    : ''}
+                                .
                             </Alert>
-                            <EvaluationStatusBanner
-                                isCorrect={existingSubmission.isCorrect}
-                                evaluationPoints={existingSubmission.evaluationPoints}
-                                pointsEarned={existingSubmission.pointsEarned}
-                                feedback={existingSubmission.feedback}
-                                reviewedAt={existingSubmission.reviewedAt}
-                            />
+                            {hasReviewScore ? (
+                                <Alert severity="success" sx={{ mb: 2 }}>
+                                    <Typography variant="body2" fontWeight={700}>
+                                        Evaluation score: {reviewedScore} / {SCENE_MAX_EVALUATION_SCORE}
+                                    </Typography>
+                                    <LinearProgress
+                                        variant="determinate"
+                                        value={Math.min(
+                                            100,
+                                            (reviewedScore / SCENE_MAX_EVALUATION_SCORE) * 100
+                                        )}
+                                        sx={{ mt: 1, height: 8, borderRadius: 1, bgcolor: alpha('#fff', 0.1) }}
+                                    />
+                                    {existingSubmission.feedback && (
+                                        <Typography variant="body2" sx={{ mt: 1 }}>
+                                            Feedback: {existingSubmission.feedback}
+                                        </Typography>
+                                    )}
+                                </Alert>
+                            ) : (
+                                <EvaluationStatusBanner
+                                    isCorrect={existingSubmission.isCorrect}
+                                    evaluationPoints={existingSubmission.evaluationPoints}
+                                    pointsEarned={existingSubmission.pointsEarned}
+                                    feedback={existingSubmission.feedback}
+                                    reviewedAt={existingSubmission.reviewedAt}
+                                />
+                            )}
                         </>
                     )}
+
                     {submitStatus && (
                         <Alert severity={submitStatus.type} sx={{ mb: 2 }}>
                             {submitStatus.message}
                         </Alert>
                     )}
 
-                    <Box component="form" onSubmit={handleSubmitDescription}>
-                        {isToday && !existingSubmission && (
-                            <>
+                    <Box component="form" onSubmit={handleSubmitSummaries}>
+                        {displaySummaries.map((_, idx) => (
+                            <Box
+                                key={idx}
+                                sx={{
+                                    mb: 2,
+                                    p: 2,
+                                    borderRadius: 2,
+                                    bgcolor: alpha('#1a1f2e', 0.55),
+                                    border: `1px solid ${alpha(GOLD_ACCENT, 0.2)}`,
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        mb: 1,
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#f8fafc' }}>
+                                        Summary {idx + 1}
+                                    </Typography>
+                                    {!locked &&
+                                        summaryDrafts.length > SCENE_MIN_SUMMARIES &&
+                                        idx >= SCENE_MIN_SUMMARIES && (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => removeSummaryField(idx)}
+                                                aria-label="Remove summary"
+                                                sx={{ color: alpha('#e2e8f0', 0.6) }}
+                                            >
+                                                <RemoveCircleOutlineIcon fontSize="small" />
+                                            </IconButton>
+                                        )}
+                                </Box>
                                 <TextField
                                     fullWidth
                                     multiline
-                                    rows={6}
-                                    placeholder="Describe what you see in the scene..."
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    disabled={isSubmitting || !user}
+                                    minRows={3}
+                                    placeholder="Describe part of the scene in your own words…"
+                                    value={locked ? displaySummaries[idx] || '' : summaryDrafts[idx] || ''}
+                                    onChange={(e) => updateSummaryDraft(idx, e.target.value)}
+                                    disabled={locked || !isToday || isSubmitting}
                                     sx={{
-                                        mb: 2,
                                         '& .MuiOutlinedInput-root': {
-                                            bgcolor: alpha('#1a1f2e', 0.6),
+                                            bgcolor: alpha('#0f172a', 0.4),
                                             color: '#e2e8f0',
                                         },
                                     }}
                                 />
-                                <Button
-                                    type="submit"
-                                    variant="contained"
-                                    size="large"
-                                    endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-                                    disabled={!description.trim() || isSubmitting || !user}
-                                    sx={{ bgcolor: GOLD_ACCENT, color: '#0f172a', fontWeight: 800, minWidth: 180 }}
+                            </Box>
+                        ))}
+
+                        {!locked && isToday && user && (
+                            <>
+                                {summaryDrafts.length < SCENE_MAX_SUMMARIES && (
+                                    <Button
+                                        type="button"
+                                        variant="outlined"
+                                        startIcon={<AddIcon />}
+                                        onClick={addSummaryField}
+                                        sx={{
+                                            mb: 2,
+                                            borderColor: alpha(GOLD_ACCENT, 0.5),
+                                            color: GOLD_ACCENT,
+                                        }}
+                                    >
+                                        Add another summary ({summaryDrafts.length}/{SCENE_MAX_SUMMARIES})
+                                    </Button>
+                                )}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 2,
+                                        pt: 1,
+                                    }}
                                 >
-                                    {isSubmitting ? 'Submitting...' : 'Submit Description'}
-                                </Button>
+                                    <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.55) }}>
+                                        {filledCount} of {SCENE_MAX_SUMMARIES} filled · minimum {SCENE_MIN_SUMMARIES}{' '}
+                                        to submit
+                                    </Typography>
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        size="large"
+                                        endIcon={
+                                            isSubmitting ? (
+                                                <CircularProgress size={20} color="inherit" />
+                                            ) : (
+                                                <SendIcon />
+                                            )
+                                        }
+                                        disabled={!canSubmitSummaries || isSubmitting}
+                                        sx={{
+                                            bgcolor: GOLD_ACCENT,
+                                            color: '#0f172a',
+                                            fontWeight: 800,
+                                            minWidth: 200,
+                                        }}
+                                    >
+                                        {isSubmitting ? 'Submitting…' : 'Submit summaries'}
+                                    </Button>
+                                </Box>
                             </>
                         )}
                         {!user && (
                             <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.6), mt: 1 }}>
-                                Please log in to submit a description.
+                                Please log in to submit your summaries.
                             </Typography>
                         )}
                     </Box>

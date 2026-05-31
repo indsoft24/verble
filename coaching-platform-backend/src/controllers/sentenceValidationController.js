@@ -307,6 +307,89 @@ export const validateVocabSentences = asyncHandler(async (req, res) => {
     });
 });
 
+const SCENE_MAX_EVALUATION_SCORE = 50;
+
+function getSceneSubmissionTexts(submission) {
+    if (Array.isArray(submission.summaries) && submission.summaries.length > 0) {
+        return submission.summaries.map((s) => String(s ?? '').trim()).filter(Boolean);
+    }
+    if (Array.isArray(submission.sentences) && submission.sentences.length > 0) {
+        return submission.sentences.map((s) => String(s ?? '').trim()).filter(Boolean);
+    }
+    if (submission.description?.trim()) {
+        return [submission.description.trim()];
+    }
+    return [];
+}
+
+/**
+ * @desc    Score a scene submission (0–50 overall)
+ * @route   PUT /api/validate-sentence/scene/:submissionId/score
+ * @access  Private (Admin)
+ */
+export const validateSceneSubmission = asyncHandler(async (req, res) => {
+    const { submissionId } = req.params;
+    const { score, feedback } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(submissionId)) {
+        res.status(400);
+        throw new Error('Invalid submission ID format.');
+    }
+
+    const submission = await UserSceneSubmission.findById(submissionId);
+    if (!submission) {
+        res.status(404);
+        throw new Error('Scene submission not found.');
+    }
+
+    const texts = getSceneSubmissionTexts(submission);
+    if (texts.length === 0 && (!submission.answers || submission.answers.length === 0)) {
+        res.status(400);
+        throw new Error('This submission has no content to score.');
+    }
+
+    let evaluationScore = Number(score);
+    if (Number.isNaN(evaluationScore)) {
+        res.status(400);
+        throw new Error('score must be a number between 0 and 50.');
+    }
+    evaluationScore = Math.max(0, Math.min(SCENE_MAX_EVALUATION_SCORE, Math.round(evaluationScore)));
+
+    submission.sentencesCorrect = texts.length;
+    submission.isCorrect = evaluationScore >= Math.ceil(SCENE_MAX_EVALUATION_SCORE / 2);
+    submission.reviewedBy = req.user._id;
+    submission.reviewedAt = new Date();
+    if (feedback !== undefined) {
+        submission.feedback = feedback;
+    }
+
+    const { delta } = await applyEvaluationToSubmission(
+        submission,
+        'scene',
+        evaluationScore,
+        texts.length
+    );
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Scene submission scored successfully.',
+        data: {
+            submission: {
+                _id: submission._id,
+                evaluationPoints: submission.evaluationPoints,
+                pointsEarned: submission.evaluationPoints,
+                isCorrect: submission.isCorrect,
+                feedback: submission.feedback,
+                reviewedAt: submission.reviewedAt,
+                evaluationDelta: delta,
+            },
+        },
+    });
+});
+
+/** @deprecated Use validateSceneSubmission — kept for older admin clients. */
+export const validateSceneQuestions = validateSceneSubmission;
+
 /**
  * @desc    Get all pending submissions for review
  * @route   GET /api/validate-sentence/pending

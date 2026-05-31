@@ -30,6 +30,7 @@ import {
     Tabs,
     Tab,
     alpha,
+    Slider,
     Table,
     TableBody,
     TableCell,
@@ -48,10 +49,16 @@ import {
     validateSubmission,
     validateStorySentences,
     validateVocabSentences,
+    validateSceneSubmission,
     type SentenceSubmission,
 } from '../services/sentenceValidationService';
 import VocabSubmissionPreview from '../components/admin/VocabSubmissionPreview';
 import { formatVocabSubmissionPlain, normalizeVocabSentences } from '../utils/vocabSubmissionDisplay';
+import {
+    formatSceneSummariesForAdmin,
+    getSceneSubmissionSummaries,
+    SCENE_MAX_EVALUATION_SCORE,
+} from '../utils/sceneActivityUtils';
 import { format } from 'date-fns';
 import {
     VALIDATION_ACTIVITY_TABS,
@@ -83,6 +90,7 @@ const AdminSentenceValidationPage: React.FC = () => {
     const [isCorrect, setIsCorrect] = useState<boolean>(true);
     const [storySentenceValidations, setStorySentenceValidations] = useState<boolean[]>([]);
     const [vocabSentenceValidations, setVocabSentenceValidations] = useState<boolean[]>([]);
+    const [sceneEvaluationScore, setSceneEvaluationScore] = useState(0);
 
     const fetchSubmissions = useCallback(async () => {
         setIsLoading(true);
@@ -142,6 +150,7 @@ const AdminSentenceValidationPage: React.FC = () => {
             case 'vocab':
                 return formatVocabSubmissionPlain(submission.sentences);
             case 'scene':
+                return formatSceneSummariesForAdmin(getSceneSubmissionSummaries(submission));
             case 'speech':
                 return submission.description || submission.sentences?.join('\n') || '';
             default:
@@ -166,6 +175,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                 })
             );
             setVocabSentenceValidations([]);
+            setSceneEvaluationScore(0);
         } else if (submission.submissionType === 'vocab') {
             const entries = normalizeVocabSentences(submission.sentences);
             const existing = submission.sentenceValidations || [];
@@ -176,9 +186,18 @@ const AdminSentenceValidationPage: React.FC = () => {
                 })
             );
             setStorySentenceValidations([]);
+            setSceneEvaluationScore(0);
+        } else if (submission.submissionType === 'scene') {
+            const reviewed = submission.evaluationPoints ?? submission.pointsEarned;
+            setSceneEvaluationScore(
+                typeof reviewed === 'number' && submission.reviewedAt ? reviewed : 0
+            );
+            setStorySentenceValidations([]);
+            setVocabSentenceValidations([]);
         } else {
             setStorySentenceValidations([]);
             setVocabSentenceValidations([]);
+            setSceneEvaluationScore(0);
         }
         setValidationDialogOpen(true);
     };
@@ -189,10 +208,15 @@ const AdminSentenceValidationPage: React.FC = () => {
         setValidationFeedback('');
         setStorySentenceValidations([]);
         setVocabSentenceValidations([]);
+        setSceneEvaluationScore(0);
     };
 
     const handleQuickValidate = async (submission: SentenceSubmission, correct: boolean) => {
-        if (submission.submissionType === 'story' || submission.submissionType === 'vocab') {
+        if (
+            submission.submissionType === 'story' ||
+            submission.submissionType === 'vocab' ||
+            submission.submissionType === 'scene'
+        ) {
             handleOpenValidationDialog(submission);
             return;
         }
@@ -229,6 +253,11 @@ const AdminSentenceValidationPage: React.FC = () => {
                 }));
                 await validateVocabSentences(selectedSubmission._id, {
                     sentenceValidations,
+                    feedback: validationFeedback || undefined,
+                });
+            } else if (selectedSubmission.submissionType === 'scene') {
+                await validateSceneSubmission(selectedSubmission._id, {
+                    score: sceneEvaluationScore,
                     feedback: validationFeedback || undefined,
                 });
             } else {
@@ -556,7 +585,13 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                                 </IconButton>
                                                             </span>
                                                         </Tooltip>
-                                                        <Tooltip title="Edit / story detail">
+                                                        <Tooltip
+                                                            title={
+                                                                submission.submissionType === 'scene'
+                                                                    ? 'Score answers'
+                                                                    : 'Edit / story detail'
+                                                            }
+                                                        >
                                                             <IconButton
                                                                 size="small"
                                                                 color="primary"
@@ -732,6 +767,50 @@ const AdminSentenceValidationPage: React.FC = () => {
                                             )
                                         )}
                                     </List>
+                                ) : selectedSubmission.submissionType === 'scene' ? (
+                                    <Box>
+                                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+                                            Overall score (0–{SCENE_MAX_EVALUATION_SCORE})
+                                        </Typography>
+                                        <List dense sx={{ mb: 2 }}>
+                                            {getSceneSubmissionSummaries(selectedSubmission).map((text, idx) => (
+                                                <ListItem
+                                                    key={idx}
+                                                    sx={{
+                                                        flexDirection: 'column',
+                                                        alignItems: 'stretch',
+                                                        mb: 1,
+                                                        p: 1.5,
+                                                        bgcolor: 'action.hover',
+                                                        borderRadius: 1,
+                                                    }}
+                                                >
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Summary {idx + 1}
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                                        {text}
+                                                    </Typography>
+                                                </ListItem>
+                                            ))}
+                                        </List>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Slider
+                                                value={sceneEvaluationScore}
+                                                min={0}
+                                                max={SCENE_MAX_EVALUATION_SCORE}
+                                                step={1}
+                                                valueLabelDisplay="auto"
+                                                onChange={(_, v) => setSceneEvaluationScore(v as number)}
+                                                sx={{ flex: 1 }}
+                                            />
+                                            <Chip
+                                                label={`${sceneEvaluationScore}/${SCENE_MAX_EVALUATION_SCORE}`}
+                                                color="primary"
+                                                variant="outlined"
+                                            />
+                                        </Box>
+                                    </Box>
                                 ) : (
                                     <FormControlLabel
                                         control={

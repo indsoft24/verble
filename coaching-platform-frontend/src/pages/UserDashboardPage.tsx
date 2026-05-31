@@ -60,6 +60,7 @@ import {
     getDisplayMembershipLevel,
     getStreakForDisplayLevel,
     hasTierAccess,
+    canAccessGoldTierContent,
 } from '../utils/userAccessState';
 import { getFreeLeaderboard, getPaidLeaderboard, getMyRank, type LeaderboardEntry } from '../services/leaderboardService';
 import LeaderboardPanel from '../components/dashboard/LeaderboardPanel';
@@ -403,7 +404,11 @@ const UserDashboardPage: React.FC = () => {
                         />
                     )}
                     {activityKind === 'scene' && (
-                        <SceneCard data={selectedActivity as never} onSubmissionSuccess={refreshDashboardAfterSubmission} />
+                        <SceneCard
+                            data={selectedActivity as never}
+                            hasGoldAccess={canAccessGoldTierContent(user)}
+                            onSubmissionSuccess={refreshDashboardAfterSubmission}
+                        />
                     )}
                     {activityKind === 'speech' && <SpeechCard data={selectedActivity as never} />}
                     {activityKind === 'lyrics' && <LyricsCard data={selectedActivity as never} />}
