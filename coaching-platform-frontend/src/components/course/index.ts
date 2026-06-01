@@ -11,6 +11,10 @@ export {
 export { default as CourseLearningShell } from './CourseLearningShell';
 export { default as CourseLearningBand } from './CourseLearningBand';
 export { default as CourseLearningTile } from './CourseLearningTile';
+export { default as CourseLearningHero } from './CourseLearningHero';
+export type { CourseLearningHeroProps } from './CourseLearningHero';
+export { default as ModuleQuizCallout } from './ModuleQuizCallout';
+export type { ModuleQuizCalloutProps } from './ModuleQuizCallout';
 export { default as CourseLearningBreadcrumbs } from './CourseLearningBreadcrumbs';
 export type { CourseBreadcrumbItem } from './CourseLearningBreadcrumbs';
 export { default as CourseBottomNav } from './CourseBottomNav';

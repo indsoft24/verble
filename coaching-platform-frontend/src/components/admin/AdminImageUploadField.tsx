@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { uploadDailyContentImage } from '../../services/dailyContentAdminService';
+import { resolveBackendMediaUrl } from '../../utils/imageUtils';
 
 export interface AdminImageUploadFieldProps {
     label: string;
@@ -116,7 +117,7 @@ const AdminImageUploadField: React.FC<AdminImageUploadFieldProps> = ({
                 >
                     <Box
                         component="img"
-                        src={value}
+                        src={resolveBackendMediaUrl(value)}
                         alt="Preview"
                         sx={{
                             maxWidth: '100%',

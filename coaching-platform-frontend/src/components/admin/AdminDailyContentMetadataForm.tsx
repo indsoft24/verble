@@ -601,6 +601,25 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                         label="YouTube URL"
                         value={(metadata.youtubeUrl as string) || ''}
                         onChange={(e) => onChange('youtubeUrl', e.target.value)}
+                        placeholder="https://youtube.com/watch?v=..."
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                        fullWidth
+                        label="Source credit"
+                        value={(metadata.credit as string) || ''}
+                        onChange={(e) => onChange('credit', e.target.value)}
+                        placeholder="@channel or speaker name"
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                        fullWidth
+                        label="Channel / profile URL"
+                        value={(metadata.creditUrl as string) || ''}
+                        onChange={(e) => onChange('creditUrl', e.target.value)}
+                        placeholder="https://youtube.com/@... or Instagram profile"
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
@@ -710,6 +729,43 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                         onChange={(e) => onChange('artist', e.target.value)}
                     />
                 </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                        fullWidth
+                        label="YouTube URL (primary playback)"
+                        value={(metadata.youtubeUrl as string) || ''}
+                        onChange={(e) => onChange('youtubeUrl', e.target.value)}
+                        placeholder="https://youtube.com/watch?v=..."
+                        helperText="Learners hear audio in-app with thumbnail artwork."
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                        fullWidth
+                        label="Direct audio URL (fallback)"
+                        value={(metadata.audio as string) || ''}
+                        onChange={(e) => onChange('audio', e.target.value)}
+                        placeholder="https://...mp3 (optional)"
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                        fullWidth
+                        label="Source credit"
+                        value={(metadata.credit as string) || ''}
+                        onChange={(e) => onChange('credit', e.target.value)}
+                        placeholder="@artist or channel name"
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                        fullWidth
+                        label="Channel / profile URL"
+                        value={(metadata.creditUrl as string) || ''}
+                        onChange={(e) => onChange('creditUrl', e.target.value)}
+                        placeholder="YouTube or Instagram profile link"
+                    />
+                </Grid>
                 <Grid size={{ xs: 12 }}>
                     <TextField
                         fullWidth
@@ -755,24 +811,38 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                             </Box>
                             <TextField
                                 fullWidth
-                                label="Credit / account"
+                                label="Account name"
                                 value={post.credit || ''}
                                 onChange={(e) => {
                                     const next = [...posts];
                                     next[idx] = { ...next[idx], credit: e.target.value };
                                     onChange('posts', next);
                                 }}
+                                placeholder="@handle"
                                 sx={{ mb: 1 }}
                             />
                             <TextField
                                 fullWidth
-                                label="Instagram post link"
+                                label="Profile URL (follow / subscribe)"
+                                value={post.creditUrl || ''}
+                                onChange={(e) => {
+                                    const next = [...posts];
+                                    next[idx] = { ...next[idx], creditUrl: e.target.value };
+                                    onChange('posts', next);
+                                }}
+                                placeholder="https://instagram.com/username"
+                                sx={{ mb: 1 }}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Post URL"
                                 value={post.postLink || ''}
                                 onChange={(e) => {
                                     const next = [...posts];
                                     next[idx] = { ...next[idx], postLink: e.target.value };
                                     onChange('posts', next);
                                 }}
+                                placeholder="https://instagram.com/p/..."
                                 sx={{ mb: 1 }}
                             />
                             <TextField

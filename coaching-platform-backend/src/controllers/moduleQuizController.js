@@ -6,13 +6,14 @@ import ModuleCompletion from '../models/ModuleCompletion.js';
 import Module from '../models/Module.js';
 import Video from '../models/Video.js';
 import {
-    assertVideosCompleteForQuiz,
+    assertQuizUnlockedForTake,
     finalizeModuleCompletion,
     getActiveQuizForModule,
     syncModuleProgressFromVideos,
     countModuleVideoProgress,
+    resolveModuleQuizGate,
+    handleQuizSubmissionFail,
 } from '../services/moduleQuizAccessService.js';
-import { resetModuleVideosForQuizRetake } from '../services/courseLearningConfigService.js';
 
 /**
  * @desc    Get quiz for a module (without answers for students)
@@ -23,7 +24,7 @@ export const getModuleQuiz = asyncHandler(async (req, res) => {
     const { moduleId } = req.params;
     const userId = req.user._id;
 
-    await assertVideosCompleteForQuiz(userId, moduleId);
+    await assertQuizUnlockedForTake(userId, moduleId);
 
     const quiz = await ModuleQuiz.findOne({ module: moduleId, isActive: true })
         .populate('module', 'title order');
@@ -85,7 +86,7 @@ export const submitModuleQuiz = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { answers, timeSpent } = req.body;
 
-    await assertVideosCompleteForQuiz(userId, moduleId);
+    await assertQuizUnlockedForTake(userId, moduleId);
 
     const quiz = await ModuleQuiz.findOne({ module: moduleId, isActive: true });
     if (!quiz) {
@@ -142,9 +143,8 @@ export const submitModuleQuiz = asyncHandler(async (req, res) => {
         const completion = await finalizeModuleCompletion(userId, moduleId, score);
         moduleCompleted = Boolean(completion?.isCompleted);
     } else {
-        await resetModuleVideosForQuizRetake(userId, moduleId);
-        retakeMessage =
-            'Review the module videos and try the quiz again. Your video progress for this cycle has been reset.';
+        const failResult = await handleQuizSubmissionFail(userId, moduleId);
+        retakeMessage = failResult.retakeMessage;
     }
 
     res.status(200).json({
@@ -283,17 +283,10 @@ export const getModuleQuizAvailability = asyncHandler(async (req, res) => {
     const { moduleId } = req.params;
     const userId = req.user._id;
 
-    const activeQuiz = await getActiveQuizForModule(moduleId);
-    const videoProgress = await countModuleVideoProgress(userId, moduleId);
-    const completion = await ModuleCompletion.findOne({ user: userId, module: moduleId });
+    const gate = await resolveModuleQuizGate(userId, moduleId);
 
     res.status(200).json({
         status: 'success',
-        data: {
-            hasQuiz: Boolean(activeQuiz),
-            videosComplete: videoProgress.allComplete,
-            canTakeQuiz: Boolean(activeQuiz) && videoProgress.allComplete,
-            isModuleComplete: Boolean(completion?.isCompleted),
-        },
+        data: gate,
     });
 });

@@ -197,6 +197,8 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                     { key: 'title', label: 'title', required: true, formField: 'Admin title' },
                     { key: 'speaker', label: 'speaker', required: false, formField: 'Speaker name' },
                     { key: 'youtube_url', label: 'youtube_url', required: false, formField: 'YouTube URL' },
+                    { key: 'credit', label: 'credit', required: false, formField: 'Source credit' },
+                    { key: 'credit_url', label: 'credit_url', required: false, formField: 'Channel / profile URL' },
                     { key: 'transcript', label: 'transcript', required: false, formField: 'Transcript' },
                     { key: 'keywords', label: 'keywords', required: false, hint: 'word:en:hi|word2:en2:hi2', formField: 'Keywords' },
                     { key: 'phrases', label: 'phrases', required: false, hint: 'phrase:en:hi', formField: 'Phrases' },
@@ -213,6 +215,10 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                     { key: 'date', label: 'date', required: true, formField: 'Schedule date' },
                     { key: 'title', label: 'title', required: true, formField: 'Admin title' },
                     { key: 'artist', label: 'artist', required: false, formField: 'Artist' },
+                    { key: 'youtube_url', label: 'youtube_url', required: false, formField: 'YouTube URL' },
+                    { key: 'audio', label: 'audio', required: false, formField: 'Direct audio URL (fallback)' },
+                    { key: 'credit', label: 'credit', required: false, formField: 'Source credit' },
+                    { key: 'credit_url', label: 'credit_url', required: false, formField: 'Channel / profile URL' },
                     { key: 'lyrics', label: 'lyrics', required: false, formField: 'Lyrics text' },
                     { key: 'metadata_json', label: 'metadata_json', required: false, formField: 'Advanced JSON override' },
                 ],
@@ -228,8 +234,9 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                     { key: 'date', label: 'date', required: true, formField: 'Schedule date' },
                     { key: 'title', label: 'title', required: true, formField: 'Admin title' },
                     { key: 'post_image_url', label: 'post_image_url', required: false, formField: 'Post image URL' },
-                    { key: 'post_credit', label: 'post_credit', required: false, formField: 'Credit / account' },
-                    { key: 'post_link', label: 'post_link', required: false, formField: 'Instagram post link' },
+                    { key: 'post_credit', label: 'post_credit', required: false, formField: 'Account name' },
+                    { key: 'post_credit_url', label: 'post_credit_url', required: false, formField: 'Profile URL' },
+                    { key: 'post_link', label: 'post_link', required: false, formField: 'Post URL' },
                     { key: 'post_caption', label: 'post_caption', required: false, formField: 'Caption' },
                     { key: 'metadata_json', label: 'metadata_json', required: false, formField: 'Advanced JSON override' },
                 ],
@@ -918,6 +925,8 @@ export function validateAndBuildPayloads(
             const meta: Record<string, unknown> = {
                 speaker: (row.speaker ?? '').trim() || undefined,
                 youtubeUrl: (row.youtube_url ?? '').trim() || undefined,
+                credit: (row.credit ?? '').trim() || undefined,
+                creditUrl: (row.credit_url ?? '').trim() || undefined,
                 transcript: (row.transcript ?? '').trim() || undefined,
                 keywords: parseSpeechKeywords(row.keywords ?? ''),
                 phrases: parseSpeechPhrases(row.phrases ?? ''),
@@ -949,7 +958,10 @@ export function validateAndBuildPayloads(
                 title,
                 metadata: {
                     artist: (row.artist ?? '').trim() || undefined,
+                    youtubeUrl: (row.youtube_url ?? '').trim() || undefined,
                     audio: (row.audio ?? '').trim() || undefined,
+                    credit: (row.credit ?? '').trim() || undefined,
+                    creditUrl: (row.credit_url ?? '').trim() || undefined,
                     lyrics: unescapeTextContent((row.lyrics ?? '').trim()) || undefined,
                 },
                 isActive: true,
@@ -983,10 +995,11 @@ export function validateAndBuildPayloads(
                 .map((row) => ({
                     imageUrl: (row.post_image_url ?? '').trim(),
                     credit: (row.post_credit ?? '').trim(),
+                    creditUrl: (row.post_credit_url ?? '').trim(),
                     postLink: (row.post_link ?? '').trim(),
                     caption: (row.post_caption ?? '').trim(),
                 }))
-                .filter((p) => p.imageUrl || p.credit || p.postLink || p.caption);
+                .filter((p) => p.imageUrl || p.credit || p.creditUrl || p.postLink || p.caption);
             if (posts.length === 0) {
                 errors.push(`FEED "${title}": at least one post row with image, credit, link, or caption`);
                 continue;

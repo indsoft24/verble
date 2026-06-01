@@ -34,11 +34,25 @@ export interface ModuleCompletionStatus {
     videosComplete: boolean;
 }
 
+export type ModuleQuizState = 'locked' | 'ready' | 'passed' | 'exhausted';
+
 export interface ModuleQuizAvailability {
     hasQuiz: boolean;
     videosComplete: boolean;
+    videosCompleted?: number;
+    totalVideos?: number;
     canTakeQuiz: boolean;
     isModuleComplete: boolean;
+    quizState: ModuleQuizState;
+    currentCycle: number;
+    maxCycles: number;
+    cyclesCompleted: number;
+    quizFailedAttempts: number;
+    maxQuizAttempts: number;
+    needsAdminReset: boolean;
+    quizUnlocked?: boolean;
+    quizPassed?: boolean;
+    message: string;
 }
 
 export const getModuleQuizAvailability = async (moduleId: string): Promise<ModuleQuizAvailability> => {

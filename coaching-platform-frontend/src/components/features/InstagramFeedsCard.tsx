@@ -1,32 +1,21 @@
 // src/components/features/InstagramFeedsCard.tsx
 import React, { useState, useEffect } from 'react';
-import {
-    Card,
-    CardContent,
-    Typography,
-    Box,
-    Divider,
-    Link as MuiLink
-} from '@mui/material';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { Card, CardContent, Typography, Box, alpha } from '@mui/material';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import { normalizeInstagramPost } from '../../utils/mediaUrlUtils';
 import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
+import InstagramPostCard from './InstagramPostCard';
+import { activityCardShell, GOLD_ACCENT } from '../../utils/dailyActivityUi';
 
+const FEED_ACCENT = '#e1306c';
 
 interface InstagramFeedsCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
     onNavigateToSpeech?: () => void;
     onNavigateToLyrics?: () => void;
-}
-
-interface InstagramPost {
-    imageUrl: string;
-    credit: string;
-    postLink: string;
-    caption?: string;
 }
 
 const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({
@@ -41,7 +30,7 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({
 
     useEffect(() => {
         setCurrentContent(data);
-        checkNavigationAvailability();
+        void checkNavigationAvailability();
     }, [data]);
 
     const checkNavigationAvailability = async () => {
@@ -57,44 +46,31 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({
         setIsLoadingNav(true);
         try {
             const adjacentContent = await getAdjacentContent(currentContent._id, direction);
-
             if (adjacentContent) {
                 setCurrentContent(adjacentContent);
-                if (onContentChange) {
-                    onContentChange(adjacentContent);
-                }
+                onContentChange?.(adjacentContent);
                 await checkNavigationAvailability();
             }
-        } catch (error: any) {
-            console.error('Failed to load adjacent content:', error);
+        } catch {
+            /* ignore */
         } finally {
             setIsLoadingNav(false);
         }
     };
 
     const feedDisplayTag = getDisplayTag(currentContent.sequenceNumber);
-
     const feedTitle = currentContent.title || 'Curated Instagram Feeds';
-    const posts: InstagramPost[] = currentContent.metadata?.posts || [];
+    const rawPosts = (currentContent.metadata?.posts as Record<string, unknown>[]) || [];
+    const posts = rawPosts.map((p) => normalizeInstagramPost(p));
 
     return (
-        <Card
-            elevation={4}
-            sx={{
-                maxWidth: 900,
-                margin: '0 auto',
-                borderRadius: 3,
-                overflow: 'hidden',
-            }}
-        >
-            <CardContent sx={{ p: 4 }}>
-                {/* Header */}
-                <Box sx={{ mb: 3 }}>
+        <Box sx={{ maxWidth: { xs: '100%', sm: 800 }, mx: 'auto' }}>
+            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
                         contentType="FEED"
-                        accentColor="#e1306c"
+                        accentColor={FEED_ACCENT}
                         displayNumber={feedDisplayTag}
-                        variant="light"
                         sx={{ mb: 2 }}
                     />
 
@@ -102,139 +78,49 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({
                         variant="h4"
                         component="h1"
                         sx={{
-                            fontWeight: 'bold',
-                            color: 'primary.main',
+                            fontWeight: 900,
+                            mb: 3,
+                            background: `linear-gradient(135deg, #e2e8f0, ${FEED_ACCENT})`,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            color: 'transparent',
                         }}
                     >
                         {feedTitle}
                     </Typography>
-                </Box>
 
-                <Divider sx={{ my: 3 }} />
-
-                {/* Instagram Posts - Displayed Vertically */}
-                {posts.length > 0 ? (
-                    <Box sx={{ mb: 4 }}>
-                        {posts.map((post: InstagramPost, index: number) => (
-                            <Box
-                                key={index}
-                                sx={{
-                                    mb: 4,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 2,
-                                    overflow: 'hidden',
-                                    backgroundColor: 'white',
-                                }}
-                            >
-                                {/* Post Image */}
-                                {post.imageUrl && (
-                                    <Box
-                                        sx={{
-                                            width: '100%',
-                                            aspectRatio: '1',
-                                            backgroundColor: 'grey.200',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            overflow: 'hidden',
-                                        }}
-                                    >
-                                        <Box
-                                            component="img"
-                                            src={post.imageUrl}
-                                            alt={`Instagram post ${index + 1}`}
-                                            sx={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover',
-                                            }}
-                                            onError={(e) => {
-                                                // Hide image if it fails to load
-                                                (e.target as HTMLImageElement).style.display = 'none';
-                                            }}
-                                        />
-                                    </Box>
-                                )}
-
-                                {/* Post Caption (if available) */}
-                                {post.caption && (
-                                    <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                                            {post.caption}
-                                        </Typography>
-                                    </Box>
-                                )}
-
-                                {/* Credits and Link */}
-                                <Box
-                                    sx={{
-                                        p: 2,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 1,
-                                        backgroundColor: 'grey.50',
-                                    }}
-                                >
-                                    {post.credit && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'medium' }}>
-                                            Credit: {post.credit}
-                                        </Typography>
-                                    )}
-                                    {post.postLink && (
-                                        <MuiLink
-                                            href={post.postLink}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            sx={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: 0.5,
-                                                textDecoration: 'none',
-                                                color: 'primary.main',
-                                                '&:hover': {
-                                                    textDecoration: 'underline',
-                                                },
-                                            }}
-                                        >
-                                            <Typography variant="body2">
-                                                View Post
-                                            </Typography>
-                                            <OpenInNewIcon fontSize="small" />
-                                        </MuiLink>
-                                    )}
-                                </Box>
-                            </Box>
-                        ))}
-                    </Box>
-                ) : (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body1" color="text.secondary">
+                    {posts.length > 0 ? (
+                        <Box sx={{ mb: 2 }}>
+                            {posts.map((post, index) => (
+                                <InstagramPostCard key={index} post={post} index={index} />
+                            ))}
+                        </Box>
+                    ) : (
+                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.6), py: 4, textAlign: 'center' }}>
                             No posts available for this feed.
                         </Typography>
-                    </Box>
-                )}
+                    )}
 
-                <ActivityTierNavFooter
-                    variant="light"
-                    accentColor="#ca8a04"
-                    left={{
-                        label: 'Previous Feed',
-                        onClick: () => handleNavigation('prev'),
-                        disabled: !hasPrevious,
-                        loading: isLoadingNav,
-                    }}
-                    center={{
-                        label: '← Song Lyrics',
-                        onClick: onNavigateToLyrics,
-                    }}
-                    right={{
-                        label: 'Famous Speeches',
-                        onClick: onNavigateToSpeech,
-                    }}
-                />
-            </CardContent>
-        </Card>
+                    <ActivityTierNavFooter
+                        accentColor={GOLD_ACCENT}
+                        left={{
+                            label: 'Previous Feed',
+                            onClick: () => handleNavigation('prev'),
+                            disabled: !hasPrevious,
+                            loading: isLoadingNav,
+                        }}
+                        center={{
+                            label: '← Song Lyrics',
+                            onClick: onNavigateToLyrics,
+                        }}
+                        right={{
+                            label: 'Famous Speeches',
+                            onClick: onNavigateToSpeech,
+                        }}
+                    />
+                </CardContent>
+            </Card>
+        </Box>
     );
 };
 

@@ -34,6 +34,7 @@ import {
 import EvaluationStatusBanner from './EvaluationStatusBanner';
 import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
+import ActivitySourceCredit from './ActivitySourceCredit';
 import {
     activityCardShell,
     GOLD_ACCENT,
@@ -227,6 +228,8 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
     const speechDisplayTag = getDisplayTag(currentContent.sequenceNumber);
     const speechTitle = currentContent.title || '';
     const speakerName = currentContent.metadata?.speaker || '';
+    const credit = String(currentContent.metadata?.credit || '');
+    const creditUrl = String(currentContent.metadata?.creditUrl || '');
     const youtubeUrl = currentContent.metadata?.youtubeUrl || '';
     const transcript = currentContent.metadata?.transcript || '';
     const keywords = currentContent.metadata?.keywords || [];
@@ -274,10 +277,16 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                         {speechTitle}
                     </Typography>
                     {speakerName && (
-                        <Typography variant="body1" sx={{ color: alpha('#e2e8f0', 0.7), mb: 2 }}>
+                        <Typography variant="body1" sx={{ color: alpha('#e2e8f0', 0.7), mb: 1 }}>
                             by {speakerName}
                         </Typography>
                     )}
+
+                    <ActivitySourceCredit
+                        creditLabel={credit}
+                        creditUrl={creditUrl}
+                        accentColor={GOLD_ACCENT}
+                    />
 
                     {embedUrl && (
                         <Box

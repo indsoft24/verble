@@ -5,6 +5,8 @@ import { courseLearningTheme } from './courseLearningTheme';
 export interface CourseLearningTileProps {
     title: string;
     subtitle?: string;
+    /** Extra lines shown on md+ (desktop horizontal layout). */
+    subtitleDesktop?: string;
     icon?: React.ReactNode;
     imageUrl?: string;
     onClick?: () => void;
@@ -12,6 +14,7 @@ export interface CourseLearningTileProps {
     badgeLabel?: string;
     disabled?: boolean;
     footer?: React.ReactNode;
+    meta?: React.ReactNode;
 }
 
 const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
@@ -24,6 +27,8 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
     badgeLabel,
     disabled = false,
     footer,
+    subtitleDesktop,
+    meta,
 }) => {
     const interactive = !disabled && !!onClick;
 
@@ -32,6 +37,7 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
     };
 
     if (variant === 'card') {
+        const hasSplitDesc = Boolean(subtitle && subtitleDesktop);
         return (
             <Box
                 role={interactive ? 'button' : undefined}
@@ -45,7 +51,8 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                 }}
                 sx={{
                     display: 'flex',
-                    flexDirection: 'column',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    alignItems: { md: 'stretch' },
                     borderRadius: 2,
                     border: courseLearningTheme.tileBorder(disabled),
                     bgcolor: courseLearningTheme.tileBg,
@@ -54,6 +61,7 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                     opacity: disabled ? 0.55 : 1,
                     transition: 'transform 0.2s, box-shadow 0.2s',
                     height: '100%',
+                    width: '100%',
                     outline: 'none',
                     '&:hover': interactive
                         ? {
@@ -67,7 +75,10 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                 {imageUrl && (
                     <Box
                         sx={{
-                            aspectRatio: '16 / 9',
+                            aspectRatio: { xs: '16 / 9', md: 'auto' },
+                            width: { xs: '100%', md: 300, lg: 380 },
+                            minHeight: { md: 220 },
+                            flexShrink: 0,
                             backgroundImage: `url("${imageUrl}")`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
@@ -75,11 +86,27 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                         }}
                     />
                 )}
-                <Box sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box
+                    sx={{
+                        p: { xs: 2, md: 2.5, lg: 3 },
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: { xs: 1, md: 1.25 },
+                        minWidth: 0,
+                    }}
+                >
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1 }}>
                         <Typography
                             variant="subtitle1"
-                            sx={{ fontWeight: 800, color: courseLearningTheme.textPrimary, lineHeight: 1.3, flex: 1, minWidth: 0 }}
+                            sx={{
+                                fontWeight: 800,
+                                color: courseLearningTheme.textPrimary,
+                                lineHeight: 1.3,
+                                flex: 1,
+                                minWidth: 0,
+                                fontSize: { xs: '1rem', md: '1.2rem' },
+                            }}
                         >
                             {title}
                         </Typography>
@@ -97,22 +124,63 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                             />
                         )}
                     </Box>
-                    {subtitle && (
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                color: courseLearningTheme.textBody,
-                                lineHeight: 1.5,
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                            }}
-                        >
-                            {subtitle}
-                        </Typography>
+                    {meta && (
+                        <Box sx={{ display: { xs: 'none', md: 'block' } }}>{meta}</Box>
                     )}
-                    {footer && <Box sx={{ mt: 'auto', pt: 1.25 }}>{footer}</Box>}
+                    {hasSplitDesc ? (
+                        <>
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    color: courseLearningTheme.textBody,
+                                    lineHeight: 1.55,
+                                    display: { xs: '-webkit-box', md: 'none' },
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                {subtitle}
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    color: courseLearningTheme.textBody,
+                                    lineHeight: 1.55,
+                                    display: { xs: 'none', md: '-webkit-box' },
+                                    WebkitLineClamp: 4,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                {subtitleDesktop}
+                            </Typography>
+                        </>
+                    ) : (
+                        (subtitle || subtitleDesktop) && (
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    color: courseLearningTheme.textBody,
+                                    lineHeight: 1.55,
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: { xs: 2, md: 4 },
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                {subtitle || subtitleDesktop}
+                            </Typography>
+                        )
+                    )}
+                    {footer && (
+                        <Box
+                            sx={{ mt: 'auto', pt: { xs: 1.25, md: 2 } }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {footer}
+                        </Box>
+                    )}
                 </Box>
             </Box>
         );

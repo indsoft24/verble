@@ -3,6 +3,7 @@ import ModuleQuiz from '../models/ModuleQuiz.js';
 import ModuleCompletion from '../models/ModuleCompletion.js';
 import Video from '../models/Video.js';
 import VideoWatchProgress from '../models/VideoWatchProgress.js';
+import { getLearningConfig } from './courseLearningConfigService.js';
 import {
     getModuleVideos,
     getModuleCompletionCycle,
@@ -10,6 +11,31 @@ import {
 
 export const getActiveQuizForModule = async (moduleId) =>
     ModuleQuiz.findOne({ module: moduleId, isActive: true });
+
+const ensureModuleCompletionRecord = async (userId, moduleId) => {
+    const module = await Module.findById(moduleId).select('course order');
+    if (!module) return null;
+
+    let completion = await ModuleCompletion.findOne({ user: userId, module: moduleId });
+    if (!completion) {
+        const totalVideos = await Video.countDocuments({ modules: moduleId, isPublished: true });
+        completion = new ModuleCompletion({
+            user: userId,
+            module: moduleId,
+            course: module.course,
+            videosCompleted: 0,
+            totalVideos,
+            quizPassed: false,
+            quizScore: 0,
+            isCompleted: false,
+            quizUnlocked: false,
+            quizFailedAttempts: 0,
+            quizExhausted: false,
+        });
+        await completion.save();
+    }
+    return completion;
+};
 
 export const areAllModuleVideosComplete = async (userId, moduleId) => {
     const videos = await getModuleVideos(moduleId);
@@ -54,6 +80,145 @@ export const countModuleVideoProgress = async (userId, moduleId) => {
 };
 
 /**
+ * Called when all lessons in a completion cycle are marked complete.
+ */
+export const onModuleCycleCompleted = async (userId, moduleId) => {
+    const activeQuiz = await getActiveQuizForModule(moduleId);
+    if (!activeQuiz) return null;
+
+    const completion = await ensureModuleCompletionRecord(userId, moduleId);
+    if (!completion || completion.quizExhausted) return completion;
+
+    completion.quizUnlocked = true;
+    await completion.save();
+    return completion;
+};
+
+/**
+ * Resolve quiz gate for UI and API.
+ */
+export const resolveModuleQuizGate = async (userId, moduleId) => {
+    const activeQuiz = await getActiveQuizForModule(moduleId);
+    const videoProgress = await countModuleVideoProgress(userId, moduleId);
+    const config = await getLearningConfig(userId);
+    const maxCycles = config.maxModuleCompletionCycles;
+    const currentCycle = await getModuleCompletionCycle(userId, moduleId);
+    const cyclesCompleted = currentCycle;
+
+    const completion = await ModuleCompletion.findOne({ user: userId, module: moduleId });
+    const hasQuiz = Boolean(activeQuiz);
+    const quizPassed = Boolean(completion?.quizPassed);
+    const quizUnlocked = Boolean(completion?.quizUnlocked);
+    const quizExhausted = Boolean(completion?.quizExhausted);
+    const quizFailedAttempts = completion?.quizFailedAttempts ?? 0;
+    const maxQuizAttempts = maxCycles;
+    const isModuleComplete = Boolean(completion?.isCompleted);
+
+    let quizState = 'locked';
+    let canTakeQuiz = false;
+    let message = '';
+
+    if (!hasQuiz) {
+        message = 'This module has no quiz.';
+    } else if (quizExhausted && !quizPassed) {
+        quizState = 'exhausted';
+        message =
+            'You have used all quiz attempts for this module. Please contact support to request a progress reset.';
+    } else if (quizPassed) {
+        quizState = 'passed';
+        canTakeQuiz = quizUnlocked && !quizExhausted;
+        message = 'You passed the module quiz. You can review it or continue extra practice cycles.';
+    } else if (quizUnlocked) {
+        quizState = 'ready';
+        canTakeQuiz = true;
+        message = 'You have finished a learning cycle. Take the module quiz when you are ready.';
+    } else {
+        quizState = 'locked';
+        const cycleLabel = currentCycle + 1;
+        if (videoProgress.allComplete) {
+            message = 'Complete this cycle to unlock the module quiz.';
+        } else {
+            message = `Finish all ${videoProgress.totalVideos} lessons in cycle ${cycleLabel} of ${maxCycles} to unlock the module quiz.`;
+        }
+    }
+
+    return {
+        hasQuiz,
+        canTakeQuiz,
+        videosComplete: videoProgress.allComplete,
+        videosCompleted: videoProgress.videosCompleted,
+        totalVideos: videoProgress.totalVideos,
+        isModuleComplete,
+        quizState,
+        currentCycle,
+        maxCycles,
+        cyclesCompleted,
+        quizFailedAttempts,
+        maxQuizAttempts,
+        needsAdminReset: quizExhausted && !quizPassed,
+        quizUnlocked,
+        quizPassed,
+        message,
+    };
+};
+
+export const assertQuizUnlockedForTake = async (userId, moduleId) => {
+    const gate = await resolveModuleQuizGate(userId, moduleId);
+    if (!gate.hasQuiz) {
+        const err = new Error('Quiz not found for this module');
+        err.statusCode = 404;
+        throw err;
+    }
+    if (gate.quizState === 'exhausted') {
+        const err = new Error(gate.message);
+        err.statusCode = 403;
+        throw err;
+    }
+    if (!gate.canTakeQuiz) {
+        const err = new Error(
+            gate.message || 'Complete a full lesson cycle in this module before taking the quiz.'
+        );
+        err.statusCode = 403;
+        throw err;
+    }
+};
+
+/**
+ * After a failed quiz: increment attempts, optionally exhaust, reset all video progress.
+ */
+export const handleQuizSubmissionFail = async (userId, moduleId) => {
+    const config = await getLearningConfig(userId);
+    const maxAttempts = config.maxModuleCompletionCycles;
+    const completion = await ensureModuleCompletionRecord(userId, moduleId);
+    if (!completion) return { exhausted: false };
+
+    completion.quizFailedAttempts = (completion.quizFailedAttempts || 0) + 1;
+    completion.quizUnlocked = false;
+    completion.quizPassed = false;
+    completion.isCompleted = false;
+    completion.completedAt = undefined;
+
+    let exhausted = false;
+    if (completion.quizFailedAttempts >= maxAttempts) {
+        completion.quizExhausted = true;
+        exhausted = true;
+    } else {
+        await VideoWatchProgress.deleteMany({ user: userId, module: moduleId });
+    }
+
+    await completion.save();
+    await syncModuleProgressFromVideos(userId, moduleId);
+
+    return {
+        exhausted,
+        attemptsRemaining: Math.max(0, maxAttempts - completion.quizFailedAttempts),
+        retakeMessage: exhausted
+            ? 'Maximum quiz attempts reached. Contact support to reset your module progress.'
+            : 'Review the lessons from the beginning, complete a full cycle, then try the quiz again.',
+    };
+};
+
+/**
  * Upsert ModuleCompletion from video progress. If no active quiz and videos done, mark module complete.
  */
 export const syncModuleProgressFromVideos = async (userId, moduleId) => {
@@ -74,6 +239,9 @@ export const syncModuleProgressFromVideos = async (userId, moduleId) => {
             quizPassed: false,
             quizScore: 0,
             isCompleted: false,
+            quizUnlocked: false,
+            quizFailedAttempts: 0,
+            quizExhausted: false,
         });
     }
 
@@ -87,7 +255,7 @@ export const syncModuleProgressFromVideos = async (userId, moduleId) => {
     } else if (activeQuiz && !completion.quizPassed) {
         completion.isCompleted = false;
         completion.completedAt = undefined;
-    } else if (activeQuiz && completion.quizPassed && allComplete) {
+    } else if (activeQuiz && completion.quizPassed) {
         completion.isCompleted = true;
         completion.completedAt = completion.completedAt || new Date();
     }
@@ -97,18 +265,13 @@ export const syncModuleProgressFromVideos = async (userId, moduleId) => {
 };
 
 /**
- * After a passing quiz attempt, finalize module completion when videos are also done.
+ * After a passing quiz attempt, finalize module completion (quiz pass unlocks module; extra cycles optional).
  */
 export const finalizeModuleCompletion = async (userId, moduleId, quizScore = 0) => {
     const module = await Module.findById(moduleId).select('course order');
     if (!module) return null;
 
-    const { videosCompleted, totalVideos, allComplete } = await countModuleVideoProgress(userId, moduleId);
-    if (!allComplete) {
-        const err = new Error('Complete all module videos before the quiz can count toward completion.');
-        err.statusCode = 403;
-        throw err;
-    }
+    const { videosCompleted, totalVideos } = await countModuleVideoProgress(userId, moduleId);
 
     let completion = await ModuleCompletion.findOne({ user: userId, module: moduleId });
     if (!completion) {
@@ -124,6 +287,7 @@ export const finalizeModuleCompletion = async (userId, moduleId, quizScore = 0) 
     completion.videosCompleted = videosCompleted;
     completion.totalVideos = totalVideos;
     completion.quizPassed = true;
+    completion.quizUnlocked = true;
     completion.quizScore = Math.max(completion.quizScore || 0, quizScore);
     completion.isCompleted = true;
     completion.completedAt = completion.completedAt || new Date();
@@ -158,14 +322,13 @@ const ensureNextModuleCompletionStub = async (userId, courseId, currentModuleOrd
         videosCompleted: 0,
         totalVideos,
         quizPassed: false,
+        quizUnlocked: false,
+        quizFailedAttempts: 0,
+        quizExhausted: false,
     });
 };
 
+/** @deprecated Use assertQuizUnlockedForTake */
 export const assertVideosCompleteForQuiz = async (userId, moduleId) => {
-    const complete = await areAllModuleVideosComplete(userId, moduleId);
-    if (!complete) {
-        const err = new Error('Watch all videos in this module before taking the quiz.');
-        err.statusCode = 403;
-        throw err;
-    }
+    await assertQuizUnlockedForTake(userId, moduleId);
 };

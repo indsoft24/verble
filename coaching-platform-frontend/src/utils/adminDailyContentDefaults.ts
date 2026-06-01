@@ -36,6 +36,7 @@ export const emptyPuzzleQuestion = () => ({
 export const emptyInstagramPost = () => ({
     imageUrl: '',
     credit: '',
+    creditUrl: '',
     postLink: '',
     caption: '',
 });
@@ -139,6 +140,8 @@ export function getDefaultMetadataForType(
             return {
                 speaker: '',
                 youtubeUrl: '',
+                credit: '',
+                creditUrl: '',
                 transcript: '',
                 keywords: [],
                 phrases: [],
@@ -147,7 +150,10 @@ export function getDefaultMetadataForType(
             return {
                 artist: '',
                 lyrics: '',
+                youtubeUrl: '',
                 audio: '',
+                credit: '',
+                creditUrl: '',
                 words: [],
                 phrases: [],
             };

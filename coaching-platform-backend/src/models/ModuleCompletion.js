@@ -36,6 +36,18 @@ const moduleCompletionSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    quizUnlocked: {
+        type: Boolean,
+        default: false,
+    },
+    quizFailedAttempts: {
+        type: Number,
+        default: 0,
+    },
+    quizExhausted: {
+        type: Boolean,
+        default: false,
+    },
     isCompleted: {
         type: Boolean,
         default: false,

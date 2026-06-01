@@ -78,7 +78,23 @@ export async function upsertUserLearningOverride(userId, updates, adminUserId) {
 
 export async function resetUserModuleVideoProgress(userId, moduleId) {
     const VideoWatchProgress = (await import('../models/VideoWatchProgress.js')).default;
+    const ModuleCompletion = (await import('../models/ModuleCompletion.js')).default;
     await VideoWatchProgress.deleteMany({ user: userId, module: moduleId });
+    await ModuleCompletion.findOneAndUpdate(
+        { user: userId, module: moduleId },
+        {
+            $set: {
+                quizUnlocked: false,
+                quizFailedAttempts: 0,
+                quizExhausted: false,
+                quizPassed: false,
+                isCompleted: false,
+                videosCompleted: 0,
+            },
+            $unset: { completedAt: 1 },
+        },
+        { upsert: false }
+    );
 }
 
 export async function resetUserCourseVideoProgress(userId, courseId) {

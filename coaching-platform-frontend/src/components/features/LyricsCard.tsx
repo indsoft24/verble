@@ -1,27 +1,29 @@
 // src/components/features/LyricsCard.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     CardContent,
     Typography,
     Box,
-    IconButton,
-    Divider,
     List,
     ListItem,
     Accordion,
     AccordionSummary,
     AccordionDetails,
-    LinearProgress
+    alpha,
 } from '@mui/material';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import { extractYouTubeVideoId } from '../../utils/mediaUrlUtils';
 import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
+import ActivitySourceCredit from './ActivitySourceCredit';
+import YouTubeAudioPlayer from './YouTubeAudioPlayer';
+import DirectAudioPlayer from './DirectAudioPlayer';
+import { activityCardShell, GOLD_ACCENT } from '../../utils/dailyActivityUi';
 
+const LYRICS_ACCENT = '#e91e63';
 
 interface LyricsCardProps {
     data: DailyContent;
@@ -30,48 +32,26 @@ interface LyricsCardProps {
     onNavigateToFeed?: () => void;
 }
 
+const darkAccordionSx = {
+    mb: 2,
+    bgcolor: alpha('#1a1f2e', 0.4),
+    color: '#f8fafc',
+    '&:before': { display: 'none' },
+};
+
 const LyricsCard: React.FC<LyricsCardProps> = ({
     data,
     onContentChange,
     onNavigateToSpeech,
     onNavigateToFeed,
 }) => {
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
     const [isLoadingNav, setIsLoadingNav] = useState(false);
     const [currentContent, setCurrentContent] = useState<DailyContent>(data);
     const [hasPrevious, setHasPrevious] = useState(false);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
         setCurrentContent(data);
-        checkNavigationAvailability();
-
-        // Set up audio event listeners
-        const audio = audioRef.current;
-        if (audio) {
-            const updateTime = () => setCurrentTime(audio.currentTime);
-            const updateDuration = () => setDuration(audio.duration);
-            const handleEnded = () => setIsPlaying(false);
-
-            audio.addEventListener('timeupdate', updateTime);
-            audio.addEventListener('loadedmetadata', updateDuration);
-            audio.addEventListener('ended', handleEnded);
-
-            return () => {
-                audio.removeEventListener('timeupdate', updateTime);
-                audio.removeEventListener('loadedmetadata', updateDuration);
-                audio.removeEventListener('ended', handleEnded);
-            };
-        }
-
-        return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current = null;
-            }
-        };
+        void checkNavigationAvailability();
     }, [data]);
 
     const checkNavigationAvailability = async () => {
@@ -87,118 +67,39 @@ const LyricsCard: React.FC<LyricsCardProps> = ({
         setIsLoadingNav(true);
         try {
             const adjacentContent = await getAdjacentContent(currentContent._id, direction);
-
             if (adjacentContent) {
-                // Stop current audio if playing
-                if (audioRef.current) {
-                    audioRef.current.pause();
-                    audioRef.current.currentTime = 0;
-                }
-                setIsPlaying(false);
-                setCurrentTime(0);
-                setDuration(0);
-
                 setCurrentContent(adjacentContent);
-                if (onContentChange) {
-                    onContentChange(adjacentContent);
-                }
+                onContentChange?.(adjacentContent);
                 await checkNavigationAvailability();
             }
-        } catch (error: any) {
-            console.error('Failed to load adjacent content:', error);
+        } catch {
+            /* ignore */
         } finally {
             setIsLoadingNav(false);
         }
     };
 
-    const handlePlayPause = () => {
-        if (!audioRef.current) {
-            // Initialize audio element
-            const audioUrl = currentContent.metadata?.audio;
-            if (!audioUrl) {
-                return;
-            }
-
-            const audio = new Audio(audioUrl);
-            audioRef.current = audio;
-
-            audio.onloadedmetadata = () => {
-                setDuration(audio.duration);
-            };
-
-            audio.onended = () => {
-                setIsPlaying(false);
-                setCurrentTime(0);
-            };
-
-            audio.onerror = () => {
-                setIsPlaying(false);
-                console.error('Failed to load audio');
-            };
-        }
-
-        const audio = audioRef.current;
-
-        if (isPlaying) {
-            audio.pause();
-            setIsPlaying(false);
-        } else {
-            audio.play()
-                .then(() => {
-                    setIsPlaying(true);
-                    setDuration(audio.duration);
-                })
-                .catch((error) => {
-                    console.error('Failed to play audio:', error);
-                    setIsPlaying(false);
-                });
-        }
-    };
-
-    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newTime = parseFloat(e.target.value);
-        if (audioRef.current) {
-            audioRef.current.currentTime = newTime;
-            setCurrentTime(newTime);
-        }
-    };
-
-    const formatTime = (seconds: number): string => {
-        if (isNaN(seconds)) return '0:00';
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
-
     const lyricsDisplayTag = getDisplayTag(currentContent.sequenceNumber);
-
     const songTitle = currentContent.title || '';
-    const artist = currentContent.metadata?.artist || '';
-    const lyrics = currentContent.metadata?.lyrics || '';
-    const audioUrl = currentContent.metadata?.audio || '';
-    const words = currentContent.metadata?.words || [];
-    const phrases = currentContent.metadata?.phrases || [];
+    const artist = String(currentContent.metadata?.artist || '');
+    const lyrics = String(currentContent.metadata?.lyrics || '');
+    const youtubeUrl = String(currentContent.metadata?.youtubeUrl || '');
+    const audioUrl = String(currentContent.metadata?.audio || '');
+    const credit = String(currentContent.metadata?.credit || '');
+    const creditUrl = String(currentContent.metadata?.creditUrl || '');
+    const words = (currentContent.metadata?.words as unknown[]) || [];
+    const phrases = (currentContent.metadata?.phrases as unknown[]) || [];
 
-    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+    const hasYoutube = Boolean(extractYouTubeVideoId(youtubeUrl));
 
     return (
-        <Card
-            elevation={4}
-            sx={{
-                maxWidth: 900,
-                margin: '0 auto',
-                borderRadius: 3,
-                overflow: 'hidden',
-            }}
-        >
-            <CardContent sx={{ p: 4 }}>
-                {/* Header with Lyrics Number */}
-                <Box sx={{ mb: 3 }}>
+        <Box sx={{ maxWidth: { xs: '100%', sm: 800 }, mx: 'auto' }}>
+            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
                         contentType="LYRICS"
-                        accentColor="#e91e63"
+                        accentColor={LYRICS_ACCENT}
                         displayNumber={lyricsDisplayTag}
-                        variant="light"
                         sx={{ mb: 2 }}
                     />
 
@@ -206,214 +107,137 @@ const LyricsCard: React.FC<LyricsCardProps> = ({
                         variant="h4"
                         component="h1"
                         sx={{
-                            fontWeight: 'bold',
-                            color: 'primary.main',
+                            fontWeight: 900,
+                            background: `linear-gradient(135deg, #e2e8f0, ${LYRICS_ACCENT})`,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            color: 'transparent',
                         }}
                     >
                         {songTitle}
                     </Typography>
                     {artist && (
-                        <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+                        <Typography variant="body1" sx={{ color: alpha('#e2e8f0', 0.7), mt: 0.5 }}>
                             by {artist}
                         </Typography>
                     )}
-                </Box>
 
-                <Divider sx={{ my: 3 }} />
+                    <ActivitySourceCredit
+                        creditLabel={credit}
+                        creditUrl={creditUrl}
+                        accentColor={LYRICS_ACCENT}
+                    />
 
-                {/* Audio Player */}
-                {audioUrl && (
-                    <Box sx={{ mb: 4 }}>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 2,
-                                p: 2,
-                                backgroundColor: 'grey.50',
-                                borderRadius: 2,
-                            }}
-                        >
-                            <IconButton
-                                onClick={handlePlayPause}
+                    {hasYoutube ? (
+                        <YouTubeAudioPlayer youtubeUrl={youtubeUrl} accentColor={LYRICS_ACCENT} />
+                    ) : audioUrl ? (
+                        <DirectAudioPlayer audioUrl={audioUrl} accentColor={LYRICS_ACCENT} />
+                    ) : null}
+
+                    {lyrics && (
+                        <Box sx={{ mb: 3 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', mb: 1 }}>
+                                Lyrics
+                            </Typography>
+                            <Box
                                 sx={{
-                                    backgroundColor: 'primary.main',
-                                    color: 'white',
-                                    width: 56,
-                                    height: 56,
-                                    '&:hover': {
-                                        backgroundColor: 'primary.dark',
-                                    },
+                                    p: 2,
+                                    borderRadius: 2,
+                                    maxHeight: 500,
+                                    overflowY: 'auto',
+                                    bgcolor: alpha('#1a1f2e', 0.55),
+                                    border: `1px solid ${alpha(LYRICS_ACCENT, 0.2)}`,
                                 }}
-                                aria-label={isPlaying ? 'Pause' : 'Play'}
                             >
-                                {isPlaying ? (
-                                    <PauseIcon sx={{ fontSize: 32 }} />
-                                ) : (
-                                    <PlayArrowIcon sx={{ fontSize: 32 }} />
-                                )}
-                            </IconButton>
-
-                            <Box sx={{ flex: 1 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 45 }}>
-                                        {formatTime(currentTime)}
-                                    </Typography>
-                                    <Box sx={{ flex: 1, position: 'relative' }}>
-                                        <LinearProgress
-                                            variant="determinate"
-                                            value={progress}
-                                            sx={{
-                                                height: 6,
-                                                borderRadius: 3,
-                                                backgroundColor: 'grey.300',
-                                                '& .MuiLinearProgress-bar': {
-                                                    borderRadius: 3,
-                                                },
-                                            }}
-                                        />
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max={duration || 0}
-                                            value={currentTime}
-                                            onChange={handleSeek}
-                                            step="0.1"
-                                            style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                width: '100%',
-                                                height: '100%',
-                                                opacity: 0,
-                                                cursor: 'pointer',
-                                            }}
-                                        />
-                                    </Box>
-                                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 45 }}>
-                                        {formatTime(duration)}
-                                    </Typography>
-                                </Box>
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        whiteSpace: 'pre-line',
+                                        lineHeight: 1.9,
+                                        color: alpha('#e2e8f0', 0.92),
+                                        fontFamily: 'inherit',
+                                    }}
+                                >
+                                    {lyrics}
+                                </Typography>
                             </Box>
                         </Box>
-                    </Box>
-                )}
+                    )}
 
-                {/* Lyrics Display */}
-                {lyrics && (
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                            Lyrics
-                        </Typography>
-                        <Box
-                            sx={{
-                                p: 3,
-                                backgroundColor: 'grey.50',
-                                borderRadius: 2,
-                                maxHeight: '500px',
-                                overflowY: 'auto',
-                            }}
-                        >
-                            <Typography
-                                variant="body1"
-                                sx={{
-                                    whiteSpace: 'pre-line',
-                                    lineHeight: 2,
-                                    fontFamily: 'monospace',
-                                }}
-                            >
-                                {lyrics}
-                            </Typography>
-                        </Box>
-                    </Box>
-                )}
-
-                <Divider sx={{ my: 4 }} />
-
-                {/* Important Words Section */}
-                {words.length > 0 && (
-                    <Box sx={{ mb: 4 }}>
-                        <Accordion>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    {words.length > 0 && (
+                        <Accordion sx={darkAccordionSx}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: LYRICS_ACCENT }} />}>
+                                <Typography sx={{ fontWeight: 700 }}>
                                     Important Words ({words.length})
                                 </Typography>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <List>
-                                    {words.map((word: any, index: number) => (
-                                        <ListItem key={index} sx={{ flexDirection: 'column', alignItems: 'flex-start', pb: 1 }}>
-                                            <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                                <List dense>
+                                    {(words as Record<string, string>[]).map((word, index) => (
+                                        <ListItem
+                                            key={index}
+                                            sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1 }}
+                                        >
+                                            <Typography sx={{ fontWeight: 600, color: '#f8fafc' }}>
                                                 {word.word || word.text}
                                             </Typography>
-                                            <Typography variant="body2" color="text.secondary">
+                                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>
                                                 {word.meaning || word.meaning_en}
                                             </Typography>
-                                            {word.meaning_hi && (
-                                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                                    {word.meaning_hi}
-                                                </Typography>
-                                            )}
                                         </ListItem>
                                     ))}
                                 </List>
                             </AccordionDetails>
                         </Accordion>
-                    </Box>
-                )}
+                    )}
 
-                {/* Important Phrases Section */}
-                {phrases.length > 0 && (
-                    <Box sx={{ mb: 4 }}>
-                        <Accordion>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    {phrases.length > 0 && (
+                        <Accordion sx={darkAccordionSx}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: LYRICS_ACCENT }} />}>
+                                <Typography sx={{ fontWeight: 700 }}>
                                     Important Phrases ({phrases.length})
                                 </Typography>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <List>
-                                    {phrases.map((phrase: any, index: number) => (
-                                        <ListItem key={index} sx={{ flexDirection: 'column', alignItems: 'flex-start', pb: 1 }}>
-                                            <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                                <List dense>
+                                    {(phrases as Record<string, string>[]).map((phrase, index) => (
+                                        <ListItem
+                                            key={index}
+                                            sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1 }}
+                                        >
+                                            <Typography sx={{ fontWeight: 600, color: '#f8fafc' }}>
                                                 {phrase.phrase || phrase.text}
                                             </Typography>
-                                            <Typography variant="body2" color="text.secondary">
+                                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>
                                                 {phrase.meaning || phrase.meaning_en}
                                             </Typography>
-                                            {phrase.meaning_hi && (
-                                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                                    {phrase.meaning_hi}
-                                                </Typography>
-                                            )}
                                         </ListItem>
                                     ))}
                                 </List>
                             </AccordionDetails>
                         </Accordion>
-                    </Box>
-                )}
+                    )}
 
-                <ActivityTierNavFooter
-                    variant="light"
-                    accentColor="#ca8a04"
-                    left={{
-                        label: 'Previous Lyrics',
-                        onClick: () => handleNavigation('prev'),
-                        disabled: !hasPrevious,
-                        loading: isLoadingNav,
-                    }}
-                    center={{
-                        label: '→ Instagram Feeds',
-                        onClick: onNavigateToFeed,
-                    }}
-                    right={{
-                        label: 'Famous Speeches',
-                        onClick: onNavigateToSpeech,
-                    }}
-                />
-            </CardContent>
-        </Card>
+                    <ActivityTierNavFooter
+                        accentColor={GOLD_ACCENT}
+                        left={{
+                            label: 'Previous Lyrics',
+                            onClick: () => handleNavigation('prev'),
+                            disabled: !hasPrevious,
+                            loading: isLoadingNav,
+                        }}
+                        center={{
+                            label: '→ Instagram Feeds',
+                            onClick: onNavigateToFeed,
+                        }}
+                        right={{
+                            label: 'Famous Speeches',
+                            onClick: onNavigateToSpeech,
+                        }}
+                    />
+                </CardContent>
+            </Card>
+        </Box>
     );
 };
 

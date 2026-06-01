@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import {
     Typography,
-    Grid,
     CircularProgress,
     Alert,
     Box,
@@ -20,6 +19,7 @@ import {
     getModuleCompletionStatus,
     getModuleQuizAvailability,
     type ModuleCompletionStatus,
+    type ModuleQuizAvailability,
 } from '../services/moduleQuizService';
 import { extractId } from '../utils/idUtils';
 import { getSplashImageUrl, resolveBackendMediaUrl, getImageUrl } from '../utils/imageUtils';
@@ -28,8 +28,10 @@ import {
     CourseLearningShell,
     CourseLearningBand,
     CourseLearningBreadcrumbs,
+    CourseLearningHero,
     CourseBottomNav,
     CourseLessonRow,
+    ModuleQuizCallout,
     courseLearningTheme,
     courseBottomNavZIndex,
     courseTiptapSx,
@@ -67,7 +69,7 @@ const ModuleVideosPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [toast, setToast] = useState<ToastState | null>(null);
     const [completionStatus, setCompletionStatus] = useState<ModuleCompletionStatus | null>(null);
-    const [quizAvailable, setQuizAvailable] = useState(false);
+    const [quizGate, setQuizGate] = useState<ModuleQuizAvailability | null>(null);
     const [isModuleLocked, setIsModuleLocked] = useState(false);
     const [moduleLockReason, setModuleLockReason] = useState<string | null>(null);
     const [previousModuleId, setPreviousModuleId] = useState<string | null>(null);
@@ -106,10 +108,10 @@ const ModuleVideosPage: React.FC = () => {
                     getModuleQuizAvailability(moduleId),
                 ]);
                 setCompletionStatus(completion);
-                setQuizAvailable(availability.canTakeQuiz);
+                setQuizGate(availability);
             } catch {
                 setCompletionStatus(null);
-                setQuizAvailable(false);
+                setQuizGate(null);
             }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to load module content.');
@@ -229,49 +231,28 @@ const ModuleVideosPage: React.FC = () => {
                 />
 
                 <CourseLearningBand headerLabel="MODULE" subtitle={courseTitle ? `Part of ${courseTitle}` : undefined}>
-                    <Grid container spacing={0} sx={{ width: '100%', gap: courseLearningTheme.gridGap, alignItems: 'stretch' }}>
-                        {moduleDetails.image ? (
-                            <Grid size={{ xs: 12, sm: 4 }}>
-                                <Box
-                                    sx={{
-                                        borderRadius: 1.5,
-                                        overflow: 'hidden',
-                                        height: { xs: 140, sm: '100%' },
-                                        minHeight: { sm: 120 },
-                                        bgcolor: courseLearningTheme.surfaceRaised,
-                                    }}
-                                >
-                                    <Box
-                                        component="img"
-                                        src={getImageUrl(moduleDetails.image, 'module')}
-                                        alt={moduleDetails.title}
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).src = getSplashImageUrl();
-                                        }}
-                                        sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                                    />
-                                </Box>
-                            </Grid>
-                        ) : null}
-                        <Grid size={{ xs: 12, sm: moduleDetails.image ? 8 : 12 }}>
-                            <Stack sx={courseLearningTheme.learningColStackSx}>
-                                <Typography
-                                    variant="h5"
-                                    component="h1"
-                                    sx={{
-                                        fontWeight: 800,
-                                        lineHeight: 1.25,
-                                        fontSize: { xs: '1.2rem', sm: '1.35rem' },
-                                        color: courseLearningTheme.textPrimary,
-                                    }}
-                                >
-                                    {moduleDetails.title}
-                                </Typography>
+                    <CourseLearningHero
+                        imageUrl={
+                            moduleDetails.image
+                                ? getImageUrl(moduleDetails.image, 'module')
+                                : getSplashImageUrl()
+                        }
+                        imageAlt={moduleDetails.title}
+                        onImageError={(e) => {
+                            (e.target as HTMLImageElement).src = getSplashImageUrl();
+                        }}
+                        title={moduleDetails.title}
+                        meta={
+                            <>
                                 {videos.length > 0 && (
-                                    <Stack direction="row" flexWrap="wrap" sx={{ gap: courseLearningTheme.space.gap, mt: courseLearningTheme.space.sectionMt }}>
+                                    <>
                                         <Chip
                                             size="small"
-                                            icon={<VideoLibraryOutlinedIcon sx={{ fontSize: 16, color: courseLearningTheme.accent }} />}
+                                            icon={
+                                                <VideoLibraryOutlinedIcon
+                                                    sx={{ fontSize: 16, color: courseLearningTheme.accent }}
+                                                />
+                                            }
                                             label={`${videos.length} lesson${videos.length === 1 ? '' : 's'}`}
                                             variant="outlined"
                                             sx={courseChipOutlinedSx}
@@ -284,76 +265,68 @@ const ModuleVideosPage: React.FC = () => {
                                                 sx={{ ...courseChipOutlinedSx, color: courseLearningTheme.textSecondary }}
                                             />
                                         )}
-                                    </Stack>
+                                    </>
                                 )}
                                 {completionStatus && (
-                                    <Stack
-                                        direction="row"
-                                        flexWrap="wrap"
-                                        alignItems="center"
-                                        sx={{ gap: courseLearningTheme.space.gap, mt: courseLearningTheme.space.sectionMt }}
-                                    >
+                                    <>
                                         <Chip
                                             size="small"
                                             variant="outlined"
                                             label={`Videos ${completionStatus.videosCompleted}/${completionStatus.totalVideos}`}
-                                            sx={completionStatus.videosComplete ? courseChipSuccessSx : courseChipOutlinedSx}
+                                            sx={
+                                                completionStatus.videosComplete
+                                                    ? courseChipSuccessSx
+                                                    : courseChipOutlinedSx
+                                            }
                                         />
                                         {completionStatus.hasQuiz && (
                                             <Chip
                                                 size="small"
                                                 variant="outlined"
-                                                label={completionStatus.quizPassed ? 'Quiz passed' : 'Quiz pending'}
-                                                sx={completionStatus.quizPassed ? courseChipSuccessSx : courseChipWarningSx}
+                                                label={
+                                                    completionStatus.quizPassed
+                                                        ? 'Quiz passed'
+                                                        : quizGate?.quizState === 'ready'
+                                                          ? 'Quiz ready'
+                                                          : 'Quiz pending'
+                                                }
+                                                sx={
+                                                    completionStatus.quizPassed
+                                                        ? courseChipSuccessSx
+                                                        : quizGate?.quizState === 'ready'
+                                                          ? courseChipWarningSx
+                                                          : courseChipOutlinedSx
+                                                }
                                             />
                                         )}
                                         {completionStatus.isCompleted && (
                                             <Chip size="small" label="Complete" variant="outlined" sx={courseChipSuccessSx} />
                                         )}
-                                        {quizAvailable && moduleId && (
-                                            <Button
-                                                variant="contained"
-                                                size="small"
-                                                onClick={() => navigate(`/modules/${moduleId}/quiz`)}
-                                                sx={{
-                                                    py: 0.25,
-                                                    minHeight: 28,
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: courseLearningTheme.accent,
-                                                    fontWeight: 700,
-                                                    textTransform: 'none',
-                                                    boxShadow: 'none',
-                                                    '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88) },
-                                                }}
-                                            >
-                                                Take quiz
-                                            </Button>
-                                        )}
-                                    </Stack>
+                                    </>
                                 )}
-                            </Stack>
-                        </Grid>
-                    </Grid>
-
-                    {moduleDetails.description ? (
-                        <Box
-                            sx={{
-                                mt: courseLearningTheme.space.sectionMt,
-                                pt: courseLearningTheme.space.gapMd,
-                                borderTop: `1px solid ${alpha(courseLearningTheme.accent, 0.2)}`,
-                            }}
-                        >
-                            <Typography
-                                variant="subtitle2"
-                                sx={{ fontWeight: 700, mb: 0.5, color: courseLearningTheme.textSecondary, fontSize: '0.8125rem' }}
-                            >
-                                About this module
-                            </Typography>
-                            <Box className="tiptap-rendered-content" sx={courseTiptapSx}>
-                                {parse(moduleDetails.description)}
-                            </Box>
-                        </Box>
-                    ) : null}
+                            </>
+                        }
+                        description={
+                            moduleDetails.description ? (
+                                <Box sx={{ pt: courseLearningTheme.space.gapMd }}>
+                                    <Typography
+                                        variant="subtitle2"
+                                        sx={{
+                                            fontWeight: 700,
+                                            mb: 0.5,
+                                            color: courseLearningTheme.textSecondary,
+                                            fontSize: '0.8125rem',
+                                        }}
+                                    >
+                                        About this module
+                                    </Typography>
+                                    <Box className="tiptap-rendered-content" sx={courseTiptapSx}>
+                                        {parse(moduleDetails.description)}
+                                    </Box>
+                                </Box>
+                            ) : undefined
+                        }
+                    />
                 </CourseLearningBand>
 
                 {isModuleLocked && (
@@ -422,6 +395,8 @@ const ModuleVideosPage: React.FC = () => {
                         </Stack>
                     )}
                 </CourseLearningBand>
+
+                {quizGate && moduleId && <ModuleQuizCallout moduleId={moduleId} gate={quizGate} />}
             </CourseLearningShell>
 
             <CourseBottomNav backLabel="Back to Course" backTo={backTo} />

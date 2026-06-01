@@ -34,6 +34,7 @@ import {
     CourseLearningShell,
     CourseLearningBand,
     CourseLearningBreadcrumbs,
+    CourseLearningHero,
     CourseBottomNav,
     courseLearningTheme,
     courseTiptapSx,
