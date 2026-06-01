@@ -6,7 +6,17 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import DashboardAgendaBand from './DashboardAgendaBand';
 import DashboardAgendaTile from './DashboardAgendaTile';
-import { premiumAgendaGridColumns, premiumTopTileSpan, premiumBottomTileSpan } from './dashboardAgendaLayout';
+import {
+    AGENDA_GRID_GAP,
+    premiumAgendaGridColumns,
+    premiumTopTileSpan,
+    premiumBottomTileSpan,
+} from './dashboardAgendaLayout';
+
+/** Readable body copy on dark agenda bands (avoids theme text.secondary gold tint). */
+const agendaBodyOnDarkSx = {
+    color: 'rgba(226, 232, 240, 0.82)',
+};
 
 export const TIER_COLORS = {
     FREE: '#14b8a6',
@@ -163,7 +173,7 @@ const DashboardActivitiesPanel: React.FC<DashboardActivitiesPanelProps> = ({
                         gridColumn: '1 / -1',
                         display: 'grid',
                         gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-                        gap: 1.5,
+                        gap: AGENDA_GRID_GAP,
                     }}
                 >
                     {goldCoreTiles.map((tile) => (
@@ -205,14 +215,14 @@ const DashboardActivitiesPanel: React.FC<DashboardActivitiesPanelProps> = ({
                             {t('dashboard.agenda.goldBonusHeader')}
                         </Typography>
                     </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: 520 }}>
+                    <Typography variant="body2" sx={{ ...agendaBodyOnDarkSx, mb: 2, maxWidth: '100%' }}>
                         {t('dashboard.agenda.goldBonusSubtitle')}
                     </Typography>
                     <Box
                         sx={{
                             display: 'grid',
                             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-                            gap: 1.5,
+                            gap: AGENDA_GRID_GAP,
                         }}
                     >
                         {goldBonusTiles.map((tile) => (
@@ -245,7 +255,7 @@ const DashboardActivitiesPanel: React.FC<DashboardActivitiesPanelProps> = ({
                         gridColumn: '1 / -1',
                         display: 'grid',
                         gridTemplateColumns: premiumAgendaGridColumns,
-                        gap: 1.5,
+                        gap: AGENDA_GRID_GAP,
                         alignItems: 'stretch',
                     }}
                 >

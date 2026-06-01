@@ -4,6 +4,7 @@ import {
     validateSentenceSubmission,
     validateStorySentences,
     validateVocabSentences,
+    validateConversationPractice,
     validateSceneSubmission,
     validateSceneQuestions,
     getPendingSubmissions,
@@ -16,6 +17,7 @@ const router = express.Router();
 router.put('/scene/:submissionId/score', protect, restrictTo('admin'), validateSceneSubmission);
 router.put('/scene/:submissionId/questions', protect, restrictTo('admin'), validateSceneQuestions);
 router.put('/vocab/:submissionId/sentences', protect, restrictTo('admin'), validateVocabSentences);
+router.put('/conversation/:submissionId', protect, restrictTo('admin'), validateConversationPractice);
 router.put('/story/:submissionId/sentences', protect, restrictTo('admin'), validateStorySentences);
 router.put('/:submissionId', protect, restrictTo('admin'), validateSentenceSubmission);
 router.get('/pending', protect, restrictTo('admin'), getPendingSubmissions);

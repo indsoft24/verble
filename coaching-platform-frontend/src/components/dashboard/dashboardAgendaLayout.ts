@@ -1,5 +1,7 @@
 /** Integer theme.spacing only — fractional values break with array-based theme. */
 export const AGENDA_GAP = 2;
+/** Fixed pixel gap for premium / gold grids (matches production layout tuning). */
+export const AGENDA_GRID_GAP = '10px';
 export const AGENDA_BAND_PADDING = 2;
 export const AGENDA_HEADER_PY = 2;
 

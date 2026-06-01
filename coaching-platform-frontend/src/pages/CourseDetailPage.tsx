@@ -104,7 +104,7 @@ const CourseDetailPage: React.FC = () => {
                     Modules for this course will appear here once they are published.
                 </Typography>
             ) : (
-                <Stack spacing={courseLearningTheme.accordionGap}>
+                <Stack sx={{ gap: courseLearningTheme.accordionGap }}>
                     {modules.map((module, index) => (
                         <Accordion
                             key={module._id}
@@ -129,7 +129,7 @@ const CourseDetailPage: React.FC = () => {
                                     '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.08) },
                                 }}
                             >
-                                <Stack direction="row" alignItems="center" spacing={1.75} sx={{ width: '100%', pr: 1 }}>
+                                <Stack direction="row" alignItems="center" sx={{ ...courseLearningTheme.learningRowStackSx }}>
                                     <Box
                                         sx={{
                                             minWidth: 36,
@@ -196,7 +196,11 @@ const CourseDetailPage: React.FC = () => {
                                     </Typography>
                                 )}
                                 {module.isModuleLocked && module.previousModuleId ? (
-                                    <Stack direction="row" spacing={1.25} flexWrap="wrap" sx={{ pt: 0.25 }}>
+                                    <Stack
+                                        direction={{ xs: 'column', sm: 'row' }}
+                                        flexWrap="wrap"
+                                        sx={{ gap: courseLearningTheme.space.gap, mt: courseLearningTheme.space.blockMt }}
+                                    >
                                         <Button
                                             variant="outlined"
                                             size="medium"
@@ -311,7 +315,7 @@ const CourseDetailPage: React.FC = () => {
                     />
 
                     <CourseLearningBand headerLabel="FULL COURSE" ribbon="ULTIMATE">
-                        <Grid container spacing={2} sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}>
+                        <Grid container spacing={0} sx={{ gap: courseLearningTheme.gridGap, alignItems: { xs: 'stretch', sm: 'center' } }}>
                             <Grid size={{ xs: 12, sm: 5 }}>
                                 <Box
                                     sx={{
@@ -334,7 +338,7 @@ const CourseDetailPage: React.FC = () => {
                                 </Box>
                             </Grid>
                             <Grid size={{ xs: 12, sm: 7 }}>
-                                <Stack spacing={1.5} sx={{ py: { xs: 0, sm: 0.5 } }}>
+                                <Stack sx={{ ...courseLearningTheme.learningColStackSx }}>
                                     <Typography
                                         variant="h5"
                                         component="h1"
@@ -357,7 +361,11 @@ const CourseDetailPage: React.FC = () => {
                                         />
                                     )}
                                     {moduleCount > 0 && (
-                                        <Stack direction="row" alignItems="center" gap={0.75} sx={{ color: courseLearningTheme.textMuted }}>
+                                        <Stack
+                                            direction="row"
+                                            alignItems="center"
+                                            sx={{ gap: courseLearningTheme.space.gap, color: courseLearningTheme.textMuted }}
+                                        >
                                             <VideoLibraryOutlinedIcon sx={{ fontSize: 20, color: courseLearningTheme.accent }} />
                                             <Typography variant="body2">
                                                 {moduleCount} module{moduleCount === 1 ? '' : 's'}
@@ -376,7 +384,13 @@ const CourseDetailPage: React.FC = () => {
                         <Typography
                             variant="subtitle2"
                             component="h2"
-                            sx={{ fontWeight: 700, mb: 1.25, color: courseLearningTheme.textSecondary, fontSize: '0.875rem' }}
+                            sx={{
+                                fontWeight: 700,
+                                m: courseLearningTheme.space.gap,
+                                mt: courseLearningTheme.space.sectionMt,
+                                color: courseLearningTheme.textSecondary,
+                                fontSize: '0.875rem',
+                            }}
                         >
                             About this course
                         </Typography>

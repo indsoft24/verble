@@ -30,6 +30,7 @@ const SUBMISSION_TYPE_DEFAULT_LEVEL: Record<SubmissionType, ContentPlanLevel> = 
     sentence: 'FREE',
     story: 'BRONZE',
     vocab: 'BRONZE',
+    conversation: 'SILVER',
     scene: 'GOLD',
     speech: 'GOLD',
 };
@@ -40,7 +41,8 @@ export function getLinkedContentRef(submission: SentenceSubmission) {
         submission.storyId ||
         submission.vocabSetId ||
         submission.sceneId ||
-        submission.speechId
+        submission.speechId ||
+        submission.conversationId
     );
 }
 
@@ -99,6 +101,8 @@ function contentLabel(submission: SentenceSubmission): string {
             return 'Explain the Scene';
         case 'speech':
             return 'Famous Speeches';
+        case 'conversation':
+            return 'Practical Conversations';
         default:
             return 'Activity';
     }
@@ -171,6 +175,18 @@ export function getValidationContentDetails(
         const body = String(meta.text_content ?? '').trim();
         if (storyTitle) lines.push({ label: 'Story title', value: storyTitle });
         if (body) lines.push({ label: 'Story text', value: body });
+        return lines;
+    }
+
+    if (submission.submissionType === 'conversation') {
+        const scenarioTitle = String(meta.scenarioTitle ?? ref?.title ?? '').trim();
+        const scenarioHi = String(meta.scenarioTitle_hi ?? '').trim();
+        if (scenarioTitle) lines.push({ label: 'Scenario', value: scenarioTitle });
+        if (scenarioHi) lines.push({ label: 'Scenario (Hindi)', value: scenarioHi });
+        const participants = meta.participants as string[] | undefined;
+        if (Array.isArray(participants) && participants.length >= 2) {
+            lines.push({ label: 'Roles', value: participants.join(' · ') });
+        }
         return lines;
     }
 

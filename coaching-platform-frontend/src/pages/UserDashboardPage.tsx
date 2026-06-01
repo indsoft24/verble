@@ -44,12 +44,7 @@ import WordOfTheDayCard from '../components/features/WordOfTheDayCard';
 import PhraseOfTheDayCard from '../components/features/PhraseOfTheDayCard';
 import StoryCard from '../components/features/StoryCard';
 import VocabularySetCard from '../components/features/VocabularySetCard';
-import ConversationChat from '../components/features/ConversationChat';
-import {
-    getConversationParticipants,
-    normalizeDialogue,
-} from '../utils/conversationDialogueUtils';
-import { getContentDisplayNumber } from '../utils/dailyActivityUi';
+import PracticalConversationActivity from '../components/features/PracticalConversationActivity';
 import PuzzleCard from '../components/features/PuzzleCard';
 import SceneCard from '../components/features/SceneCard';
 import SpeechCard from '../components/features/SpeechCard';
@@ -366,7 +361,6 @@ const UserDashboardPage: React.FC = () => {
     const displayStreak = getStreakForDisplayLevel(user);
 
     if (selectedActivity && activityKind) {
-        const meta = selectedActivity.metadata || {};
         return (
             <UserLayout title="Activity">
                 <Container maxWidth="lg" sx={{ py: 2 }}>
@@ -415,30 +409,14 @@ const UserDashboardPage: React.FC = () => {
                             }
                         />
                     )}
-                    {activityKind === 'conversation' && Array.isArray(meta.dialogue) && (
+                    {activityKind === 'conversation' && (
                         <Box sx={{ minHeight: '70vh', py: 2 }}>
-                            {(() => {
-                                const { participant1, participant2 } =
-                                    getConversationParticipants(meta);
-                                return (
-                                    <>
-                                        <ConversationChat
-                                            dialogue={normalizeDialogue(
-                                                meta.dialogue,
-                                                participant1,
-                                                participant2
-                                            )}
-                                            participant1={participant1}
-                                            participant2={participant2}
-                                            scenarioTitle={String(
-                                                meta.scenarioTitle || selectedActivity.title || ''
-                                            )}
-                                            scenarioTitleHi={String(meta.scenarioTitle_hi || '')}
-                                            displayNumber={getContentDisplayNumber(
-                                                selectedActivity.sequenceNumber
-                                            )}
-                                        />
-                                        <Paper
+                            <>
+                                <PracticalConversationActivity
+                                    data={selectedActivity}
+                                    onSubmissionSuccess={refreshDashboardAfterSubmission}
+                                />
+                                <Paper
                                             elevation={0}
                                             sx={{
                                                 mt: 2,
@@ -474,9 +452,7 @@ const UserDashboardPage: React.FC = () => {
                                                 }}
                                             />
                                         </Paper>
-                                    </>
-                                );
-                            })()}
+                            </>
                         </Box>
                     )}
                     {(activityKind === 'puzzle_spot' || activityKind === 'puzzle_grammar') && (

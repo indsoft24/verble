@@ -12,6 +12,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import UserSidebar from './UserSidebar';
 import { brandAssets } from '../../assets/brandAssets';
+import { alpha } from '@mui/material/styles';
 import { courseLearningTheme } from '../course/courseLearningTheme';
 
 interface UserLayoutProps {
@@ -84,7 +85,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                         sx={{
                             bgcolor: isLearning ? courseLearningTheme.bandBg : 'background.paper',
                             borderBottom: '1px solid',
-                            borderColor: isLearning ? 'rgba(124, 58, 237, 0.35)' : 'divider',
+                            borderColor: isLearning ? alpha(courseLearningTheme.accent, 0.25) : 'divider',
                             color: isLearning ? courseLearningTheme.textPrimary : 'text.primary',
                             zIndex: theme.zIndex.drawer + 1,
                         }}
@@ -94,6 +95,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                                 onClick={handleSidebarToggle}
                                 edge="start"
                                 aria-label="Open menu"
+                                sx={isLearning ? { color: courseLearningTheme.textPrimary } : undefined}
                             >
                                 <MenuIcon />
                             </IconButton>

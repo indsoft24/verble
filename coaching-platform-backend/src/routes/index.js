@@ -35,6 +35,7 @@ import dailyContentRoutes from './dailyContentRoutes.js';
 import sentenceSubmissionRoutes from './sentenceSubmissionRoutes.js';
 import storySubmissionRoutes from './storySubmissionRoutes.js';
 import vocabSubmissionRoutes from './vocabSubmissionRoutes.js';
+import conversationSubmissionRoutes from './conversationSubmissionRoutes.js';
 import puzzleSubmissionRoutes from './puzzleSubmissionRoutes.js';
 import sceneSubmissionRoutes from './sceneSubmissionRoutes.js';
 import speechSubmissionRoutes from './speechSubmissionRoutes.js';
@@ -99,6 +100,7 @@ router.use('/daily-content', dailyContentRoutes); // Handles /api/daily-content/
 router.use('/submit-sentence', sentenceSubmissionRoutes); // Handles /api/submit-sentence/*
 router.use('/submit-story-summary', storySubmissionRoutes); // Handles /api/submit-story-summary/*
 router.use('/submit-vocab-sentences', vocabSubmissionRoutes); // Handles /api/submit-vocab-sentences/*
+router.use('/submit-conversation-practice', conversationSubmissionRoutes); // Handles /api/submit-conversation-practice/*
 router.use('/submit-puzzle', puzzleSubmissionRoutes); // Handles /api/submit-puzzle/*
 router.use('/submit-scene-description', sceneSubmissionRoutes); // Handles /api/submit-scene-description/*
 router.use('/submit-speech-description', speechSubmissionRoutes); // Handles /api/submit-speech-description/*

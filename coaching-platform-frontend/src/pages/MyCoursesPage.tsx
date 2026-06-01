@@ -173,7 +173,7 @@ const MyCoursesPage: React.FC = () => {
                                     bgcolor: courseLearningTheme.accent,
                                     fontWeight: 700,
                                     textTransform: 'none',
-                                    '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88) },
+                                    '&:hover': { bgcolor: courseLearningTheme.accentDark },
                                 }}
                             >
                                 Explore Courses
@@ -184,8 +184,12 @@ const MyCoursesPage: React.FC = () => {
                     <Box
                         sx={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                            gap: 1.25,
+                            gridTemplateColumns: {
+                                xs: '1fr',
+                                sm: 'repeat(2, 1fr)',
+                                lg: 'repeat(auto-fill, minmax(300px, 1fr))',
+                            },
+                            gap: courseLearningTheme.gridGap,
                             alignItems: 'stretch',
                         }}
                     >
@@ -208,8 +212,8 @@ const MyCoursesPage: React.FC = () => {
 
                             const progressFooter =
                                 isAuthenticated && eligibility ? (
-                                    <Stack spacing={1}>
-                                        <Stack direction="row" justifyContent="space-between">
+                                    <Stack sx={courseLearningTheme.learningColStackSx}>
+                                        <Stack direction="row" justifyContent="space-between" sx={{ gap: courseLearningTheme.space.gap }}>
                                             <Typography variant="caption" sx={{ color: courseLearningTheme.textMuted }}>
                                                 Completion
                                             </Typography>
@@ -227,7 +231,7 @@ const MyCoursesPage: React.FC = () => {
                                                 '& .MuiLinearProgress-bar': { bgcolor: courseLearningTheme.accent },
                                             }}
                                         />
-                                        <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                                        <Stack direction="row" flexWrap="wrap" sx={{ gap: courseLearningTheme.space.gap, mt: courseLearningTheme.space.sectionMt }}>
                                             <Chip
                                                 size="small"
                                                 label={eligibility.isEligible ? 'Certificate eligible' : 'In progress'}
@@ -244,7 +248,7 @@ const MyCoursesPage: React.FC = () => {
                                 ) : undefined;
 
                             return (
-                                <Box key={courseId} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Box key={courseId} sx={{ ...courseLearningTheme.learningColStackSx }}>
                                     <CourseLearningTile
                                         variant="card"
                                         title={course.title}
@@ -254,13 +258,14 @@ const MyCoursesPage: React.FC = () => {
                                         onClick={() => handleCardClick(courseId)}
                                         footer={progressFooter}
                                     />
-                                    <Stack spacing={0.75}>
+                                    <Stack sx={{ ...courseLearningTheme.learningColStackSx, width: '100%' }}>
                                         {eligibility?.reportCardAvailable && (
                                             <Button
                                                 size="small"
                                                 variant="outlined"
                                                 component={RouterLink}
                                                 to={`/my-courses/${courseId}/report-card`}
+                                                fullWidth
                                                 sx={{
                                                     borderColor: alpha(courseLearningTheme.accent, 0.5),
                                                     color: courseLearningTheme.textPrimary,
@@ -298,7 +303,7 @@ const MyCoursesPage: React.FC = () => {
                                                     bgcolor: courseLearningTheme.accent,
                                                     textTransform: 'none',
                                                     fontWeight: 700,
-                                                    '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88) },
+                                                    '&:hover': { bgcolor: courseLearningTheme.accentDark },
                                                 }}
                                             >
                                                 {generatingForCourse[courseId] ? 'Generating…' : 'Generate certificate'}

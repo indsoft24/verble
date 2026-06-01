@@ -12,10 +12,6 @@ import {
     Stack,
     alpha,
 } from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import VideoLibraryOutlinedIcon from '@mui/icons-material/VideoLibraryOutlined';
 import parse from 'html-react-parser';
 
@@ -33,6 +29,7 @@ import {
     CourseLearningBand,
     CourseLearningBreadcrumbs,
     CourseBottomNav,
+    CourseLessonRow,
     courseLearningTheme,
     courseBottomNavZIndex,
     courseTiptapSx,
@@ -232,7 +229,7 @@ const ModuleVideosPage: React.FC = () => {
                 />
 
                 <CourseLearningBand headerLabel="MODULE" subtitle={courseTitle ? `Part of ${courseTitle}` : undefined}>
-                    <Grid container spacing={1.5} sx={{ width: '100%', alignItems: 'stretch' }}>
+                    <Grid container spacing={0} sx={{ width: '100%', gap: courseLearningTheme.gridGap, alignItems: 'stretch' }}>
                         {moduleDetails.image ? (
                             <Grid size={{ xs: 12, sm: 4 }}>
                                 <Box
@@ -257,7 +254,7 @@ const ModuleVideosPage: React.FC = () => {
                             </Grid>
                         ) : null}
                         <Grid size={{ xs: 12, sm: moduleDetails.image ? 8 : 12 }}>
-                            <Stack spacing={1}>
+                            <Stack sx={courseLearningTheme.learningColStackSx}>
                                 <Typography
                                     variant="h5"
                                     component="h1"
@@ -271,7 +268,7 @@ const ModuleVideosPage: React.FC = () => {
                                     {moduleDetails.title}
                                 </Typography>
                                 {videos.length > 0 && (
-                                    <Stack direction="row" flexWrap="wrap" gap={0.75}>
+                                    <Stack direction="row" flexWrap="wrap" sx={{ gap: courseLearningTheme.space.gap, mt: courseLearningTheme.space.sectionMt }}>
                                         <Chip
                                             size="small"
                                             icon={<VideoLibraryOutlinedIcon sx={{ fontSize: 16, color: courseLearningTheme.accent }} />}
@@ -290,7 +287,12 @@ const ModuleVideosPage: React.FC = () => {
                                     </Stack>
                                 )}
                                 {completionStatus && (
-                                    <Stack direction="row" flexWrap="wrap" gap={0.75} alignItems="center" sx={{ pt: 0.25 }}>
+                                    <Stack
+                                        direction="row"
+                                        flexWrap="wrap"
+                                        alignItems="center"
+                                        sx={{ gap: courseLearningTheme.space.gap, mt: courseLearningTheme.space.sectionMt }}
+                                    >
                                         <Chip
                                             size="small"
                                             variant="outlined"
@@ -334,7 +336,13 @@ const ModuleVideosPage: React.FC = () => {
                     </Grid>
 
                     {moduleDetails.description ? (
-                        <Box sx={{ mt: 1.25, pt: 1.25, borderTop: `1px solid ${alpha(courseLearningTheme.accent, 0.2)}` }}>
+                        <Box
+                            sx={{
+                                mt: courseLearningTheme.space.sectionMt,
+                                pt: courseLearningTheme.space.gapMd,
+                                borderTop: `1px solid ${alpha(courseLearningTheme.accent, 0.2)}`,
+                            }}
+                        >
                             <Typography
                                 variant="subtitle2"
                                 sx={{ fontWeight: 700, mb: 0.5, color: courseLearningTheme.textSecondary, fontSize: '0.8125rem' }}
@@ -369,7 +377,10 @@ const ModuleVideosPage: React.FC = () => {
                 )}
 
                 {cycleMeta.maxModuleCycles != null && !isModuleLocked && (
-                    <Typography variant="caption" sx={{ display: 'block', mb: 1, color: courseLearningTheme.textSecondary }}>
+                    <Typography
+                        variant="caption"
+                        sx={{ display: 'block', mb: courseLearningTheme.sectionGap, color: courseLearningTheme.textSecondary }}
+                    >
                         Cycle {(cycleMeta.completionCycle ?? 0) + 1} of {cycleMeta.maxModuleCycles}
                         {cycleMeta.maxWatchesPerCycle != null
                             ? ` · Up to ${cycleMeta.maxWatchesPerCycle} watches per lesson this cycle`
@@ -386,237 +397,28 @@ const ModuleVideosPage: React.FC = () => {
                             No lessons have been published for this module yet.
                         </Typography>
                     ) : (
-                        <Stack component="ol" sx={{ listStyle: 'none', m: 0, p: 0, width: '100%' }} spacing={0}>
-                            {sortedVideos.map((video, index) => {
-                                const locked = Boolean(video.isLocked);
-                                const needsPlan = video.lockReason === 'subscription';
-                                const watchLimited = video.lockReason === 'watch_limit';
-                                const sequenceLocked = video.lockReason === 'sequence';
-                                const disabled = locked || needsPlan || watchLimited || sequenceLocked;
-                                const vid = extractId(video) || video._id;
-
-                                return (
+                        <Stack component="ol" sx={{ listStyle: 'none', m: 0, p: 0, width: '100%', gap: courseLearningTheme.listRowGap }}>
+                            {sortedVideos.map((video, index) => (
                                     <Box
                                         component="li"
                                         key={video._id}
                                         sx={{
-                                            borderBottom: `1px solid ${alpha(courseLearningTheme.accent, 0.2)}`,
-                                            '&:last-of-type': { borderBottom: 'none' },
+                                            borderRadius: `${courseLearningTheme.borderRadius}px`,
+                                            border: courseLearningTheme.tileBorder(),
+                                            overflow: 'hidden',
                                         }}
                                     >
-                                        <Box
-                                            className="module-lesson-row"
-                                            role="button"
-                                            tabIndex={0}
-                                            onClick={() => handleVideoCardClick(video)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' || e.key === ' ') {
-                                                    e.preventDefault();
-                                                    handleVideoCardClick(video);
-                                                }
-                                            }}
-                                            sx={{
-                                                width: '100%',
-                                                maxWidth: '100%',
-                                                display: 'flex',
-                                                flexDirection: { xs: 'column', sm: 'row' },
-                                                alignItems: { sm: 'stretch' },
-                                                textAlign: 'left',
-                                                cursor: 'pointer',
-                                                bgcolor: courseLearningTheme.tileBg,
-                                                transition: 'background-color 0.15s ease',
-                                                outline: 'none',
-                                                '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.12) },
-                                                '&:focus-visible': { boxShadow: courseLearningTheme.focusRing },
-                                            }}
-                                        >
-                                            {/* Thumbnail — fixed width on desktop so row always reads clearly */}
-                                            <Box
-                                                sx={{
-                                                    position: 'relative',
-                                                    width: { xs: '100%', sm: 180, md: 200 },
-                                                    flexShrink: 0,
-                                                    alignSelf: { xs: 'stretch', sm: 'auto' },
-                                                    aspectRatio: '16 / 9',
-                                                    bgcolor: 'grey.900',
-                                                }}
-                                            >
-                                                <Box
-                                                    component="img"
-                                                    src={getVideoThumbUrl(video)}
-                                                    alt={video.title}
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).src = getSplashImageUrl();
-                                                    }}
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        inset: 0,
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        objectFit: 'cover',
-                                                    }}
-                                                />
-                                                <Chip
-                                                    label={`${index + 1}`}
-                                                    size="small"
-                                                    aria-hidden
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        top: 8,
-                                                        left: 8,
-                                                        minWidth: 28,
-                                                        fontWeight: 800,
-                                                        bgcolor: courseLearningTheme.accent,
-                                                        color: '#fff',
-                                                        border: 'none',
-                                                        '& .MuiChip-label': { px: 0.75 },
-                                                    }}
-                                                />
-                                                {video.durationSeconds != null && video.durationSeconds > 0 && (
-                                                    <Chip
-                                                        label={formatDuration(video.durationSeconds)}
-                                                        size="small"
-                                                        icon={<AccessTimeIcon sx={{ color: 'common.white !important', fontSize: '14px !important' }} />}
-                                                        sx={{
-                                                            position: 'absolute',
-                                                            bottom: 8,
-                                                            right: 8,
-                                                            fontWeight: 600,
-                                                            bgcolor: 'rgba(15, 23, 42, 0.78)',
-                                                            color: 'common.white',
-                                                            border: 'none',
-                                                            '& .MuiChip-icon': { ml: 0.5 },
-                                                        }}
-                                                    />
-                                                )}
-                                                <Box
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        inset: 0,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        bgcolor: disabled ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.22)',
-                                                        opacity: disabled ? 1 : 0.88,
-                                                        transition: 'opacity 0.2s ease',
-                                                        '@media (hover: hover)': {
-                                                            '.module-lesson-row:hover &': { opacity: 1 },
-                                                        },
-                                                    }}
-                                                >
-                                                    {disabled ? (
-                                                        <LockOutlinedIcon sx={{ fontSize: 40, color: 'common.white' }} />
-                                                    ) : (
-                                                        <PlayArrowIcon sx={{ fontSize: 48, color: 'common.white', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))' }} />
-                                                    )}
-                                                </Box>
-                                            </Box>
-
-                                            <Stack
-                                                direction={{ xs: 'column', sm: 'row' }}
-                                                spacing={2}
-                                                alignItems={{ xs: 'stretch', sm: 'center' }}
-                                                justifyContent="space-between"
-                                                sx={{ flex: 1, minWidth: 0, p: { xs: 1.25, sm: 1.5 }, gap: 1 }}
-                                            >
-                                                <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
-                                                    <Typography
-                                                        variant="overline"
-                                                        sx={{ color: courseLearningTheme.accent, fontWeight: 700, letterSpacing: 0.5 }}
-                                                    >
-                                                        Lesson {index + 1}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="h6"
-                                                        component="h3"
-                                                        sx={{
-                                                            fontWeight: 800,
-                                                            lineHeight: 1.3,
-                                                            mt: 0.25,
-                                                            wordBreak: 'break-word',
-                                                            color: courseLearningTheme.textPrimary,
-                                                        }}
-                                                    >
-                                                        {video.title}
-                                                    </Typography>
-                                                    <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1.25 }}>
-                                                        {sequenceLocked && (
-                                                            <Chip
-                                                                label={video.accessReason || 'Complete previous lesson'}
-                                                                size="small"
-                                                                variant="outlined"
-                                                                icon={<LockOutlinedIcon sx={{ fontSize: 14, color: courseLearningTheme.textSecondary }} />}
-                                                                sx={{ ...courseChipOutlinedSx, maxWidth: '100%', height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }}
-                                                            />
-                                                        )}
-                                                        {watchLimited && (
-                                                            <Chip
-                                                                label={video.accessReason || 'Watch limit reached'}
-                                                                size="small"
-                                                                variant="outlined"
-                                                                sx={courseChipWarningSx}
-                                                            />
-                                                        )}
-                                                        {needsPlan && (
-                                                            <Chip
-                                                                label="Subscription required"
-                                                                size="small"
-                                                                variant="outlined"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    navigate('/subscription-plans');
-                                                                }}
-                                                                sx={courseChipWarningSx}
-                                                            />
-                                                        )}
-                                                        {!disabled && (
-                                                            <Chip label="Ready" size="small" variant="outlined" sx={courseChipSuccessSx} />
-                                                        )}
-                                                    </Stack>
-                                                </Box>
-
-                                                <Stack
-                                                    direction="row"
-                                                    alignItems="center"
-                                                    spacing={1}
-                                                    sx={{
-                                                        flexShrink: 0,
-                                                        justifyContent: { xs: 'space-between', sm: 'flex-end' },
-                                                    }}
-                                                >
-                                                    <Button
-                                                        variant="contained"
-                                                        size="medium"
-                                                        disabled={disabled}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (disabled) {
-                                                                handleVideoCardClick(video);
-                                                                return;
-                                                            }
-                                                            if (vid) navigate(`/videos/${vid}`);
-                                                        }}
-                                                        startIcon={locked ? <LockOutlinedIcon /> : needsPlan ? undefined : <PlayArrowIcon />}
-                                                        sx={{
-                                                            textTransform: 'none',
-                                                            fontWeight: 800,
-                                                            borderRadius: 1.5,
-                                                            minWidth: { xs: 'auto', sm: 148 },
-                                                            px: 2,
-                                                            boxShadow: 'none',
-                                                            bgcolor: courseLearningTheme.accent,
-                                                            '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88), boxShadow: 'none' },
-                                                        }}
-                                                    >
-                                                        {needsPlan ? 'View plans' : locked ? 'Locked' : 'Watch'}
-                                                    </Button>
-                                                    <ChevronRightIcon sx={{ color: 'text.disabled', display: { xs: 'none', sm: 'block' } }} />
-                                                </Stack>
-                                            </Stack>
-                                        </Box>
+                                        <CourseLessonRow
+                                            video={video}
+                                            index={index}
+                                            thumbUrl={getVideoThumbUrl(video)}
+                                            splashUrl={getSplashImageUrl()}
+                                            formatDuration={formatDuration}
+                                            onRowClick={handleVideoCardClick}
+                                            onWatch={(id) => navigate(`/videos/${id}`)}
+                                        />
                                     </Box>
-                                );
-                            })}
+                            ))}
                         </Stack>
                     )}
                 </CourseLearningBand>

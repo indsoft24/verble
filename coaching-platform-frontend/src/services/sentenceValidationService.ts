@@ -45,6 +45,18 @@ export interface SentenceSubmission {
         level?: string;
         metadata?: Record<string, unknown>;
     };
+    conversationId?: {
+        _id: string;
+        title: string;
+        type: string;
+        level?: string;
+        metadata?: Record<string, unknown>;
+    };
+    participant1?: string;
+    participant2?: string;
+    exchanges?: Array<{ participant1Line: string; participant2Line: string }>;
+    exchangeValidations?: Array<{ exchangeIndex: number; isCorrect: boolean }>;
+    exchangesCorrect?: number;
     word?: string;
     sentence?: string;
     sentences?: string[] | Array<{ sentence: string; vocabWordsUsed?: string[] }>;
@@ -64,7 +76,7 @@ export interface SentenceSubmission {
     reviewedAt?: string;
     createdAt: string;
     updatedAt: string;
-    submissionType: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech';
+    submissionType: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech' | 'conversation';
 }
 
 export interface PendingSubmissionsResponse {
@@ -102,6 +114,14 @@ export interface ValidateVocabSentencesRequest {
     feedback?: string;
 }
 
+export interface ValidateConversationPracticeRequest {
+    exchangeValidations: Array<{
+        exchangeIndex: number;
+        isCorrect: boolean;
+    }>;
+    feedback?: string;
+}
+
 export interface ValidateSubmissionResponse {
     status: string;
     message: string;
@@ -122,7 +142,7 @@ export interface ValidateSubmissionResponse {
  * Get all pending submissions for review
  */
 export const getPendingSubmissions = async (
-    type?: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech',
+    type?: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech' | 'conversation',
     limit: number = 50
 ): Promise<SentenceSubmission[]> => {
     const params: any = { limit };
@@ -173,6 +193,17 @@ export const validateVocabSentences = async (
     return response.data;
 };
 
+export const validateConversationPractice = async (
+    submissionId: string,
+    data: ValidateConversationPracticeRequest
+): Promise<ValidateSubmissionResponse> => {
+    const response = await apiClient.put<ValidateSubmissionResponse>(
+        `/validate-sentence/conversation/${submissionId}`,
+        data
+    );
+    return response.data;
+};
+
 export interface ValidateSceneSubmissionRequest {
     score: number;
     feedback?: string;
@@ -193,7 +224,7 @@ export const validateSceneSubmission = async (
  * Get all submissions (pending and reviewed)
  */
 export const getAllSubmissions = async (
-    type?: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech',
+    type?: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech' | 'conversation',
     status?: 'pending' | 'reviewed' | 'all',
     limit: number = 100
 ): Promise<SentenceSubmission[]> => {

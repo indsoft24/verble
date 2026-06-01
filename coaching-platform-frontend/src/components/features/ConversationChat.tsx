@@ -1,4 +1,4 @@
-// WhatsApp-style practical conversation — chronological thread, two fixed participants
+// Chat-style practical conversation — chronological thread, two fixed participants
 import React, { useState, useRef, useEffect } from 'react';
 import {
     Box,
@@ -7,27 +7,20 @@ import {
     Tooltip,
     CircularProgress,
     IconButton,
-    alpha,
 } from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import MicIcon from '@mui/icons-material/Mic';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { keyframes } from '@emotion/react';
 import { isParticipant2Speaker, type DialogueLine } from '../../utils/conversationDialogueUtils';
 import ActivityContentHeader from './ActivityContentHeader';
-
-const SILVER_ACCENT = '#3b82f6';
-const WA_HEADER = '#075e54';
-const WA_BG = '#e5ddd5';
-const BUBBLE_USER = '#dcf8c6';
-const BUBBLE_OTHER = '#ffffff';
+import { practicalConversationTheme as theme } from './practicalConversationTheme';
 
 const pulse = keyframes`
     0%, 100% { opacity: 1; }
     50% { opacity: 0.65; }
 `;
 
-interface ConversationChatProps {
+export interface ConversationChatProps {
     dialogue: DialogueLine[];
     participant1: string;
     participant2: string;
@@ -129,19 +122,21 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
-                minHeight: { xs: 520, md: 560 },
-                maxWidth: 520,
+                width: theme.frameWidth,
+                maxWidth: theme.frameMaxWidth,
+                minWidth: { xs: 0, sm: 360 },
+                minHeight: { xs: 420, md: 480 },
                 margin: '0 auto',
                 borderRadius: 3,
                 overflow: 'hidden',
-                border: `2px solid ${SILVER_ACCENT}`,
-                boxShadow: `0 0 24px ${alpha(SILVER_ACCENT, 0.25)}`,
+                border: `2px solid ${theme.silverRing}`,
+                boxShadow: theme.cardShadow,
             }}
         >
-            <Box sx={{ bgcolor: WA_HEADER, color: '#fff', px: 2, py: 1.75 }}>
+            <Box sx={{ bgcolor: theme.headerBg, color: theme.headerText, px: 2, py: 1.75 }}>
                 <ActivityContentHeader
                     contentType="CONVERSATION"
-                    accentColor="#a7f3d0"
+                    accentColor={theme.headerAccentLabel}
                     displayNumber={displayNumber}
                     sx={{ mb: 0.75 }}
                 />
@@ -149,11 +144,11 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                     {headerTitle}
                 </Typography>
                 {scenarioTitleHi && (
-                    <Typography variant="body2" sx={{ opacity: 0.92, mt: 0.25 }}>
+                    <Typography variant="body2" sx={{ color: theme.headerMuted, mt: 0.25 }}>
                         {scenarioTitleHi}
                     </Typography>
                 )}
-                <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mt: 0.75 }}>
+                <Typography variant="caption" sx={{ color: theme.headerMuted, display: 'block', mt: 0.75 }}>
                     {participant1} · {participant2}
                 </Typography>
             </Box>
@@ -162,7 +157,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                 sx={{
                     flex: 1,
                     overflowY: 'auto',
-                    bgcolor: WA_BG,
+                    bgcolor: theme.chatBg,
                     p: 2,
                     display: 'flex',
                     flexDirection: 'column',
@@ -170,7 +165,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                 }}
             >
                 {dialogue.length === 0 && (
-                    <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 4 }}>
+                    <Typography variant="body2" sx={{ color: theme.headerMuted, textAlign: 'center', py: 4 }}>
                         No dialogue available for this scenario yet.
                     </Typography>
                 )}
@@ -193,7 +188,13 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                                 {!isUser && (
                                     <Typography
                                         variant="caption"
-                                        sx={{ ml: 0.5, mb: 0.25, display: 'block', color: WA_HEADER, fontWeight: 700 }}
+                                        sx={{
+                                            ml: 0.5,
+                                            mb: 0.25,
+                                            display: 'block',
+                                            color: theme.bubbleLabel,
+                                            fontWeight: 700,
+                                        }}
                                     >
                                         {item.speaker || participant1}
                                     </Typography>
@@ -204,22 +205,29 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                                         px: 1.5,
                                         py: 1,
                                         borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                                        bgcolor: isUser ? BUBBLE_USER : BUBBLE_OTHER,
-                                        boxShadow: '0 1px 1px rgba(0,0,0,0.12)',
+                                        bgcolor: isUser ? theme.bubbleUser : theme.bubbleOther,
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
                                     }}
                                 >
-                                    <Typography variant="body2" sx={{ color: '#111', whiteSpace: 'pre-wrap' }}>
+                                    <Typography
+                                        variant="body2"
+                                        sx={{ color: theme.bubbleOtherText, whiteSpace: 'pre-wrap' }}
+                                    >
                                         {item.text_en}
                                     </Typography>
                                     {hindiVisible && item.text_hi && (
-                                        <Typography variant="body2" sx={{ color: '#334155', mt: 0.75 }}>
+                                        <Typography variant="body2" sx={{ color: theme.bubbleHindi, mt: 0.75 }}>
                                             {item.text_hi}
                                         </Typography>
                                     )}
                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.25, mt: 0.5 }}>
                                         {item.text_hi && (
                                             <Tooltip title={hindiVisible ? 'Hide Hindi' : 'Show Hindi'}>
-                                                <IconButton size="small" onClick={() => toggleHindi(index)}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => toggleHindi(index)}
+                                                    sx={{ color: theme.iconColor }}
+                                                >
                                                     <TranslateIcon sx={{ fontSize: 16 }} />
                                                 </IconButton>
                                             </Tooltip>
@@ -228,25 +236,15 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                                             <IconButton
                                                 size="small"
                                                 onClick={() => handlePlayAudio(index, item.text_en, item.audio)}
+                                                sx={{ color: theme.iconColor }}
                                             >
                                                 {audioLoading[index] ? (
-                                                    <CircularProgress size={14} />
+                                                    <CircularProgress size={14} sx={{ color: theme.iconColor }} />
                                                 ) : (
                                                     <VolumeUpIcon sx={{ fontSize: 18 }} />
                                                 )}
                                             </IconButton>
                                         </Tooltip>
-                                        {isUser && (
-                                            <Tooltip title="Practice speaking">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handlePlayAudio(index, item.text_en, item.audio)}
-                                                    sx={{ bgcolor: alpha(WA_HEADER, 0.12) }}
-                                                >
-                                                    <MicIcon sx={{ fontSize: 18, color: WA_HEADER }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                        )}
                                     </Box>
                                 </Paper>
                             </Box>

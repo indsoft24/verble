@@ -25,7 +25,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
 import WordOfTheDayCard from '../components/features/WordOfTheDayCard';
 import StoryCard from '../components/features/StoryCard';
-import ConversationChat from '../components/features/ConversationChat';
+import PracticalConversationActivity from '../components/features/PracticalConversationActivity';
 import LevelUnlockDialog from '../components/features/LevelUnlockDialog';
 import { getTodaysDailyContent, type DailyContent } from '../services/dailyContentService';
 import { getContentTypeConfig, type ContentType } from '../utils/contentTypeConfig';
@@ -220,13 +220,9 @@ const HomePage: React.FC = () => {
                 {activityType === 'story' && (
                     <StoryCard data={selectedActivity as any} />
                 )}
-                {activityType === 'conversation' && selectedActivity.metadata?.dialogue && (
-                    <Box sx={{ height: '80vh' }}>
-                        <ConversationChat
-                            dialogue={selectedActivity.metadata.dialogue}
-                            participant1={String(selectedActivity.metadata.participant1 || selectedActivity.metadata.participants?.[0] || 'Speaker 1')}
-                            participant2={String(selectedActivity.metadata.participant2 || selectedActivity.metadata.participants?.[1] || 'Speaker 2')}
-                        />
+                {activityType === 'conversation' && (
+                    <Box sx={{ py: 2 }}>
+                        <PracticalConversationActivity data={selectedActivity} />
                     </Box>
                 )}
             </Container>

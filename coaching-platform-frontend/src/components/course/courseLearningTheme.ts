@@ -1,55 +1,100 @@
 import { alpha } from '@mui/material/styles';
 
-/** Full Course tier accent */
-export const COURSE_LEARNING_ACCENT = '#8b5cf6';
-export const COURSE_LEARNING_ACCENT_DARK = '#7c3aed';
+/** Verble brand — teal primary, yellow highlight (logo-inspired) */
+export const COURSE_LEARNING_ACCENT = '#22a699';
+export const COURSE_LEARNING_ACCENT_DARK = '#1a857c';
+export const COURSE_LEARNING_HIGHLIGHT = '#e8b923';
 
-/** Readable text on purple-tinted dark surfaces */
+/** Production-tuned spacing (matches learning page devtools reference) */
+export const courseLearningSpace = {
+    gap: '5px',
+    gapMd: '8px',
+    bandInset: { xs: '7px', sm: '8px' },
+    bandMb: '24px',
+    blockMt: '5px',
+    blockMb: '16px',
+    sectionMt: '8px',
+    rowIndent: '16px',
+    lessonThumbSm: 104,
+    lessonRowMinHeight: 102,
+} as const;
+
+/** MUI Stack/Grid spacing multiplier for 5px (8px theme unit × 0.625) */
+export const courseLearningStackSpacing = 0.625;
+
 export const courseLearningTheme = {
     accent: COURSE_LEARNING_ACCENT,
     accentDark: COURSE_LEARNING_ACCENT_DARK,
-    /** Soft black with purple undertone */
-    pageBg: '#13111c',
-    /** Card / band surface */
-    bandBg: '#1c1929',
-    /** Nested tiles, lesson rows */
-    tileBg: '#252236',
-    surfaceRaised: '#2d2940',
-    textPrimary: '#f8fafc',
-    textSecondary: '#e9e4ff',
-    textMuted: '#c4bdd9',
-    textBody: '#e2e8f0',
+    highlight: COURSE_LEARNING_HIGHLIGHT,
+    pageBg: '#0f1619',
+    bandBg: '#182428',
+    tileBg: '#1f2e34',
+    surfaceRaised: '#263a42',
+    textPrimary: '#f4f7f6',
+    textSecondary: '#c5ddd8',
+    textMuted: '#8fa8a3',
+    textBody: '#d4e4e1',
+    iconOnDark: '#ffffff',
+    iconMuted: '#a8c4bf',
     borderRadius: 10,
     bandBorderRadius: 14,
     bottomNavHeight: 64,
     bottomNavSafePadding: 'max(8px, env(safe-area-inset-bottom))',
     contentPaddingBottom: 76,
-    /** Compact but breathable vertical rhythm */
-    bandMb: 2,
-    bandHeaderPy: { xs: 1.5, sm: 1.75 },
-    bandBodyP: { xs: 2, sm: 2.25 },
-    bandBodyPt: { xs: 1.75, sm: 2 },
-    stackGap: 1.5,
-    stackGapLoose: 2,
-    accordionGap: 1.5,
-    accordionSummaryPx: { xs: 2, sm: 2.25 },
-    accordionSummaryPy: 1.75,
-    accordionDetailsPx: { xs: 2, sm: 2.5 },
-    accordionDetailsPy: 2.25,
-    shellPt: 1,
-    shellPx: { xs: 2, sm: 2.5 },
-    breadcrumbMb: 1.5,
+    space: courseLearningSpace,
+    bandMb: courseLearningSpace.bandMb,
+    bandOuterP: courseLearningSpace.bandInset,
+    bandHeaderPt: courseLearningSpace.gapMd,
+    bandHeaderPb: courseLearningSpace.gap,
+    bandBodyP: 0,
+    bandBodyPt: courseLearningSpace.gap,
+    bandBodyGap: courseLearningSpace.gap,
+    stackGap: courseLearningSpace.gap,
+    stackGapLoose: courseLearningSpace.blockMb,
+    sectionGap: courseLearningSpace.blockMb,
+    gridGap: courseLearningSpace.gap,
+    accordionGap: courseLearningSpace.gap,
+    listRowGap: courseLearningSpace.gap,
+    paperP: courseLearningSpace.bandInset,
+    accordionSummaryPx: courseLearningSpace.bandInset,
+    accordionSummaryPy: courseLearningSpace.gapMd,
+    accordionDetailsPx: courseLearningSpace.bandInset,
+    accordionDetailsPy: courseLearningSpace.gapMd,
+    lessonThumbWidth: { sm: courseLearningSpace.lessonThumbSm, md: 200 },
+    shellPt: courseLearningSpace.gapMd,
+    shellPx: courseLearningSpace.bandInset,
+    breadcrumbMb: courseLearningSpace.blockMb,
+    learningRowStackSx: {
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        width: '100%',
+        pr: courseLearningSpace.gapMd,
+        gap: courseLearningSpace.gap,
+    },
+    learningColStackSx: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: courseLearningSpace.gap,
+    },
+    learningActionBarSx: {
+        display: 'flex',
+        justifyContent: 'center',
+        mt: courseLearningSpace.blockMt,
+        mb: courseLearningSpace.blockMb,
+    },
+    contentMaxWidth: 1200,
     bandBorder: (locked = false) =>
-        `1px solid ${alpha(COURSE_LEARNING_ACCENT, locked ? 0.3 : 0.55)}`,
-    bandShadow: `0 2px 16px ${alpha('#000', 0.25)}`,
+        `1px solid ${alpha(COURSE_LEARNING_ACCENT, locked ? 0.28 : 0.45)}`,
+    bandShadow: `0 2px 16px ${alpha('#000', 0.28)}`,
     tileBorder: (locked = false) =>
-        `1px solid ${alpha(COURSE_LEARNING_ACCENT, locked ? 0.22 : 0.38)}`,
-    focusRing: `0 0 0 2px ${alpha(COURSE_LEARNING_ACCENT, 0.55)}`,
+        `1px solid ${alpha(COURSE_LEARNING_ACCENT, locked ? 0.2 : 0.32)}`,
+    focusRing: `0 0 0 2px ${alpha(COURSE_LEARNING_ACCENT, 0.5)}`,
 } as const;
 
 export const courseBottomNavZIndex = 1200;
 
-/** TipTap / HTML description — force light text on dark UI */
 export const courseTiptapSx = {
     color: courseLearningTheme.textBody,
     '& p': {
@@ -77,31 +122,35 @@ export const courseTiptapSx = {
 } as const;
 
 export const courseChipOutlinedSx = {
-    height: 24,
+    height: 26,
     fontSize: '0.75rem',
     fontWeight: 600,
     borderColor: alpha(COURSE_LEARNING_ACCENT, 0.45),
     color: courseLearningTheme.textSecondary,
-    bgcolor: alpha(COURSE_LEARNING_ACCENT, 0.08),
+    bgcolor: alpha(COURSE_LEARNING_ACCENT, 0.1),
+    '& .MuiChip-icon': { color: courseLearningTheme.accent },
 } as const;
 
 export const courseChipSuccessSx = {
     ...courseChipOutlinedSx,
-    borderColor: alpha('#34d399', 0.5),
+    borderColor: alpha('#34d399', 0.55),
     color: '#a7f3d0',
-    bgcolor: alpha('#34d399', 0.12),
+    bgcolor: alpha('#34d399', 0.14),
+    '& .MuiChip-icon': { color: '#6ee7b7' },
 } as const;
 
 export const courseChipWarningSx = {
     ...courseChipOutlinedSx,
-    borderColor: alpha('#fbbf24', 0.55),
+    borderColor: alpha(COURSE_LEARNING_HIGHLIGHT, 0.55),
     color: '#fde68a',
-    bgcolor: alpha('#fbbf24', 0.12),
+    bgcolor: alpha(COURSE_LEARNING_HIGHLIGHT, 0.12),
+    '& .MuiChip-icon': { color: COURSE_LEARNING_HIGHLIGHT },
 } as const;
 
 export const courseChipInfoSx = {
     ...courseChipOutlinedSx,
-    borderColor: alpha('#a78bfa', 0.5),
-    color: '#ddd6fe',
-    bgcolor: alpha('#a78bfa', 0.1),
+    borderColor: alpha(COURSE_LEARNING_ACCENT, 0.5),
+    color: courseLearningTheme.textSecondary,
+    bgcolor: alpha(COURSE_LEARNING_ACCENT, 0.12),
+    '& .MuiChip-icon': { color: courseLearningTheme.accent },
 } as const;

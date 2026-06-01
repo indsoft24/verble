@@ -58,7 +58,7 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                     '&:hover': interactive
                         ? {
                               transform: 'translateY(-2px)',
-                              boxShadow: `0 6px 20px ${alpha(courseLearningTheme.accent, 0.25)}`,
+                              boxShadow: `0 6px 20px ${alpha(courseLearningTheme.accent, 0.22)}`,
                           }
                         : undefined,
                     '&:focus-visible': { boxShadow: courseLearningTheme.focusRing },
@@ -71,15 +71,15 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                             backgroundImage: `url("${imageUrl}")`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
-                            bgcolor: alpha(courseLearningTheme.accent, 0.15),
+                            bgcolor: alpha(courseLearningTheme.accent, 0.12),
                         }}
                     />
                 )}
-                <Box sx={{ p: 1.5, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1 }}>
                         <Typography
                             variant="subtitle1"
-                            sx={{ fontWeight: 800, color: courseLearningTheme.accent, lineHeight: 1.3 }}
+                            sx={{ fontWeight: 800, color: courseLearningTheme.textPrimary, lineHeight: 1.3, flex: 1, minWidth: 0 }}
                         >
                             {title}
                         </Typography>
@@ -89,20 +89,30 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                                 size="small"
                                 variant="outlined"
                                 sx={{
-                                    height: 22,
+                                    height: 24,
                                     fontSize: '0.7rem',
-                                    borderColor: alpha(courseLearningTheme.accent, 0.55),
+                                    borderColor: alpha(courseLearningTheme.accent, 0.5),
                                     color: courseLearningTheme.accent,
                                 }}
                             />
                         )}
                     </Box>
                     {subtitle && (
-                        <Typography variant="caption" sx={{ color: courseLearningTheme.textBody, lineHeight: 1.45 }}>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: courseLearningTheme.textBody,
+                                lineHeight: 1.5,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                            }}
+                        >
                             {subtitle}
                         </Typography>
                     )}
-                    {footer && <Box sx={{ mt: 'auto', pt: 1 }}>{footer}</Box>}
+                    {footer && <Box sx={{ mt: 'auto', pt: 1.25 }}>{footer}</Box>}
                 </Box>
             </Box>
         );
@@ -137,7 +147,7 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                 '&:hover': interactive
                     ? {
                           transform: 'translateY(-2px)',
-                          boxShadow: `0 6px 20px ${alpha(courseLearningTheme.accent, 0.25)}`,
+                          boxShadow: `0 6px 20px ${alpha(courseLearningTheme.accent, 0.22)}`,
                       }
                     : undefined,
                 '&:focus-visible': { boxShadow: courseLearningTheme.focusRing },
@@ -162,7 +172,7 @@ const CourseLearningTile: React.FC<CourseLearningTileProps> = ({
                 </Box>
             )}
             <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: courseLearningTheme.accent, lineHeight: 1.3 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: courseLearningTheme.textPrimary, lineHeight: 1.3 }}>
                     {title}
                 </Typography>
                 {subtitle && (

@@ -15,5 +15,7 @@ export { default as CourseLearningBreadcrumbs } from './CourseLearningBreadcrumb
 export type { CourseBreadcrumbItem } from './CourseLearningBreadcrumbs';
 export { default as CourseBottomNav } from './CourseBottomNav';
 export type { CourseBottomNavAction, CourseBottomNavProps } from './CourseBottomNav';
+export { default as CourseLessonRow } from './CourseLessonRow';
+export type { CourseLessonRowProps } from './CourseLessonRow';
 export { default as CourseNavRow, navThumbUrl } from './CourseNavRow';
 export type { CourseNavItem, CourseNavRowProps } from './CourseNavRow';

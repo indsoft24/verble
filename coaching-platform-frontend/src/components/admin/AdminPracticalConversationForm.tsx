@@ -87,7 +87,7 @@ const AdminPracticalConversationForm: React.FC<AdminPracticalConversationFormPro
         <Box sx={{ mt: 1 }}>
             <Alert severity="info" icon={<ChatIcon />} sx={{ mb: 2 }}>
                 <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                    Silver: Practical Conversations (WhatsApp format)
+                    Silver: Practical Conversations (chat-style dialogue)
                 </Typography>
                 <Typography variant="body2">
                     Set a scenario theme, two participants (e.g. Waiter and You), then build the chat in

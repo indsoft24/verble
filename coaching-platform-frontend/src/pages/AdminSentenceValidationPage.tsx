@@ -49,11 +49,14 @@ import {
     validateSubmission,
     validateStorySentences,
     validateVocabSentences,
+    validateConversationPractice,
     validateSceneSubmission,
     type SentenceSubmission,
 } from '../services/sentenceValidationService';
 import VocabSubmissionPreview from '../components/admin/VocabSubmissionPreview';
+import ConversationSubmissionPreview from '../components/admin/ConversationSubmissionPreview';
 import { formatVocabSubmissionPlain, normalizeVocabSentences } from '../utils/vocabSubmissionDisplay';
+import { formatConversationSubmissionFromRecord } from '../utils/conversationSubmissionDisplay';
 import {
     formatSceneSummariesForAdmin,
     getSceneSubmissionSummaries,
@@ -157,6 +160,7 @@ const AdminSentenceValidationPage: React.FC = () => {
     const [isCorrect, setIsCorrect] = useState<boolean>(true);
     const [storySentenceValidations, setStorySentenceValidations] = useState<boolean[]>([]);
     const [vocabSentenceValidations, setVocabSentenceValidations] = useState<boolean[]>([]);
+    const [conversationExchangeValidations, setConversationExchangeValidations] = useState<boolean[]>([]);
     const [sceneEvaluationScore, setSceneEvaluationScore] = useState(0);
     const { widths, startResize, cellSx, tableMinWidth } = useResizableValidationColumns();
 
@@ -215,6 +219,8 @@ const AdminSentenceValidationPage: React.FC = () => {
                 return submission.summary?.join('\n') || '';
             case 'vocab':
                 return formatVocabSubmissionPlain(submission.sentences);
+            case 'conversation':
+                return formatConversationSubmissionFromRecord(submission);
             case 'scene':
                 return formatSceneSummariesForAdmin(getSceneSubmissionSummaries(submission));
             case 'speech':
@@ -241,6 +247,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                 })
             );
             setVocabSentenceValidations([]);
+            setConversationExchangeValidations([]);
             setSceneEvaluationScore(0);
         } else if (submission.submissionType === 'vocab') {
             const entries = normalizeVocabSentences(submission.sentences);
@@ -252,6 +259,18 @@ const AdminSentenceValidationPage: React.FC = () => {
                 })
             );
             setStorySentenceValidations([]);
+            setConversationExchangeValidations([]);
+            setSceneEvaluationScore(0);
+        } else if (submission.submissionType === 'conversation' && submission.exchanges) {
+            const existing = submission.exchangeValidations || [];
+            setConversationExchangeValidations(
+                submission.exchanges.map((_, idx) => {
+                    const found = existing.find((v) => v.exchangeIndex === idx);
+                    return found ? found.isCorrect : true;
+                })
+            );
+            setStorySentenceValidations([]);
+            setVocabSentenceValidations([]);
             setSceneEvaluationScore(0);
         } else if (submission.submissionType === 'scene') {
             const reviewed = submission.evaluationPoints ?? submission.pointsEarned;
@@ -260,9 +279,11 @@ const AdminSentenceValidationPage: React.FC = () => {
             );
             setStorySentenceValidations([]);
             setVocabSentenceValidations([]);
+            setConversationExchangeValidations([]);
         } else {
             setStorySentenceValidations([]);
             setVocabSentenceValidations([]);
+            setConversationExchangeValidations([]);
             setSceneEvaluationScore(0);
         }
         setValidationDialogOpen(true);
@@ -274,6 +295,7 @@ const AdminSentenceValidationPage: React.FC = () => {
         setValidationFeedback('');
         setStorySentenceValidations([]);
         setVocabSentenceValidations([]);
+        setConversationExchangeValidations([]);
         setSceneEvaluationScore(0);
     };
 
@@ -281,6 +303,7 @@ const AdminSentenceValidationPage: React.FC = () => {
         if (
             submission.submissionType === 'story' ||
             submission.submissionType === 'vocab' ||
+            submission.submissionType === 'conversation' ||
             submission.submissionType === 'scene'
         ) {
             handleOpenValidationDialog(submission);
@@ -319,6 +342,15 @@ const AdminSentenceValidationPage: React.FC = () => {
                 }));
                 await validateVocabSentences(selectedSubmission._id, {
                     sentenceValidations,
+                    feedback: validationFeedback || undefined,
+                });
+            } else if (selectedSubmission.submissionType === 'conversation') {
+                const exchangeValidations = conversationExchangeValidations.map((ok, index) => ({
+                    exchangeIndex: index,
+                    isCorrect: ok,
+                }));
+                await validateConversationPractice(selectedSubmission._id, {
+                    exchangeValidations,
                     feedback: validationFeedback || undefined,
                 });
             } else if (selectedSubmission.submissionType === 'scene') {
@@ -569,6 +601,17 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                         sentences={submission.sentences}
                                                         compact
                                                     />
+                                                ) : submission.submissionType === 'conversation' &&
+                                                  submission.exchanges ? (
+                                                    <ConversationSubmissionPreview
+                                                        participant1={
+                                                            submission.participant1 || 'Speaker 1'
+                                                        }
+                                                        participant2={
+                                                            submission.participant2 || 'Speaker 2'
+                                                        }
+                                                        exchanges={submission.exchanges}
+                                                    />
                                                 ) : (
                                                     <Typography
                                                         variant="body2"
@@ -743,6 +786,19 @@ const AdminSentenceValidationPage: React.FC = () => {
                                     <Box sx={{ mb: 2 }}>
                                         <VocabSubmissionPreview sentences={selectedSubmission.sentences} />
                                     </Box>
+                                ) : selectedSubmission.submissionType === 'conversation' &&
+                                  selectedSubmission.exchanges ? (
+                                    <Box sx={{ mb: 2 }}>
+                                        <ConversationSubmissionPreview
+                                            participant1={
+                                                selectedSubmission.participant1 || 'Speaker 1'
+                                            }
+                                            participant2={
+                                                selectedSubmission.participant2 || 'Speaker 2'
+                                            }
+                                            exchanges={selectedSubmission.exchanges}
+                                        />
+                                    </Box>
                                 ) : (
                                     <Typography variant="body2" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
                                         {getSubmissionContent(selectedSubmission) || '—'}
@@ -820,6 +876,50 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                 </ListItem>
                                             )
                                         )}
+                                    </List>
+                                ) : selectedSubmission.submissionType === 'conversation' &&
+                                  selectedSubmission.exchanges ? (
+                                    <List dense>
+                                        {selectedSubmission.exchanges.map((row, idx) => (
+                                            <ListItem
+                                                key={idx}
+                                                disablePadding
+                                                sx={{ mb: 1.5, flexDirection: 'column', alignItems: 'stretch' }}
+                                            >
+                                                <FormControlLabel
+                                                    control={
+                                                        <Checkbox
+                                                            checked={
+                                                                conversationExchangeValidations[idx] ||
+                                                                false
+                                                            }
+                                                            onChange={(e) => {
+                                                                const next = [
+                                                                    ...conversationExchangeValidations,
+                                                                ];
+                                                                next[idx] = e.target.checked;
+                                                                setConversationExchangeValidations(next);
+                                                            }}
+                                                        />
+                                                    }
+                                                    label={
+                                                        <Box>
+                                                            <Typography variant="caption" fontWeight={700}>
+                                                                Exchange {idx + 1}
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                                                {selectedSubmission.participant1}:{' '}
+                                                                {row.participant1Line}
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                                                {selectedSubmission.participant2}:{' '}
+                                                                {row.participant2Line}
+                                                            </Typography>
+                                                        </Box>
+                                                    }
+                                                />
+                                            </ListItem>
+                                        ))}
                                     </List>
                                 ) : selectedSubmission.submissionType === 'scene' ? (
                                     <Box>

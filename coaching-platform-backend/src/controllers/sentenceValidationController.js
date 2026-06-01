@@ -5,6 +5,7 @@ import UserStorySubmission from '../models/UserStorySubmission.js';
 import UserVocabSubmission from '../models/UserVocabSubmission.js';
 import UserSceneSubmission from '../models/UserSceneSubmission.js';
 import UserSpeechSubmission from '../models/UserSpeechSubmission.js';
+import UserConversationSubmission from '../models/UserConversationSubmission.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
 
@@ -34,6 +35,12 @@ function computeEvaluationPoints(submissionType, isCorrect, submission, pointsPe
         const sentences = submission.sentences || [];
         if (isCorrect) {
             sentencesCorrect = sentences.length;
+            evaluationPoints = sentencesCorrect * pointsPerCorrect;
+        }
+    } else if (submissionType === 'conversation') {
+        const exchanges = submission.exchanges || [];
+        if (isCorrect) {
+            sentencesCorrect = exchanges.length;
             evaluationPoints = sentencesCorrect * pointsPerCorrect;
         }
     } else if (submissionType === 'scene' || submissionType === 'speech') {
@@ -307,6 +314,81 @@ export const validateVocabSentences = asyncHandler(async (req, res) => {
     });
 });
 
+/**
+ * @desc    Validate exchanges in a practical conversation practice submission
+ * @route   PUT /api/validate-sentence/conversation/:submissionId
+ * @access  Private (Admin)
+ */
+export const validateConversationPractice = asyncHandler(async (req, res) => {
+    const { submissionId } = req.params;
+    const { exchangeValidations, feedback } = req.body;
+
+    if (!Array.isArray(exchangeValidations)) {
+        res.status(400);
+        throw new Error('exchangeValidations must be an array.');
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(submissionId)) {
+        res.status(400);
+        throw new Error('Invalid submission ID format.');
+    }
+
+    const submission = await UserConversationSubmission.findById(submissionId);
+    if (!submission) {
+        res.status(404);
+        throw new Error('Conversation practice submission not found.');
+    }
+
+    let exchangesCorrect = 0;
+    const exchanges = submission.exchanges || [];
+    const normalized = exchangeValidations.map((v, index) => ({
+        exchangeIndex: v.exchangeIndex ?? index,
+        isCorrect: Boolean(v.isCorrect),
+    }));
+
+    normalized.forEach((validation) => {
+        if (validation.isCorrect && validation.exchangeIndex < exchanges.length) {
+            exchangesCorrect++;
+        }
+    });
+
+    const evaluationPoints = exchangesCorrect * 10;
+
+    submission.exchangeValidations = normalized;
+    submission.exchangesCorrect = exchangesCorrect;
+    submission.isCorrect = exchangesCorrect === exchanges.length && exchanges.length > 0;
+    submission.reviewedBy = req.user._id;
+    submission.reviewedAt = new Date();
+    if (feedback !== undefined) {
+        submission.feedback = feedback;
+    }
+
+    const { delta } = await applyEvaluationToSubmission(
+        submission,
+        'conversation',
+        evaluationPoints,
+        exchangesCorrect
+    );
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Conversation practice validated successfully.',
+        data: {
+            submission: {
+                _id: submission._id,
+                exchangesCorrect,
+                evaluationPoints: submission.evaluationPoints,
+                pointsEarned: submission.evaluationPoints,
+                isCorrect: submission.isCorrect,
+                feedback: submission.feedback,
+                exchangeValidations: submission.exchangeValidations,
+                reviewedAt: submission.reviewedAt,
+                evaluationDelta: delta,
+            },
+        },
+    });
+});
+
 const SCENE_MAX_EVALUATION_SCORE = 50;
 
 function getSceneSubmissionTexts(submission) {
@@ -452,6 +534,16 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
         submissions.push(...speechSubs.map((s) => ({ ...s, submissionType: 'speech' })));
     }
 
+    if (!type || type === 'conversation') {
+        const conversationSubs = await UserConversationSubmission.find(query)
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('conversationId', 'title type level metadata')
+            .limit(parseInt(limit, 10))
+            .sort({ createdAt: -1 })
+            .lean();
+        submissions.push(...conversationSubs.map((s) => ({ ...s, submissionType: 'conversation' })));
+    }
+
     submissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     submissions = submissions.slice(0, parseInt(limit, 10));
 
@@ -534,6 +626,17 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
             .sort({ createdAt: -1 })
             .lean();
         submissions.push(...speechSubs.map((s) => ({ ...s, submissionType: 'speech' })));
+    }
+
+    if (!type || type === 'conversation') {
+        const conversationSubs = await UserConversationSubmission.find(query)
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('conversationId', 'title type level metadata')
+            .populate('reviewedBy', 'name email')
+            .limit(parseInt(limit, 10))
+            .sort({ createdAt: -1 })
+            .lean();
+        submissions.push(...conversationSubs.map((s) => ({ ...s, submissionType: 'conversation' })));
     }
 
     submissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

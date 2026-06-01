@@ -24,6 +24,7 @@ const CourseLearningBand: React.FC<CourseLearningBandProps> = ({
         sx={{
             position: 'relative',
             mb: noMargin ? 0 : courseLearningTheme.bandMb,
+            p: courseLearningTheme.bandOuterP,
             borderRadius: `${courseLearningTheme.bandBorderRadius}px`,
             border: courseLearningTheme.bandBorder(locked),
             bgcolor: courseLearningTheme.bandBg,
@@ -42,8 +43,8 @@ const CourseLearningBand: React.FC<CourseLearningBandProps> = ({
                     py: 0.75,
                     textAlign: 'center',
                     transform: 'rotate(45deg)',
-                    bgcolor: courseLearningTheme.accent,
-                    color: '#fff',
+                    bgcolor: courseLearningTheme.highlight,
+                    color: '#1a1a1a',
                     fontWeight: 900,
                     fontSize: '0.62rem',
                     letterSpacing: 1,
@@ -55,9 +56,11 @@ const CourseLearningBand: React.FC<CourseLearningBandProps> = ({
 
         <Box
             sx={{
-                px: courseLearningTheme.bandBodyP,
-                py: courseLearningTheme.bandHeaderPy,
+                pt: courseLearningTheme.bandHeaderPt,
+                pb: children ? courseLearningTheme.bandHeaderPb : 0,
+                ...(ribbon ? { pr: courseLearningTheme.space.gapMd } : {}),
                 borderBottom: children ? `1px solid ${alpha(courseLearningTheme.accent, 0.22)}` : 'none',
+                ...courseLearningTheme.learningColStackSx,
             }}
         >
             <Typography
@@ -69,6 +72,7 @@ const CourseLearningBand: React.FC<CourseLearningBandProps> = ({
                     fontSize: '0.68rem',
                     lineHeight: 1.3,
                     display: 'block',
+                    m: 0,
                 }}
             >
                 {headerLabel}
@@ -77,7 +81,7 @@ const CourseLearningBand: React.FC<CourseLearningBandProps> = ({
                 <Typography
                     variant="body2"
                     sx={{
-                        mt: 0.75,
+                        m: 0,
                         color: courseLearningTheme.textMuted,
                         maxWidth: 640,
                         lineHeight: 1.5,
@@ -92,9 +96,8 @@ const CourseLearningBand: React.FC<CourseLearningBandProps> = ({
         {children && (
             <Box
                 sx={{
-                    px: courseLearningTheme.bandBodyP,
-                    py: courseLearningTheme.bandBodyP,
                     pt: courseLearningTheme.bandBodyPt,
+                    ...courseLearningTheme.learningColStackSx,
                 }}
             >
                 {children}
