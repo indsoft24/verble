@@ -278,7 +278,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
             const participation = participationPointsAwarded ?? 10;
             setSubmitStatus({
                 type: 'success',
-                message: `Submitted ${summaries.length} summar${summaries.length === 1 ? 'y' : 'ies'}! ${participation > 0 ? `+${participation} participation points on the leaderboard. ` : ''}An instructor will review your work and award up to ${SCENE_MAX_EVALUATION_SCORE} evaluation points.`,
+                message: `Submitted ${summaries.length} summar${summaries.length === 1 ? 'y' : 'ies'}! ${participation > 0 ? `+${participation} participation points on the leaderboard. ` : ''}After review: up to ${SCENE_MAX_EVALUATION_SCORE} points (10 per correct summary).`,
             });
             setShowConfetti(true);
             setTimeout(() => setShowConfetti(false), 3000);
@@ -310,7 +310,16 @@ const SceneCard: React.FC<SceneCardProps> = ({
     const narrationAudio = currentContent.metadata?.audio as string | undefined;
     const reviewedScore =
         existingSubmission?.evaluationPoints ?? existingSubmission?.pointsEarned ?? 0;
-    const hasReviewScore = Boolean(existingSubmission?.reviewedAt);
+    const hasReviewScore =
+        !!existingSubmission?.reviewedAt &&
+        (typeof reviewedScore === 'number' && reviewedScore > 0 ||
+            (existingSubmission.sentenceValidations?.length ?? 0) > 0);
+
+    const getSummaryReviewState = (index: number): boolean | null => {
+        if (!existingSubmission?.sentenceValidations?.length) return null;
+        const found = existingSubmission.sentenceValidations.find((v) => v.sentenceIndex === index);
+        return found ? found.isCorrect : null;
+    };
     const locked = Boolean(existingSubmission);
     const displaySummaries = locked
         ? getSceneSubmissionSummaries(existingSubmission!)
@@ -499,8 +508,8 @@ const SceneCard: React.FC<SceneCardProps> = ({
                         Your scene summaries
                     </Typography>
                     <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65), mb: 2 }}>
-                        {submissionPrompt} +10 participation points when you submit. After review, earn up to{' '}
-                        {SCENE_MAX_EVALUATION_SCORE} evaluation points for your overall submission.
+                        {submissionPrompt} +10 participation points when you submit. After review:{' '}
+                        <strong>10 points per correct summary</strong> (up to {SCENE_MAX_EVALUATION_SCORE}).
                     </Typography>
 
                     {!isToday && (
@@ -519,7 +528,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
                                     : ''}
                                 .
                             </Alert>
-                            {hasReviewScore ? (
+                            {hasReviewScore || existingSubmission.sentenceValidations?.length ? (
                                 <Alert severity="success" sx={{ mb: 2 }}>
                                     <Typography variant="body2" fontWeight={700}>
                                         Evaluation score: {reviewedScore} / {SCENE_MAX_EVALUATION_SCORE}
@@ -557,7 +566,9 @@ const SceneCard: React.FC<SceneCardProps> = ({
                     )}
 
                     <Box component="form" onSubmit={handleSubmitSummaries}>
-                        {displaySummaries.map((_, idx) => (
+                        {displaySummaries.map((_, idx) => {
+                            const review = getSummaryReviewState(idx);
+                            return (
                             <Box
                                 key={idx}
                                 sx={{
@@ -565,7 +576,13 @@ const SceneCard: React.FC<SceneCardProps> = ({
                                     p: 2,
                                     borderRadius: 2,
                                     bgcolor: alpha('#1a1f2e', 0.55),
-                                    border: `1px solid ${alpha(GOLD_ACCENT, 0.2)}`,
+                                    border: `1px solid ${
+                                        review === true
+                                            ? alpha('#34d399', 0.6)
+                                            : review === false
+                                              ? alpha('#f87171', 0.5)
+                                              : alpha(GOLD_ACCENT, 0.2)
+                                    }`,
                                 }}
                             >
                                 <Box
@@ -578,6 +595,11 @@ const SceneCard: React.FC<SceneCardProps> = ({
                                 >
                                     <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#f8fafc' }}>
                                         Summary {idx + 1}
+                                        {review === true && (
+                                            <Typography component="span" variant="caption" sx={{ ml: 1, color: '#34d399' }}>
+                                                +10
+                                            </Typography>
+                                        )}
                                     </Typography>
                                     {!locked &&
                                         summaryDrafts.length > SCENE_MIN_SUMMARIES &&
@@ -608,7 +630,8 @@ const SceneCard: React.FC<SceneCardProps> = ({
                                     }}
                                 />
                             </Box>
-                        ))}
+                        );
+                        })}
 
                         {!locked && isToday && user && (
                             <>

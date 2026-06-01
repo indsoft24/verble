@@ -1,6 +1,6 @@
 import apiClient from './apiClient';
 
-export interface UserSceneSubmission {
+export interface UserSpeechSubmission {
     _id: string;
     summaries?: string[];
     sentences?: string[];
@@ -15,32 +15,32 @@ export interface UserSceneSubmission {
     sentenceValidations?: { sentenceIndex: number; isCorrect: boolean }[];
 }
 
-export const getUserSceneSubmission = async (sceneId: string): Promise<UserSceneSubmission | null> => {
+export const getUserSpeechSubmission = async (speechId: string): Promise<UserSpeechSubmission | null> => {
     try {
         const response = await apiClient.get<{
             status: string;
-            data: { submission: UserSceneSubmission };
-        }>(`/submit-scene-description/${sceneId}`);
+            data: { submission: UserSpeechSubmission };
+        }>(`/submit-speech-description/${speechId}`);
         return response.data.data.submission ?? null;
     } catch {
         return null;
     }
 };
 
-export const submitSceneSummaries = async (
-    sceneId: string,
+export const submitSpeechSummaries = async (
+    speechId: string,
     summaries: string[]
 ): Promise<{
     participationPointsAwarded?: number;
-    submission: UserSceneSubmission;
+    submission: UserSpeechSubmission;
 }> => {
     const response = await apiClient.post<{
         status: string;
         data: {
             participationPointsAwarded?: number;
-            submission: UserSceneSubmission;
+            submission: UserSpeechSubmission;
         };
-    }>('/submit-scene-description', { sceneId, summaries });
+    }>('/submit-speech-description', { speechId, summaries });
     return {
         participationPointsAwarded: response.data.data.participationPointsAwarded,
         submission: response.data.data.submission,

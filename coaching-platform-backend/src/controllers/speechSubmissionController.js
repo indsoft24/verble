@@ -5,23 +5,23 @@ import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
 import { isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
+import {
+    SUMMARY_MIN,
+    SUMMARY_MAX,
+    normalizeSummaries,
+} from '../utils/goldSummaryConstants.js';
 
 /**
- * @desc    Submit a speech description
+ * @desc    Submit speech summaries (2–5)
  * @route   POST /api/submit-speech-description
  * @access  Private
  */
 export const submitSpeechDescription = asyncHandler(async (req, res) => {
-    const { speechId, description } = req.body;
+    const { speechId, summaries, description } = req.body;
 
-    if (!speechId || !description) {
+    if (!speechId) {
         res.status(400);
-        throw new Error('Speech ID and description are required.');
-    }
-
-    if (!description.trim()) {
-        res.status(400);
-        throw new Error('Description cannot be empty.');
+        throw new Error('Speech ID is required.');
     }
 
     if (!mongoose.Types.ObjectId.isValid(speechId)) {
@@ -29,7 +29,6 @@ export const submitSpeechDescription = asyncHandler(async (req, res) => {
         throw new Error('Invalid speech ID format.');
     }
 
-    // Verify the speech exists
     const speechContent = await DailyContent.findById(speechId);
     if (!speechContent) {
         res.status(404);
@@ -43,34 +42,41 @@ export const submitSpeechDescription = asyncHandler(async (req, res) => {
 
     if (!isDailyContentScheduledForLocalToday(speechContent.date)) {
         res.status(400);
-        throw new Error('Only today\'s speech can be submitted.');
+        throw new Error("Only today's speech can be submitted.");
     }
 
-    // Check if user already submitted for this speech
     const existingSubmission = await UserSpeechSubmission.findOne({
         userId: req.user._id,
-        speechId: speechId
+        speechId,
     });
 
     if (existingSubmission) {
         res.status(400);
-        throw new Error('You have already submitted a description for this speech.');
+        throw new Error('You have already submitted summaries for this speech.');
     }
 
-    // Parse description into sentences (simple sentence splitting)
-    const sentences = description
-        .trim()
-        .split(/[.!?]+/)
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
+    let validated = normalizeSummaries(summaries);
+    if (validated.length === 0 && description?.trim()) {
+        validated = [description.trim()];
+    }
+
+    if (validated.length < SUMMARY_MIN) {
+        res.status(400);
+        throw new Error(`Please provide at least ${SUMMARY_MIN} summaries about the speech.`);
+    }
+
+    if (validated.length > SUMMARY_MAX) {
+        res.status(400);
+        throw new Error(`You can submit at most ${SUMMARY_MAX} summaries.`);
+    }
 
     const PARTICIPATION_POINTS = 10;
 
     const submission = await UserSpeechSubmission.create({
         userId: req.user._id,
-        speechId: speechId,
-        description: description.trim(),
-        sentences: sentences,
+        speechId,
+        summaries: validated,
+        sentences: validated,
         evaluationPoints: 0,
         pointsEarned: 0,
     });
@@ -92,12 +98,11 @@ export const submitSpeechDescription = asyncHandler(async (req, res) => {
 
     res.status(201).json({
         status: 'success',
-        message: 'Speech description submitted successfully!',
+        message: 'Speech summaries submitted successfully!',
         data: {
             submission: {
                 _id: submission._id,
-                description: submission.description,
-                sentences: submission.sentences,
+                summaries: submission.summaries,
                 evaluationPoints: 0,
                 submittedAt: submission.createdAt,
                 isCorrect: submission.isCorrect,
@@ -124,7 +129,7 @@ export const getUserSpeechSubmission = asyncHandler(async (req, res) => {
 
     const submission = await UserSpeechSubmission.findOne({
         userId: req.user._id,
-        speechId: speechId
+        speechId,
     });
 
     if (!submission) {
@@ -135,7 +140,7 @@ export const getUserSpeechSubmission = asyncHandler(async (req, res) => {
     res.status(200).json({
         status: 'success',
         data: {
-            submission
-        }
+            submission,
+        },
     });
 });

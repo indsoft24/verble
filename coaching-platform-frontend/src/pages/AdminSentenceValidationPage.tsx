@@ -30,7 +30,6 @@ import {
     Tabs,
     Tab,
     alpha,
-    Slider,
     Table,
     TableBody,
     TableCell,
@@ -50,7 +49,8 @@ import {
     validateStorySentences,
     validateVocabSentences,
     validateConversationPractice,
-    validateSceneSubmission,
+    validateSpeechSummaries,
+    validateSceneSummaries,
     type SentenceSubmission,
 } from '../services/sentenceValidationService';
 import VocabSubmissionPreview from '../components/admin/VocabSubmissionPreview';
@@ -58,10 +58,11 @@ import ConversationSubmissionPreview from '../components/admin/ConversationSubmi
 import { formatVocabSubmissionPlain, normalizeVocabSentences } from '../utils/vocabSubmissionDisplay';
 import { formatConversationSubmissionFromRecord } from '../utils/conversationSubmissionDisplay';
 import {
-    formatSceneSummariesForAdmin,
-    getSceneSubmissionSummaries,
-    SCENE_MAX_EVALUATION_SCORE,
-} from '../utils/sceneActivityUtils';
+    formatSummariesForAdmin,
+    getSubmissionSummaries,
+    MAX_EVALUATION_SCORE,
+    POINTS_PER_CORRECT_SUMMARY,
+} from '../utils/goldSummaryActivityUtils';
 import { format } from 'date-fns';
 import {
     VALIDATION_PLAN_TABS,
@@ -161,7 +162,7 @@ const AdminSentenceValidationPage: React.FC = () => {
     const [storySentenceValidations, setStorySentenceValidations] = useState<boolean[]>([]);
     const [vocabSentenceValidations, setVocabSentenceValidations] = useState<boolean[]>([]);
     const [conversationExchangeValidations, setConversationExchangeValidations] = useState<boolean[]>([]);
-    const [sceneEvaluationScore, setSceneEvaluationScore] = useState(0);
+    const [summaryValidations, setSummaryValidations] = useState<boolean[]>([]);
     const { widths, startResize, cellSx, tableMinWidth } = useResizableValidationColumns();
 
     const fetchSubmissions = useCallback(async () => {
@@ -222,9 +223,8 @@ const AdminSentenceValidationPage: React.FC = () => {
             case 'conversation':
                 return formatConversationSubmissionFromRecord(submission);
             case 'scene':
-                return formatSceneSummariesForAdmin(getSceneSubmissionSummaries(submission));
             case 'speech':
-                return submission.description || submission.sentences?.join('\n') || '';
+                return formatSummariesForAdmin(getSubmissionSummaries(submission));
             default:
                 return '';
         }
@@ -248,7 +248,7 @@ const AdminSentenceValidationPage: React.FC = () => {
             );
             setVocabSentenceValidations([]);
             setConversationExchangeValidations([]);
-            setSceneEvaluationScore(0);
+            setSummaryValidations([]);
         } else if (submission.submissionType === 'vocab') {
             const entries = normalizeVocabSentences(submission.sentences);
             const existing = submission.sentenceValidations || [];
@@ -260,7 +260,7 @@ const AdminSentenceValidationPage: React.FC = () => {
             );
             setStorySentenceValidations([]);
             setConversationExchangeValidations([]);
-            setSceneEvaluationScore(0);
+            setSummaryValidations([]);
         } else if (submission.submissionType === 'conversation' && submission.exchanges) {
             const existing = submission.exchangeValidations || [];
             setConversationExchangeValidations(
@@ -271,11 +271,18 @@ const AdminSentenceValidationPage: React.FC = () => {
             );
             setStorySentenceValidations([]);
             setVocabSentenceValidations([]);
-            setSceneEvaluationScore(0);
-        } else if (submission.submissionType === 'scene') {
-            const reviewed = submission.evaluationPoints ?? submission.pointsEarned;
-            setSceneEvaluationScore(
-                typeof reviewed === 'number' && submission.reviewedAt ? reviewed : 0
+            setSummaryValidations([]);
+        } else if (
+            submission.submissionType === 'scene' ||
+            submission.submissionType === 'speech'
+        ) {
+            const summaries = getSubmissionSummaries(submission);
+            const existing = submission.sentenceValidations || [];
+            setSummaryValidations(
+                summaries.map((_, idx) => {
+                    const found = existing.find((v) => v.sentenceIndex === idx);
+                    return found ? found.isCorrect : true;
+                })
             );
             setStorySentenceValidations([]);
             setVocabSentenceValidations([]);
@@ -284,7 +291,7 @@ const AdminSentenceValidationPage: React.FC = () => {
             setStorySentenceValidations([]);
             setVocabSentenceValidations([]);
             setConversationExchangeValidations([]);
-            setSceneEvaluationScore(0);
+            setSummaryValidations([]);
         }
         setValidationDialogOpen(true);
     };
@@ -296,7 +303,7 @@ const AdminSentenceValidationPage: React.FC = () => {
         setStorySentenceValidations([]);
         setVocabSentenceValidations([]);
         setConversationExchangeValidations([]);
-        setSceneEvaluationScore(0);
+        setSummaryValidations([]);
     };
 
     const handleQuickValidate = async (submission: SentenceSubmission, correct: boolean) => {
@@ -304,7 +311,8 @@ const AdminSentenceValidationPage: React.FC = () => {
             submission.submissionType === 'story' ||
             submission.submissionType === 'vocab' ||
             submission.submissionType === 'conversation' ||
-            submission.submissionType === 'scene'
+            submission.submissionType === 'scene' ||
+            submission.submissionType === 'speech'
         ) {
             handleOpenValidationDialog(submission);
             return;
@@ -353,11 +361,25 @@ const AdminSentenceValidationPage: React.FC = () => {
                     exchangeValidations,
                     feedback: validationFeedback || undefined,
                 });
-            } else if (selectedSubmission.submissionType === 'scene') {
-                await validateSceneSubmission(selectedSubmission._id, {
-                    score: sceneEvaluationScore,
-                    feedback: validationFeedback || undefined,
-                });
+            } else if (
+                selectedSubmission.submissionType === 'scene' ||
+                selectedSubmission.submissionType === 'speech'
+            ) {
+                const sentenceValidations = summaryValidations.map((ok, index) => ({
+                    sentenceIndex: index,
+                    isCorrect: ok,
+                }));
+                if (selectedSubmission.submissionType === 'scene') {
+                    await validateSceneSummaries(selectedSubmission._id, {
+                        sentenceValidations,
+                        feedback: validationFeedback || undefined,
+                    });
+                } else {
+                    await validateSpeechSummaries(selectedSubmission._id, {
+                        sentenceValidations,
+                        feedback: validationFeedback || undefined,
+                    });
+                }
             } else {
                 await validateSubmission(selectedSubmission._id, {
                     isCorrect,
@@ -684,8 +706,9 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                         </Tooltip>
                                                         <Tooltip
                                                             title={
-                                                                submission.submissionType === 'scene'
-                                                                    ? 'Score answers'
+                                                                submission.submissionType === 'scene' ||
+                                                                submission.submissionType === 'speech'
+                                                                    ? 'Review summaries'
                                                                     : 'Edit / story detail'
                                                             }
                                                         >
@@ -921,49 +944,54 @@ const AdminSentenceValidationPage: React.FC = () => {
                                             </ListItem>
                                         ))}
                                     </List>
-                                ) : selectedSubmission.submissionType === 'scene' ? (
+                                ) : selectedSubmission.submissionType === 'scene' ||
+                                  selectedSubmission.submissionType === 'speech' ? (
                                     <Box>
-                                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
-                                            Overall score (0–{SCENE_MAX_EVALUATION_SCORE})
+                                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                                            Mark each summary (+{POINTS_PER_CORRECT_SUMMARY} pts each, max{' '}
+                                            {MAX_EVALUATION_SCORE})
                                         </Typography>
-                                        <List dense sx={{ mb: 2 }}>
-                                            {getSceneSubmissionSummaries(selectedSubmission).map((text, idx) => (
-                                                <ListItem
-                                                    key={idx}
-                                                    sx={{
-                                                        flexDirection: 'column',
-                                                        alignItems: 'stretch',
-                                                        mb: 1,
-                                                        p: 1.5,
-                                                        bgcolor: 'action.hover',
-                                                        borderRadius: 1,
-                                                    }}
-                                                >
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Summary {idx + 1}
-                                                    </Typography>
-                                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                                                        {text}
-                                                    </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                                            Score preview:{' '}
+                                            {summaryValidations.filter(Boolean).length * POINTS_PER_CORRECT_SUMMARY} /{' '}
+                                            {MAX_EVALUATION_SCORE}
+                                        </Typography>
+                                        {selectedSubmission.reviewedAt &&
+                                            !selectedSubmission.sentenceValidations?.length &&
+                                            (selectedSubmission.evaluationPoints ?? 0) > 0 && (
+                                                <Alert severity="info" sx={{ mb: 2 }}>
+                                                    Legacy review: {selectedSubmission.evaluationPoints} pts (expert
+                                                    score). Re-save with checkboxes to use per-summary scoring.
+                                                </Alert>
+                                            )}
+                                        <List dense>
+                                            {getSubmissionSummaries(selectedSubmission).map((text, idx) => (
+                                                <ListItem key={idx} disablePadding sx={{ mb: 1 }}>
+                                                    <FormControlLabel
+                                                        control={
+                                                            <Checkbox
+                                                                checked={summaryValidations[idx] || false}
+                                                                onChange={(e) => {
+                                                                    const next = [...summaryValidations];
+                                                                    next[idx] = e.target.checked;
+                                                                    setSummaryValidations(next);
+                                                                }}
+                                                            />
+                                                        }
+                                                        label={
+                                                            <Box>
+                                                                <Typography variant="caption" fontWeight={700}>
+                                                                    Summary {idx + 1}
+                                                                </Typography>
+                                                                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                                                    {text}
+                                                                </Typography>
+                                                            </Box>
+                                                        }
+                                                    />
                                                 </ListItem>
                                             ))}
                                         </List>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <Slider
-                                                value={sceneEvaluationScore}
-                                                min={0}
-                                                max={SCENE_MAX_EVALUATION_SCORE}
-                                                step={1}
-                                                valueLabelDisplay="auto"
-                                                onChange={(_, v) => setSceneEvaluationScore(v as number)}
-                                                sx={{ flex: 1 }}
-                                            />
-                                            <Chip
-                                                label={`${sceneEvaluationScore}/${SCENE_MAX_EVALUATION_SCORE}`}
-                                                color="primary"
-                                                variant="outlined"
-                                            />
-                                        </Box>
                                     </Box>
                                 ) : (
                                     <FormControlLabel

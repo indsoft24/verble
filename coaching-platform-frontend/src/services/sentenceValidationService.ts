@@ -220,6 +220,30 @@ export const validateSceneSubmission = async (
     return response.data;
 };
 
+export type ValidateSummarySentencesRequest = ValidateVocabSentencesRequest;
+
+export const validateSpeechSummaries = async (
+    submissionId: string,
+    data: ValidateSummarySentencesRequest
+): Promise<ValidateSubmissionResponse> => {
+    const response = await apiClient.put<ValidateSubmissionResponse>(
+        `/validate-sentence/speech/${submissionId}/sentences`,
+        data
+    );
+    return response.data;
+};
+
+export const validateSceneSummaries = async (
+    submissionId: string,
+    data: ValidateSummarySentencesRequest
+): Promise<ValidateSubmissionResponse> => {
+    const response = await apiClient.put<ValidateSubmissionResponse>(
+        `/validate-sentence/scene/${submissionId}/sentences`,
+        data
+    );
+    return response.data;
+};
+
 /**
  * Get all submissions (pending and reviewed)
  */

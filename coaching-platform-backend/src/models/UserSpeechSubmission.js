@@ -1,60 +1,80 @@
 // src/models/UserSpeechSubmission.js
 import mongoose from 'mongoose';
 
-const userSpeechSubmissionSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-        index: true,
+const sentenceValidationSchema = new mongoose.Schema(
+    {
+        sentenceIndex: { type: Number, required: true },
+        isCorrect: { type: Boolean, required: true },
     },
-    speechId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'DailyContent',
-        required: true,
-        index: true,
-    },
-    description: {
-        type: String, // User's description of the speech in their own words
-        required: true,
-        trim: true,
-    },
-    sentences: {
-        type: [String], // Parsed sentences from description (for scoring)
-        default: [],
-    },
-    pointsEarned: {
-        type: Number,
-        default: 0,
-    },
-    evaluationPoints: {
-        type: Number,
-        default: 0,
-    },
-    sentencesCorrect: {
-        type: Number,
-        default: 0,
-    },
-    isCorrect: {
-        type: Boolean,
-        default: null, // null = not reviewed, true = correct, false = incorrect
-    },
-    feedback: {
-        type: String,
-        trim: true,
-    },
-    reviewedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-    },
-    reviewedAt: {
-        type: Date,
-    },
-}, {
-    timestamps: true
-});
+    { _id: false }
+);
 
-// Compound index to prevent duplicate submissions for the same speech
+const userSpeechSubmissionSchema = new mongoose.Schema(
+    {
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+            index: true,
+        },
+        speechId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'DailyContent',
+            required: true,
+            index: true,
+        },
+        /** Learner summaries (2–5 per speech). */
+        summaries: {
+            type: [String],
+            default: [],
+        },
+        /** Legacy single description. */
+        description: {
+            type: String,
+            trim: true,
+        },
+        /** Mirror of summaries for display compat. */
+        sentences: {
+            type: [String],
+            default: [],
+        },
+        pointsEarned: {
+            type: Number,
+            default: 0,
+        },
+        evaluationPoints: {
+            type: Number,
+            default: 0,
+        },
+        sentencesCorrect: {
+            type: Number,
+            default: 0,
+        },
+        isCorrect: {
+            type: Boolean,
+            default: null,
+        },
+        feedback: {
+            type: String,
+            trim: true,
+        },
+        reviewedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        reviewedAt: {
+            type: Date,
+        },
+        sentenceValidations: {
+            type: [sentenceValidationSchema],
+            default: [],
+        },
+    },
+    {
+        timestamps: true,
+    }
+);
+
 userSpeechSubmissionSchema.index({ userId: 1, speechId: 1 }, { unique: true });
 
 const UserSpeechSubmission = mongoose.model('UserSpeechSubmission', userSpeechSubmissionSchema);

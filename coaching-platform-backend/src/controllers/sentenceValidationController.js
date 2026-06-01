@@ -8,6 +8,10 @@ import UserSpeechSubmission from '../models/UserSpeechSubmission.js';
 import UserConversationSubmission from '../models/UserConversationSubmission.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
+import {
+    POINTS_PER_CORRECT_SUMMARY,
+    getSubmissionSummariesFromDoc,
+} from '../utils/goldSummaryConstants.js';
 
 function getPreviousEvaluationPoints(submission) {
     if (submission.evaluationPoints != null && submission.evaluationPoints > 0) {
@@ -44,9 +48,15 @@ function computeEvaluationPoints(submissionType, isCorrect, submission, pointsPe
             evaluationPoints = sentencesCorrect * pointsPerCorrect;
         }
     } else if (submissionType === 'scene' || submissionType === 'speech') {
-        const sentences = submission.sentences || [];
-        if (isCorrect) {
-            sentencesCorrect = sentences.length;
+        const validations = submission.sentenceValidations || [];
+        if (validations.length > 0) {
+            validations.forEach((v) => {
+                if (v.isCorrect) sentencesCorrect++;
+            });
+            evaluationPoints = sentencesCorrect * POINTS_PER_CORRECT_SUMMARY;
+        } else if (isCorrect) {
+            const texts = getSubmissionSummariesFromDoc(submission);
+            sentencesCorrect = texts.length;
             evaluationPoints = 10 + sentencesCorrect * pointsPerCorrect;
         }
     }
@@ -115,9 +125,13 @@ export const validateSentenceSubmission = asyncHandler(async (req, res) => {
     }
 
     if (!submission) {
-        submission = await UserSpeechSubmission.findById(submissionId);
-        submissionType = 'speech';
-        pointsPerCorrect = 2;
+        const speechOnly = await UserSpeechSubmission.findById(submissionId);
+        if (speechOnly) {
+            res.status(400);
+            throw new Error(
+                'Speech submissions must be reviewed via PUT /validate-sentence/speech/:submissionId/sentences'
+            );
+        }
     }
 
     if (!submission) {
@@ -392,20 +406,117 @@ export const validateConversationPractice = asyncHandler(async (req, res) => {
 const SCENE_MAX_EVALUATION_SCORE = 50;
 
 function getSceneSubmissionTexts(submission) {
-    if (Array.isArray(submission.summaries) && submission.summaries.length > 0) {
-        return submission.summaries.map((s) => String(s ?? '').trim()).filter(Boolean);
+    return getSubmissionSummariesFromDoc(submission);
+}
+
+async function validateSummaryBasedSubmission(req, res, Model, notFoundMessage, successMessage) {
+    const { submissionId } = req.params;
+    const { sentenceValidations, feedback } = req.body;
+
+    if (!Array.isArray(sentenceValidations)) {
+        res.status(400);
+        throw new Error('sentenceValidations must be an array.');
     }
-    if (Array.isArray(submission.sentences) && submission.sentences.length > 0) {
-        return submission.sentences.map((s) => String(s ?? '').trim()).filter(Boolean);
+
+    if (!mongoose.Types.ObjectId.isValid(submissionId)) {
+        res.status(400);
+        throw new Error('Invalid submission ID format.');
     }
-    if (submission.description?.trim()) {
-        return [submission.description.trim()];
+
+    const submission = await Model.findById(submissionId);
+    if (!submission) {
+        res.status(404);
+        throw new Error(notFoundMessage);
     }
-    return [];
+
+    const summaries = getSubmissionSummariesFromDoc(submission);
+    if (summaries.length === 0) {
+        res.status(400);
+        throw new Error('This submission has no summaries to validate.');
+    }
+
+    let sentencesCorrect = 0;
+    const normalized = sentenceValidations.map((v, index) => ({
+        sentenceIndex: v.sentenceIndex ?? index,
+        isCorrect: Boolean(v.isCorrect),
+    }));
+
+    normalized.forEach((validation) => {
+        if (validation.isCorrect && validation.sentenceIndex < summaries.length) {
+            sentencesCorrect++;
+        }
+    });
+
+    const evaluationPoints = sentencesCorrect * POINTS_PER_CORRECT_SUMMARY;
+
+    submission.sentenceValidations = normalized;
+    submission.sentencesCorrect = sentencesCorrect;
+    submission.isCorrect = sentencesCorrect === summaries.length && summaries.length > 0;
+    submission.reviewedBy = req.user._id;
+    submission.reviewedAt = new Date();
+    if (feedback !== undefined) {
+        submission.feedback = feedback;
+    }
+
+    const submissionType = Model.modelName === 'UserSceneSubmission' ? 'scene' : 'speech';
+    const { delta } = await applyEvaluationToSubmission(
+        submission,
+        submissionType,
+        evaluationPoints,
+        sentencesCorrect
+    );
+
+    res.status(200).json({
+        status: 'success',
+        message: successMessage,
+        data: {
+            submission: {
+                _id: submission._id,
+                sentencesCorrect,
+                evaluationPoints: submission.evaluationPoints,
+                pointsEarned: submission.evaluationPoints,
+                isCorrect: submission.isCorrect,
+                feedback: submission.feedback,
+                sentenceValidations: submission.sentenceValidations,
+                reviewedAt: submission.reviewedAt,
+                evaluationDelta: delta,
+            },
+        },
+    });
 }
 
 /**
- * @desc    Score a scene submission (0–50 overall)
+ * @desc    Validate individual summaries in a speech submission
+ * @route   PUT /api/validate-sentence/speech/:submissionId/sentences
+ * @access  Private (Admin)
+ */
+export const validateSpeechSummaries = asyncHandler(async (req, res) =>
+    validateSummaryBasedSubmission(
+        req,
+        res,
+        UserSpeechSubmission,
+        'Speech submission not found.',
+        'Speech summaries validated successfully.'
+    )
+);
+
+/**
+ * @desc    Validate individual summaries in a scene submission
+ * @route   PUT /api/validate-sentence/scene/:submissionId/sentences
+ * @access  Private (Admin)
+ */
+export const validateSceneSummaries = asyncHandler(async (req, res) =>
+    validateSummaryBasedSubmission(
+        req,
+        res,
+        UserSceneSubmission,
+        'Scene submission not found.',
+        'Scene summaries validated successfully.'
+    )
+);
+
+/**
+ * @desc    Score a scene submission (0–50 overall) — legacy expert slider
  * @route   PUT /api/validate-sentence/scene/:submissionId/score
  * @access  Private (Admin)
  */

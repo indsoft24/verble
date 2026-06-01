@@ -1,5 +1,5 @@
 // src/components/features/SpeechCard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Card,
     CardContent,
@@ -7,25 +7,48 @@ import {
     Box,
     Button,
     TextField,
+    IconButton,
     CircularProgress,
     Alert,
-    Divider,
-    List,
-    ListItem,
+    alpha,
+    LinearProgress,
     Accordion,
     AccordionSummary,
-    AccordionDetails
+    AccordionDetails,
+    List,
+    ListItem,
 } from '@mui/material';
 import { keyframes } from '@emotion/react';
 import SendIcon from '@mui/icons-material/Send';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import {
+    getUserSpeechSubmission,
+    submitSpeechSummaries,
+    type UserSpeechSubmission,
+} from '../../services/speechSubmissionService';
+import EvaluationStatusBanner from './EvaluationStatusBanner';
 import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
-
+import {
+    activityCardShell,
+    GOLD_ACCENT,
+    isContentScheduledToday,
+    refreshAdjacentFlags,
+    canShowNextNavigation,
+} from '../../utils/dailyActivityUi';
+import {
+    SUMMARY_MIN,
+    SUMMARY_MAX,
+    MAX_EVALUATION_SCORE,
+    countFilledSummaries,
+    getSubmissionSummaries,
+    isSummarySubmissionReady,
+} from '../../utils/goldSummaryActivityUtils';
 
 interface SpeechCardProps {
     data: DailyContent;
@@ -34,76 +57,40 @@ interface SpeechCardProps {
     onNavigateToLyrics?: () => void;
 }
 
-// Confetti animation keyframes
 const confettiFall = keyframes`
-    from {
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-    }
-    to {
-        transform: translateY(100vh) rotate(720deg);
-        opacity: 0;
-    }
+    from { transform: translateY(0) rotate(0deg); opacity: 1; }
+    to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 `;
 
-// Simple CSS-based Confetti Effect
-const ConfettiEffect: React.FC = () => {
-    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+const ConfettiEffect: React.FC = () => (
+    <Box sx={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1400, overflow: 'hidden' }}>
+        {Array.from({ length: 50 }).map((_, i) => (
+            <Box
+                key={i}
+                sx={{
+                    position: 'absolute',
+                    width: 10,
+                    height: 10,
+                    backgroundColor: ['#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff'][i % 6],
+                    left: `${Math.random() * 100}%`,
+                    top: '-10px',
+                    animation: `${confettiFall} ${2 + Math.random() * 2}s linear ${Math.random() * 0.5}s forwards`,
+                }}
+            />
+        ))}
+    </Box>
+);
 
-    return (
-        <Box
-            sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-                zIndex: 1000,
-                overflow: 'hidden',
-            }}
-        >
-            {Array.from({ length: 50 }).map((_, i) => {
-                const duration = 2 + Math.random() * 2;
-                const delay = Math.random() * 0.5;
-                const left = Math.random() * 100;
-
-                return (
-                    <Box
-                        key={i}
-                        sx={{
-                            position: 'absolute',
-                            width: 10,
-                            height: 10,
-                            backgroundColor: colors[Math.floor(Math.random() * colors.length)],
-                            left: `${left}%`,
-                            top: '-10px',
-                            animation: `${confettiFall} ${duration}s linear ${delay}s forwards`,
-                        }}
-                    />
-                );
-            })}
-        </Box>
-    );
-};
-
-// Helper function to extract YouTube video ID from various URL formats
 const extractYouTubeVideoId = (url: string): string | null => {
     if (!url) return null;
-
-    // Handle various YouTube URL formats
     const patterns = [
         /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-        /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
+        /^([a-zA-Z0-9_-]{11})$/,
     ];
-
     for (const pattern of patterns) {
         const match = url.match(pattern);
-        if (match && match[1]) {
-            return match[1];
-        }
+        if (match?.[1]) return match[1];
     }
-
     return null;
 };
 
@@ -114,7 +101,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
     onNavigateToLyrics,
 }) => {
     const { user } = useAuth();
-    const [description, setDescription] = useState('');
+    const [summaryDrafts, setSummaryDrafts] = useState<string[]>(['', '']);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [showConfetti, setShowConfetti] = useState(false);
@@ -122,140 +109,153 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
     const [currentContent, setCurrentContent] = useState<DailyContent>(data);
     const [hasPrevious, setHasPrevious] = useState(false);
     const [hasNext, setHasNext] = useState(false);
+    const [existingSubmission, setExistingSubmission] = useState<UserSpeechSubmission | null>(null);
+
+    const loadSubmission = useCallback(async (speechId: string) => {
+        if (!user) {
+            setExistingSubmission(null);
+            return;
+        }
+        const sub = await getUserSpeechSubmission(speechId);
+        setExistingSubmission(sub);
+        if (sub) {
+            const texts = getSubmissionSummaries(sub);
+            if (texts.length > 0) setSummaryDrafts(texts);
+        }
+    }, [user]);
+
+    const checkAdjacent = useCallback(async (contentId: string) => {
+        const flags = await refreshAdjacentFlags(contentId);
+        setHasPrevious(flags.hasPrevious);
+        setHasNext(flags.hasNext);
+    }, []);
 
     useEffect(() => {
         setCurrentContent(data);
-        checkNavigationAvailability();
-    }, [data]);
-
-    const checkNavigationAvailability = async () => {
-        try {
-            const [prevContent, nextContent] = await Promise.all([
-                getAdjacentContent(data._id, 'prev'),
-                getAdjacentContent(data._id, 'next')
-            ]);
-
-            setHasPrevious(!!prevContent);
-            setHasNext(!!nextContent);
-        } catch (error) {
-            setHasPrevious(false);
-            setHasNext(false);
-        }
-    };
+        setSummaryDrafts(['', '']);
+        setSubmitStatus(null);
+        void loadSubmission(data._id);
+        void checkAdjacent(data._id);
+    }, [data, loadSubmission, checkAdjacent]);
 
     const handleNavigation = async (direction: 'prev' | 'next') => {
         setIsLoadingNav(true);
+        setSubmitStatus(null);
         try {
             const adjacentContent = await getAdjacentContent(currentContent._id, direction);
-
             if (adjacentContent) {
                 setCurrentContent(adjacentContent);
-                setDescription('');
-                setSubmitStatus(null);
-                if (onContentChange) {
-                    onContentChange(adjacentContent);
-                }
-                await checkNavigationAvailability();
+                setSummaryDrafts(['', '']);
+                onContentChange?.(adjacentContent);
+                await loadSubmission(adjacentContent._id);
+                await checkAdjacent(adjacentContent._id);
             } else {
                 setSubmitStatus({
                     type: 'error',
-                    message: `No ${direction === 'prev' ? 'previous' : 'next'} speech available.`
+                    message: `No ${direction === 'prev' ? 'previous' : 'next'} speech available.`,
                 });
             }
-        } catch (error: any) {
-            setSubmitStatus({
-                type: 'error',
-                message: `Failed to load ${direction === 'prev' ? 'previous' : 'next'} speech.`
-            });
+        } catch {
+            setSubmitStatus({ type: 'error', message: 'Failed to load speech.' });
         } finally {
             setIsLoadingNav(false);
         }
     };
 
-    const handleSubmitDescription = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const filledCount = countFilledSummaries(summaryDrafts);
+    const canSubmitSummaries = isSummarySubmissionReady(summaryDrafts);
+    const isToday = isContentScheduledToday(currentContent.date);
+    const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
+    const locked = !!existingSubmission;
+    const displaySummaries = locked ? getSubmissionSummaries(existingSubmission) : summaryDrafts;
 
-        if (!description.trim()) {
+    const updateSummaryDraft = (index: number, value: string) => {
+        setSummaryDrafts((prev) => {
+            const next = [...prev];
+            next[index] = value;
+            return next;
+        });
+    };
+
+    const addSummaryField = () => {
+        if (summaryDrafts.length >= SUMMARY_MAX) return;
+        setSummaryDrafts((prev) => [...prev, '']);
+    };
+
+    const removeSummaryField = (index: number) => {
+        if (summaryDrafts.length <= SUMMARY_MIN) return;
+        setSummaryDrafts((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSubmitSummaries = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!isToday) {
+            setSubmitStatus({ type: 'error', message: "You can only submit summaries for today's speech." });
+            return;
+        }
+        const summaries = summaryDrafts.map((s) => s.trim()).filter(Boolean);
+        if (!isSummarySubmissionReady(summaries)) {
             setSubmitStatus({
                 type: 'error',
-                message: 'Please describe the speech before submitting.'
+                message: `Please write at least ${SUMMARY_MIN} summaries (up to ${SUMMARY_MAX}).`,
             });
             return;
         }
-
         setIsSubmitting(true);
         setSubmitStatus(null);
-
         try {
-            const response = await apiClient.post('/submit-speech-description', {
-                speechId: currentContent._id,
-                description: description.trim()
-            });
-
-            if (response.data?.status === 'success') {
-                const participation =
-                    response.data.data.participationPointsAwarded ?? 10;
-                setSubmitStatus({
-                    type: 'success',
-                    message: `Great job! ${participation > 0 ? `+${participation} participation points toward the leaderboard. ` : ''}Your description is pending review for evaluation score.`,
-                });
-                setDescription('');
-                setShowConfetti(true);
-                setTimeout(() => setShowConfetti(false), 3000);
-                onSubmissionSuccess?.();
-            } else {
-                setSubmitStatus({
-                    type: 'error',
-                    message: response.data?.message || 'Failed to submit description'
-                });
-            }
-        } catch (error: any) {
+            const { participationPointsAwarded } = await submitSpeechSummaries(currentContent._id, summaries);
+            const participation = participationPointsAwarded ?? 10;
             setSubmitStatus({
-                type: 'error',
-                message: error.response?.data?.message || 'Failed to submit description. Please try again.'
+                type: 'success',
+                message: `Submitted ${summaries.length} summar${summaries.length === 1 ? 'y' : 'ies'}! ${participation > 0 ? `+${participation} participation points on the leaderboard. ` : ''}After review: up to ${MAX_EVALUATION_SCORE} points (10 per correct summary).`,
             });
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 3000);
+            await loadSubmission(currentContent._id);
+            onSubmissionSuccess?.();
+        } catch (err: unknown) {
+            const message =
+                (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+                'Failed to submit summaries. Please try again.';
+            setSubmitStatus({ type: 'error', message });
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const speechDisplayTag = getDisplayTag(currentContent.sequenceNumber);
-
     const speechTitle = currentContent.title || '';
     const speakerName = currentContent.metadata?.speaker || '';
     const youtubeUrl = currentContent.metadata?.youtubeUrl || '';
     const transcript = currentContent.metadata?.transcript || '';
     const keywords = currentContent.metadata?.keywords || [];
     const phrases = currentContent.metadata?.phrases || [];
-
-    // Extract YouTube video ID
     const youtubeVideoId = extractYouTubeVideoId(youtubeUrl);
-    const embedUrl = youtubeVideoId
-        ? `https://www.youtube.com/embed/${youtubeVideoId}`
-        : null;
+    const embedUrl = youtubeVideoId ? `https://www.youtube.com/embed/${youtubeVideoId}` : null;
+
+    const reviewedScore = existingSubmission?.evaluationPoints ?? existingSubmission?.pointsEarned ?? 0;
+    const hasReviewScore =
+        !!existingSubmission?.reviewedAt &&
+        typeof reviewedScore === 'number' &&
+        reviewedScore > 0;
+
+    const getSummaryReviewState = (index: number): boolean | null => {
+        if (!existingSubmission?.sentenceValidations?.length) return null;
+        const found = existingSubmission.sentenceValidations.find((v) => v.sentenceIndex === index);
+        return found ? found.isCorrect : null;
+    };
 
     return (
-        <Card
-            elevation={4}
-            sx={{
-                maxWidth: 900,
-                margin: '0 auto',
-                borderRadius: 3,
-                overflow: 'hidden',
-                position: 'relative',
-            }}
-        >
-            {/* Confetti Effect */}
+        <Box sx={{ maxWidth: { xs: '100%', sm: 800 }, mx: 'auto' }}>
             {showConfetti && <ConfettiEffect />}
 
-            <CardContent sx={{ p: 4 }}>
-                {/* Header with Speech Number */}
-                <Box sx={{ mb: 3 }}>
+            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
                         contentType="SPEECH"
-                        accentColor="#00796b"
+                        accentColor={GOLD_ACCENT}
                         displayNumber={speechDisplayTag}
-                        variant="light"
                         sx={{ mb: 2 }}
                     />
 
@@ -263,32 +263,32 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                         variant="h4"
                         component="h1"
                         sx={{
-                            fontWeight: 'bold',
-                            color: 'primary.main',
+                            fontWeight: 900,
+                            mb: 0.5,
+                            background: `linear-gradient(135deg, #e2e8f0, ${GOLD_ACCENT})`,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            color: 'transparent',
                         }}
                     >
                         {speechTitle}
                     </Typography>
                     {speakerName && (
-                        <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+                        <Typography variant="body1" sx={{ color: alpha('#e2e8f0', 0.7), mb: 2 }}>
                             by {speakerName}
                         </Typography>
                     )}
-                </Box>
 
-                <Divider sx={{ my: 3 }} />
-
-                {/* YouTube Embed */}
-                {embedUrl && (
-                    <Box sx={{ mb: 4 }}>
+                    {embedUrl && (
                         <Box
                             sx={{
                                 position: 'relative',
-                                paddingTop: '56.25%', // 16:9 Aspect Ratio
-                                backgroundColor: '#000',
+                                paddingTop: '56.25%',
+                                bgcolor: '#000',
                                 borderRadius: 2,
                                 overflow: 'hidden',
-                                width: '100%',
+                                mb: 3,
+                                border: `1px solid ${alpha(GOLD_ACCENT, 0.3)}`,
                             }}
                         >
                             <iframe
@@ -306,165 +306,314 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                                 title={speechTitle}
                             />
                         </Box>
-                    </Box>
-                )}
+                    )}
 
-                {/* Transcript Section */}
-                {transcript && (
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                            Transcript
-                        </Typography>
-                        <Box
+                    {transcript && (
+                        <Box sx={{ mb: 3 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', mb: 1 }}>
+                                Transcript
+                            </Typography>
+                            <Box
+                                sx={{
+                                    p: 2,
+                                    borderRadius: 2,
+                                    maxHeight: 400,
+                                    overflowY: 'auto',
+                                    bgcolor: alpha('#1a1f2e', 0.55),
+                                    border: `1px solid ${alpha(GOLD_ACCENT, 0.2)}`,
+                                }}
+                            >
+                                <Typography
+                                    variant="body2"
+                                    sx={{ whiteSpace: 'pre-line', lineHeight: 1.8, color: alpha('#e2e8f0', 0.9) }}
+                                >
+                                    {transcript}
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )}
+
+                    {keywords.length > 0 && (
+                        <Accordion
                             sx={{
-                                p: 2,
-                                backgroundColor: 'grey.50',
-                                borderRadius: 2,
-                                maxHeight: '400px',
-                                overflowY: 'auto',
+                                mb: 2,
+                                bgcolor: alpha('#1a1f2e', 0.4),
+                                color: '#f8fafc',
+                                '&:before': { display: 'none' },
                             }}
                         >
-                            <Typography variant="body1" sx={{ whiteSpace: 'pre-line', lineHeight: 1.8 }}>
-                                {transcript}
-                            </Typography>
-                        </Box>
-                    </Box>
-                )}
-
-                <Divider sx={{ my: 4 }} />
-
-                {/* Keywords Section */}
-                {keywords.length > 0 && (
-                    <Box sx={{ mb: 4 }}>
-                        <Accordion>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                    Keywords ({keywords.length})
-                                </Typography>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: GOLD_ACCENT }} />}>
+                                <Typography sx={{ fontWeight: 700 }}>Keywords ({keywords.length})</Typography>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <List>
-                                    {keywords.map((keyword: any, index: number) => (
-                                        <ListItem key={index} sx={{ flexDirection: 'column', alignItems: 'flex-start', pb: 1 }}>
-                                            <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                                <List dense>
+                                    {keywords.map((keyword: Record<string, string>, index: number) => (
+                                        <ListItem
+                                            key={index}
+                                            sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1 }}
+                                        >
+                                            <Typography sx={{ fontWeight: 600, color: '#f8fafc' }}>
                                                 {keyword.word || keyword.phrase}
                                             </Typography>
-                                            <Typography variant="body2" color="text.secondary">
+                                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>
                                                 {keyword.meaning || keyword.meaning_en}
                                             </Typography>
-                                            {keyword.meaning_hi && (
-                                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                                    {keyword.meaning_hi}
-                                                </Typography>
-                                            )}
                                         </ListItem>
                                     ))}
                                 </List>
                             </AccordionDetails>
                         </Accordion>
-                    </Box>
-                )}
+                    )}
 
-                {/* Key Phrases Section */}
-                {phrases.length > 0 && (
-                    <Box sx={{ mb: 4 }}>
-                        <Accordion>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                    Key Phrases ({phrases.length})
-                                </Typography>
+                    {phrases.length > 0 && (
+                        <Accordion
+                            sx={{
+                                mb: 2,
+                                bgcolor: alpha('#1a1f2e', 0.4),
+                                color: '#f8fafc',
+                                '&:before': { display: 'none' },
+                            }}
+                        >
+                            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: GOLD_ACCENT }} />}>
+                                <Typography sx={{ fontWeight: 700 }}>Key Phrases ({phrases.length})</Typography>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <List>
-                                    {phrases.map((phrase: any, index: number) => (
-                                        <ListItem key={index} sx={{ flexDirection: 'column', alignItems: 'flex-start', pb: 1 }}>
-                                            <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                                <List dense>
+                                    {phrases.map((phrase: Record<string, string>, index: number) => (
+                                        <ListItem
+                                            key={index}
+                                            sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1 }}
+                                        >
+                                            <Typography sx={{ fontWeight: 600, color: '#f8fafc' }}>
                                                 {phrase.phrase || phrase.text}
                                             </Typography>
-                                            <Typography variant="body2" color="text.secondary">
+                                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>
                                                 {phrase.meaning || phrase.meaning_en}
                                             </Typography>
-                                            {phrase.meaning_hi && (
-                                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                                    {phrase.meaning_hi}
-                                                </Typography>
-                                            )}
                                         </ListItem>
                                     ))}
                                 </List>
                             </AccordionDetails>
                         </Accordion>
-                    </Box>
-                )}
+                    )}
+                </CardContent>
+            </Card>
 
-                {/* Description Submission Section */}
-                <Box>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 1 }}>
-                        Type the speech in your own words
+            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+                    <Typography
+                        variant="overline"
+                        sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2, display: 'block', mb: 1 }}
+                    >
+                        Your speech summaries
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        +10 participation points when you submit (leaderboard). After review, evaluation score: up to
-                        10 + 2 per correct sentence.
+                    <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65), mb: 2 }}>
+                        Write {SUMMARY_MIN} to {SUMMARY_MAX} short summaries in your own words about what you took
+                        from the speech. +10 participation when you submit. After review:{' '}
+                        <strong>10 points per correct summary</strong> (up to {MAX_EVALUATION_SCORE}).
                     </Typography>
+
+                    {!isToday && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            Past speech — browse only. Submit summaries on today&apos;s speech.
+                        </Alert>
+                    )}
+
+                    {existingSubmission && (
+                        <>
+                            <Alert severity="success" sx={{ mb: 2 }}>
+                                You submitted {getSubmissionSummaries(existingSubmission).length} summar
+                                {getSubmissionSummaries(existingSubmission).length === 1 ? 'y' : 'ies'}
+                                {existingSubmission.createdAt
+                                    ? ` on ${new Date(existingSubmission.createdAt).toLocaleDateString()}`
+                                    : ''}
+                                .
+                            </Alert>
+                            {hasReviewScore || existingSubmission.sentenceValidations?.length ? (
+                                <Alert severity="success" sx={{ mb: 2 }}>
+                                    <Typography variant="body2" fontWeight={700}>
+                                        Evaluation score: {reviewedScore} / {MAX_EVALUATION_SCORE}
+                                    </Typography>
+                                    <LinearProgress
+                                        variant="determinate"
+                                        value={Math.min(100, (reviewedScore / MAX_EVALUATION_SCORE) * 100)}
+                                        sx={{ mt: 1, height: 8, borderRadius: 1, bgcolor: alpha('#fff', 0.1) }}
+                                    />
+                                    {existingSubmission.feedback && (
+                                        <Typography variant="body2" sx={{ mt: 1 }}>
+                                            Feedback: {existingSubmission.feedback}
+                                        </Typography>
+                                    )}
+                                </Alert>
+                            ) : (
+                                <EvaluationStatusBanner
+                                    isCorrect={existingSubmission.isCorrect}
+                                    evaluationPoints={existingSubmission.evaluationPoints}
+                                    pointsEarned={existingSubmission.pointsEarned}
+                                    feedback={existingSubmission.feedback}
+                                    reviewedAt={existingSubmission.reviewedAt}
+                                />
+                            )}
+                        </>
+                    )}
+
                     {submitStatus && (
                         <Alert severity={submitStatus.type} sx={{ mb: 2 }}>
                             {submitStatus.message}
                         </Alert>
                     )}
-                    <Box component="form" onSubmit={handleSubmitDescription}>
-                        <TextField
-                            fullWidth
-                            multiline
-                            rows={6}
-                            placeholder="Describe the speech in your own words..."
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            disabled={isSubmitting || !user}
-                            sx={{ mb: 2 }}
-                        />
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                color="primary"
-                                size="large"
-                                endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-                                disabled={!description.trim() || isSubmitting || !user}
-                                sx={{ minWidth: 150 }}
-                            >
-                                {isSubmitting ? 'Submitting...' : 'Submit Description'}
-                            </Button>
-                        </Box>
+
+                    <Box component="form" onSubmit={handleSubmitSummaries}>
+                        {displaySummaries.map((_, idx) => {
+                            const review = getSummaryReviewState(idx);
+                            return (
+                                <Box
+                                    key={idx}
+                                    sx={{
+                                        mb: 2,
+                                        p: 2,
+                                        borderRadius: 2,
+                                        bgcolor: alpha('#1a1f2e', 0.55),
+                                        border: `1px solid ${
+                                            review === true
+                                                ? alpha('#34d399', 0.6)
+                                                : review === false
+                                                  ? alpha('#f87171', 0.5)
+                                                  : alpha(GOLD_ACCENT, 0.2)
+                                        }`,
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            mb: 1,
+                                        }}
+                                    >
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#f8fafc' }}>
+                                            Summary {idx + 1}
+                                            {review === true && (
+                                                <Typography component="span" variant="caption" sx={{ ml: 1, color: '#34d399' }}>
+                                                    +10
+                                                </Typography>
+                                            )}
+                                        </Typography>
+                                        {!locked &&
+                                            summaryDrafts.length > SUMMARY_MIN &&
+                                            idx >= SUMMARY_MIN && (
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => removeSummaryField(idx)}
+                                                    aria-label="Remove summary"
+                                                    sx={{ color: alpha('#e2e8f0', 0.6) }}
+                                                >
+                                                    <RemoveCircleOutlineIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
+                                    </Box>
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        minRows={3}
+                                        placeholder="Summarize part of the speech in your own words…"
+                                        value={locked ? displaySummaries[idx] || '' : summaryDrafts[idx] || ''}
+                                        onChange={(e) => updateSummaryDraft(idx, e.target.value)}
+                                        disabled={locked || !isToday || isSubmitting}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                bgcolor: alpha('#0f172a', 0.4),
+                                                color: '#e2e8f0',
+                                            },
+                                        }}
+                                    />
+                                </Box>
+                            );
+                        })}
+
+                        {!locked && isToday && user && (
+                            <>
+                                {summaryDrafts.length < SUMMARY_MAX && (
+                                    <Button
+                                        type="button"
+                                        variant="outlined"
+                                        startIcon={<AddIcon />}
+                                        onClick={addSummaryField}
+                                        sx={{
+                                            mb: 2,
+                                            borderColor: alpha(GOLD_ACCENT, 0.5),
+                                            color: GOLD_ACCENT,
+                                        }}
+                                    >
+                                        Add another summary ({summaryDrafts.length}/{SUMMARY_MAX})
+                                    </Button>
+                                )}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 2,
+                                        pt: 1,
+                                    }}
+                                >
+                                    <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.55) }}>
+                                        {filledCount} of {SUMMARY_MAX} filled · minimum {SUMMARY_MIN} to submit
+                                    </Typography>
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        size="large"
+                                        endIcon={
+                                            isSubmitting ? (
+                                                <CircularProgress size={20} color="inherit" />
+                                            ) : (
+                                                <SendIcon />
+                                            )
+                                        }
+                                        disabled={!canSubmitSummaries || isSubmitting}
+                                        sx={{
+                                            bgcolor: GOLD_ACCENT,
+                                            color: '#0f172a',
+                                            fontWeight: 800,
+                                            minWidth: 200,
+                                        }}
+                                    >
+                                        {isSubmitting ? 'Submitting…' : 'Submit summaries'}
+                                    </Button>
+                                </Box>
+                            </>
+                        )}
                         {!user && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Please log in to submit a description.
+                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.6), mt: 1 }}>
+                                Please log in to submit your summaries.
                             </Typography>
                         )}
                     </Box>
-                </Box>
 
-                <ActivityTierNavFooter
-                    variant="light"
-                    accentColor="#ca8a04"
-                    left={{
-                        label: 'Previous Speech',
-                        onClick: () => handleNavigation('prev'),
-                        disabled: !hasPrevious,
-                        loading: isLoadingNav,
-                    }}
-                    center={{
-                        label: '→ Song Lyrics',
-                        onClick: onNavigateToLyrics,
-                    }}
-                    right={{
-                        label: 'Next Speech',
-                        onClick: () => handleNavigation('next'),
-                        disabled: !hasNext,
-                        loading: isLoadingNav,
-                    }}
-                />
-            </CardContent>
-        </Card>
+                    <ActivityTierNavFooter
+                        accentColor={GOLD_ACCENT}
+                        left={{
+                            label: 'Previous Speech',
+                            onClick: () => handleNavigation('prev'),
+                            disabled: !hasPrevious,
+                            loading: isLoadingNav,
+                        }}
+                        center={{
+                            label: '→ Song Lyrics',
+                            onClick: onNavigateToLyrics,
+                        }}
+                        right={{
+                            label: 'Next Speech',
+                            onClick: () => handleNavigation('next'),
+                            disabled: !canGoNext,
+                            loading: isLoadingNav,
+                        }}
+                    />
+                </CardContent>
+            </Card>
+        </Box>
     );
 };
 

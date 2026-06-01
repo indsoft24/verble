@@ -168,6 +168,13 @@ const userSceneSubmissionSchema = new mongoose.Schema(
 
         },
 
+        sentenceValidations: [
+            {
+                sentenceIndex: { type: Number, required: true },
+                isCorrect: { type: Boolean, required: true },
+            },
+        ],
+
     },
 
     {

@@ -6,6 +6,8 @@ import {
     validateVocabSentences,
     validateConversationPractice,
     validateSceneSubmission,
+    validateSceneSummaries,
+    validateSpeechSummaries,
     validateSceneQuestions,
     getPendingSubmissions,
     getAllSubmissions,
@@ -15,7 +17,9 @@ import { protect, restrictTo } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.put('/scene/:submissionId/score', protect, restrictTo('admin'), validateSceneSubmission);
+router.put('/scene/:submissionId/sentences', protect, restrictTo('admin'), validateSceneSummaries);
 router.put('/scene/:submissionId/questions', protect, restrictTo('admin'), validateSceneQuestions);
+router.put('/speech/:submissionId/sentences', protect, restrictTo('admin'), validateSpeechSummaries);
 router.put('/vocab/:submissionId/sentences', protect, restrictTo('admin'), validateVocabSentences);
 router.put('/conversation/:submissionId', protect, restrictTo('admin'), validateConversationPractice);
 router.put('/story/:submissionId/sentences', protect, restrictTo('admin'), validateStorySentences);
