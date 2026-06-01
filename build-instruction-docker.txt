@@ -1,0 +1,102 @@
+================================================================================
+VERBLE — Docker build & deploy (VPS)
+================================================================================
+Project root:  /var/www/verble
+Compose file:  docker-compose.vps.yml
+
+You do NOT need to rebuild mongo, redis, or every service for a small UI/API fix.
+Only rebuild the image that actually changed, then recreate that container.
+
+--------------------------------------------------------------------------------
+WHAT EACH SERVICE IS
+--------------------------------------------------------------------------------
+  web       Frontend (Vite build + nginx). Rebuild when: React/TS/CSS/i18n changes.
+  backend   Node API. Rebuild when: coaching-platform-backend code changes.
+  mongo     Database (pre-built image). Rebuild: NEVER for app code. Only `up -d`.
+  redis     Cache (pre-built image). Rebuild: NEVER for app code. Only `up -d`.
+
+Apache/cPanel proxies verble.in → host port 3001 (web). No Docker rebuild for
+proxy-only fixes — edit /etc/apache2/conf.d/userdata/.../verble.in/proxy.conf
+and run: /usr/local/cpanel/scripts/rebuildhttpdconf && /scripts/restartsrv_httpd
+
+--------------------------------------------------------------------------------
+QUICK REFERENCE (run from /var/www/verble)
+--------------------------------------------------------------------------------
+
+  export COMPOSE="docker compose -f docker-compose.vps.yml"
+
+  # --- Frontend only (most UI/dashboard changes) ---
+  $COMPOSE build web && $COMPOSE up -d web
+
+  # --- Backend API only ---
+  $COMPOSE build backend && $COMPOSE up -d backend
+
+  # --- Frontend + backend (full-stack feature touching both) ---
+  $COMPOSE build web backend && $COMPOSE up -d web backend
+
+  # --- App stack: ensure web + backend + mongo + redis are running (no rebuild) ---
+  $COMPOSE up -d
+
+  # --- Rebuild ALL custom images (web + backend), then start everything ---
+  $COMPOSE build web backend && $COMPOSE up -d
+
+--------------------------------------------------------------------------------
+COPY-PASTE COMMANDS
+--------------------------------------------------------------------------------
+
+cd /var/www/verble
+
+# 1) WEB ONLY — frontend / dashboard / components / i18n
+docker compose -f docker-compose.vps.yml build web
+docker compose -f docker-compose.vps.yml up -d web
+
+# 2) BACKEND ONLY — API, controllers, models, middleware
+docker compose -f docker-compose.vps.yml build backend
+docker compose -f docker-compose.vps.yml up -d backend
+
+# 3) WEB + BACKEND — same release, both codebases changed
+docker compose -f docker-compose.vps.yml build web backend
+docker compose -f docker-compose.vps.yml up -d web backend
+
+# 4) START / RESTART ONLY — no code change (reboot, .env already in image mount)
+docker compose -f docker-compose.vps.yml up -d
+
+# 5) STATUS & LOGS
+docker compose -f docker-compose.vps.yml ps
+docker logs -f verble-web --tail 100
+docker logs -f verble-backend --tail 100
+
+--------------------------------------------------------------------------------
+WHEN TO USE WHICH
+--------------------------------------------------------------------------------
+  Change in coaching-platform-frontend/     →  WEB ONLY (1)
+  Change in coaching-platform-backend/      →  BACKEND ONLY (2)
+  Change in both                            →  WEB + BACKEND (3)
+  Server reboot / containers stopped        →  up -d (4)
+  Only backend .env change (no code)        →  up -d backend (4) — .env is mounted
+                                               at runtime via env_file; restart enough
+  Dockerfile / package.json / nginx.conf    →  rebuild affected service (1 or 2 or 3)
+  mongo / redis                             →  do NOT build; `up -d` only if stopped
+
+--------------------------------------------------------------------------------
+LOCAL DEV (no Docker) — fastest for tiny frontend edits
+--------------------------------------------------------------------------------
+  cd coaching-platform-frontend && npm run dev
+  Uses Vite HMR; changes appear instantly. Use Docker web build only for production.
+
+--------------------------------------------------------------------------------
+AFTER DEPLOY
+--------------------------------------------------------------------------------
+  • Hard refresh browser: Ctrl+Shift+R (Cmd+Shift+R on Mac)
+  • Check: curl -sI https://verble.in/ | head -5   (expect Server: nginx, 200)
+  • Check API: curl -s http://127.0.0.1:5001/api/health  (if health route exists)
+
+--------------------------------------------------------------------------------
+ONE-LINERS (aliases you can add to ~/.bashrc)
+--------------------------------------------------------------------------------
+  alias verble-web='cd /var/www/verble && docker compose -f docker-compose.vps.yml build web && docker compose -f docker-compose.vps.yml up -d web'
+  alias verble-api='cd /var/www/verble && docker compose -f docker-compose.vps.yml build backend && docker compose -f docker-compose.vps.yml up -d backend'
+  alias verble-app='cd /var/www/verble && docker compose -f docker-compose.vps.yml build web backend && docker compose -f docker-compose.vps.yml up -d web backend'
+  alias verble-ps='cd /var/www/verble && docker compose -f docker-compose.vps.yml ps'
+
+================================================================================

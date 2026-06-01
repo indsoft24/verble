@@ -6,6 +6,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import DashboardAgendaBand from './DashboardAgendaBand';
 import DashboardAgendaTile from './DashboardAgendaTile';
+import { premiumAgendaGridColumns, premiumTopTileSpan, premiumBottomTileSpan } from './dashboardAgendaLayout';
 
 export const TIER_COLORS = {
     FREE: '#14b8a6',
@@ -237,57 +238,24 @@ const DashboardActivitiesPanel: React.FC<DashboardActivitiesPanelProps> = ({
                 lockMessage={lockMsg}
                 onLockedSectionClick={() => onLockedTier('FULL_COURSE')}
                 ribbon={t('dashboard.agenda.ultimateRibbon') as 'ULTIMATE'}
+                tileColumns={3}
             >
                 <Box
                     sx={{
                         gridColumn: '1 / -1',
                         display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                        gridTemplateColumns: premiumAgendaGridColumns,
                         gap: 1.5,
+                        alignItems: 'stretch',
                     }}
                 >
-                    <DashboardAgendaTile
-                        variant="hero"
-                        title={fullCourseHero.modulesTitle}
-                        subtitle={fullCourseHero.modulesSubtitle}
-                        icon={<AutoAwesomeIcon />}
-                        accentColor={TIER_COLORS.FULL_COURSE}
-                        sectionLocked={!tierHasFullCourse}
-                        onClick={
-                            tierHasFullCourse
-                                ? () => navigate('/my-courses')
-                                : () => onLockedTier('FULL_COURSE')
-                        }
-                    />
-                    <DashboardAgendaTile
-                        variant="hero"
-                        title={fullCourseHero.accessTitle}
-                        subtitle={fullCourseHero.accessSubtitle}
-                        icon={<WorkspacePremiumIcon />}
-                        accentColor={TIER_COLORS.FULL_COURSE}
-                        sectionLocked={!tierHasFullCourse}
-                        onClick={
-                            tierHasFullCourse
-                                ? () => navigate('/my-courses')
-                                : () => onLockedTier('FULL_COURSE')
-                        }
-                    />
-                </Box>
-                <Box
-                    sx={{
-                        gridColumn: '1 / -1',
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-                        gap: 1.5,
-                    }}
-                >
-                    {fullCourseBenefits.map((tile) => (
+                    <Box sx={{ gridColumn: premiumTopTileSpan }}>
                         <DashboardAgendaTile
-                            key={tile.id}
-                            title={tile.title}
-                            subtitle={tile.subtitle}
-                            icon={tile.icon}
-                            accentColor={tile.accentColor}
+                            variant="hero"
+                            title={fullCourseHero.modulesTitle}
+                            subtitle={fullCourseHero.modulesSubtitle}
+                            icon={<AutoAwesomeIcon />}
+                            accentColor={TIER_COLORS.FULL_COURSE}
                             sectionLocked={!tierHasFullCourse}
                             onClick={
                                 tierHasFullCourse
@@ -295,6 +263,37 @@ const DashboardActivitiesPanel: React.FC<DashboardActivitiesPanelProps> = ({
                                     : () => onLockedTier('FULL_COURSE')
                             }
                         />
+                    </Box>
+                    <Box sx={{ gridColumn: premiumTopTileSpan }}>
+                        <DashboardAgendaTile
+                            variant="hero"
+                            title={fullCourseHero.accessTitle}
+                            subtitle={fullCourseHero.accessSubtitle}
+                            icon={<WorkspacePremiumIcon />}
+                            accentColor={TIER_COLORS.FULL_COURSE}
+                            sectionLocked={!tierHasFullCourse}
+                            onClick={
+                                tierHasFullCourse
+                                    ? () => navigate('/my-courses')
+                                    : () => onLockedTier('FULL_COURSE')
+                            }
+                        />
+                    </Box>
+                    {fullCourseBenefits.map((tile) => (
+                        <Box key={tile.id} sx={{ gridColumn: premiumBottomTileSpan }}>
+                            <DashboardAgendaTile
+                                title={tile.title}
+                                subtitle={tile.subtitle}
+                                icon={tile.icon}
+                                accentColor={tile.accentColor}
+                                sectionLocked={!tierHasFullCourse}
+                                onClick={
+                                    tierHasFullCourse
+                                        ? () => navigate('/my-courses')
+                                        : () => onLockedTier('FULL_COURSE')
+                                }
+                            />
+                        </Box>
                     ))}
                 </Box>
             </DashboardAgendaBand>

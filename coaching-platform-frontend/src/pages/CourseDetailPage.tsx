@@ -16,6 +16,7 @@ import {
     Chip,
     Grid,
     Stack,
+    alpha,
 } from '@mui/material';
 import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -27,8 +28,18 @@ import parse from 'html-react-parser';
 import { getPublishedCourseWithModulesForUser, type CourseListItemUser, type ModuleListItemUser } from '../services/courseUserService';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl, getSplashImageUrl } from '../utils/imageUtils';
+import UserLayout from '../components/layout/UserLayout';
+import {
+    CourseLearningShell,
+    CourseLearningBand,
+    CourseLearningBreadcrumbs,
+    CourseBottomNav,
+    courseLearningTheme,
+    courseTiptapSx,
+    courseChipOutlinedSx,
+} from '../components/course';
 
-const contentSx = {
+const publicContentSx = {
     '& p': { typography: 'body1', lineHeight: 1.75, mb: 2, color: 'text.secondary' },
     '& ul, & ol': { pl: 3, mb: 2 },
     '& li': { mb: 0.5, typography: 'body1', lineHeight: 1.75 },
@@ -37,16 +48,6 @@ const contentSx = {
     '& u': { textDecoration: 'underline' },
     '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
     '& h1, & h2, & h3, & h4, & h5, & h6': { mt: 2.5, mb: 1, fontWeight: 700, color: 'text.primary' },
-} as const;
-
-const moduleBodySx = {
-    '& p': { typography: 'body2', lineHeight: 1.7, mb: 1.5, color: 'text.secondary' },
-    '& ul, & ol': { pl: 3, mb: 1.5 },
-    '& li': { mb: 0.5, typography: 'body2', lineHeight: 1.7 },
-    '& strong': { fontWeight: 700, color: 'text.primary' },
-    '& em': { fontStyle: 'italic' },
-    '& u': { textDecoration: 'underline' },
-    '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
 } as const;
 
 const CourseDetailPage: React.FC = () => {
@@ -86,7 +87,129 @@ const CourseDetailPage: React.FC = () => {
         navigate(`/modules/${moduleId}/videos`);
     };
 
+    const moduleCount = course?.moduleCount ?? modules.length;
+    const totalVideos = modules.reduce((sum, m) => sum + (m.videoCount ?? 0), 0);
+
+    const renderAuthenticatedCurriculum = () => (
+        <CourseLearningBand
+            headerLabel="CURRICULUM"
+            subtitle="Expand a module, then open lessons when you are ready to study."
+        >
+            {modules.length === 0 ? (
+                <Typography sx={{ color: courseLearningTheme.textMuted, textAlign: 'center', py: 2 }}>
+                    Modules for this course will appear here once they are published.
+                </Typography>
+            ) : (
+                <Stack spacing={1}>
+                    {modules.map((module, index) => (
+                        <Accordion
+                            key={module._id}
+                            defaultExpanded={index === 0}
+                            disableGutters
+                            elevation={0}
+                            sx={{
+                                border: courseLearningTheme.tileBorder(),
+                                borderRadius: '12px !important',
+                                overflow: 'hidden',
+                                bgcolor: courseLearningTheme.tileBg,
+                                '&:before': { display: 'none' },
+                            }}
+                        >
+                            <AccordionSummary
+                                expandIcon={<ExpandMoreIcon sx={{ color: courseLearningTheme.accent }} />}
+                                sx={{
+                                            px: 1.5,
+                                            py: 1.25,
+                                    '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.08) },
+                                }}
+                            >
+                                <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%', pr: 1 }}>
+                                    <Box
+                                        sx={{
+                                            minWidth: 36,
+                                            height: 36,
+                                            borderRadius: 1,
+                                            bgcolor: courseLearningTheme.accent,
+                                            color: '#fff',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontWeight: 800,
+                                            fontSize: '0.875rem',
+                                        }}
+                                    >
+                                        {index + 1}
+                                    </Box>
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography
+                                            variant="subtitle1"
+                                            sx={{ fontWeight: 700, lineHeight: 1.3, color: courseLearningTheme.textPrimary }}
+                                        >
+                                            {module.title}
+                                        </Typography>
+                                        {module.videoCount != null && module.videoCount > 0 && (
+                                            <Typography variant="caption" sx={{ color: courseLearningTheme.textBody }}>
+                                                {module.videoCount} lesson{module.videoCount === 1 ? '' : 's'}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                    <OndemandVideoIcon sx={{ color: courseLearningTheme.accent, display: { xs: 'none', sm: 'block' } }} />
+                                </Stack>
+                            </AccordionSummary>
+                            <AccordionDetails
+                                sx={{
+                                    px: 2,
+                                    pb: 2,
+                                    pt: 0,
+                                    borderTop: `1px solid ${alpha(courseLearningTheme.accent, 0.2)}`,
+                                }}
+                            >
+                                <Box className="tiptap-rendered-content" sx={{ ...courseTiptapSx, mb: 1.5, mt: 1.5 }}>
+                                    {module.description ? (
+                                        parse(module.description)
+                                    ) : (
+                                        <Typography variant="body2" sx={{ color: courseLearningTheme.textMuted }}>
+                                            No outline has been added for this module yet.
+                                        </Typography>
+                                    )}
+                                </Box>
+                                <Button
+                                    variant="contained"
+                                    size="medium"
+                                    onClick={() => handleModuleClick(module._id)}
+                                    startIcon={<PlayCircleOutlineIcon />}
+                                    sx={{
+                                        borderRadius: 1.5,
+                                        fontWeight: 700,
+                                        textTransform: 'none',
+                                        bgcolor: courseLearningTheme.accent,
+                                        boxShadow: 'none',
+                                        '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88), boxShadow: 'none' },
+                                    }}
+                                >
+                                    Open lessons
+                                </Button>
+                            </AccordionDetails>
+                        </Accordion>
+                    ))}
+                </Stack>
+            )}
+        </CourseLearningBand>
+    );
+
     if (isLoading) {
+        if (isAuthenticated) {
+            return (
+                <UserLayout title="Course" variant="learning">
+                    <CourseLearningShell>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8, gap: 2 }}>
+                            <CircularProgress sx={{ color: courseLearningTheme.accent }} size={28} />
+                            <Typography sx={{ color: courseLearningTheme.textMuted }}>Loading course…</Typography>
+                        </Box>
+                    </CourseLearningShell>
+                </UserLayout>
+            );
+        }
         return (
             <Box sx={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                 <CircularProgress size={28} />
@@ -95,50 +218,136 @@ const CourseDetailPage: React.FC = () => {
         );
     }
 
-    if (error) {
+    if (error || !course) {
+        const msg = error || 'This course is not available.';
+        if (isAuthenticated) {
+            return (
+                <UserLayout title="Course" variant="learning">
+                    <CourseLearningShell maxWidth="sm">
+                        <Alert severity="error" action={error ? <Button onClick={fetchPageData}>Retry</Button> : undefined}>
+                            {msg}
+                        </Alert>
+                    </CourseLearningShell>
+                    <CourseBottomNav backLabel="Back to My Courses" backTo="/my-courses" />
+                </UserLayout>
+            );
+        }
         return (
             <Container maxWidth="sm" sx={{ mt: 6 }}>
-                <Alert severity="error" action={<Button onClick={fetchPageData}>Retry</Button>}>
-                    {error}
+                <Alert severity={error ? 'error' : 'info'} action={error ? <Button onClick={fetchPageData}>Retry</Button> : undefined}>
+                    {msg}
                 </Alert>
-            </Container>
-        );
-    }
-
-    if (!course) {
-        return (
-            <Container maxWidth="sm" sx={{ mt: 6 }}>
-                <Alert severity="info">This course is not available.</Alert>
             </Container>
         );
     }
 
     const examSlug = typeof course.examCategory === 'object' ? course.examCategory.slug : '';
     const examName = typeof course.examCategory === 'object' ? course.examCategory.name : 'Category';
-    const moduleCount = course.moduleCount ?? modules.length;
-    const totalVideos = modules.reduce((sum, m) => sum + (m.videoCount ?? 0), 0);
+
+    if (isAuthenticated) {
+        return (
+            <UserLayout title={course.title} variant="learning">
+                <CourseLearningShell>
+                    <CourseLearningBreadcrumbs
+                        items={[
+                            { label: 'My Courses', to: '/my-courses' },
+                            { label: course.title },
+                        ]}
+                    />
+
+                    <CourseLearningBand headerLabel="FULL COURSE" ribbon="ULTIMATE">
+                        <Grid container spacing={1.5} sx={{ alignItems: 'stretch' }}>
+                            <Grid size={{ xs: 12, sm: 5 }}>
+                                <Box
+                                    sx={{
+                                        borderRadius: 1.5,
+                                        overflow: 'hidden',
+                                        aspectRatio: { xs: '16 / 9', sm: 'auto' },
+                                        minHeight: { sm: 140 },
+                                        height: { sm: '100%' },
+                                        bgcolor: courseLearningTheme.surfaceRaised,
+                                    }}
+                                >
+                                    <Box
+                                        component="img"
+                                        src={course.image ? getImageUrl(course.image, 'course') : getSplashImageUrl()}
+                                        alt={course.title}
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = getSplashImageUrl();
+                                        }}
+                                        sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                    />
+                                </Box>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 7 }}>
+                                <Stack spacing={1}>
+                                    <Typography
+                                        variant="h5"
+                                        component="h1"
+                                        sx={{
+                                            fontWeight: 800,
+                                            lineHeight: 1.25,
+                                            color: courseLearningTheme.textPrimary,
+                                            fontSize: { xs: '1.25rem', sm: '1.4rem' },
+                                        }}
+                                    >
+                                        {course.title}
+                                    </Typography>
+                                    {typeof course.examCategory === 'object' && course.examCategory && (
+                                        <Chip
+                                            icon={<SchoolIcon sx={{ fontSize: 16, color: courseLearningTheme.accent }} />}
+                                            label={course.examCategory.name}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{ ...courseChipOutlinedSx, alignSelf: 'flex-start' }}
+                                        />
+                                    )}
+                                    {moduleCount > 0 && (
+                                        <Stack direction="row" alignItems="center" gap={0.75} sx={{ color: courseLearningTheme.textMuted }}>
+                                            <VideoLibraryOutlinedIcon sx={{ fontSize: 20, color: courseLearningTheme.accent }} />
+                                            <Typography variant="body2">
+                                                {moduleCount} module{moduleCount === 1 ? '' : 's'}
+                                                {totalVideos > 0
+                                                    ? ` · ${totalVideos} lesson${totalVideos === 1 ? '' : 's'}`
+                                                    : ''}
+                                            </Typography>
+                                        </Stack>
+                                    )}
+                                </Stack>
+                            </Grid>
+                        </Grid>
+                        <Box sx={{ mt: 1.25, pt: 1.25, borderTop: `1px solid ${alpha(courseLearningTheme.accent, 0.2)}` }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, color: courseLearningTheme.textSecondary }}>
+                                About this course
+                            </Typography>
+                            <Box className="tiptap-rendered-content" sx={courseTiptapSx}>
+                                {course.description ? (
+                                    parse(course.description)
+                                ) : (
+                                    <Typography sx={{ color: courseLearningTheme.textBody }}>
+                                        A full description will appear here when it is added for this program.
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Box>
+                    </CourseLearningBand>
+
+                    {renderAuthenticatedCurriculum()}
+                </CourseLearningShell>
+                <CourseBottomNav backLabel="Back to My Courses" backTo="/my-courses" />
+            </UserLayout>
+        );
+    }
 
     return (
         <Box sx={{ bgcolor: 'grey.50', minHeight: '100vh', pb: { xs: 6, md: 8 } }}>
             <Container maxWidth="lg" sx={{ pt: { xs: 2, sm: 3 }, pb: 1 }}>
-                <Breadcrumbs
-                    aria-label="breadcrumb"
-                    sx={{
-                        mb: 3,
-                        '& .MuiBreadcrumbs-separator': { color: 'text.disabled' },
-                    }}
-                >
+                <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3, '& .MuiBreadcrumbs-separator': { color: 'text.disabled' } }}>
                     <MuiLink component={RouterLink} underline="hover" color="text.secondary" to="/" sx={{ fontSize: 14 }}>
                         Home
                     </MuiLink>
                     {examSlug ? (
-                        <MuiLink
-                            component={RouterLink}
-                            underline="hover"
-                            color="text.secondary"
-                            to={`/exams/${examSlug}`}
-                            sx={{ fontSize: 14 }}
-                        >
+                        <MuiLink component={RouterLink} underline="hover" color="text.secondary" to={`/exams/${examSlug}`} sx={{ fontSize: 14 }}>
                             {examName}
                         </MuiLink>
                     ) : (
@@ -164,14 +373,7 @@ const CourseDetailPage: React.FC = () => {
                 >
                     <Grid container>
                         <Grid size={{ xs: 12, md: 5 }}>
-                            <Box
-                                sx={{
-                                    position: 'relative',
-                                    height: { xs: 220, sm: 280, md: '100%' },
-                                    minHeight: { md: 320 },
-                                    bgcolor: 'grey.200',
-                                }}
-                            >
+                            <Box sx={{ position: 'relative', height: { xs: 220, sm: 280, md: '100%' }, minHeight: { md: 320 }, bgcolor: 'grey.200' }}>
                                 <Box
                                     component="img"
                                     src={course.image ? getImageUrl(course.image, 'course') : getSplashImageUrl()}
@@ -179,12 +381,7 @@ const CourseDetailPage: React.FC = () => {
                                     onError={(e) => {
                                         (e.target as HTMLImageElement).src = getSplashImageUrl();
                                     }}
-                                    sx={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                        display: 'block',
-                                    }}
+                                    sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                 />
                             </Box>
                         </Grid>
@@ -221,19 +418,11 @@ const CourseDetailPage: React.FC = () => {
                         </Grid>
                     </Grid>
 
-                    <Box
-                        sx={{
-                            px: { xs: 3, sm: 4 },
-                            py: { xs: 3, sm: 4 },
-                            borderTop: '1px solid',
-                            borderColor: 'divider',
-                            bgcolor: 'grey.50',
-                        }}
-                    >
+                    <Box sx={{ px: { xs: 3, sm: 4 }, py: { xs: 3, sm: 4 }, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'grey.50' }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
                             About this course
                         </Typography>
-                        <Box className="tiptap-rendered-content" sx={contentSx}>
+                        <Box className="tiptap-rendered-content" sx={publicContentSx}>
                             {course.description ? (
                                 parse(course.description)
                             ) : (
@@ -245,152 +434,45 @@ const CourseDetailPage: React.FC = () => {
                     </Box>
                 </Paper>
 
-                {isAuthenticated ? (
-                    <Box sx={{ mt: { xs: 4, md: 5 } }}>
-                        <Stack spacing={0.5} sx={{ mb: 2.5 }}>
-                            <Typography variant="h5" component="h2" sx={{ fontWeight: 800, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-                                Curriculum
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 560 }}>
-                                Expand a module to read what it covers, then open the video list when you are ready to study.
-                            </Typography>
-                        </Stack>
-                        {modules.length === 0 ? (
-                            <Paper
-                                variant="outlined"
-                                sx={{ p: 4, textAlign: 'center', borderRadius: 2, bgcolor: 'background.paper' }}
-                            >
-                                <Typography color="text.secondary">Modules for this course will appear here once they are published.</Typography>
-                            </Paper>
-                        ) : (
-                            <Stack spacing={1.5}>
-                                {modules.map((module, index) => (
-                                    <Accordion
-                                        key={module._id}
-                                        defaultExpanded={index === 0}
-                                        disableGutters
-                                        elevation={0}
-                                        sx={{
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                            borderRadius: '12px !important',
-                                            overflow: 'hidden',
-                                            bgcolor: 'background.paper',
-                                            '&:before': { display: 'none' },
-                                            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
-                                        }}
-                                    >
-                                        <AccordionSummary
-                                            expandIcon={<ExpandMoreIcon sx={{ color: 'text.secondary' }} />}
-                                            sx={{
-                                                px: 2,
-                                                py: 1.5,
-                                                '&:hover': { bgcolor: 'action.hover' },
-                                            }}
-                                        >
-                                            <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%', pr: 1 }}>
-                                                <Box
-                                                    sx={{
-                                                        minWidth: 36,
-                                                        height: 36,
-                                                        borderRadius: 1,
-                                                        bgcolor: 'primary.main',
-                                                        color: 'primary.contrastText',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        typography: 'subtitle2',
-                                                        fontWeight: 800,
-                                                    }}
-                                                >
-                                                    {index + 1}
-                                                </Box>
-                                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                    <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-                                                        {module.title}
-                                                    </Typography>
-                                                    {module.videoCount != null && module.videoCount > 0 && (
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            {module.videoCount} video{module.videoCount === 1 ? '' : 's'}
-                                                        </Typography>
-                                                    )}
-                                                </Box>
-                                                <OndemandVideoIcon sx={{ color: 'action.active', display: { xs: 'none', sm: 'block' } }} />
-                                            </Stack>
-                                        </AccordionSummary>
-                                        <AccordionDetails sx={{ px: 2, pb: 2, pt: 0, borderTop: '1px solid', borderColor: 'divider' }}>
-                                            <Box className="tiptap-rendered-content" sx={{ ...moduleBodySx, mb: 2, mt: 2 }}>
-                                                {module.description ? (
-                                                    parse(module.description)
-                                                ) : (
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        No outline has been added for this module yet.
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                            <Button
-                                                variant="contained"
-                                                size="medium"
-                                                onClick={() => handleModuleClick(module._id)}
-                                                startIcon={<PlayCircleOutlineIcon />}
-                                                sx={{
-                                                    borderRadius: 1.5,
-                                                    fontWeight: 700,
-                                                    textTransform: 'none',
-                                                    px: 2.5,
-                                                    boxShadow: 'none',
-                                                    '&:hover': { boxShadow: 2 },
-                                                }}
-                                            >
-                                                View videos
-                                            </Button>
-                                        </AccordionDetails>
-                                    </Accordion>
-                                ))}
-                            </Stack>
-                        )}
-                    </Box>
-                ) : (
-                    <Paper
-                        elevation={0}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        mt: { xs: 4, md: 5 },
+                        p: { xs: 3, sm: 4 },
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        textAlign: 'center',
+                        maxWidth: 520,
+                        mx: 'auto',
+                        bgcolor: 'background.paper',
+                    }}
+                >
+                    <SchoolIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1.5, opacity: 0.9 }} />
+                    <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
+                        Sign in to open the curriculum
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ mb: 3, lineHeight: 1.65, fontSize: '0.95rem' }}>
+                        Your modules and lesson videos are available after you log in. This page stays here so you can read the course overview anytime.
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        size="large"
+                        component={RouterLink}
+                        to={`/login?redirect=/courses/${courseId}`}
                         sx={{
-                            mt: { xs: 4, md: 5 },
-                            p: { xs: 3, sm: 4 },
-                            borderRadius: 2,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            textAlign: 'center',
-                            maxWidth: 520,
-                            mx: 'auto',
-                            bgcolor: 'background.paper',
+                            px: 3,
+                            py: 1.25,
+                            borderRadius: 1.5,
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            boxShadow: 'none',
+                            '&:hover': { boxShadow: 2 },
                         }}
                     >
-                        <SchoolIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1.5, opacity: 0.9 }} />
-                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-                            Sign in to open the curriculum
-                        </Typography>
-                        <Typography color="text.secondary" sx={{ mb: 3, lineHeight: 1.65, fontSize: '0.95rem' }}>
-                            Your modules and lesson videos are available after you log in. This page stays here so you can read the course overview anytime.
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            size="large"
-                            component={RouterLink}
-                            to={`/login?redirect=/courses/${courseId}`}
-                            sx={{
-                                px: 3,
-                                py: 1.25,
-                                borderRadius: 1.5,
-                                fontWeight: 700,
-                                textTransform: 'none',
-                                boxShadow: 'none',
-                                '&:hover': { boxShadow: 2 },
-                            }}
-                        >
-                            Log in to continue
-                        </Button>
-                    </Paper>
-                )}
+                        Log in to continue
+                    </Button>
+                </Paper>
             </Container>
         </Box>
     );

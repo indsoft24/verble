@@ -121,7 +121,7 @@ function AppContent() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             {/* Only show Navbar and Footer for non-admin and non-user dashboard routes */}
-            {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <Navbar />}
+            {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname, { isAuthenticated }) && <Navbar />}
 
             <Box component="main" sx={{ flexGrow: 1 }}>
                 <Suspense fallback={<PageLoader />}>
@@ -219,8 +219,8 @@ function AppContent() {
             </Box>
 
             {/* Only show Footer for non-admin and non-user dashboard routes */}
-            {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <Footer />}
-            {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname) && <PromoBanner />}
+            {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname, { isAuthenticated }) && <Footer />}
+            {!location.pathname.startsWith('/admin') && !isUserAppRoute(location.pathname, { isAuthenticated }) && <PromoBanner />}
         </Box>
     );
 }

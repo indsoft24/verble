@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
-    Container,
     Box,
     Typography,
     CircularProgress,
@@ -18,8 +17,6 @@ import {
     Grid,
     Stack,
     Chip,
-    Breadcrumbs,
-    Link as MuiLink,
     Skeleton,
 } from '@mui/material';
 import LockIcon from '@mui/icons-material/Lock';
@@ -29,7 +26,6 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import ViewListIcon from '@mui/icons-material/ViewList';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
@@ -47,20 +43,21 @@ import {
     type VideoListItemForModulePage,
 } from '../services/courseUserService';
 import { extractId, getStringId } from '../utils/idUtils';
-import { getSplashImageUrl, resolveBackendMediaUrl } from '../utils/imageUtils';
 import UserLayout from '../components/layout/UserLayout';
-
-/** One row in the flattened course / module lesson order (for prev / next / up next). */
-interface CourseNavItem {
-    _id: string;
-    title: string;
-    moduleId: string;
-    moduleTitle: string;
-    durationSeconds?: number;
-    thumbnailUrl?: string;
-    isLocked?: boolean;
-    canAccess?: boolean;
-}
+import CourseNavRow, { type CourseNavItem } from '../components/course/CourseNavRow';
+import {
+    CourseLearningShell,
+    CourseLearningBreadcrumbs,
+    CourseBottomNav,
+    courseLearningTheme,
+    courseBottomNavZIndex,
+    courseChipOutlinedSx,
+    courseChipSuccessSx,
+    courseChipWarningSx,
+    courseChipInfoSx,
+    type CourseBottomNavAction,
+} from '../components/course';
+import { alpha } from '@mui/material/styles';
 
 function formatDuration(totalSeconds: number): string {
     const s = Math.max(0, Math.floor(totalSeconds));
@@ -107,13 +104,6 @@ function resolveModuleIdCandidate(input: unknown): string | null {
         normalizeModuleId(obj?.id) ||
         normalizeModuleId(obj?.moduleId);
     return candidate || null;
-}
-
-function navThumbUrl(item: CourseNavItem): string {
-    if (item.thumbnailUrl) {
-        return resolveBackendMediaUrl(item.thumbnailUrl);
-    }
-    return getSplashImageUrl();
 }
 
 function sortVideosByOrder(videos: VideoListItemForModulePage[]) {
@@ -468,91 +458,78 @@ const VideoWatchPage: React.FC = () => {
     const accessErrorMessage = error?.message || 'This video requires a subscription or is still processing.';
     const isSequenceLocked = /locked|unlock lesson|complete lesson/i.test(accessErrorMessage);
 
+    const moduleBackTo = contextModuleId ? `/modules/${contextModuleId}/videos` : '/my-courses';
+    const bottomSecondary: CourseBottomNavAction[] = [];
+    if (prevItem) {
+        bottomSecondary.push({ label: 'Previous', to: `/videos/${prevItem._id}`, icon: 'prev', variant: 'outlined' });
+    } else {
+        bottomSecondary.push({ label: 'Previous', to: '#', icon: 'prev', variant: 'outlined', disabled: true });
+    }
+    if (nextItem) {
+        bottomSecondary.push({ label: 'Next', to: `/videos/${nextItem._id}`, icon: 'next', variant: 'contained' });
+    } else {
+        bottomSecondary.push({ label: 'Next', to: '#', icon: 'next', variant: 'contained', disabled: true });
+    }
+
+    const learningPaperSx = {
+        p: { xs: 1.5, sm: 2 },
+        borderRadius: `${courseLearningTheme.borderRadius}px`,
+        border: courseLearningTheme.tileBorder(),
+        bgcolor: courseLearningTheme.bandBg,
+        boxShadow: courseLearningTheme.bandShadow,
+    };
+
     if (isLoading) {
         return (
-            <UserLayout title="Watch Video" fullWidth>
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', gap: 2 }}>
-                    <CircularProgress size={28} />
-                    <Typography color="text.secondary">Loading video…</Typography>
-                </Box>
+            <UserLayout title="Watch Video" fullWidth variant="learning">
+                <CourseLearningShell maxWidth="xl">
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', gap: 2 }}>
+                        <CircularProgress size={28} sx={{ color: courseLearningTheme.accent }} />
+                        <Typography sx={{ color: courseLearningTheme.textMuted }}>Loading video…</Typography>
+                    </Box>
+                </CourseLearningShell>
             </UserLayout>
         );
     }
 
     if (error && !video) {
         return (
-            <UserLayout title="Watch Video">
-                <Container sx={{ textAlign: 'center' }}>
+            <UserLayout title="Watch Video" variant="learning">
+                <CourseLearningShell maxWidth="md">
                     <Alert severity="error">{error.message}</Alert>
-                    <Button component={RouterLink} to="/videos" variant="outlined" sx={{ mt: 2 }}>
-                        Back to videos
-                    </Button>
-                </Container>
+                </CourseLearningShell>
+                <CourseBottomNav backLabel="Back to lessons" backTo={moduleBackTo} />
             </UserLayout>
         );
     }
 
     if (!video) {
         return (
-            <UserLayout title="Watch Video">
-                <Alert severity="warning">Could not find video data.</Alert>
+            <UserLayout title="Watch Video" variant="learning">
+                <CourseLearningShell>
+                    <Alert severity="warning">Could not find video data.</Alert>
+                </CourseLearningShell>
             </UserLayout>
         );
     }
 
     return (
-        <UserLayout title={video.title || 'Watch Video'} fullWidth>
-        <Box
-            sx={{
-                pb: { xs: 4, md: 6 },
-                backgroundImage: 'linear-gradient(180deg, rgba(15,23,42,0.02) 0%, rgba(15,23,42,0) 30%)',
-            }}
-        >
-            <Container maxWidth="xl" disableGutters sx={{ px: { xs: 0, sm: 2 } }}>
-                <Breadcrumbs sx={{ mb: 2, '& .MuiBreadcrumbs-separator': { color: 'text.disabled' } }}>
-                    <MuiLink component={RouterLink} underline="hover" color="text.secondary" to="/" sx={{ fontSize: 14 }}>
-                        Home
-                    </MuiLink>
-                    {outlineCourseId ? (
-                        <MuiLink
-                            component={RouterLink}
-                            underline="hover"
-                            color="text.secondary"
-                            to={`/courses/${outlineCourseId}`}
-                            sx={{ fontSize: 14, maxWidth: 200 }}
-                            noWrap
-                        >
-                            {outlineCourseTitle || 'Course'}
-                        </MuiLink>
-                    ) : null}
-                    {contextModuleId ? (
-                        <MuiLink
-                            component={RouterLink}
-                            underline="hover"
-                            color="text.secondary"
-                            to={`/modules/${contextModuleId}/videos`}
-                            sx={{ fontSize: 14, maxWidth: 220 }}
-                            noWrap
-                        >
-                            {contextModuleTitle || 'Module'}
-                        </MuiLink>
-                    ) : null}
-                    <Typography color="text.primary" sx={{ fontSize: 14, fontWeight: 600, maxWidth: 280 }} noWrap>
-                        {video.title}
-                    </Typography>
-                </Breadcrumbs>
+        <UserLayout title={video.title || 'Watch Video'} fullWidth variant="learning">
+            <CourseLearningShell maxWidth="xl" disableGutters>
+                <CourseLearningBreadcrumbs
+                    items={[
+                        { label: 'My Courses', to: '/my-courses' },
+                        ...(outlineCourseId
+                            ? [{ label: outlineCourseTitle || 'Course', to: `/courses/${outlineCourseId}` }]
+                            : []),
+                        ...(contextModuleId
+                            ? [{ label: contextModuleTitle || 'Module', to: `/modules/${contextModuleId}/videos` }]
+                            : []),
+                        { label: video.title },
+                    ]}
+                />
 
-                <Paper
-                    elevation={0}
-                    sx={{
-                        p: { xs: 2, sm: 3 },
-                        mb: 2.5,
-                        borderRadius: 2.5,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        boxShadow: '0 6px 24px rgba(15, 23, 42, 0.05)',
-                    }}
-                >
+                <Paper elevation={0} sx={{ ...learningPaperSx, mb: 1.5 }}>
                     <Stack
                         direction={{ xs: 'column', md: 'row' }}
                         spacing={2}
@@ -563,37 +540,42 @@ const VideoWatchPage: React.FC = () => {
                             <Typography
                                 variant="h4"
                                 component="h1"
-                                sx={{ fontWeight: 800, lineHeight: 1.2, fontSize: { xs: '1.35rem', md: '1.75rem' } }}
+                                sx={{
+                                    fontWeight: 800,
+                                    lineHeight: 1.2,
+                                    fontSize: { xs: '1.35rem', md: '1.75rem' },
+                                    color: courseLearningTheme.textPrimary,
+                                }}
                             >
                                 {video.title}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, maxWidth: 760 }}>
-                                Focus mode playback with adaptive quality and lesson progression tracking.
+                            <Typography variant="body2" sx={{ mt: 0.5, maxWidth: 760, color: courseLearningTheme.textBody, fontSize: '0.8125rem' }}>
+                                Watch the lesson, mark complete, then continue with the next video.
                             </Typography>
                         </Box>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                            <Chip icon={<OndemandVideoIcon />} label={video.videoStatus || 'Unknown'} variant="outlined" />
+                        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                            <Chip size="small" icon={<OndemandVideoIcon sx={{ fontSize: '16px !important' }} />} label={video.videoStatus || 'Unknown'} variant="outlined" sx={courseChipOutlinedSx} />
                             {video.durationSeconds ? (
-                                <Chip icon={<TimerOutlinedIcon />} label={formatDuration(video.durationSeconds)} variant="outlined" />
+                                <Chip size="small" icon={<TimerOutlinedIcon sx={{ fontSize: '16px !important' }} />} label={formatDuration(video.durationSeconds)} variant="outlined" sx={courseChipOutlinedSx} />
                             ) : null}
-                            <Chip icon={<WorkspacePremiumIcon />} label={video.canAccess ? 'Access granted' : 'Restricted'} color={video.canAccess ? 'success' : 'warning'} variant="outlined" />
+                            <Chip
+                                size="small"
+                                icon={<WorkspacePremiumIcon sx={{ fontSize: '16px !important' }} />}
+                                label={video.canAccess ? 'Access granted' : 'Restricted'}
+                                variant="outlined"
+                                sx={video.canAccess ? courseChipSuccessSx : courseChipWarningSx}
+                            />
                         </Stack>
                     </Stack>
                 </Paper>
 
-                <Grid container spacing={3} alignItems="flex-start">
-                    <Grid size={{ xs: 12, lg: 8 }}>
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                p: { xs: 2, sm: 3 },
-                                borderRadius: 2.5,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                boxShadow: '0 6px 24px rgba(15, 23, 42, 0.05)',
-                            }}
-                        >
-                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: 'text.secondary', letterSpacing: 0.4 }}>
+                <Grid container spacing={1.5} alignItems="flex-start">
+                    <Grid size={{ xs: 12, lg: 8 }} sx={{ order: { xs: 1, lg: 1 } }}>
+                        <Paper elevation={0} sx={learningPaperSx}>
+                            <Typography
+                                variant="subtitle2"
+                                sx={{ fontWeight: 800, mb: 1.5, color: courseLearningTheme.accent, letterSpacing: 0.4 }}
+                            >
                                 VIDEO PLAYER
                             </Typography>
 
@@ -616,7 +598,14 @@ const VideoWatchPage: React.FC = () => {
                                             onClick={handleVideoComplete}
                                             disabled={isMarkingComplete || hasMarkedCompleteRef.current}
                                             startIcon={isMarkingComplete ? <CircularProgress size={20} /> : <CheckCircleIcon />}
-                                            sx={{ textTransform: 'none', fontWeight: 700, px: 2.5, boxShadow: 'none' }}
+                                            sx={{
+                                                textTransform: 'none',
+                                                fontWeight: 700,
+                                                px: 2.5,
+                                                boxShadow: 'none',
+                                                bgcolor: courseLearningTheme.accent,
+                                                '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88) },
+                                            }}
                                         >
                                             {isMarkingComplete ? 'Marking as complete…' : 'Mark video as complete'}
                                         </Button>
@@ -664,7 +653,7 @@ const VideoWatchPage: React.FC = () => {
                                     <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
                                         Description
                                     </Typography>
-                                    <Typography variant="body1" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: courseLearningTheme.textBody }}>
                                         {video.description}
                                     </Typography>
                                 </Box>
@@ -700,41 +689,26 @@ const VideoWatchPage: React.FC = () => {
                         </Paper>
                     </Grid>
 
-                    <Grid size={{ xs: 12, lg: 4 }}>
-                        <Stack spacing={2} sx={{ position: { lg: 'sticky' }, top: { lg: 16 } }}>
-                            <Paper
-                                elevation={0}
-                                sx={{
-                                    p: 2,
-                                    borderRadius: 2.5,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    boxShadow: '0 6px 24px rgba(15, 23, 42, 0.05)',
-                                }}
-                            >
-                                <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 1, color: 'primary.main' }}>
+                    <Grid size={{ xs: 12, lg: 4 }} sx={{ order: { xs: 2, lg: 2 } }}>
+                        <Stack spacing={1} sx={{ position: { lg: 'sticky' }, top: { lg: 12 } }}>
+                            <Paper elevation={0} sx={{ ...learningPaperSx, p: 1.5 }}>
+                                <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 1, color: courseLearningTheme.accent, fontSize: '0.68rem' }}>
                                     Watch insights
                                 </Typography>
-                                <Stack spacing={1} sx={{ mt: 1.25 }}>
-                                    <Chip icon={<PlayLessonOutlinedIcon />} label={`Watched: ${video.watchCount ?? 0} time(s)`} variant="outlined" />
-                                    <Chip label={`Remaining in cycle: ${video.remainingWatches ?? 0}`} color="info" variant="outlined" />
+                                <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: 1 }}>
+                                    <Chip size="small" icon={<PlayLessonOutlinedIcon sx={{ fontSize: '16px !important' }} />} label={`Watched: ${video.watchCount ?? 0}`} variant="outlined" sx={courseChipOutlinedSx} />
+                                    <Chip size="small" label={`Remaining: ${video.remainingWatches ?? 0}`} variant="outlined" sx={courseChipInfoSx} />
                                 </Stack>
                             </Paper>
-                            <Paper
-                                elevation={0}
-                                sx={{
-                                    p: 3,
-                                    borderRadius: 3,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    boxShadow: '0 10px 28px rgba(15, 23, 42, 0.06)',
-                                }}
+                            <Paper elevation={0} sx={{ ...learningPaperSx, p: { xs: 1.5, sm: 2 } }}>
+                            <Typography
+                                variant="overline"
+                                sx={{ fontWeight: 800, letterSpacing: 1, color: courseLearningTheme.accent, display: 'block', mb: 0.75 }}
                             >
-                            <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 1, color: 'primary.main', display: 'block', mb: 0.75 }}>
                                 Course navigation
                             </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, maxWidth: 340, lineHeight: 1.5 }}>
-                                Move through the full course without going back in the browser.
+                            <Typography variant="body2" sx={{ mb: 1.5, maxWidth: 340, lineHeight: 1.45, color: courseLearningTheme.textBody, fontSize: '0.8125rem' }}>
+                                Move through the full course without using the browser back button.
                             </Typography>
 
                             {navLoading ? (
@@ -752,7 +726,7 @@ const VideoWatchPage: React.FC = () => {
                                         </Alert>
                                     )}
 
-                                    <Stack spacing={1} sx={{ mb: 2.5 }}>
+                                    <Stack spacing={0.75} sx={{ mb: 1.5 }}>
                                         {outlineCourseId && (
                                             <Button
                                                 component={RouterLink}
@@ -765,8 +739,9 @@ const VideoWatchPage: React.FC = () => {
                                                     fontWeight: 700,
                                                     borderRadius: 1.5,
                                                     boxShadow: 'none',
-                                                    minHeight: 48,
-                                                    '&:hover': { boxShadow: '0 4px 12px rgba(25, 118, 210, 0.24)' },
+                                                    minHeight: 44,
+                                                    bgcolor: courseLearningTheme.accent,
+                                                    '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88), boxShadow: 'none' },
                                                 }}
                                             >
                                                 Full course outline
@@ -783,8 +758,13 @@ const VideoWatchPage: React.FC = () => {
                                                     textTransform: 'none',
                                                     fontWeight: 700,
                                                     borderRadius: 1.5,
-                                                    minHeight: 48,
-                                                    '&:hover': { bgcolor: 'action.hover' },
+                                                    minHeight: 44,
+                                                    borderColor: alpha(courseLearningTheme.accent, 0.5),
+                                                    color: courseLearningTheme.textPrimary,
+                                                    '&:hover': {
+                                                        borderColor: courseLearningTheme.accent,
+                                                        bgcolor: alpha(courseLearningTheme.accent, 0.12),
+                                                    },
                                                 }}
                                             >
                                                 All lessons in this module
@@ -798,9 +778,15 @@ const VideoWatchPage: React.FC = () => {
                                                 icon={<AutoAwesomeIcon sx={{ fontSize: '16px !important' }} />}
                                                 label={`Lesson ${navIndex + 1} of ${navTotal}`}
                                                 size="small"
-                                                color="primary"
                                                 variant="outlined"
-                                                sx={{ fontWeight: 700, px: 0.25, height: 38, borderRadius: 999 }}
+                                                sx={{
+                                                    fontWeight: 700,
+                                                    px: 0.25,
+                                                    height: 38,
+                                                    borderRadius: 999,
+                                                    borderColor: alpha(courseLearningTheme.accent, 0.5),
+                                                    color: courseLearningTheme.accent,
+                                                }}
                                             />
                                         </Box>
                                     )}
@@ -812,28 +798,27 @@ const VideoWatchPage: React.FC = () => {
                                         </Alert>
                                     )}
 
-                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 3 }}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 3, display: { xs: 'none', lg: 'flex' } }}>
                                         {prevItem ? (
                                             <Button
                                                 component={RouterLink}
                                                 to={`/videos/${prevItem._id}`}
                                                 variant="outlined"
                                                 fullWidth
-                                                aria-label={`Previous lesson: ${prevItem.title}`}
                                                 startIcon={<ChevronLeftIcon />}
                                                 sx={{
                                                     textTransform: 'none',
                                                     fontWeight: 700,
-                                                    py: 1.25,
                                                     minHeight: 48,
                                                     borderRadius: 1.5,
-                                                    boxShadow: 'none',
+                                                    borderColor: alpha(courseLearningTheme.accent, 0.5),
+                                                    color: courseLearningTheme.textPrimary,
                                                 }}
                                             >
                                                 Previous
                                             </Button>
                                         ) : (
-                                            <Button variant="outlined" fullWidth disabled startIcon={<ChevronLeftIcon />} sx={{ py: 1.25, minHeight: 48, borderRadius: 1.5 }}>
+                                            <Button variant="outlined" fullWidth disabled startIcon={<ChevronLeftIcon />} sx={{ minHeight: 48, borderRadius: 1.5 }}>
                                                 Previous
                                             </Button>
                                         )}
@@ -843,22 +828,20 @@ const VideoWatchPage: React.FC = () => {
                                                 to={`/videos/${nextItem._id}`}
                                                 variant="contained"
                                                 fullWidth
-                                                aria-label={`Next lesson: ${nextItem.title}`}
                                                 endIcon={<ChevronRightIcon />}
                                                 sx={{
                                                     textTransform: 'none',
                                                     fontWeight: 700,
-                                                    py: 1.25,
                                                     minHeight: 48,
                                                     borderRadius: 1.5,
+                                                    bgcolor: courseLearningTheme.accent,
                                                     boxShadow: 'none',
-                                                    '&:hover': { boxShadow: '0 4px 12px rgba(25, 118, 210, 0.24)' },
                                                 }}
                                             >
                                                 Next
                                             </Button>
                                         ) : (
-                                            <Button variant="contained" fullWidth disabled endIcon={<ChevronRightIcon />} sx={{ py: 1.25, minHeight: 48, borderRadius: 1.5 }}>
+                                            <Button variant="contained" fullWidth disabled endIcon={<ChevronRightIcon />} sx={{ minHeight: 48, borderRadius: 1.5 }}>
                                                 Next
                                             </Button>
                                         )}
@@ -871,13 +854,13 @@ const VideoWatchPage: React.FC = () => {
                                     </Typography>
 
                                     {navIndex >= 0 && nextThree.length === 0 && navTotal > 0 && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        <Typography variant="body2" sx={{ mb: 1, color: courseLearningTheme.textBody }}>
                                             You are on the last lesson in this sequence.
                                         </Typography>
                                     )}
 
                                     {navTotal === 1 && navIndex === 0 && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        <Typography variant="body2" sx={{ mb: 1, color: courseLearningTheme.textBody }}>
                                             This is the only published lesson in this sequence.
                                         </Typography>
                                     )}
@@ -899,7 +882,7 @@ const VideoWatchPage: React.FC = () => {
                                     )}
 
                                     {!navLoading && navFlat.length === 0 && !outlineCourseId && !contextModuleId && (
-                                        <Typography variant="body2" color="text.secondary">
+                                        <Typography variant="body2" sx={{ color: courseLearningTheme.textBody }}>
                                             This video is not linked to a course module, so lesson-to-lesson navigation is unavailable.
                                         </Typography>
                                     )}
@@ -909,13 +892,20 @@ const VideoWatchPage: React.FC = () => {
                         </Stack>
                     </Grid>
                 </Grid>
-            </Container>
+            </CourseLearningShell>
+
+            <CourseBottomNav
+                backLabel="Back to lessons"
+                backTo={moduleBackTo}
+                secondaryActions={bottomSecondary}
+            />
 
             <Snackbar
                 open={!!completionMessage}
                 autoHideDuration={quizPrompt ? null : 6000}
                 onClose={() => setCompletionMessage(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                sx={{ bottom: { xs: 88, sm: 88 }, zIndex: courseBottomNavZIndex - 1 }}
             >
                 <Alert
                     onClose={() => {
@@ -939,106 +929,8 @@ const VideoWatchPage: React.FC = () => {
                     {completionMessage}
                 </Alert>
             </Snackbar>
-        </Box>
         </UserLayout>
     );
 };
-
-function CourseNavRow({ item, currentId }: { item: CourseNavItem; currentId: string | undefined }) {
-    const isCurrent = currentId === item._id;
-    const thumb = navThumbUrl(item);
-
-    return (
-        <Box
-            component={RouterLink}
-            to={`/videos/${item._id}`}
-            sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '88px minmax(0, 1fr)', sm: '104px minmax(0, 1fr)' },
-                columnGap: { xs: 1.25, sm: 1.75 },
-                alignItems: 'center',
-                py: { xs: 1.25, sm: 1.5 },
-                textDecoration: 'none',
-                color: 'inherit',
-                borderRadius: 2.25,
-                px: { xs: 1.25, sm: 1.5 },
-                border: '1px solid',
-                borderColor: isCurrent ? 'primary.light' : 'divider',
-                bgcolor: 'background.paper',
-                minHeight: { xs: 88, sm: 102 },
-                pointerEvents: isCurrent ? 'none' : 'auto',
-                transition: 'all 0.16s ease',
-                boxShadow: isCurrent ? '0 0 0 2px rgba(25, 118, 210, 0.12)' : 'none',
-                '&:hover': {
-                    bgcolor: 'action.hover',
-                    borderColor: 'primary.light',
-                    boxShadow: '0 6px 18px rgba(15, 23, 42, 0.09)',
-                    transform: 'translateY(-1px)',
-                },
-            }}
-        >
-            <Box
-                aria-hidden
-                sx={{
-                    width: { xs: 88, sm: 104 },
-                    height: { xs: 56, sm: 64 },
-                    borderRadius: 1.5,
-                    overflow: 'hidden',
-                    bgcolor: 'grey.200',
-                    backgroundImage: `url("${thumb}")`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
-                }}
-            />
-            <Box sx={{ minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                <Typography
-                    variant="subtitle2"
-                    fontWeight={700}
-                    sx={{
-                        lineHeight: 1.25,
-                        fontSize: { xs: '1rem', sm: '1.02rem' },
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        wordBreak: 'break-word',
-                    }}
-                >
-                    {item.title}
-                </Typography>
-                <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    noWrap
-                    display="block"
-                    sx={{ fontSize: { xs: '0.79rem', sm: '0.81rem' }, lineHeight: 1.2 }}
-                >
-                    {item.moduleTitle}
-                </Typography>
-                <Stack direction="row" alignItems="center" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ pt: 0.25 }}>
-                    {item.durationSeconds != null && item.durationSeconds > 0 && (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.78rem', opacity: 0.9 }}>
-                            {formatDuration(item.durationSeconds)}
-                        </Typography>
-                    )}
-                    {item.isLocked && (
-                        <Chip
-                            size="small"
-                            icon={<LockOutlinedIcon sx={{ fontSize: '14px !important' }} />}
-                            label="Locked"
-                            variant="outlined"
-                            sx={{ height: 22 }}
-                        />
-                    )}
-                    {item.canAccess === false && !item.isLocked && (
-                        <Chip size="small" label="Plan required" color="warning" variant="outlined" sx={{ height: 22 }} />
-                    )}
-                </Stack>
-            </Box>
-        </Box>
-    );
-}
 
 export default VideoWatchPage;

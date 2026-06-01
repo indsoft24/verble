@@ -12,19 +12,24 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import UserSidebar from './UserSidebar';
 import { brandAssets } from '../../assets/brandAssets';
+import { courseLearningTheme } from '../course/courseLearningTheme';
 
 interface UserLayoutProps {
     children: React.ReactNode;
     title?: string;
     /** Less padding for full-width content (e.g. video player) */
     fullWidth?: boolean;
+    /** Dark Full Course learning pages */
+    variant?: 'default' | 'learning';
 }
 
 const UserLayout: React.FC<UserLayoutProps> = ({
     children,
     title: titleProp = 'My Dashboard',
     fullWidth = false,
+    variant = 'default',
 }) => {
+    const isLearning = variant === 'learning';
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const location = useLocation();
@@ -50,8 +55,10 @@ const UserLayout: React.FC<UserLayoutProps> = ({
 
     const drawerWidth = sidebarOpen ? 280 : 64;
 
+    const mainBg = isLearning ? courseLearningTheme.pageBg : 'grey.50';
+
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'grey.50' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: mainBg }}>
             <UserSidebar open={sidebarOpen} onToggle={handleSidebarToggle} />
 
             <Box
@@ -64,7 +71,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                         easing: theme.transitions.easing.sharp,
                         duration: theme.transitions.duration.leavingScreen,
                     }),
-                    bgcolor: 'grey.50',
+                    bgcolor: mainBg,
                     minHeight: '100vh',
                     display: 'flex',
                     flexDirection: 'column',
@@ -75,10 +82,10 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                         position="sticky"
                         elevation={0}
                         sx={{
-                            bgcolor: 'background.paper',
+                            bgcolor: isLearning ? courseLearningTheme.bandBg : 'background.paper',
                             borderBottom: '1px solid',
-                            borderColor: 'divider',
-                            color: 'text.primary',
+                            borderColor: isLearning ? 'rgba(124, 58, 237, 0.35)' : 'divider',
+                            color: isLearning ? courseLearningTheme.textPrimary : 'text.primary',
                             zIndex: theme.zIndex.drawer + 1,
                         }}
                     >
@@ -111,9 +118,9 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                 <Box
                     sx={{
                         flexGrow: 1,
-                        p: fullWidth ? { xs: 1, sm: 2 } : { xs: 2, sm: 3 },
-                        maxWidth: fullWidth ? 'none' : '1600px',
-                        mx: fullWidth ? 0 : 'auto',
+                        p: fullWidth || isLearning ? { xs: 0, sm: 0 } : { xs: 2, sm: 3 },
+                        maxWidth: fullWidth || isLearning ? 'none' : '1600px',
+                        mx: fullWidth || isLearning ? 0 : 'auto',
                         width: '100%',
                         boxSizing: 'border-box',
                     }}

@@ -11,7 +11,23 @@ export const USER_APP_ROUTE_PREFIXES = [
     '/modules',
 ] as const;
 
-export const isUserAppRoute = (pathname: string): boolean =>
-    USER_APP_ROUTE_PREFIXES.some(
-        (path) => pathname === path || pathname.startsWith(`${path}/`)
-    );
+/** Authenticated course detail — hide marketing shell, not the /courses catalog */
+const AUTHENTICATED_COURSE_DETAIL = /^\/courses\/[0-9a-fA-F]{24}$/;
+
+export interface IsUserAppRouteOptions {
+    isAuthenticated?: boolean;
+}
+
+export const isUserAppRoute = (pathname: string, options?: IsUserAppRouteOptions): boolean => {
+    if (
+        USER_APP_ROUTE_PREFIXES.some(
+            (path) => pathname === path || pathname.startsWith(`${path}/`)
+        )
+    ) {
+        return true;
+    }
+    if (options?.isAuthenticated && AUTHENTICATED_COURSE_DETAIL.test(pathname)) {
+        return true;
+    }
+    return false;
+};

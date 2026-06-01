@@ -1,15 +1,24 @@
-// File: src/pages/MyCoursesPage.tsx (NEW FILE)
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
-    Container, Typography, Grid, Card, CardActionArea, CardContent, CardMedia,
-    CircularProgress, Alert, Box, Button, Paper, Chip, LinearProgress, Stack
+    CircularProgress,
+    Alert,
+    Box,
+    Button,
+    Chip,
+    LinearProgress,
+    Stack,
+    Typography,
+    alpha,
 } from '@mui/material';
 import UserLayout from '../components/layout/UserLayout';
-import parse from 'html-react-parser';
-
-// --- Import the new service function ---
+import {
+    CourseLearningShell,
+    CourseLearningBand,
+    CourseLearningTile,
+    CourseBottomNav,
+    courseLearningTheme,
+} from '../components/course';
 import { getMyCoursesForUser, type CourseListItemUser } from '../services/courseUserService';
 import {
     generateCourseCertificateForMe,
@@ -18,9 +27,12 @@ import {
     type CourseCertificateEligibility,
     type MyCourseCertificate,
 } from '../services/courseCertificateService';
-import { useAuth } from '../contexts/AuthContext'; 
-import { getImageUrl } from '../utils/imageUtils';
-import { extractId } from '../utils/idUtils'; 
+import { useAuth } from '../contexts/AuthContext';
+import { getImageUrl, getSplashImageUrl } from '../utils/imageUtils';
+import { extractId } from '../utils/idUtils';
+
+const stripHtml = (html: string): string =>
+    html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
 
 const MyCoursesPage: React.FC = () => {
     const [courses, setCourses] = useState<CourseListItemUser[]>([]);
@@ -37,7 +49,6 @@ const MyCoursesPage: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            // Call the new service function. It handles auth automatically.
             const { courses: fetchedCourses, context } = await getMyCoursesForUser();
             const safeCourses = fetchedCourses || [];
             setCourses(safeCourses);
@@ -80,12 +91,11 @@ const MyCoursesPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [isAuthenticated]);
 
     useEffect(() => {
-        // We use the isAuthenticated flag to re-fetch data if the user logs in or out.
         fetchCourses();
-    }, [fetchCourses, isAuthenticated]);
+    }, [fetchCourses]);
 
     const handleGenerateCertificate = async (courseId: string) => {
         setGeneratingForCourse((prev) => ({ ...prev, [courseId]: true }));
@@ -103,205 +113,205 @@ const MyCoursesPage: React.FC = () => {
     };
 
     const handleCardClick = (courseId: string) => {
-        // If not authenticated, redirect to login, then bring them back.
         if (!isAuthenticated) {
-            alert('Please log in or register to view course details.');
             navigate('/login', { state: { from: `/courses/${courseId}` } });
             return;
         }
         navigate(`/courses/${courseId}`);
     };
 
-    const pageTitle = pageContext === 'subscribed' ? 'My Enrolled Courses' : 'Explore All Courses';
-    const noCoursesMessage = pageContext === 'subscribed'
-        ? "You haven't subscribed to any courses yet. Explore our courses to get started!"
-        : "No courses are available right now. Please check back soon.";
+    const bandSubtitle =
+        pageContext === 'subscribed'
+            ? 'Your enrolled programs — pick up where you left off.'
+            : 'Browse published courses and start learning.';
+
+    const noCoursesMessage =
+        pageContext === 'subscribed'
+            ? "You haven't subscribed to any courses yet. Explore our courses to get started!"
+            : 'No courses are available right now. Please check back soon.';
+
+    const layout = (content: React.ReactNode) => (
+        <UserLayout title="My Courses" variant="learning">
+            {content}
+            <CourseBottomNav backLabel="Back to Dashboard" backTo="/dashboard" />
+        </UserLayout>
+    );
 
     if (isLoading) {
-        return (
-            <UserLayout title="My Courses">
-                <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
-                    <CircularProgress />
-                </Container>
-            </UserLayout>
+        return layout(
+            <CourseLearningShell>
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8, gap: 2 }}>
+                    <CircularProgress sx={{ color: courseLearningTheme.accent }} />
+                    <Typography sx={{ color: courseLearningTheme.textMuted }}>Loading courses…</Typography>
+                </Box>
+            </CourseLearningShell>
         );
     }
+
     if (error) {
-        return (
-            <UserLayout title="My Courses">
-                <Container sx={{ mt: 4 }}>
-                    <Alert severity="error">{error}</Alert>
-                </Container>
-            </UserLayout>
+        return layout(
+            <CourseLearningShell maxWidth="md">
+                <Alert severity="error" sx={{ mt: 2 }}>
+                    {error}
+                </Alert>
+            </CourseLearningShell>
         );
     }
 
-    return (
-        <UserLayout title="My Courses">
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h3" component="h1" gutterBottom sx={{ textAlign: 'center', mb: 4, fontWeight: 'bold' }}>
-                {pageTitle}
-            </Typography>
+    return layout(
+        <CourseLearningShell maxWidth="xl">
+            <CourseLearningBand headerLabel="MY COURSES" subtitle={bandSubtitle} ribbon="ULTIMATE">
+                {courses.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 2 }}>
+                        <Typography sx={{ color: courseLearningTheme.textMuted, mb: 2 }}>{noCoursesMessage}</Typography>
+                        {pageContext === 'subscribed' && (
+                            <Button
+                                component={RouterLink}
+                                to="/courses"
+                                variant="contained"
+                                sx={{
+                                    bgcolor: courseLearningTheme.accent,
+                                    fontWeight: 700,
+                                    textTransform: 'none',
+                                    '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88) },
+                                }}
+                            >
+                                Explore Courses
+                            </Button>
+                        )}
+                    </Box>
+                ) : (
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                            gap: 1.25,
+                            alignItems: 'stretch',
+                        }}
+                    >
+                        {courses.map((course) => {
+                            const courseId = extractId(course) || course._id;
+                            if (!courseId) return null;
+                            const eligibility = eligibilityByCourse[courseId];
+                            const certificate = certificateByCourse[courseId];
+                            const canGenerate = Boolean(eligibility?.isEligible) && !certificate;
+                            const examName =
+                                typeof course.examCategory === 'object' && course.examCategory !== null
+                                    ? course.examCategory.name
+                                    : 'General';
+                            const imageUrl = course.image
+                                ? getImageUrl(course.image, 'course')
+                                : getSplashImageUrl();
+                            const descText = course.description
+                                ? stripHtml(course.description)
+                                : 'Explore this course to unlock your potential.';
 
-            {courses.length === 0 ? (
-                <Paper sx={{p: 4, textAlign:'center', mt: 4}}>
-                    <Typography variant="h6">{noCoursesMessage}</Typography>
-                    {pageContext === 'subscribed' && (
-                        <Button component={RouterLink} to="/courses" variant="contained" sx={{ mt: 2 }}>
-                            Explore Courses
-                        </Button>
-                    )}
-                </Paper>
-            ) : (
-                <Grid container spacing={4}>
-                    {courses.map((course, index) => {
-                        const courseId = extractId(course) || course._id;
-                        if (!courseId) return null; // Skip if no valid ID
-                        const eligibility = eligibilityByCourse[courseId];
-                        const certificate = certificateByCourse[courseId];
-                        const canGenerate = Boolean(eligibility?.isEligible) && !certificate;
-                        
-                        return (
-                        <Grid key={courseId} sx={{width: {xs: '100%', sm: '50%', md: '33%'}}}>
-                             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: '12px', transition: 'all 0.3s', '&:hover': { boxShadow: 6, transform: 'translateY(-4px)' } }}>
-                                <CardActionArea
-                                    onClick={() => handleCardClick(courseId)}
-                                    sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
-                                >
-                                    <CardMedia
-                                        component="div"
-                                        sx={{
-                                            height: 160,
-                                            width: '100%',
-                                            background: course.image 
-                                                ? `url(${getImageUrl(course.image, 'course')})` 
-                                                : `linear-gradient(45deg, hsl(${index * 50}, 60%, 85%), hsl(${index * 50 + 35}, 75%, 90%))`,
-                                            backgroundSize: 'cover',
-                                            backgroundPosition: 'center',
-                                            backgroundRepeat: 'no-repeat'
-                                        }}
-                                    />
-                                    <CardContent sx={{ flexGrow: 1, width: '100%' }}>
-                                        <Typography variant="h6" component="h2" sx={{ fontWeight: 600, mb: 1 }}>
-                                            {course.title}
-                                        </Typography>
-                                         <Typography variant="caption" color="text.secondary" display="block">
-                                            {typeof course.examCategory === 'object' && course.examCategory !== null ? course.examCategory.name : 'General'}
-                                        </Typography>
-                                        <Box
-                                            sx={{
-                                                mt: 1,
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 3,
-                                                WebkitBoxOrient: 'vertical',
-                                                minHeight: '3.9em',
-                                                color: 'text.secondary',
-                                                '& p': { typography: 'body2', mb: 0.5, display: 'inline' },
-                                                '& ul, & ol': { display: 'none' },
-                                                '& strong': { fontWeight: 'bold' },
-                                                '& em': { fontStyle: 'italic' },
-                                            }}
-                                        >
-                                            {course.description ? parse(course.description) : 'Explore this course to unlock your potential.'}
-                                        </Box>
-                                        {isAuthenticated && eligibility && (
-                                            <Box sx={{ mt: 1.5 }}>
-                                                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Completion
-                                                    </Typography>
-                                                    <Typography variant="caption" fontWeight={600}>
-                                                        {eligibility.completionPercent}%
-                                                    </Typography>
-                                                </Stack>
-                                                <LinearProgress
-                                                    variant="determinate"
-                                                    value={Math.max(0, Math.min(100, eligibility.completionPercent))}
-                                                    sx={{ height: 6, borderRadius: 6 }}
-                                                />
-                                                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                                    <Chip
-                                                        size="small"
-                                                        label={eligibility.isEligible ? 'Eligible for certificate' : 'Not eligible yet'}
-                                                        color={eligibility.isEligible ? 'success' : 'default'}
-                                                    />
-                                                    {eligibility.rule.requireAssessment && (
-                                                        <Chip size="small" label="Assessment required" color="warning" />
-                                                    )}
-                                                </Box>
-                                                {!eligibility.isEligible && (
-                                                    <Box sx={{ mt: 0.75 }}>
-                                                        {eligibility.reasons?.map((reason) => (
-                                                            <Typography
-                                                                key={reason}
-                                                                variant="caption"
-                                                                color="text.secondary"
-                                                                sx={{ display: 'block' }}
-                                                            >
-                                                                {reason}
-                                                            </Typography>
-                                                        ))}
-                                                    </Box>
-                                                )}
-                                                {eligibility.reportCardAvailable && (
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        sx={{ mt: 1 }}
-                                                        component={RouterLink}
-                                                        to={`/my-courses/${courseId}/report-card`}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        View report card
-                                                    </Button>
-                                                )}
-                                            </Box>
-                                        )}
-                                    </CardContent>
-                                     <Box sx={{ p: 2, pt: 0, width: '100%', mt: 'auto' }}>
-                                        <Stack spacing={1}>
-                                            <Button variant="contained" fullWidth>
-                                                View Course
-                                            </Button>
-                                            {isAuthenticated && certificate && (
-                                                <Button
-                                                    variant="outlined"
-                                                    fullWidth
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        window.open(certificate.pdfUrl, '_blank', 'noopener,noreferrer');
-                                                    }}
-                                                >
-                                                    Download Certificate
-                                                </Button>
-                                            )}
-                                            {isAuthenticated && canGenerate && (
-                                                <Button
-                                                    variant="contained"
-                                                    color="success"
-                                                    fullWidth
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleGenerateCertificate(courseId);
-                                                    }}
-                                                    disabled={Boolean(generatingForCourse[courseId])}
-                                                >
-                                                    {generatingForCourse[courseId] ? 'Generating...' : 'Generate Certificate'}
-                                                </Button>
-                                            )}
+                            const progressFooter =
+                                isAuthenticated && eligibility ? (
+                                    <Stack spacing={1}>
+                                        <Stack direction="row" justifyContent="space-between">
+                                            <Typography variant="caption" sx={{ color: courseLearningTheme.textMuted }}>
+                                                Completion
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: courseLearningTheme.textPrimary, fontWeight: 700 }}>
+                                                {eligibility.completionPercent}%
+                                            </Typography>
                                         </Stack>
-                                    </Box>
-                                </CardActionArea>
-                            </Card>
-                        </Grid>
-                        );
-                    })}
-                </Grid>
-            )}
-        </Container>
-        </UserLayout>
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={Math.max(0, Math.min(100, eligibility.completionPercent))}
+                                            sx={{
+                                                height: 6,
+                                                borderRadius: 6,
+                                                bgcolor: alpha(courseLearningTheme.accent, 0.2),
+                                                '& .MuiLinearProgress-bar': { bgcolor: courseLearningTheme.accent },
+                                            }}
+                                        />
+                                        <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                                            <Chip
+                                                size="small"
+                                                label={eligibility.isEligible ? 'Certificate eligible' : 'In progress'}
+                                                sx={{
+                                                    height: 22,
+                                                    fontSize: '0.7rem',
+                                                    borderColor: alpha(courseLearningTheme.accent, 0.5),
+                                                    color: courseLearningTheme.accent,
+                                                }}
+                                                variant="outlined"
+                                            />
+                                        </Stack>
+                                    </Stack>
+                                ) : undefined;
+
+                            return (
+                                <Box key={courseId} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <CourseLearningTile
+                                        variant="card"
+                                        title={course.title}
+                                        subtitle={`${examName} · ${descText}`}
+                                        imageUrl={imageUrl}
+                                        badgeLabel={examName}
+                                        onClick={() => handleCardClick(courseId)}
+                                        footer={progressFooter}
+                                    />
+                                    <Stack spacing={0.75}>
+                                        {eligibility?.reportCardAvailable && (
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                component={RouterLink}
+                                                to={`/my-courses/${courseId}/report-card`}
+                                                sx={{
+                                                    borderColor: alpha(courseLearningTheme.accent, 0.5),
+                                                    color: courseLearningTheme.textPrimary,
+                                                    textTransform: 'none',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                View report card
+                                            </Button>
+                                        )}
+                                        {certificate && (
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                onClick={() =>
+                                                    window.open(certificate.pdfUrl, '_blank', 'noopener,noreferrer')
+                                                }
+                                                sx={{
+                                                    borderColor: alpha(courseLearningTheme.accent, 0.5),
+                                                    color: courseLearningTheme.textPrimary,
+                                                    textTransform: 'none',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                Download certificate
+                                            </Button>
+                                        )}
+                                        {canGenerate && (
+                                            <Button
+                                                size="small"
+                                                variant="contained"
+                                                disabled={Boolean(generatingForCourse[courseId])}
+                                                onClick={() => handleGenerateCertificate(courseId)}
+                                                sx={{
+                                                    bgcolor: courseLearningTheme.accent,
+                                                    textTransform: 'none',
+                                                    fontWeight: 700,
+                                                    '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88) },
+                                                }}
+                                            >
+                                                {generatingForCourse[courseId] ? 'Generating…' : 'Generate certificate'}
+                                            </Button>
+                                        )}
+                                    </Stack>
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                )}
+            </CourseLearningBand>
+        </CourseLearningShell>
     );
 };
 
