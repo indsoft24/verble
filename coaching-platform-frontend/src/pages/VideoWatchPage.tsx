@@ -408,7 +408,7 @@ const VideoWatchPage: React.FC = () => {
         if (hasRedirectedLockedRef.current) return;
 
         const moduleId = collectModuleIds(video).filter(isMongoObjectId)[0];
-        const isSequentiallyLocked = video.canAccess === false && (video.remainingWatches ?? 0) > 0;
+        const isSequentiallyLocked = video.lockReason === 'sequence';
         if (!moduleId || !isSequentiallyLocked) return;
 
         hasRedirectedLockedRef.current = true;
@@ -456,7 +456,10 @@ const VideoWatchPage: React.FC = () => {
     const outlineCourseId = [navCourseId, fallbackCourseId].find((id) => isMongoObjectId(id)) ?? null;
     const outlineCourseTitle = navCourseTitle;
     const accessErrorMessage = error?.message || 'This video requires a subscription or is still processing.';
-    const isSequenceLocked = /locked|unlock lesson|complete lesson/i.test(accessErrorMessage);
+    const isSequenceLocked =
+        video?.lockReason === 'sequence' ||
+        (!video?.lockReason && /locked|unlock lesson|complete lesson/i.test(accessErrorMessage));
+    const isSubscriptionLocked = video?.lockReason === 'subscription';
 
     const moduleBackTo = contextModuleId ? `/modules/${contextModuleId}/videos` : '/my-courses';
     const bottomSecondary: CourseBottomNavAction[] = [];
@@ -640,9 +643,13 @@ const VideoWatchPage: React.FC = () => {
                                         >
                                             Go to module lessons
                                         </Button>
-                                    ) : (
+                                    ) : isSubscriptionLocked ? (
                                         <Button component={RouterLink} to="/subscription-plans" variant="contained" color="primary" sx={{ fontWeight: 700 }}>
                                             View subscription plans
+                                        </Button>
+                                    ) : (
+                                        <Button component={RouterLink} to={moduleBackTo} variant="contained" sx={{ fontWeight: 700 }}>
+                                            Back to lessons
                                         </Button>
                                     )}
                                 </Alert>
@@ -659,7 +666,7 @@ const VideoWatchPage: React.FC = () => {
                                 </Box>
                             )}
 
-                            {video.canAccess && video.associatedMaterials && video.associatedMaterials.length > 0 && (
+                            {video.associatedMaterials && video.associatedMaterials.length > 0 && (
                                 <Box sx={{ mt: 4 }}>
                                     <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
                                         Study materials
@@ -696,8 +703,25 @@ const VideoWatchPage: React.FC = () => {
                                     Watch insights
                                 </Typography>
                                 <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: 1 }}>
-                                    <Chip size="small" icon={<PlayLessonOutlinedIcon sx={{ fontSize: '16px !important' }} />} label={`Watched: ${video.watchCount ?? 0}`} variant="outlined" sx={courseChipOutlinedSx} />
-                                    <Chip size="small" label={`Remaining: ${video.remainingWatches ?? 0}`} variant="outlined" sx={courseChipInfoSx} />
+                                    <Chip size="small" icon={<PlayLessonOutlinedIcon sx={{ fontSize: '16px !important' }} />} label={`Watched this cycle: ${video.watchCount ?? 0}`} variant="outlined" sx={courseChipOutlinedSx} />
+                                    <Chip
+                                        size="small"
+                                        label={
+                                            video.maxWatchesPerCycle != null
+                                                ? `Left this cycle: ${video.remainingWatches ?? 0} / ${video.maxWatchesPerCycle}`
+                                                : `Remaining: ${video.remainingWatches ?? 0}`
+                                        }
+                                        variant="outlined"
+                                        sx={courseChipInfoSx}
+                                    />
+                                    {video.maxModuleCycles != null && (
+                                        <Chip
+                                            size="small"
+                                            label={`Cycle ${(video.completionCycle ?? 0) + 1} of ${video.maxModuleCycles}`}
+                                            variant="outlined"
+                                            sx={courseChipOutlinedSx}
+                                        />
+                                    )}
                                 </Stack>
                             </Paper>
                             <Paper elevation={0} sx={{ ...learningPaperSx, p: { xs: 1.5, sm: 2 } }}>

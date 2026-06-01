@@ -5,6 +5,8 @@ import VideoWatchProgress from '../models/VideoWatchProgress.js';
 import mongoose from 'mongoose';
 import asyncHandler from 'express-async-handler';
 import { checkSequentialVideoAccess, getModuleCompletionCycle, getCurrentUnlockedSetIndex } from '../utils/videoAccessHelper.js';
+import { buildVideoLockFlags, isModuleUnlockedForUser } from '../services/moduleUnlockService.js';
+import { getLearningConfig } from '../services/courseLearningConfigService.js';
 import { getCache, setCache, generateCacheKey, CACHE_TTL } from '../utils/cacheHelper.js';
 import { getStreamProvider } from '../utils/videoStreamProvider.js';
 import { getActiveUserTierLevel, canAccessRequiredPlansByTier } from '../utils/subscriptionTierAccess.js';
@@ -76,6 +78,30 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
     }
 
     const user = userId ? await User.findById(userId).select('subscriptions').lean() : null;
+
+    let learningConfig = null;
+    if (userId) {
+        learningConfig = await getLearningConfig(userId);
+        const moduleUnlock = await isModuleUnlockedForUser(userId, moduleId);
+        if (!moduleUnlock.unlocked) {
+            const moduleDataLocked = module.toObject ? module.toObject() : module;
+            return res.status(403).json({
+                status: 'fail',
+                message: moduleUnlock.reason,
+                data: {
+                    module: moduleDataLocked,
+                    videos: [],
+                    isModuleLocked: true,
+                    moduleLockReason: moduleUnlock.reason,
+                    previousModuleId: moduleUnlock.previousModuleId || null,
+                    completionCycle: 0,
+                    unlockedSetIndex: 0,
+                    maxWatchesPerCycle: learningConfig.maxWatchesPerVideoPerCycle,
+                    maxModuleCycles: learningConfig.maxModuleCompletionCycles,
+                },
+            });
+        }
+    }
 
     // Get watch progress for all videos in this module
     let watchProgressMap = new Map();
@@ -161,11 +187,13 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
         if (!hasSubscriptionAccess) {
             return {
                 ...videoObject,
-                canAccess: false, // Explicit boolean
-                accessReason: 'Subscription required',
-                watchCount: 0,
-                remainingWatches: 0,
-                isLocked: true, // Explicit boolean
+                ...buildVideoLockFlags(false, {
+                    canAccess: false,
+                    reason: 'Subscription required',
+                    watchCount: 0,
+                    remainingWatches: 0,
+                }),
+                completionCycle: completionCycle,
             };
         }
 
@@ -185,44 +213,33 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
         const isFreeVideo = !video.requiredPlans || video.requiredPlans.length === 0;
         
         if (isFreeVideo) {
-            // Free videos are always accessible, no watch limits
             return {
                 ...videoObject,
-                canAccess: !!hasSubscriptionAccess, // Explicit boolean
+                canAccess: !!hasSubscriptionAccess,
                 accessReason: 'Free video - unlimited access',
                 watchCount: 0,
                 remainingWatches: 0,
-                isLocked: false, // Explicit boolean
+                isLocked: false,
+                lockReason: null,
                 completionCycle: 0,
             };
         }
 
-        // Check sequential access rules for paid videos
-        // Pass pre-calculated unlockedSetIndex and completionCycle for consistency and performance
-        const sequentialAccess = await checkSequentialVideoAccess(userId, video, moduleId, unlockedSetIndex, completionCycle);
-        
-        // Get total watch count across both cycles
-        const cycle0Key = `${video._id.toString()}_0`;
-        const cycle1Key = `${video._id.toString()}_1`;
-        const cycle0Progress = watchProgressMap.get(cycle0Key);
-        const cycle1Progress = watchProgressMap.get(cycle1Key);
-        const totalWatchCount = (cycle0Progress?.watchCount || 0) + (cycle1Progress?.watchCount || 0);
-        const remainingWatches = sequentialAccess.remainingWatches;
+        const sequentialAccess = await checkSequentialVideoAccess(
+            userId,
+            video,
+            moduleId,
+            unlockedSetIndex,
+            completionCycle
+        );
+        const lockFlags = buildVideoLockFlags(true, sequentialAccess);
 
-        // Ensure canAccess and isLocked are explicit booleans
-        const finalCanAccess = !!(sequentialAccess.canAccess && hasSubscriptionAccess);
-        const finalIsLocked = !sequentialAccess.canAccess;
-        
-        // Video access check completed
-        
         return {
             ...videoObject,
-            canAccess: finalCanAccess, // Explicit boolean
-            accessReason: sequentialAccess.reason,
-            watchCount: totalWatchCount, // Total watch count across cycles
-            remainingWatches: remainingWatches,
-            isLocked: finalIsLocked, // Explicit boolean
-            completionCycle: completionCycle,
+            ...lockFlags,
+            completionCycle: sequentialAccess.completionCycle ?? completionCycle,
+            maxWatchesPerCycle: sequentialAccess.maxWatchesPerCycle,
+            maxModuleCycles: sequentialAccess.maxModuleCycles,
         };
     }));
 
@@ -291,10 +308,16 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
     const response = {
         status: 'success',
         data: {
-            module: moduleData,
+            module: {
+                ...moduleData,
+                isModuleLocked: false,
+                moduleLockReason: null,
+            },
             videos: validatedVideos,
             completionCycle: completionCycle,
             unlockedSetIndex: unlockedSetIndex,
+            maxWatchesPerCycle: learningConfig?.maxWatchesPerVideoPerCycle ?? 4,
+            maxModuleCycles: learningConfig?.maxModuleCompletionCycles ?? 4,
         }
     };
 

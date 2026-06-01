@@ -13,6 +13,13 @@ import {
     removeSubscriptionFromUser,
     resendLoginPinForUser,
 } from '../controllers/adminController.js';
+import {
+    getLearningSettings,
+    patchLearningSettings,
+    getUserLearningOverride,
+    putUserLearningOverride,
+    postUserLearningReset,
+} from '../controllers/adminLearningSettingsController.js';
 
 const router = express.Router();
 
@@ -30,5 +37,11 @@ router.patch('/users/:userId/password', updateUserPassword);
 router.delete('/users/:userId', deleteUser);
 router.post('/users/:userId/subscriptions', addSubscriptionToUser);
 router.delete('/users/:userId/subscriptions/:subscriptionInstanceId', removeSubscriptionFromUser);
+
+router.get('/learning-settings', getLearningSettings);
+router.patch('/learning-settings', patchLearningSettings);
+router.get('/users/:userId/learning-override', getUserLearningOverride);
+router.put('/users/:userId/learning-override', putUserLearningOverride);
+router.post('/users/:userId/learning-reset', postUserLearningReset);
 
 export default router;

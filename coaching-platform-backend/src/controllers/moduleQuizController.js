@@ -12,6 +12,7 @@ import {
     syncModuleProgressFromVideos,
     countModuleVideoProgress,
 } from '../services/moduleQuizAccessService.js';
+import { resetModuleVideosForQuizRetake } from '../services/courseLearningConfigService.js';
 
 /**
  * @desc    Get quiz for a module (without answers for students)
@@ -136,9 +137,14 @@ export const submitModuleQuiz = asyncHandler(async (req, res) => {
     });
 
     let moduleCompleted = false;
+    let retakeMessage = null;
     if (passed) {
         const completion = await finalizeModuleCompletion(userId, moduleId, score);
         moduleCompleted = Boolean(completion?.isCompleted);
+    } else {
+        await resetModuleVideosForQuizRetake(userId, moduleId);
+        retakeMessage =
+            'Review the module videos and try the quiz again. Your video progress for this cycle has been reset.';
     }
 
     res.status(200).json({
@@ -151,6 +157,7 @@ export const submitModuleQuiz = asyncHandler(async (req, res) => {
                 correctAnswers,
                 totalQuestions: quiz.questions.length,
                 moduleCompleted,
+                retakeMessage,
                 answers: gradedAnswers.map((a) => ({
                     questionId: a.questionId,
                     isCorrect: a.isCorrect,

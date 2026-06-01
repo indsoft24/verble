@@ -6,6 +6,8 @@ import ExamCategory from '../models/ExamCategory.js';
 import mongoose from 'mongoose';
 import asyncHandler from 'express-async-handler';
 import { getCache, setCache, generateCacheKey, CACHE_TTL } from '../utils/cacheHelper.js';
+import { enrichModulesWithUnlockStatus } from '../services/moduleUnlockService.js';
+import { getActiveUserTierLevel, TIER_LEVEL } from '../utils/subscriptionTierAccess.js';
 
 
 /**
@@ -82,20 +84,22 @@ export const getMyCourses = asyncHandler(async (req, res) => {
         );
 
         if (activeSubscriptions.length > 0) {
-            // Extract plan IDs from active subscriptions
             const activePlanIds = activeSubscriptions.map(sub => sub.planId);
             
-            // Fetch subscription plans to get course IDs
             const plans = await SubscriptionPlan.find({ 
                 _id: { $in: activePlanIds },
                 isActive: true 
             }).select('course name');
             
-            // Extract unique course IDs from plans
-            const courseIds = [...new Set(plans.map(plan => plan.course).filter(Boolean))];
-            
+            let courseIds = [...new Set(plans.map(plan => plan.course).filter(Boolean))];
+
+            const userTierLevel = getActiveUserTierLevel(user.subscriptions);
+            if (courseIds.length === 0 && userTierLevel >= TIER_LEVEL.FULL_COURSE) {
+                const allPublished = await Course.find({ isPublished: true }).select('_id').lean();
+                courseIds = allPublished.map((c) => c._id);
+            }
+
             if (courseIds.length > 0) {
-                // Fetch courses using the course IDs
                 const myCourses = await Course.find({ 
                     _id: { $in: courseIds }, 
                     isPublished: true 
@@ -234,16 +238,18 @@ export const getPublishedCourseById = async (req, res, next) => {
             return res.status(400).json({ status: 'fail', message: 'Invalid course ID format.' });
         }
 
-        // Generate cache key
-        const cacheKey = `course:detail:${courseId}`;
+        const userId = req.user?._id;
+        const cacheKey = userId
+            ? `course:detail:${courseId}:user:${userId.toString()}`
+            : `course:detail:${courseId}`;
 
-        // Try to get from cache first
-        const cached = await getCache(cacheKey);
-        if (cached) {
-            return res.status(200).json(cached);
+        if (!userId) {
+            const cached = await getCache(cacheKey);
+            if (cached) {
+                return res.status(200).json(cached);
+            }
         }
 
-        // Parallel queries for better performance
         const [course, modules] = await Promise.all([
             Course.findOne({ _id: courseId, isPublished: true })
                 .populate('examCategory', 'name slug')
@@ -260,16 +266,22 @@ export const getPublishedCourseById = async (req, res, next) => {
             return res.status(404).json({ status: 'fail', message: 'Published course not found.' });
         }
 
+        let modulesOut = modules;
+        if (userId) {
+            modulesOut = await enrichModulesWithUnlockStatus(userId, courseId, modules);
+        }
+
         const response = {
             status: 'success',
             data: {
                 course,
-                modules, 
+                modules: modulesOut,
             },
         };
 
-        // Cache the response
-        await setCache(cacheKey, response, CACHE_TTL.MEDIUM);
+        if (!userId) {
+            await setCache(cacheKey, response, CACHE_TTL.MEDIUM);
+        }
 
         res.status(200).json(response);
     } catch (error) {

@@ -88,3 +88,32 @@ export async function resetUserCourseVideoProgress(userId, courseId) {
     if (moduleIds.length === 0) return;
     await VideoWatchProgress.deleteMany({ user: userId, module: { $in: moduleIds } });
 }
+
+/**
+ * After a failed quiz attempt: clear current-cycle video progress so the learner must rewatch before retaking.
+ */
+export async function resetModuleVideosForQuizRetake(userId, moduleId) {
+    const VideoWatchProgress = (await import('../models/VideoWatchProgress.js')).default;
+    const ModuleCompletion = (await import('../models/ModuleCompletion.js')).default;
+    const { getModuleCompletionCycle } = await import('../utils/videoAccessHelper.js');
+
+    const currentCycle = await getModuleCompletionCycle(userId, moduleId);
+    await VideoWatchProgress.deleteMany({
+        user: userId,
+        module: moduleId,
+        moduleCompletionCycle: currentCycle,
+    });
+
+    await ModuleCompletion.findOneAndUpdate(
+        { user: userId, module: moduleId },
+        {
+            $set: {
+                quizPassed: false,
+                isCompleted: false,
+            },
+        },
+        { upsert: false }
+    );
+
+    return { currentCycle };
+}

@@ -35,19 +35,19 @@ const videoWatchProgressSchema = new mongoose.Schema({
     completedAt: {
         type: Date,
     },
-    // Tracks which completion cycle this watch belongs to (0 or 1, max 2 cycles)
+    // Tracks which completion cycle this watch belongs to (configurable, default up to 10)
     moduleCompletionCycle: {
         type: Number,
         default: 0,
         min: 0,
-        max: 1,
+        max: 10,
     },
 }, {
     timestamps: true
 });
 
 // Compound index to ensure one progress record per user-video-module-cycle combination
-// This allows separate progress tracking for cycle 0 and cycle 1
+// One progress record per user-video-module-cycle
 videoWatchProgressSchema.index({ user: 1, video: 1, module: 1, moduleCompletionCycle: 1 }, { unique: true });
 
 // Index for querying by user and module

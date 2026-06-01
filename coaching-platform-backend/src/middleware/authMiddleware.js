@@ -72,6 +72,26 @@ export const protect = async (req, res, next) => {
     }
 };
 
+/** Sets req.user when a valid token is present; does not fail when absent. */
+export const optionalAuth = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return next();
+    }
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const currentUser = await User.findById(decoded.id).select('-password');
+        if (currentUser) {
+            req.user = currentUser;
+            req.token = token;
+        }
+    } catch {
+        // ignore invalid optional token
+    }
+    next();
+};
+
 export const restrictTo = (...roles) => {
     return (req, res, next) => {
         if (!req.user || !roles.includes(req.user.role)) {

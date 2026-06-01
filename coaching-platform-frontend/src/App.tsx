@@ -73,6 +73,7 @@ const AdminWebinarLeadsPage = lazy(() => import('./pages/AdminWebinarLeadsPage')
 const AdminPromoBannerPage = lazy(() => import('./pages/AdminPromoBannerPage'));
 const AdminCertificationManagementPage = lazy(() => import('./pages/AdminCertificationManagementPage'));
 const AdminModuleQuizzesPage = lazy(() => import('./pages/AdminModuleQuizzesPage'));
+const AdminLearningSettingsPage = lazy(() => import('./pages/AdminLearningSettingsPage'));
 const AdminQuizValidationPage = lazy(() => import('./pages/AdminQuizValidationPage'));
 
 // Static Pages (Low priority - lazy load)
@@ -208,6 +209,7 @@ function AppContent() {
                             <Route path='/admin/promo-banner' element={<AdminPromoBannerPage />} />
                             <Route path='/admin/certification-management' element={<AdminCertificationManagementPage />} />
                             <Route path='/admin/module-quizzes' element={<AdminModuleQuizzesPage />} />
+                            <Route path='/admin/learning-settings' element={<AdminLearningSettingsPage />} />
                             <Route path='/admin/quiz-validation' element={<AdminQuizValidationPage />} />
                         </Route>
 

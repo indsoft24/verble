@@ -1,7 +1,7 @@
 import express from 'express';
 import {getFeaturedCourses, getAllPublishedCourses, getPublishedCourseById, getMyCourses} from '../controllers/courseController.js';
 import { getSubscriptionPlansForCourse } from '../controllers/subscriptionController.js';
-import { protect } from '../middleware/authMiddleware.js'; 
+import { protect, optionalAuth } from '../middleware/authMiddleware.js'; 
 
 const router = express.Router();
 
@@ -13,7 +13,7 @@ router.get('/my-courses', protect, getMyCourses);
 
 router.get('/:courseId/subscription-plans', getSubscriptionPlansForCourse);
 
-router.get('/:courseId', getPublishedCourseById);
+router.get('/:courseId', optionalAuth, getPublishedCourseById);
 
 
 

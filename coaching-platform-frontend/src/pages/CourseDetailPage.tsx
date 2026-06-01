@@ -19,6 +19,7 @@ import {
     alpha,
 } from '@mui/material';
 import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SchoolIcon from '@mui/icons-material/School';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
@@ -83,8 +84,11 @@ const CourseDetailPage: React.FC = () => {
         fetchPageData();
     }, [fetchPageData]);
 
-    const handleModuleClick = (moduleId: string) => {
-        navigate(`/modules/${moduleId}/videos`);
+    const handleModuleClick = (module: ModuleListItemUser) => {
+        if (module.isModuleLocked) {
+            return;
+        }
+        navigate(`/modules/${module._id}/videos`);
     };
 
     const moduleCount = course?.moduleCount ?? modules.length;
@@ -100,7 +104,7 @@ const CourseDetailPage: React.FC = () => {
                     Modules for this course will appear here once they are published.
                 </Typography>
             ) : (
-                <Stack spacing={1}>
+                <Stack spacing={courseLearningTheme.accordionGap}>
                     {modules.map((module, index) => (
                         <Accordion
                             key={module._id}
@@ -118,12 +122,14 @@ const CourseDetailPage: React.FC = () => {
                             <AccordionSummary
                                 expandIcon={<ExpandMoreIcon sx={{ color: courseLearningTheme.accent }} />}
                                 sx={{
-                                            px: 1.5,
-                                            py: 1.25,
+                                    px: courseLearningTheme.accordionSummaryPx,
+                                    py: courseLearningTheme.accordionSummaryPy,
+                                    minHeight: 56,
+                                    '& .MuiAccordionSummary-content': { my: 0.5 },
                                     '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.08) },
                                 }}
                             >
-                                <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%', pr: 1 }}>
+                                <Stack direction="row" alignItems="center" spacing={1.75} sx={{ width: '100%', pr: 1 }}>
                                     <Box
                                         sx={{
                                             minWidth: 36,
@@ -153,18 +159,21 @@ const CourseDetailPage: React.FC = () => {
                                             </Typography>
                                         )}
                                     </Box>
-                                    <OndemandVideoIcon sx={{ color: courseLearningTheme.accent, display: { xs: 'none', sm: 'block' } }} />
+                                    {module.isModuleLocked ? (
+                                        <LockOutlinedIcon sx={{ color: courseLearningTheme.textMuted }} />
+                                    ) : (
+                                        <OndemandVideoIcon sx={{ color: courseLearningTheme.accent, display: { xs: 'none', sm: 'block' } }} />
+                                    )}
                                 </Stack>
                             </AccordionSummary>
                             <AccordionDetails
                                 sx={{
-                                    px: 2,
-                                    pb: 2,
-                                    pt: 0,
+                                    px: courseLearningTheme.accordionDetailsPx,
+                                    py: courseLearningTheme.accordionDetailsPy,
                                     borderTop: `1px solid ${alpha(courseLearningTheme.accent, 0.2)}`,
                                 }}
                             >
-                                <Box className="tiptap-rendered-content" sx={{ ...courseTiptapSx, mb: 1.5, mt: 1.5 }}>
+                                <Box className="tiptap-rendered-content" sx={{ ...courseTiptapSx, mb: 2 }}>
                                     {module.description ? (
                                         parse(module.description)
                                     ) : (
@@ -173,22 +182,68 @@ const CourseDetailPage: React.FC = () => {
                                         </Typography>
                                     )}
                                 </Box>
-                                <Button
-                                    variant="contained"
-                                    size="medium"
-                                    onClick={() => handleModuleClick(module._id)}
-                                    startIcon={<PlayCircleOutlineIcon />}
-                                    sx={{
-                                        borderRadius: 1.5,
-                                        fontWeight: 700,
-                                        textTransform: 'none',
-                                        bgcolor: courseLearningTheme.accent,
-                                        boxShadow: 'none',
-                                        '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88), boxShadow: 'none' },
-                                    }}
-                                >
-                                    Open lessons
-                                </Button>
+                                {module.isModuleLocked && module.moduleLockReason && (
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            color: courseLearningTheme.textSecondary,
+                                            mb: 2,
+                                            lineHeight: 1.55,
+                                            maxWidth: 560,
+                                        }}
+                                    >
+                                        {module.moduleLockReason}
+                                    </Typography>
+                                )}
+                                {module.isModuleLocked && module.previousModuleId ? (
+                                    <Stack direction="row" spacing={1.25} flexWrap="wrap" sx={{ pt: 0.25 }}>
+                                        <Button
+                                            variant="outlined"
+                                            size="medium"
+                                            onClick={() => navigate(`/modules/${module.previousModuleId}/videos`)}
+                                            sx={{ textTransform: 'none', fontWeight: 700 }}
+                                        >
+                                            Go to previous module
+                                        </Button>
+                                        <Button
+                                            variant="contained"
+                                            size="medium"
+                                            onClick={() => navigate(`/modules/${module.previousModuleId}/quiz`)}
+                                            sx={{
+                                                textTransform: 'none',
+                                                fontWeight: 700,
+                                                bgcolor: courseLearningTheme.accent,
+                                                boxShadow: 'none',
+                                            }}
+                                        >
+                                            Take previous quiz
+                                        </Button>
+                                    </Stack>
+                                ) : (
+                                    <Button
+                                        variant="contained"
+                                        size="medium"
+                                        disabled={module.isModuleLocked}
+                                        onClick={() => handleModuleClick(module)}
+                                        startIcon={module.isModuleLocked ? <LockOutlinedIcon /> : <PlayCircleOutlineIcon />}
+                                        sx={{
+                                            borderRadius: 1.5,
+                                            fontWeight: 700,
+                                            textTransform: 'none',
+                                            bgcolor: module.isModuleLocked ? courseLearningTheme.surfaceRaised : courseLearningTheme.accent,
+                                            color: module.isModuleLocked ? courseLearningTheme.textMuted : '#fff',
+                                            boxShadow: 'none',
+                                            '&:hover': {
+                                                bgcolor: module.isModuleLocked
+                                                    ? courseLearningTheme.surfaceRaised
+                                                    : alpha(courseLearningTheme.accent, 0.88),
+                                                boxShadow: 'none',
+                                            },
+                                        }}
+                                    >
+                                        {module.isModuleLocked ? 'Locked' : 'Open lessons'}
+                                    </Button>
+                                )}
                             </AccordionDetails>
                         </Accordion>
                     ))}
@@ -256,15 +311,14 @@ const CourseDetailPage: React.FC = () => {
                     />
 
                     <CourseLearningBand headerLabel="FULL COURSE" ribbon="ULTIMATE">
-                        <Grid container spacing={1.5} sx={{ alignItems: 'stretch' }}>
+                        <Grid container spacing={2} sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}>
                             <Grid size={{ xs: 12, sm: 5 }}>
                                 <Box
                                     sx={{
                                         borderRadius: 1.5,
                                         overflow: 'hidden',
-                                        aspectRatio: { xs: '16 / 9', sm: 'auto' },
-                                        minHeight: { sm: 140 },
-                                        height: { sm: '100%' },
+                                        aspectRatio: { xs: '16 / 9', sm: '4 / 3' },
+                                        maxHeight: { sm: 200 },
                                         bgcolor: courseLearningTheme.surfaceRaised,
                                     }}
                                 >
@@ -280,15 +334,15 @@ const CourseDetailPage: React.FC = () => {
                                 </Box>
                             </Grid>
                             <Grid size={{ xs: 12, sm: 7 }}>
-                                <Stack spacing={1}>
+                                <Stack spacing={1.5} sx={{ py: { xs: 0, sm: 0.5 } }}>
                                     <Typography
                                         variant="h5"
                                         component="h1"
                                         sx={{
                                             fontWeight: 800,
-                                            lineHeight: 1.25,
+                                            lineHeight: 1.3,
                                             color: courseLearningTheme.textPrimary,
-                                            fontSize: { xs: '1.25rem', sm: '1.4rem' },
+                                            fontSize: { xs: '1.25rem', sm: '1.45rem' },
                                         }}
                                     >
                                         {course.title}
@@ -316,19 +370,24 @@ const CourseDetailPage: React.FC = () => {
                                 </Stack>
                             </Grid>
                         </Grid>
-                        <Box sx={{ mt: 1.25, pt: 1.25, borderTop: `1px solid ${alpha(courseLearningTheme.accent, 0.2)}` }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, color: courseLearningTheme.textSecondary }}>
-                                About this course
-                            </Typography>
-                            <Box className="tiptap-rendered-content" sx={courseTiptapSx}>
-                                {course.description ? (
-                                    parse(course.description)
-                                ) : (
-                                    <Typography sx={{ color: courseLearningTheme.textBody }}>
-                                        A full description will appear here when it is added for this program.
-                                    </Typography>
-                                )}
-                            </Box>
+                    </CourseLearningBand>
+
+                    <CourseLearningBand headerLabel="OVERVIEW" subtitle="What you will cover in this program.">
+                        <Typography
+                            variant="subtitle2"
+                            component="h2"
+                            sx={{ fontWeight: 700, mb: 1.25, color: courseLearningTheme.textSecondary, fontSize: '0.875rem' }}
+                        >
+                            About this course
+                        </Typography>
+                        <Box className="tiptap-rendered-content" sx={courseTiptapSx}>
+                            {course.description ? (
+                                parse(course.description)
+                            ) : (
+                                <Typography sx={{ color: courseLearningTheme.textBody, lineHeight: 1.6 }}>
+                                    A full description will appear here when it is added for this program.
+                                </Typography>
+                            )}
                         </Box>
                     </CourseLearningBand>
 

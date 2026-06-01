@@ -1,6 +1,8 @@
 import apiClient from './apiClient';
 import { type ExamCategory } from './examCategoryService'; 
 
+export type VideoLockReason = 'subscription' | 'sequence' | 'watch_limit' | null;
+
 export interface ModuleListItemUser {
     _id: string;
     title: string;
@@ -9,8 +11,11 @@ export interface ModuleListItemUser {
     chapters?: string[];
     image?: string;
     order: number;
-    videoCount?: number; 
+    videoCount?: number;
     createdAt?: string;
+    isModuleLocked?: boolean;
+    moduleLockReason?: string | null;
+    previousModuleId?: string | null;
 }
 
 // Interface for a Course item in the list (user-facing)
@@ -58,18 +63,31 @@ export interface VideoListItemForModulePage {
     requiredPlans?: Array<string | { _id: string; name: string; }> | null;
     canAccess?: boolean;
     videoStatus?: string;
-    watchCount?: number; // Number of times video has been watched in current cycle
-    remainingWatches?: number; // Remaining watches allowed (0-4)
-    isLocked?: boolean; // Whether video is locked due to sequential access rules
-    accessReason?: string; // Reason for access granted/denied
-    completionCycle?: number; // Current completion cycle (0 or 1)
+    watchCount?: number;
+    remainingWatches?: number;
+    isLocked?: boolean;
+    lockReason?: VideoLockReason;
+    accessReason?: string;
+    completionCycle?: number;
+    maxWatchesPerCycle?: number;
+    maxModuleCycles?: number;
 }
 
 interface GetModuleWithVideosUserResponse {
     status: string;
     data: {
-        module: ModuleDetailUser;
+        module: ModuleDetailUser & {
+            isModuleLocked?: boolean;
+            moduleLockReason?: string | null;
+        };
         videos: VideoListItemForModulePage[];
+        completionCycle?: number;
+        unlockedSetIndex?: number;
+        maxWatchesPerCycle?: number;
+        maxModuleCycles?: number;
+        isModuleLocked?: boolean;
+        moduleLockReason?: string | null;
+        previousModuleId?: string | null;
     };
     message?: string;
 }
@@ -182,19 +200,49 @@ export const getPublishedCourseWithModulesForUser = async (courseId: string): Pr
  * Fetches a single published module by its ID, including its published videos (for users).
  * Calls GET /api/modules/:moduleId/videos (or /api/modules/:moduleId if it returns videos too)
  */
-export const getPublishedModuleWithVideosForUser = async (moduleId: string): Promise<{ module: ModuleDetailUser, videos: VideoListItemForModulePage[] }> => {
+export interface ModuleVideosPageData {
+    module: ModuleDetailUser;
+    videos: VideoListItemForModulePage[];
+    completionCycle?: number;
+    maxWatchesPerCycle?: number;
+    maxModuleCycles?: number;
+    isModuleLocked?: boolean;
+    moduleLockReason?: string | null;
+    previousModuleId?: string | null;
+}
+
+export const getPublishedModuleWithVideosForUser = async (moduleId: string): Promise<ModuleVideosPageData> => {
     try {
-        // Ensure this endpoint matches your backend route that returns module details and its videos
-        const response = await apiClient.get<GetModuleWithVideosUserResponse>(`/modules/${moduleId}/videos`); 
-        if (response.data && response.data.status === 'success' && response.data.data) {
+        const response = await apiClient.get<GetModuleWithVideosUserResponse>(`/modules/${moduleId}/videos`);
+        if (response.data?.status === 'success' && response.data.data) {
+            const d = response.data.data;
             return {
-                module: response.data.data.module,
-                videos: Array.isArray(response.data.data.videos) ? response.data.data.videos : []
+                module: d.module,
+                videos: Array.isArray(d.videos) ? d.videos : [],
+                completionCycle: d.completionCycle,
+                maxWatchesPerCycle: d.maxWatchesPerCycle,
+                maxModuleCycles: d.maxModuleCycles,
+                isModuleLocked: d.isModuleLocked ?? d.module?.isModuleLocked,
+                moduleLockReason: d.moduleLockReason ?? d.module?.moduleLockReason,
+                previousModuleId: d.previousModuleId ?? null,
             };
         }
         throw new Error(response.data?.message || 'Failed to fetch module and video details');
     } catch (error: any) {
-        throw error.response?.data || error;
+        const payload = error.response?.data || error;
+        if (payload?.data?.isModuleLocked) {
+            const d = payload.data;
+            return {
+                module: d.module,
+                videos: [],
+                isModuleLocked: true,
+                moduleLockReason: d.moduleLockReason || payload.message,
+                previousModuleId: d.previousModuleId || null,
+                maxWatchesPerCycle: d.maxWatchesPerCycle,
+                maxModuleCycles: d.maxModuleCycles,
+            };
+        }
+        throw payload;
     }
 };
 
@@ -203,7 +251,7 @@ interface GetMyCoursesUserResponse {
     results?: number;
     data: {
         courses: CourseListItemUser[];
-        context: 'subscribed' | 'all_courses';
+        context: 'subscribed' | 'all_courses' | 'no_subscription';
     };
 }
 
@@ -218,7 +266,10 @@ export const getMyCoursesForUser = async (): Promise<{ courses: CourseListItemUs
         if (response.data && response.data.status === 'success' && response.data.data) {
             return {
                 courses: response.data.data.courses || [],
-                context: response.data.data.context || 'all_courses',
+                context:
+                    response.data.data.context === 'subscribed'
+                        ? 'subscribed'
+                        : 'all_courses',
             };
         }
         throw new Error('Failed to fetch courses');

@@ -7,6 +7,7 @@ import Course from '../models/Course.js';
 import ExamCategory from '../models/ExamCategory.js';
 import asyncHandler from 'express-async-handler';
 import { checkSequentialVideoAccess, markVideoAsCompleted } from '../utils/videoAccessHelper.js';
+import { buildVideoLockFlags } from '../services/moduleUnlockService.js';
 import { getCache, setCache, generateCacheKey, CACHE_TTL } from '../utils/cacheHelper.js';
 import { getStreamProvider } from '../utils/videoStreamProvider.js';
 import { getThumbnailPath, getMasterPlaylistPath } from '../config/videoStorageConfig.js';
@@ -114,7 +115,7 @@ export const getPublishedVideoById = async (req, res, next) => {
       // Ensure we select `videoStatus` (and related fields) because the frontend
       // gates playback on it and we interpolate it in access-denied messages.
       .select(
-        "order modules courses streamProvider localStorageId videoStatus"
+        "title description durationSeconds order modules courses streamProvider localStorageId videoStatus associatedMaterials"
       )
       .lean();
 
@@ -181,12 +182,28 @@ export const getPublishedVideoById = async (req, res, next) => {
       }
     }
 
+    const thumbDenied =
+      provider === "local" && video.localStorageId
+        ? `/api/videos/thumbnail/${video._id}`
+        : null;
+
     if (!hasSubscriptionAccess) {
-      const partialVideoInfo = { ...video };
+      const lockFlags = buildVideoLockFlags(false, {
+        canAccess: false,
+        reason: accessDeniedMessage,
+        watchCount: 0,
+        remainingWatches: 0,
+      });
       return res.status(403).json({
         status: "fail",
         message: accessDeniedMessage,
-        data: { video: { ...partialVideoInfo, canAccess: false } },
+        data: {
+          video: {
+            ...video,
+            thumbnailUrl: thumbDenied,
+            ...lockFlags,
+          },
+        },
       });
     }
 
@@ -215,17 +232,24 @@ export const getPublishedVideoById = async (req, res, next) => {
     }
 
     if (!canAccess) {
-      const partialVideoInfo = { ...video };
+      const lockFlags = buildVideoLockFlags(true, sequentialAccessInfo || {
+        canAccess: false,
+        reason: accessDeniedMessage,
+        watchCount: 0,
+        remainingWatches: 0,
+      });
       return res.status(403).json({
         status: "fail",
         message: accessDeniedMessage,
-        data: { 
-          video: { 
-            ...partialVideoInfo,
-            canAccess: false,
-            watchCount: sequentialAccessInfo?.watchCount || 0,
-            remainingWatches: sequentialAccessInfo?.remainingWatches || 0,
-          } 
+        data: {
+          video: {
+            ...video,
+            thumbnailUrl: thumbDenied,
+            ...lockFlags,
+            completionCycle: sequentialAccessInfo?.completionCycle ?? 0,
+            maxWatchesPerCycle: sequentialAccessInfo?.maxWatchesPerCycle,
+            maxModuleCycles: sequentialAccessInfo?.maxModuleCycles,
+          },
         },
       });
     }
@@ -235,16 +259,24 @@ export const getPublishedVideoById = async (req, res, next) => {
         ? `/api/videos/thumbnail/${video._id}`
         : null;
 
+    const successLockFlags = buildVideoLockFlags(true, sequentialAccessInfo || {
+      canAccess: true,
+      reason: 'Access granted',
+      watchCount: 0,
+      remainingWatches: 0,
+    });
+
     res.status(200).json({
       status: "success",
-      data: { 
-        video: { 
-          ...video, 
+      data: {
+        video: {
+          ...video,
           thumbnailUrl: thumbOut,
-          canAccess: true,
-          watchCount: sequentialAccessInfo?.watchCount || 0,
-          remainingWatches: sequentialAccessInfo?.remainingWatches || 0,
-        } 
+          ...successLockFlags,
+          completionCycle: sequentialAccessInfo?.completionCycle ?? 0,
+          maxWatchesPerCycle: sequentialAccessInfo?.maxWatchesPerCycle,
+          maxModuleCycles: sequentialAccessInfo?.maxModuleCycles,
+        },
       },
     });
   } catch (error) {

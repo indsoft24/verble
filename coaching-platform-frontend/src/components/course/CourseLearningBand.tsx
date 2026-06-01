@@ -77,10 +77,10 @@ const CourseLearningBand: React.FC<CourseLearningBandProps> = ({
                 <Typography
                     variant="body2"
                     sx={{
-                        mt: 0.35,
+                        mt: 0.75,
                         color: courseLearningTheme.textMuted,
                         maxWidth: 640,
-                        lineHeight: 1.45,
+                        lineHeight: 1.5,
                         fontSize: '0.8125rem',
                     }}
                 >
@@ -90,7 +90,15 @@ const CourseLearningBand: React.FC<CourseLearningBandProps> = ({
         </Box>
 
         {children && (
-            <Box sx={{ p: courseLearningTheme.bandBodyP, pt: 1.25 }}>{children}</Box>
+            <Box
+                sx={{
+                    px: courseLearningTheme.bandBodyP,
+                    py: courseLearningTheme.bandBodyP,
+                    pt: courseLearningTheme.bandBodyPt,
+                }}
+            >
+                {children}
+            </Box>
         )}
     </Box>
 );

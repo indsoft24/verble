@@ -56,10 +56,18 @@ export interface GetSingleVideoUserApiResponse {
 
 
 // This is the detailed object we expect for the watch page
+export type VideoLockReason = 'subscription' | 'sequence' | 'watch_limit' | null;
+
 export interface VideoDetail extends VideoMetadata {
-    canAccess?: boolean; // Add canAccess to the type
-    watchCount?: number; // Number of times video has been watched in current cycle
-    remainingWatches?: number; // Remaining watches allowed (0-4)
+    canAccess?: boolean;
+    isLocked?: boolean;
+    lockReason?: VideoLockReason;
+    accessReason?: string;
+    watchCount?: number;
+    remainingWatches?: number;
+    completionCycle?: number;
+    maxWatchesPerCycle?: number;
+    maxModuleCycles?: number;
 }
 
 interface GetVideoResponse {
@@ -81,10 +89,17 @@ export const getVideoByIdForUser = async (videoId: string): Promise<VideoDetail>
         if (response.data?.status === 'success' && response.data.data?.video) {
             return response.data.data.video;
         }
-        // This allows us to throw an error but still access the partial data for the UI
         throw response.data;
     } catch (error: any) {
-        throw error.response?.data || error;
+        const payload = error.response?.data || error;
+        if (payload?.data?.video) {
+            const err = new Error(payload.message || 'Failed to load video.') as Error & {
+                data?: { video: VideoDetail };
+            };
+            err.data = payload.data;
+            throw err;
+        }
+        throw payload;
     }
 };
 

@@ -71,6 +71,10 @@ const ModuleVideosPage: React.FC = () => {
     const [toast, setToast] = useState<ToastState | null>(null);
     const [completionStatus, setCompletionStatus] = useState<ModuleCompletionStatus | null>(null);
     const [quizAvailable, setQuizAvailable] = useState(false);
+    const [isModuleLocked, setIsModuleLocked] = useState(false);
+    const [moduleLockReason, setModuleLockReason] = useState<string | null>(null);
+    const [previousModuleId, setPreviousModuleId] = useState<string | null>(null);
+    const [cycleMeta, setCycleMeta] = useState<{ completionCycle?: number; maxWatchesPerCycle?: number; maxModuleCycles?: number }>({});
 
     const getVideoThumbUrl = (video: VideoListItemForModulePage): string => {
         if (video.thumbnailUrl) {
@@ -88,9 +92,17 @@ const ModuleVideosPage: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const { module: fetchedModule, videos: fetchedVideos } = await getPublishedModuleWithVideosForUser(moduleId);
-            setModuleDetails(fetchedModule);
-            setVideos(fetchedVideos || []);
+            const pageData = await getPublishedModuleWithVideosForUser(moduleId);
+            setModuleDetails(pageData.module);
+            setVideos(pageData.videos || []);
+            setIsModuleLocked(Boolean(pageData.isModuleLocked));
+            setModuleLockReason(pageData.moduleLockReason || null);
+            setPreviousModuleId(pageData.previousModuleId || null);
+            setCycleMeta({
+                completionCycle: pageData.completionCycle,
+                maxWatchesPerCycle: pageData.maxWatchesPerCycle,
+                maxModuleCycles: pageData.maxModuleCycles,
+            });
             try {
                 const [completion, availability] = await Promise.all([
                     getModuleCompletionStatus(moduleId),
@@ -127,7 +139,26 @@ const ModuleVideosPage: React.FC = () => {
             return;
         }
 
-        if (video.isLocked) {
+        if (video.lockReason === 'subscription') {
+            setToast({
+                message: 'An active subscription is required to watch this lesson.',
+                severity: 'warning',
+                action: { label: 'View plans', to: '/subscription-plans' },
+            });
+            return;
+        }
+
+        if (video.lockReason === 'watch_limit') {
+            setToast({
+                message:
+                    video.accessReason ||
+                    `You have used all watches for this lesson in cycle ${(video.completionCycle ?? 0) + 1}.`,
+                severity: 'info',
+            });
+            return;
+        }
+
+        if (video.isLocked || video.lockReason === 'sequence') {
             setToast({
                 message: video.accessReason || 'Complete the previous lesson to unlock this one.',
                 severity: 'info',
@@ -137,9 +168,8 @@ const ModuleVideosPage: React.FC = () => {
 
         if (video.canAccess === false) {
             setToast({
-                message: 'An active subscription is required to watch this lesson.',
-                severity: 'warning',
-                action: { label: 'View plans', to: '/subscription-plans' },
+                message: video.accessReason || 'This lesson is not available yet.',
+                severity: 'info',
             });
             return;
         }
@@ -185,7 +215,7 @@ const ModuleVideosPage: React.FC = () => {
     const parentCourse = moduleDetails.course;
     const courseId = parentCourse && typeof parentCourse === 'object' ? extractId(parentCourse) || (parentCourse as { _id?: string })._id : undefined;
     const courseTitle = typeof parentCourse === 'object' ? parentCourse.title : undefined;
-    const playableCount = videos.filter((v) => !v.isLocked && v.canAccess !== false).length;
+    const playableCount = videos.filter((v) => !v.isLocked && v.canAccess !== false && !v.lockReason).length;
     const sortedVideos = [...videos].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     const backTo = courseId ? `/courses/${courseId}` : '/my-courses';
@@ -318,6 +348,35 @@ const ModuleVideosPage: React.FC = () => {
                     ) : null}
                 </CourseLearningBand>
 
+                {isModuleLocked && (
+                    <Alert
+                        severity="warning"
+                        sx={{ mb: 1.5 }}
+                        action={
+                            previousModuleId ? (
+                                <Button
+                                    color="inherit"
+                                    size="small"
+                                    onClick={() => navigate(`/modules/${previousModuleId}/videos`)}
+                                >
+                                    Go to previous module
+                                </Button>
+                            ) : undefined
+                        }
+                    >
+                        {moduleLockReason || 'Complete the previous module to unlock this one.'}
+                    </Alert>
+                )}
+
+                {cycleMeta.maxModuleCycles != null && !isModuleLocked && (
+                    <Typography variant="caption" sx={{ display: 'block', mb: 1, color: courseLearningTheme.textSecondary }}>
+                        Cycle {(cycleMeta.completionCycle ?? 0) + 1} of {cycleMeta.maxModuleCycles}
+                        {cycleMeta.maxWatchesPerCycle != null
+                            ? ` · Up to ${cycleMeta.maxWatchesPerCycle} watches per lesson this cycle`
+                            : ''}
+                    </Typography>
+                )}
+
                 <CourseLearningBand
                     headerLabel="LESSONS"
                     subtitle="Work top to bottom — locked lessons unlock after the previous one."
@@ -330,8 +389,10 @@ const ModuleVideosPage: React.FC = () => {
                         <Stack component="ol" sx={{ listStyle: 'none', m: 0, p: 0, width: '100%' }} spacing={0}>
                             {sortedVideos.map((video, index) => {
                                 const locked = Boolean(video.isLocked);
-                                const needsPlan = video.canAccess === false;
-                                const disabled = locked || needsPlan;
+                                const needsPlan = video.lockReason === 'subscription';
+                                const watchLimited = video.lockReason === 'watch_limit';
+                                const sequenceLocked = video.lockReason === 'sequence';
+                                const disabled = locked || needsPlan || watchLimited || sequenceLocked;
                                 const vid = extractId(video) || video._id;
 
                                 return (
@@ -479,13 +540,21 @@ const ModuleVideosPage: React.FC = () => {
                                                         {video.title}
                                                     </Typography>
                                                     <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1.25 }}>
-                                                        {locked && (
+                                                        {sequenceLocked && (
                                                             <Chip
-                                                                label={video.accessReason || 'Locked'}
+                                                                label={video.accessReason || 'Complete previous lesson'}
                                                                 size="small"
                                                                 variant="outlined"
                                                                 icon={<LockOutlinedIcon sx={{ fontSize: 14, color: courseLearningTheme.textSecondary }} />}
                                                                 sx={{ ...courseChipOutlinedSx, maxWidth: '100%', height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }}
+                                                            />
+                                                        )}
+                                                        {watchLimited && (
+                                                            <Chip
+                                                                label={video.accessReason || 'Watch limit reached'}
+                                                                size="small"
+                                                                variant="outlined"
+                                                                sx={courseChipWarningSx}
                                                             />
                                                         )}
                                                         {needsPlan && (
@@ -518,12 +587,14 @@ const ModuleVideosPage: React.FC = () => {
                                                     <Button
                                                         variant="contained"
                                                         size="medium"
-                                                        disabled={locked}
+                                                        disabled={disabled}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            if (locked) return;
-                                                            if (needsPlan) navigate('/subscription-plans');
-                                                            else if (vid) navigate(`/videos/${vid}`);
+                                                            if (disabled) {
+                                                                handleVideoCardClick(video);
+                                                                return;
+                                                            }
+                                                            if (vid) navigate(`/videos/${vid}`);
                                                         }}
                                                         startIcon={locked ? <LockOutlinedIcon /> : needsPlan ? undefined : <PlayArrowIcon />}
                                                         sx={{

@@ -54,7 +54,7 @@ const MyCoursesPage: React.FC = () => {
             setCourses(safeCourses);
             setPageContext(context);
 
-            if (isAuthenticated && safeCourses.length > 0) {
+            if (isAuthenticated && safeCourses.length > 0 && context === 'subscribed') {
                 const [myCertificates, eligibilityRows] = await Promise.all([
                     getMyCourseCertificates(),
                     Promise.all(

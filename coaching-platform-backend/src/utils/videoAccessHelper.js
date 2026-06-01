@@ -302,7 +302,9 @@ export const checkSequentialVideoAccess = async (userId, video, moduleId, preCal
  * @returns {Promise<Object>} - Updated progress and unlock status
  */
 export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
-    const MAX_WATCHES_PER_VIDEO = 4;
+    const config = await getLearningConfig(userId);
+    const maxPerCycle = config.maxWatchesPerVideoPerCycle;
+    const maxCycles = config.maxModuleCompletionCycles;
     // Get the video to find all modules it belongs to
     const video = await Video.findById(videoId).select('modules').lean();
     if (!video) {
@@ -346,17 +348,11 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
             });
         }
 
-        // Check total watch count across both cycles for THIS MODULE before incrementing
-        const allVideoProgress = await VideoWatchProgress.find({
-            user: userId,
-            video: videoId,
-            module: modId, // Check watch count per module
-        }).lean();
-        
-        const totalWatchCount = allVideoProgress.reduce((sum, p) => sum + (p.watchCount || 0), 0);
-        
-        if (totalWatchCount >= MAX_WATCHES_PER_VIDEO) {
-            throw new Error(`Maximum watch limit reached for this video (${MAX_WATCHES_PER_VIDEO} watches).`);
+        const cycleWatchCount = progress.watchCount || 0;
+        if (cycleWatchCount >= maxPerCycle) {
+            throw new Error(
+                `Maximum watch limit reached for this video in cycle ${completionCycle + 1} (${maxPerCycle} watches).`
+            );
         }
 
         // Increment watch count for current cycle
@@ -370,7 +366,7 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
         progressResults.push({
             moduleId: modId,
             progress: progress,
-            totalWatchCount: totalWatchCount + 1,
+            cycleWatchCount: cycleWatchCount + 1,
         });
     }
 
@@ -381,8 +377,8 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
         throw new Error('No progress was saved for any module');
     }
 
-    const { progress, totalWatchCount: finalTotalWatchCount } = requestedModuleResult;
-    const remainingWatches = Math.max(0, MAX_WATCHES_PER_VIDEO - finalTotalWatchCount);
+    const { progress, cycleWatchCount: finalCycleWatchCount } = requestedModuleResult;
+    const remainingWatches = Math.max(0, maxPerCycle - finalCycleWatchCount);
 
     // Check if current set is complete for the requested module
     const videos = await getModuleVideos(moduleId);
@@ -439,10 +435,9 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
     let nextCycleStarted = false;
     let newCompletionCycle = requestedModuleCycle;
     
-    if (moduleComplete && requestedModuleCycle < 1) {
-        // Module is complete in cycle 0, next access should be cycle 1
+    if (moduleComplete && requestedModuleCycle < maxCycles - 1) {
         nextCycleStarted = true;
-        newCompletionCycle = 1;
+        newCompletionCycle = requestedModuleCycle + 1;
     }
 
     if (moduleComplete) {
@@ -456,8 +451,11 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
         moduleComplete: moduleComplete,
         nextCycleStarted: nextCycleStarted,
         newCompletionCycle: newCompletionCycle,
-        watchCount: finalTotalWatchCount,
+        watchCount: finalCycleWatchCount,
         remainingWatches: remainingWatches,
         currentCycleWatchCount: progress.watchCount,
+        completionCycle: requestedModuleCycle,
+        maxWatchesPerCycle: maxPerCycle,
+        maxModuleCycles: maxCycles,
     };
 };
