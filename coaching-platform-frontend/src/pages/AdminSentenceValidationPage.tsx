@@ -1,5 +1,5 @@
 // src/pages/AdminSentenceValidationPage.tsx
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
 import AdminLayout from '../components/layout/AdminLayout';
 import {
     Container,
@@ -61,25 +61,92 @@ import {
 } from '../utils/sceneActivityUtils';
 import { format } from 'date-fns';
 import {
-    VALIDATION_ACTIVITY_TABS,
+    VALIDATION_PLAN_TABS,
     getActivityRowLabel,
     getContentTypeLabel,
     getLinkedContentType,
-    getOriginalReferenceText,
     getUserPhone,
     getValidationContentDetails,
     submissionMatchesTab,
     type ValidationTabId,
 } from '../utils/validationActivityTabs';
+
+const PLAN_TAB_IDS: ValidationTabId[] = ['free', 'bronze', 'silver', 'gold'];
 import { getContentTypeConfig, type ContentType } from '../utils/contentTypeConfig';
+import {
+    useResizableValidationColumns,
+    VALIDATION_COLUMN_LABELS,
+    VALIDATION_COLUMN_ORDER,
+    type ValidationColumnId,
+} from '../hooks/useResizableValidationColumns';
 
 type SubmissionStatus = 'all' | 'pending' | 'reviewed';
+
+const ResizableHeaderCell: React.FC<{
+    columnId: ValidationColumnId;
+    width: number;
+    align?: 'left' | 'center' | 'right';
+    onResizeStart: (id: ValidationColumnId, clientX: number) => void;
+    isLast?: boolean;
+}> = ({ columnId, width, align, onResizeStart, isLast }) => (
+    <TableCell
+        align={align}
+        sx={{
+            fontWeight: 700,
+            width,
+            minWidth: width,
+            maxWidth: width,
+            position: 'relative',
+            userSelect: 'none',
+            pr: isLast ? 2 : 1.5,
+            boxSizing: 'border-box',
+        }}
+    >
+        {VALIDATION_COLUMN_LABELS[columnId]}
+        {!isLast && (
+            <Tooltip title="Drag to resize column" placement="top">
+                <Box
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label={`Resize ${VALIDATION_COLUMN_LABELS[columnId]} column`}
+                    onMouseDown={(e: ReactMouseEvent) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onResizeStart(columnId, e.clientX);
+                    }}
+                    sx={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 8,
+                        cursor: 'col-resize',
+                        zIndex: 2,
+                        '&:hover': {
+                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.2),
+                        },
+                        '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            right: 3,
+                            top: '20%',
+                            bottom: '20%',
+                            width: 2,
+                            borderRadius: 1,
+                            bgcolor: 'divider',
+                        },
+                    }}
+                />
+            </Tooltip>
+        )}
+    </TableCell>
+);
 
 const AdminSentenceValidationPage: React.FC = () => {
     const [submissions, setSubmissions] = useState<SentenceSubmission[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<ValidationTabId>('sentence');
+    const [activeTab, setActiveTab] = useState<ValidationTabId>('free');
     const [selectedStatus, setSelectedStatus] = useState<SubmissionStatus>('pending');
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
@@ -91,20 +158,17 @@ const AdminSentenceValidationPage: React.FC = () => {
     const [storySentenceValidations, setStorySentenceValidations] = useState<boolean[]>([]);
     const [vocabSentenceValidations, setVocabSentenceValidations] = useState<boolean[]>([]);
     const [sceneEvaluationScore, setSceneEvaluationScore] = useState(0);
+    const { widths, startResize, cellSx, tableMinWidth } = useResizableValidationColumns();
 
     const fetchSubmissions = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const tab = VALIDATION_ACTIVITY_TABS.find((t) => t.id === activeTab);
-            const singleType =
-                tab && tab.submissionTypes.length === 1 ? tab.submissionTypes[0] : undefined;
-
             let fetched: SentenceSubmission[];
             if (selectedStatus === 'pending') {
-                fetched = await getPendingSubmissions(singleType, 500);
+                fetched = await getPendingSubmissions(undefined, 1000);
             } else {
-                fetched = await getAllSubmissions(singleType, selectedStatus, 500);
+                fetched = await getAllSubmissions(undefined, selectedStatus, 1000);
             }
 
             fetched.sort(
@@ -117,14 +181,16 @@ const AdminSentenceValidationPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [activeTab, selectedStatus]);
+    }, [selectedStatus]);
 
     useEffect(() => {
         try {
             const raw = sessionStorage.getItem('adminSentenceValidationView');
             if (raw) {
                 const saved = JSON.parse(raw) as { activeTab?: ValidationTabId; selectedStatus?: SubmissionStatus };
-                if (saved.activeTab) setActiveTab(saved.activeTab);
+                if (saved.activeTab && PLAN_TAB_IDS.includes(saved.activeTab)) {
+                    setActiveTab(saved.activeTab);
+                }
                 if (saved.selectedStatus) setSelectedStatus(saved.selectedStatus);
             }
         } catch {
@@ -299,8 +365,8 @@ const AdminSentenceValidationPage: React.FC = () => {
                     Sentence Validation Dashboard
                 </Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                    Review user submissions in chronological order. Use tabs to match daily content
-                    activities.
+                    Review user submissions by plan tier. Each tab shows every activity type in that
+                    tier (Word, Phrase, Story, Vocab, Scene, Speech, and more).
                 </Typography>
 
                 <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -327,12 +393,23 @@ const AdminSentenceValidationPage: React.FC = () => {
                     <Tabs
                         value={activeTab}
                         onChange={(_, v) => setActiveTab(v as ValidationTabId)}
-                        variant="scrollable"
-                        scrollButtons="auto"
-                        sx={{ borderBottom: 1, borderColor: 'divider', px: 1 }}
+                        variant="fullWidth"
+                        sx={{
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                            '& .MuiTab-root': { fontWeight: 700, textTransform: 'none', minHeight: 48 },
+                        }}
                     >
-                        {VALIDATION_ACTIVITY_TABS.map((tab) => (
-                            <Tab key={tab.id} label={tab.label} value={tab.id} />
+                        {VALIDATION_PLAN_TABS.map((tab) => (
+                            <Tab
+                                key={tab.id}
+                                label={tab.label}
+                                value={tab.id}
+                                sx={{
+                                    color: 'text.secondary',
+                                    '&.Mui-selected': { color: tab.accentColor },
+                                }}
+                            />
                         ))}
                     </Tabs>
                 </Paper>
@@ -374,6 +451,11 @@ const AdminSentenceValidationPage: React.FC = () => {
                     </Alert>
                 )}
 
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    Drag the edge of any column header to resize. Widths are remembered until you hard-refresh
+                    or close this browser tab.
+                </Typography>
+
                 {isLoading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                         <CircularProgress />
@@ -383,24 +465,34 @@ const AdminSentenceValidationPage: React.FC = () => {
                         <Typography color="text.secondary">No submissions in this tab.</Typography>
                     </Paper>
                 ) : (
-                    <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 320px)' }}>
-                        <Table stickyHeader size="small">
+                    <TableContainer
+                        component={Paper}
+                        sx={{
+                            maxHeight: 'calc(100vh - 320px)',
+                            overflowX: 'auto',
+                        }}
+                    >
+                        <Table
+                            stickyHeader
+                            size="small"
+                            sx={{
+                                tableLayout: 'fixed',
+                                width: tableMinWidth,
+                                minWidth: '100%',
+                            }}
+                        >
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 700, minWidth: 140 }}>Type</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, minWidth: 160 }}>Activity</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, minWidth: 140 }}>User</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, minWidth: 120 }}>Phone</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, minWidth: 220 }}>
-                                        User submission
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 700, minWidth: 260 }}>
-                                        Daily content (prompt)
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 700, width: 150 }}>Submitted</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, width: 140 }} align="center">
-                                        Actions
-                                    </TableCell>
+                                    {VALIDATION_COLUMN_ORDER.map((columnId, index) => (
+                                        <ResizableHeaderCell
+                                            key={columnId}
+                                            columnId={columnId}
+                                            width={widths[columnId]}
+                                            align={columnId === 'actions' ? 'center' : 'left'}
+                                            onResizeStart={startResize}
+                                            isLast={index === VALIDATION_COLUMN_ORDER.length - 1}
+                                        />
+                                    ))}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -412,7 +504,6 @@ const AdminSentenceValidationPage: React.FC = () => {
                                     const IconComponent = config?.icon;
                                     const isPending = submission.isCorrect === null;
                                     const busy = actionLoadingId === submission._id;
-                                    const contentDetails = getValidationContentDetails(submission);
 
                                     return (
                                         <TableRow
@@ -427,7 +518,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                           : 'error.50',
                                             }}
                                         >
-                                            <TableCell>
+                                            <TableCell sx={cellSx('type')}>
                                                 <Chip
                                                     label={getContentTypeLabel(submission)}
                                                     size="small"
@@ -435,7 +526,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                     sx={{ fontWeight: 600, maxWidth: '100%' }}
                                                 />
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={cellSx('activity')}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     {IconComponent && (
                                                         <IconComponent
@@ -455,7 +546,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                     </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={cellSx('user')}>
                                                 <Typography variant="body2" fontWeight={700}>
                                                     {submission.userId?.name || 'Unknown'}
                                                 </Typography>
@@ -469,65 +560,28 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                     </Typography>
                                                 )}
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={cellSx('phone')}>
                                                 <Typography variant="body2">{getUserPhone(submission)}</Typography>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={cellSx('userSubmission')}>
                                                 {submission.submissionType === 'vocab' ? (
-                                                    <Box sx={{ maxWidth: 300 }}>
-                                                        <VocabSubmissionPreview
-                                                            sentences={submission.sentences}
-                                                            compact
-                                                        />
-                                                    </Box>
+                                                    <VocabSubmissionPreview
+                                                        sentences={submission.sentences}
+                                                        compact
+                                                    />
                                                 ) : (
                                                     <Typography
                                                         variant="body2"
                                                         sx={{
                                                             whiteSpace: 'pre-wrap',
                                                             wordBreak: 'break-word',
-                                                            maxWidth: 280,
                                                         }}
                                                     >
                                                         {getSubmissionContent(submission) || '—'}
                                                     </Typography>
                                                 )}
                                             </TableCell>
-                                            <TableCell>
-                                                <Box sx={{ maxWidth: 320 }}>
-                                                    {contentDetails
-                                                        .filter((line) => line.label !== 'Activity type')
-                                                        .slice(0, 4)
-                                                        .map((line) => (
-                                                            <Box key={line.label} sx={{ mb: 0.75 }}>
-                                                                <Typography
-                                                                    variant="caption"
-                                                                    color="text.secondary"
-                                                                    display="block"
-                                                                >
-                                                                    {line.label}
-                                                                </Typography>
-                                                                <Typography
-                                                                    variant="body2"
-                                                                    sx={{
-                                                                        whiteSpace: 'pre-wrap',
-                                                                        wordBreak: 'break-word',
-                                                                    }}
-                                                                >
-                                                                    {line.value.length > 200
-                                                                        ? `${line.value.slice(0, 200)}…`
-                                                                        : line.value}
-                                                                </Typography>
-                                                            </Box>
-                                                        ))}
-                                                    {contentDetails.length <= 1 && (
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            {getOriginalReferenceText(submission)}
-                                                        </Typography>
-                                                    )}
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={cellSx('submitted')}>
                                                 <Typography variant="caption" display="block">
                                                     {format(
                                                         new Date(submission.createdAt),
@@ -538,7 +592,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                     {format(new Date(submission.createdAt), 'HH:mm')}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell align="center">
+                                            <TableCell sx={cellSx('actions')} align="center">
                                                 {isPending ? (
                                                     <Box
                                                         sx={{

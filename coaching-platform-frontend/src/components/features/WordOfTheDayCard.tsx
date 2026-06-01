@@ -31,7 +31,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, getWordDisplayNumber } from '../../services/dailyContentService';
 import { getUserWordSubmissions, type UserWordSubmission } from '../../services/sentenceSubmissionService';
 import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
-import { getContentTypeConfig } from '../../utils/contentTypeConfig';
+import ActivityContentHeader from './ActivityContentHeader';
 
 interface DailyContent {
     _id: string;
@@ -118,8 +118,6 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
     const [historyAnchor, setHistoryAnchor] = useState<HTMLElement | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const synthRef = useRef<SpeechSynthesis | null>(null);
-    const config = getContentTypeConfig('WORD');
-
     const isToday = isScheduledToday(currentData.date);
     const submittedCount = submissions.length;
     const remainingSlots = Math.max(0, MAX_SENTENCES - submittedCount);
@@ -365,35 +363,12 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, mb: 2 }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-                                <Box component={config.icon} sx={{ fontSize: 20, color: GREEN_ACCENT }} />
-                                <Typography
-                                    variant="overline"
-                                    sx={{ fontWeight: 800, letterSpacing: 1.2, color: GREEN_ACCENT }}
-                                >
-                                    Word of the Day
-                                </Typography>
-                                {displayNumber && (
-                                    <Chip
-                                        label={displayNumber}
-                                        size="small"
-                                        sx={{
-                                            borderColor: alpha(GREEN_ACCENT, 0.6),
-                                            color: GREEN_ACCENT,
-                                            fontWeight: 700,
-                                        }}
-                                        variant="outlined"
-                                    />
-                                )}
-                                {currentData.metadata.partOfSpeech && (
-                                    <Chip
-                                        label={currentData.metadata.partOfSpeech}
-                                        size="small"
-                                        sx={{ color: alpha('#e2e8f0', 0.9), borderColor: alpha('#e2e8f0', 0.3) }}
-                                        variant="outlined"
-                                    />
-                                )}
-                            </Box>
+                            <ActivityContentHeader
+                                contentType="WORD"
+                                accentColor={GREEN_ACCENT}
+                                displayNumber={displayNumber}
+                                secondaryChip={currentData.metadata.partOfSpeech}
+                            />
                             <Typography
                                 variant="h3"
                                 component="h1"

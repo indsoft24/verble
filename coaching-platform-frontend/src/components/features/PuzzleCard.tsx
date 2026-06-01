@@ -23,11 +23,20 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { type DailyContent } from '../../services/dailyContentService';
+import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import ActivityContentHeader from './ActivityContentHeader';
+import ActivityTierNavFooter, { type NavFooterSlot } from './ActivityTierNavFooter';
 
 interface PuzzleCardProps {
     data: DailyContent;
     puzzleType: 'SPOT_CORRECT_SENTENCE' | 'GRAMMAR_FILL_BLANK';
     onSubmissionSuccess?: () => void;
+    tierNav?: {
+        accentColor: string;
+        left?: NavFooterSlot;
+        center?: NavFooterSlot;
+        right?: NavFooterSlot;
+    };
 }
 
 interface Question {
@@ -95,7 +104,7 @@ const ConfettiEffect: React.FC = () => {
     );
 };
 
-const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionSuccess }) => {
+const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionSuccess, tierNav }) => {
     const { user } = useAuth();
     const [answers, setAnswers] = useState<{ [key: number]: number }>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,6 +202,11 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
     const puzzleTitle = puzzleType === 'SPOT_CORRECT_SENTENCE' 
         ? 'Spot the Correct Sentence' 
         : 'Correct Use of Grammar';
+    const puzzleHeaderLabel =
+        puzzleType === 'SPOT_CORRECT_SENTENCE'
+            ? 'Puzzle — Spot the Correct Sentence'
+            : 'Puzzle — Correct Form of the Verb';
+    const displayNumber = getDisplayTag(data.sequenceNumber);
 
     return (
         <Card
@@ -211,13 +225,15 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
             <CardContent sx={{ p: 4 }}>
                 {/* Header */}
                 <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            Daily Puzzle
-                        </Typography>
-                        <Chip label={data.level} size="small" color="primary" />
-                    </Box>
-                    
+                    <ActivityContentHeader
+                        contentType="PUZZLE"
+                        accentColor="#c2185b"
+                        displayNumber={displayNumber}
+                        labelOverride={puzzleHeaderLabel}
+                        variant="light"
+                        sx={{ mb: 2 }}
+                    />
+
                     <Typography
                         variant="h4"
                         component="h1"
@@ -431,6 +447,16 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 3, textAlign: 'center' }}>
                         You earn 10 points for each correct answer.
                     </Typography>
+
+                    {tierNav && (
+                        <ActivityTierNavFooter
+                            variant="light"
+                            accentColor={tierNav.accentColor}
+                            left={tierNav.left}
+                            center={tierNav.center}
+                            right={tierNav.right}
+                        />
+                    )}
                 </Box>
             </CardContent>
         </Card>

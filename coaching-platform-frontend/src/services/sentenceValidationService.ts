@@ -14,30 +14,35 @@ export interface SentenceSubmission {
         _id: string;
         title: string;
         type: string;
+        level?: string;
         metadata?: Record<string, unknown>;
     };
     storyId?: {
         _id: string;
         title: string;
         type: string;
+        level?: string;
         metadata?: Record<string, unknown>;
     };
     vocabSetId?: {
         _id: string;
         title: string;
         type: string;
+        level?: string;
         metadata?: Record<string, unknown>;
     };
     sceneId?: {
         _id: string;
         title: string;
         type: string;
+        level?: string;
         metadata?: Record<string, unknown>;
     };
     speechId?: {
         _id: string;
         title: string;
         type: string;
+        level?: string;
         metadata?: Record<string, unknown>;
     };
     word?: string;

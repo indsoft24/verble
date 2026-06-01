@@ -405,7 +405,7 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'sentence') {
         const sentenceSubs = await UserSentenceSubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('wordId', 'title type metadata')
+            .populate('wordId', 'title type level metadata')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })
             .lean();
@@ -415,7 +415,7 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'story') {
         const storySubs = await UserStorySubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('storyId', 'title type metadata')
+            .populate('storyId', 'title type level metadata')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })
             .lean();
@@ -425,7 +425,7 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'vocab') {
         const vocabSubs = await UserVocabSubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('vocabSetId', 'title type metadata')
+            .populate('vocabSetId', 'title type level metadata')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })
             .lean();
@@ -435,7 +435,7 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'scene') {
         const sceneSubs = await UserSceneSubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('sceneId', 'title type metadata')
+            .populate('sceneId', 'title type level metadata')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })
             .lean();
@@ -445,7 +445,7 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'speech') {
         const speechSubs = await UserSpeechSubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('speechId', 'title type metadata')
+            .populate('speechId', 'title type level metadata')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })
             .lean();
@@ -484,7 +484,7 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'sentence') {
         const sentenceSubs = await UserSentenceSubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('wordId', 'title type metadata')
+            .populate('wordId', 'title type level metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })
@@ -495,7 +495,7 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'story') {
         const storySubs = await UserStorySubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('storyId', 'title type metadata')
+            .populate('storyId', 'title type level metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })
@@ -506,7 +506,7 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'vocab') {
         const vocabSubs = await UserVocabSubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('vocabSetId', 'title type metadata')
+            .populate('vocabSetId', 'title type level metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })
@@ -517,7 +517,7 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'scene') {
         const sceneSubs = await UserSceneSubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('sceneId', 'title type metadata')
+            .populate('sceneId', 'title type level metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })
@@ -528,7 +528,7 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
     if (!type || type === 'speech') {
         const speechSubs = await UserSpeechSubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
-            .populate('speechId', 'title type metadata')
+            .populate('speechId', 'title type level metadata')
             .populate('reviewedBy', 'name email')
             .limit(parseInt(limit, 10))
             .sort({ createdAt: -1 })

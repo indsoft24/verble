@@ -5,10 +5,8 @@ import {
     CardContent,
     Typography,
     Box,
-    Button,
     IconButton,
     Divider,
-    Chip,
     List,
     ListItem,
     Accordion,
@@ -18,26 +16,32 @@ import {
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import ActivityContentHeader from './ActivityContentHeader';
+import ActivityTierNavFooter from './ActivityTierNavFooter';
 
 
 interface LyricsCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
+    onNavigateToSpeech?: () => void;
+    onNavigateToFeed?: () => void;
 }
 
-const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
+const LyricsCard: React.FC<LyricsCardProps> = ({
+    data,
+    onContentChange,
+    onNavigateToSpeech,
+    onNavigateToFeed,
+}) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isLoadingNav, setIsLoadingNav] = useState(false);
     const [currentContent, setCurrentContent] = useState<DailyContent>(data);
     const [hasPrevious, setHasPrevious] = useState(false);
-    const [hasNext, setHasNext] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
@@ -72,16 +76,10 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
 
     const checkNavigationAvailability = async () => {
         try {
-            const [prevContent, nextContent] = await Promise.all([
-                getAdjacentContent(data._id, 'prev'),
-                getAdjacentContent(data._id, 'next')
-            ]);
-
+            const prevContent = await getAdjacentContent(data._id, 'prev');
             setHasPrevious(!!prevContent);
-            setHasNext(!!nextContent);
-        } catch (error) {
+        } catch {
             setHasPrevious(false);
-            setHasNext(false);
         }
     };
 
@@ -196,12 +194,13 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
             <CardContent sx={{ p: 4 }}>
                 {/* Header with Lyrics Number */}
                 <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {lyricsDisplayTag ? `Song Lyrics ${lyricsDisplayTag}` : 'Song Lyrics'}
-                        </Typography>
-                        <Chip label={currentContent.level} size="small" color="primary" />
-                    </Box>
+                    <ActivityContentHeader
+                        contentType="LYRICS"
+                        accentColor="#e91e63"
+                        displayNumber={lyricsDisplayTag}
+                        variant="light"
+                        sx={{ mb: 2 }}
+                    />
 
                     <Typography
                         variant="h4"
@@ -395,27 +394,24 @@ const LyricsCard: React.FC<LyricsCardProps> = ({ data, onContentChange }) => {
                     </Box>
                 )}
 
-                <Divider sx={{ my: 4 }} />
-
-                {/* Navigation Buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<ArrowBackIcon />}
-                        onClick={() => handleNavigation('prev')}
-                        disabled={!hasPrevious || isLoadingNav}
-                    >
-                        Previous Lyrics
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        endIcon={<ArrowForwardIcon />}
-                        onClick={() => handleNavigation('next')}
-                        disabled={!hasNext || isLoadingNav}
-                    >
-                        Next Lyrics
-                    </Button>
-                </Box>
+                <ActivityTierNavFooter
+                    variant="light"
+                    accentColor="#ca8a04"
+                    left={{
+                        label: 'Previous Lyrics',
+                        onClick: () => handleNavigation('prev'),
+                        disabled: !hasPrevious,
+                        loading: isLoadingNav,
+                    }}
+                    center={{
+                        label: '→ Instagram Feeds',
+                        onClick: onNavigateToFeed,
+                    }}
+                    right={{
+                        label: 'Famous Speeches',
+                        onClick: onNavigateToSpeech,
+                    }}
+                />
             </CardContent>
         </Card>
     );

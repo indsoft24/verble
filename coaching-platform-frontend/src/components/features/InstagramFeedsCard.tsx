@@ -5,21 +5,21 @@ import {
     CardContent,
     Typography,
     Box,
-    Button,
     Divider,
-    Chip,
     Link as MuiLink
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import ActivityContentHeader from './ActivityContentHeader';
+import ActivityTierNavFooter from './ActivityTierNavFooter';
 
 
 interface InstagramFeedsCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
+    onNavigateToSpeech?: () => void;
+    onNavigateToLyrics?: () => void;
 }
 
 interface InstagramPost {
@@ -29,11 +29,15 @@ interface InstagramPost {
     caption?: string;
 }
 
-const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({ data, onContentChange }) => {
+const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({
+    data,
+    onContentChange,
+    onNavigateToSpeech,
+    onNavigateToLyrics,
+}) => {
     const [isLoadingNav, setIsLoadingNav] = useState(false);
     const [currentContent, setCurrentContent] = useState<DailyContent>(data);
     const [hasPrevious, setHasPrevious] = useState(false);
-    const [hasNext, setHasNext] = useState(false);
 
     useEffect(() => {
         setCurrentContent(data);
@@ -42,16 +46,10 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({ data, onContent
 
     const checkNavigationAvailability = async () => {
         try {
-            const [prevContent, nextContent] = await Promise.all([
-                getAdjacentContent(data._id, 'prev'),
-                getAdjacentContent(data._id, 'next')
-            ]);
-
+            const prevContent = await getAdjacentContent(data._id, 'prev');
             setHasPrevious(!!prevContent);
-            setHasNext(!!nextContent);
-        } catch (error) {
+        } catch {
             setHasPrevious(false);
-            setHasNext(false);
         }
     };
 
@@ -92,12 +90,13 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({ data, onContent
             <CardContent sx={{ p: 4 }}>
                 {/* Header */}
                 <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {feedDisplayTag ? `Instagram Feed ${feedDisplayTag}` : 'Instagram Feed'}
-                        </Typography>
-                        <Chip label={currentContent.level} size="small" color="primary" />
-                    </Box>
+                    <ActivityContentHeader
+                        contentType="FEED"
+                        accentColor="#e1306c"
+                        displayNumber={feedDisplayTag}
+                        variant="light"
+                        sx={{ mb: 2 }}
+                    />
 
                     <Typography
                         variant="h4"
@@ -216,27 +215,24 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({ data, onContent
                     </Box>
                 )}
 
-                <Divider sx={{ my: 4 }} />
-
-                {/* Navigation Buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<ArrowBackIcon />}
-                        onClick={() => handleNavigation('prev')}
-                        disabled={!hasPrevious || isLoadingNav}
-                    >
-                        Previous Feed
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        endIcon={<ArrowForwardIcon />}
-                        onClick={() => handleNavigation('next')}
-                        disabled={!hasNext || isLoadingNav}
-                    >
-                        Next Feed
-                    </Button>
-                </Box>
+                <ActivityTierNavFooter
+                    variant="light"
+                    accentColor="#ca8a04"
+                    left={{
+                        label: 'Previous Feed',
+                        onClick: () => handleNavigation('prev'),
+                        disabled: !hasPrevious,
+                        loading: isLoadingNav,
+                    }}
+                    center={{
+                        label: '← Song Lyrics',
+                        onClick: onNavigateToLyrics,
+                    }}
+                    right={{
+                        label: 'Famous Speeches',
+                        onClick: onNavigateToSpeech,
+                    }}
+                />
             </CardContent>
         </Card>
     );

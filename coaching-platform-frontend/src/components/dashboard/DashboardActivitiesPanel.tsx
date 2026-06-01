@@ -33,8 +33,8 @@ export interface DashboardActivitiesPanelProps {
     freeTiles: ActivityTileConfig[];
     bronzeTiles: ActivityTileConfig[];
     silverTiles: ActivityTileConfig[];
-    goldTopTiles: ActivityTileConfig[];
-    goldBottomTiles: ActivityTileConfig[];
+    goldCoreTiles: ActivityTileConfig[];
+    goldBonusTiles: ActivityTileConfig[];
     fullCourseHero: {
         modulesTitle: string;
         modulesSubtitle: string;
@@ -68,8 +68,8 @@ const DashboardActivitiesPanel: React.FC<DashboardActivitiesPanelProps> = ({
     freeTiles,
     bronzeTiles,
     silverTiles,
-    goldTopTiles,
-    goldBottomTiles,
+    goldCoreTiles,
+    goldBonusTiles,
     fullCourseHero,
     fullCourseBenefits,
     onLockedTier,
@@ -165,7 +165,7 @@ const DashboardActivitiesPanel: React.FC<DashboardActivitiesPanelProps> = ({
                         gap: 1.5,
                     }}
                 >
-                    {goldTopTiles.map((tile) => (
+                    {goldCoreTiles.map((tile) => (
                         <DashboardAgendaTile
                             key={tile.id}
                             title={tile.title}
@@ -181,24 +181,52 @@ const DashboardActivitiesPanel: React.FC<DashboardActivitiesPanelProps> = ({
                 <Box
                     sx={{
                         gridColumn: '1 / -1',
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-                        gap: 1.5,
-                        mt: 0,
+                        mt: 2,
+                        pt: 2.5,
+                        px: { xs: 0.5, sm: 1.5 },
+                        pb: 0.5,
+                        borderTop: `2px dashed ${alpha(TIER_COLORS.GOLD, 0.4)}`,
+                        borderRadius: 2,
+                        background: `linear-gradient(160deg, ${alpha(TIER_COLORS.GOLD, 0.1)} 0%, ${alpha(TIER_COLORS.GOLD, 0.02)} 45%, transparent 100%)`,
                     }}
                 >
-                    {goldBottomTiles.map((tile) => (
-                        <DashboardAgendaTile
-                            key={tile.id}
-                            title={tile.title}
-                            subtitle={tile.subtitle}
-                            icon={tile.icon}
-                            accentColor={tile.accentColor}
-                            sectionLocked={!isGoldOrFull}
-                            emptyToday={tile.emptyToday}
-                            onClick={!isGoldOrFull ? () => onLockedTier('GOLD') : tile.onOpen}
-                        />
-                    ))}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <AutoAwesomeIcon sx={{ color: TIER_COLORS.GOLD, fontSize: 22 }} />
+                        <Typography
+                            variant="overline"
+                            sx={{
+                                fontWeight: 900,
+                                color: TIER_COLORS.GOLD,
+                                letterSpacing: 1.4,
+                                lineHeight: 1.3,
+                            }}
+                        >
+                            {t('dashboard.agenda.goldBonusHeader')}
+                        </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: 520 }}>
+                        {t('dashboard.agenda.goldBonusSubtitle')}
+                    </Typography>
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+                            gap: 1.5,
+                        }}
+                    >
+                        {goldBonusTiles.map((tile) => (
+                            <DashboardAgendaTile
+                                key={tile.id}
+                                title={tile.title}
+                                subtitle={tile.subtitle}
+                                icon={tile.icon}
+                                accentColor={tile.accentColor}
+                                sectionLocked={!isGoldOrFull}
+                                emptyToday={tile.emptyToday}
+                                onClick={!isGoldOrFull ? () => onLockedTier('GOLD') : tile.onOpen}
+                            />
+                        ))}
+                    </Box>
                 </Box>
             </DashboardAgendaBand>
 

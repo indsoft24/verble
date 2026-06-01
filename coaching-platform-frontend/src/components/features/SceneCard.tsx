@@ -10,7 +10,6 @@ import {
     IconButton,
     CircularProgress,
     Alert,
-    Chip,
     alpha,
     LinearProgress,
 } from '@mui/material';
@@ -20,8 +19,6 @@ import { keyframes } from '@emotion/react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import StopIcon from '@mui/icons-material/Stop';
 import SendIcon from '@mui/icons-material/Send';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import {
@@ -49,6 +46,8 @@ import {
     canShowNextNavigation,
     GOLD_ACCENT,
 } from '../../utils/dailyActivityUi';
+import ActivityContentHeader from './ActivityContentHeader';
+import ActivityTierNavFooter from './ActivityTierNavFooter';
 
 interface SceneCardProps {
     data: DailyContent;
@@ -56,6 +55,7 @@ interface SceneCardProps {
     onSubmissionSuccess?: () => void;
     /** Optional override; otherwise derived from the logged-in user's subscription. */
     hasGoldAccess?: boolean;
+    onNavigateToProfessional?: () => void;
 }
 
 const confettiFall = keyframes`
@@ -89,6 +89,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
     onContentChange,
     onSubmissionSuccess,
     hasGoldAccess: hasGoldAccessProp,
+    onNavigateToProfessional,
 }) => {
     const { user } = useAuth();
     const [summaryDrafts, setSummaryDrafts] = useState<string[]>(['', '']);
@@ -374,20 +375,12 @@ const SceneCard: React.FC<SceneCardProps> = ({
 
             <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                        <Typography variant="overline" sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2 }}>
-                            Explain the Scene
-                        </Typography>
-                        {displayNumber && (
-                            <Chip
-                                label={displayNumber}
-                                size="small"
-                                variant="outlined"
-                                sx={{ borderColor: alpha(GOLD_ACCENT, 0.6), color: GOLD_ACCENT }}
-                            />
-                        )}
-                        <Chip label={currentContent.level} size="small" variant="outlined" sx={{ color: alpha('#e2e8f0', 0.8) }} />
-                    </Box>
+                    <ActivityContentHeader
+                        contentType="SCENE"
+                        accentColor={GOLD_ACCENT}
+                        displayNumber={displayNumber}
+                        sx={{ mb: 2 }}
+                    />
 
                     <Typography
                         variant="h4"
@@ -494,26 +487,6 @@ const SceneCard: React.FC<SceneCardProps> = ({
                         </Box>
                     )}
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-                        <Button
-                            variant="text"
-                            startIcon={<ArrowBackIcon />}
-                            onClick={() => handleNavigation('prev')}
-                            disabled={!hasPrevious || isLoadingNav}
-                            sx={{ color: alpha('#e2e8f0', 0.85) }}
-                        >
-                            Previous Scene
-                        </Button>
-                        <Button
-                            variant="text"
-                            endIcon={<ArrowForwardIcon />}
-                            onClick={() => handleNavigation('next')}
-                            disabled={!canGoNext || isLoadingNav}
-                            sx={{ color: alpha('#e2e8f0', 0.85) }}
-                        >
-                            Next Scene
-                        </Button>
-                    </Box>
                 </CardContent>
             </Card>
 
@@ -698,6 +671,25 @@ const SceneCard: React.FC<SceneCardProps> = ({
                             </Typography>
                         )}
                     </Box>
+                    <ActivityTierNavFooter
+                        accentColor={GOLD_ACCENT}
+                        left={{
+                            label: 'Previous Scene',
+                            onClick: () => handleNavigation('prev'),
+                            disabled: !hasPrevious,
+                            loading: isLoadingNav,
+                        }}
+                        center={{
+                            label: '→ Professional Conversations',
+                            onClick: onNavigateToProfessional,
+                        }}
+                        right={{
+                            label: 'Next Scene',
+                            onClick: () => handleNavigation('next'),
+                            disabled: !canGoNext,
+                            loading: isLoadingNav,
+                        }}
+                    />
                 </CardContent>
             </Card>
         </Box>

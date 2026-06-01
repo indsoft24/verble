@@ -60,10 +60,6 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                     { key: 'text', label: 'text', required: true, formField: 'Phrase' },
                     { key: 'meaning_en', label: 'meaning_en', required: true, hint: 'or en', formField: 'English meaning' },
                     { key: 'meaning_hi', label: 'meaning_hi', required: true, hint: 'or hi', formField: 'Hindi meaning' },
-                    { key: 'pronunciation_ipa', label: 'pronunciation_ipa', required: false, formField: 'IPA pronunciation' },
-                    { key: 'pronunciation_devanagari', label: 'pronunciation_devanagari', required: false, formField: 'Devanagari pronunciation' },
-                    { key: 'synonyms', label: 'synonyms', required: false, formField: 'Synonyms' },
-                    { key: 'antonyms', label: 'antonyms', required: false, formField: 'Antonyms' },
                     { key: 'examples_json', label: 'examples_json', required: false, formField: 'Example sentences (advanced)' },
                 ],
                 exampleRows: [],
@@ -611,14 +607,14 @@ export function validateAndBuildPayloads(
                 meaning_en,
                 meaning_hi,
                 audio: (row.audio ?? '').trim() || undefined,
-                synonyms: row.synonyms ? splitCommaList(row.synonyms) : undefined,
-                antonyms: row.antonyms ? splitCommaList(row.antonyms) : undefined,
                 examples,
-                pronunciation_ipa: (row.pronunciation_ipa ?? '').trim() || undefined,
-                pronunciation_devanagari: (row.pronunciation_devanagari ?? '').trim() || undefined,
             };
             if (adminKey === 'WORD') {
                 meta.partOfSpeech = (row.part_of_speech ?? '').trim() || undefined;
+                meta.synonyms = row.synonyms ? splitCommaList(row.synonyms) : undefined;
+                meta.antonyms = row.antonyms ? splitCommaList(row.antonyms) : undefined;
+                meta.pronunciation_ipa = (row.pronunciation_ipa ?? '').trim() || undefined;
+                meta.pronunciation_devanagari = (row.pronunciation_devanagari ?? '').trim() || undefined;
             }
             Object.keys(meta).forEach((k) => (meta[k] === undefined || meta[k] === '') && delete meta[k]);
             payloads.push({

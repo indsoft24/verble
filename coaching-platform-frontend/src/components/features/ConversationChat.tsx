@@ -14,6 +14,7 @@ import MicIcon from '@mui/icons-material/Mic';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { keyframes } from '@emotion/react';
 import { isParticipant2Speaker, type DialogueLine } from '../../utils/conversationDialogueUtils';
+import ActivityContentHeader from './ActivityContentHeader';
 
 const SILVER_ACCENT = '#3b82f6';
 const WA_HEADER = '#075e54';
@@ -32,6 +33,7 @@ interface ConversationChatProps {
     participant2: string;
     scenarioTitle?: string;
     scenarioTitleHi?: string;
+    displayNumber?: string | null;
 }
 
 const ConversationChat: React.FC<ConversationChatProps> = ({
@@ -40,6 +42,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
     participant2,
     scenarioTitle,
     scenarioTitleHi,
+    displayNumber,
 }) => {
     const [showHindi, setShowHindi] = useState<Record<number, boolean>>({});
     const [playingAudio, setPlayingAudio] = useState<number | null>(null);
@@ -136,9 +139,12 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
             }}
         >
             <Box sx={{ bgcolor: WA_HEADER, color: '#fff', px: 2, py: 1.75 }}>
-                <Typography variant="overline" sx={{ opacity: 0.85, letterSpacing: 1.2 }}>
-                    Silver · Practical conversation
-                </Typography>
+                <ActivityContentHeader
+                    contentType="CONVERSATION"
+                    accentColor="#a7f3d0"
+                    displayNumber={displayNumber}
+                    sx={{ mb: 0.75 }}
+                />
                 <Typography variant="h6" fontWeight={800}>
                     {headerTitle}
                 </Typography>

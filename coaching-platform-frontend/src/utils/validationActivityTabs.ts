@@ -1,48 +1,69 @@
 import type { SentenceSubmission } from '../services/sentenceValidationService';
+import { TIER_COLORS } from '../components/dashboard/DashboardActivitiesPanel';
 
-export type ValidationTabId =
-    | 'sentence'
-    | 'vocabulary'
-    | 'dialogues'
-    | 'audio_speech'
-    | 'free_writing';
+export type ValidationTabId = 'free' | 'bronze' | 'silver' | 'gold';
 
 export type SubmissionType = SentenceSubmission['submissionType'];
 
-export interface ValidationActivityTab {
+export type ContentPlanLevel = 'FREE' | 'BRONZE' | 'SILVER' | 'GOLD';
+
+export interface ValidationPlanTab {
     id: ValidationTabId;
     label: string;
-    submissionTypes: SubmissionType[];
+    /** Daily content `level` values included in this tab (BONUS counts as Gold). */
+    planLevels: ContentPlanLevel[];
+    accentColor: string;
 }
 
-/** Tab labels aligned with daily content activity names on the learner dashboard. */
-export const VALIDATION_ACTIVITY_TABS: ValidationActivityTab[] = [
-    {
-        id: 'sentence',
-        label: 'Sentences',
-        submissionTypes: ['sentence'],
-    },
-    {
-        id: 'vocabulary',
-        label: 'Vocabulary',
-        submissionTypes: ['vocab'],
-    },
-    {
-        id: 'dialogues',
-        label: 'Dialogues',
-        submissionTypes: ['scene'],
-    },
-    {
-        id: 'audio_speech',
-        label: 'Audio / Speech',
-        submissionTypes: ['speech'],
-    },
-    {
-        id: 'free_writing',
-        label: 'Free-writing',
-        submissionTypes: ['story'],
-    },
+/** Tabs aligned with subscription tiers on the learner dashboard. */
+export const VALIDATION_PLAN_TABS: ValidationPlanTab[] = [
+    { id: 'free', label: 'Free', planLevels: ['FREE'], accentColor: TIER_COLORS.FREE },
+    { id: 'bronze', label: 'Bronze', planLevels: ['BRONZE'], accentColor: TIER_COLORS.BRONZE },
+    { id: 'silver', label: 'Silver', planLevels: ['SILVER'], accentColor: TIER_COLORS.SILVER },
+    { id: 'gold', label: 'Gold', planLevels: ['GOLD'], accentColor: TIER_COLORS.GOLD },
 ];
+
+/** @deprecated Use VALIDATION_PLAN_TABS */
+export const VALIDATION_ACTIVITY_TABS = VALIDATION_PLAN_TABS;
+
+const SUBMISSION_TYPE_DEFAULT_LEVEL: Record<SubmissionType, ContentPlanLevel> = {
+    sentence: 'FREE',
+    story: 'BRONZE',
+    vocab: 'BRONZE',
+    scene: 'GOLD',
+    speech: 'GOLD',
+};
+
+export function getLinkedContentRef(submission: SentenceSubmission) {
+    return (
+        submission.wordId ||
+        submission.storyId ||
+        submission.vocabSetId ||
+        submission.sceneId ||
+        submission.speechId
+    );
+}
+
+/** Resolve plan tier from linked daily content (or submission type fallback). */
+export function getSubmissionPlanLevel(submission: SentenceSubmission): ContentPlanLevel {
+    const ref = getLinkedContentRef(submission);
+    const raw = ref?.level ? String(ref.level).toUpperCase() : '';
+    if (raw === 'BONUS') return 'GOLD';
+    if (raw === 'FREE' || raw === 'BRONZE' || raw === 'SILVER' || raw === 'GOLD') {
+        return raw;
+    }
+    return SUBMISSION_TYPE_DEFAULT_LEVEL[submission.submissionType] ?? 'FREE';
+}
+
+export function submissionMatchesTab(
+    submission: SentenceSubmission,
+    tabId: ValidationTabId
+): boolean {
+    const tab = VALIDATION_PLAN_TABS.find((t) => t.id === tabId);
+    if (!tab) return false;
+    const level = getSubmissionPlanLevel(submission);
+    return tab.planLevels.includes(level);
+}
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
     WORD: 'Word of the Day',
@@ -57,25 +78,10 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
     FEED: 'Instagram Feeds',
 };
 
-export function submissionMatchesTab(
-    submission: SentenceSubmission,
-    tabId: ValidationTabId
-): boolean {
-    const tab = VALIDATION_ACTIVITY_TABS.find((t) => t.id === tabId);
-    if (!tab) return false;
-    return tab.submissionTypes.includes(submission.submissionType);
-}
-
 export function getLinkedContentType(
     submission: SentenceSubmission
 ): string | undefined {
-    const ref =
-        submission.wordId ||
-        submission.storyId ||
-        submission.vocabSetId ||
-        submission.sceneId ||
-        submission.speechId;
-    return ref?.type;
+    return getLinkedContentRef(submission)?.type;
 }
 
 function contentLabel(submission: SentenceSubmission): string {
@@ -99,12 +105,7 @@ function contentLabel(submission: SentenceSubmission): string {
 }
 
 export function getActivityRowLabel(submission: SentenceSubmission): string {
-    const ref =
-        submission.wordId ||
-        submission.storyId ||
-        submission.vocabSetId ||
-        submission.sceneId ||
-        submission.speechId;
+    const ref = getLinkedContentRef(submission);
     const meta = ref?.metadata as Record<string, unknown> | undefined;
     const storyTitle = meta?.title ? String(meta.title).trim() : '';
     const listTitle = ref?.title?.trim() || '';
@@ -130,12 +131,7 @@ export interface ValidationContentDetailLine {
 export function getValidationContentDetails(
     submission: SentenceSubmission
 ): ValidationContentDetailLine[] {
-    const ref =
-        submission.wordId ||
-        submission.storyId ||
-        submission.vocabSetId ||
-        submission.sceneId ||
-        submission.speechId;
+    const ref = getLinkedContentRef(submission);
     const meta = (ref?.metadata || {}) as Record<string, unknown>;
     const lines: ValidationContentDetailLine[] = [];
 
@@ -235,12 +231,7 @@ export function getValidationContentDetails(
 }
 
 export function getOriginalReferenceText(submission: SentenceSubmission): string {
-    const ref =
-        submission.wordId ||
-        submission.storyId ||
-        submission.vocabSetId ||
-        submission.sceneId ||
-        submission.speechId;
+    const ref = getLinkedContentRef(submission);
     const meta = (ref?.metadata || {}) as Record<string, unknown>;
 
     if (submission.submissionType === 'sentence') {

@@ -1,7 +1,7 @@
 // src/pages/UserDashboardPage.tsx
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import UserLayout from '../components/layout/UserLayout';
 import {
     Container,
@@ -17,6 +17,7 @@ import {
     ListItemText,
     ListItemAvatar,
     Avatar,
+    alpha,
 } from '@mui/material';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
@@ -48,11 +49,13 @@ import {
     getConversationParticipants,
     normalizeDialogue,
 } from '../utils/conversationDialogueUtils';
+import { getContentDisplayNumber } from '../utils/dailyActivityUi';
 import PuzzleCard from '../components/features/PuzzleCard';
 import SceneCard from '../components/features/SceneCard';
 import SpeechCard from '../components/features/SpeechCard';
 import LyricsCard from '../components/features/LyricsCard';
 import InstagramFeedsCard from '../components/features/InstagramFeedsCard';
+import ActivityTierNavFooter from '../components/features/ActivityTierNavFooter';
 import { getTodaysDailyContent, type DailyContent } from '../services/dailyContentService';
 import { contentMatchesCatalogSlot, DAILY_CONTENT_CATALOG } from '../utils/dailyContentTypeCatalog';
 import { findTodaysGoldMedia } from '../utils/goldDailyContent';
@@ -80,8 +83,14 @@ type ActivityKind =
     | 'lyrics'
     | 'feed';
 
+type DashboardOpenActivityState = {
+    openActivity?: { kind: ActivityKind; content: DailyContent };
+};
+
 const UserDashboardPage: React.FC = () => {
     const { user, isLoading: authIsLoading, refreshUser } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
 
     const [dailyContent, setDailyContent] = useState<DailyContent[]>([]);
     const [isLoadingContent, setIsLoadingContent] = useState(true);
@@ -141,6 +150,16 @@ const UserDashboardPage: React.FC = () => {
         fetchDailyContent();
         fetchAdditionalData();
     }, [fetchDailyContent, fetchAdditionalData]);
+
+    useEffect(() => {
+        const state = location.state as DashboardOpenActivityState | null;
+        const open = state?.openActivity;
+        if (open?.content && open?.kind) {
+            setSelectedActivity(open.content);
+            setActivityKind(open.kind);
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, location.pathname, navigate]);
 
     const refreshDashboardAfterSubmission = useCallback(async () => {
         await Promise.allSettled([refreshUser(), fetchAdditionalData()]);
@@ -269,14 +288,8 @@ const UserDashboardPage: React.FC = () => {
             ),
         ];
 
-        const goldTopTiles: ActivityTileConfig[] = [
+        const goldCoreTiles: ActivityTileConfig[] = [
             tile('scene', 'Explain the Scene', 'Visual storytelling', <TheaterComedyIcon />, TIER_COLORS.GOLD, sceneContent, 'scene'),
-            tile('speech', 'Famous Speeches', 'Listen & learn', <MicIcon />, TIER_COLORS.GOLD, speechContent, 'speech'),
-        ];
-
-        const goldBottomTiles: ActivityTileConfig[] = [
-            tile('lyrics', 'Song Lyrics', 'Music & English', <MusicNoteIcon />, TIER_COLORS.GOLD, lyricsContent, 'lyrics'),
-            tile('feed', 'Instagram Feeds', 'Social English', <InstagramIcon />, TIER_COLORS.GOLD, feedContent, 'feed'),
             {
                 id: 'pro-conversations',
                 title: 'Professional Conversations',
@@ -284,8 +297,17 @@ const UserDashboardPage: React.FC = () => {
                 icon: <PeopleIcon />,
                 accentColor: TIER_COLORS.GOLD,
                 emptyToday: false,
-                onOpen: () => window.location.assign('/professional-conversations'),
+                onOpen: () =>
+                    navigate('/professional-conversations', {
+                        state: { sceneContent: sceneContent ?? null },
+                    }),
             },
+        ];
+
+        const goldBonusTiles: ActivityTileConfig[] = [
+            tile('speech', 'Famous Speeches', 'Listen & learn', <MicIcon />, TIER_COLORS.GOLD, speechContent, 'speech'),
+            tile('lyrics', 'Song Lyrics', 'Music & English', <MusicNoteIcon />, TIER_COLORS.GOLD, lyricsContent, 'lyrics'),
+            tile('feed', 'Instagram Feeds', 'Social English', <InstagramIcon />, TIER_COLORS.GOLD, feedContent, 'feed'),
         ];
 
         return {
@@ -296,10 +318,24 @@ const UserDashboardPage: React.FC = () => {
             freeTiles,
             bronzeTiles,
             silverTiles,
-            goldTopTiles,
-            goldBottomTiles,
+            goldCoreTiles,
+            goldBonusTiles,
         };
-    }, [user, wordContent, phraseContent, storyContent, vocabContent, conversationContent, puzzleSpotContent, puzzleGrammarContent, sceneContent, speechContent, lyricsContent, feedContent]);
+    }, [
+        user,
+        navigate,
+        wordContent,
+        phraseContent,
+        storyContent,
+        vocabContent,
+        conversationContent,
+        puzzleSpotContent,
+        puzzleGrammarContent,
+        sceneContent,
+        speechContent,
+        lyricsContent,
+        feedContent,
+    ]);
 
     if (authIsLoading) {
         return (
@@ -361,12 +397,22 @@ const UserDashboardPage: React.FC = () => {
                         <StoryCard
                             data={selectedActivity as never}
                             onSubmissionSuccess={refreshDashboardAfterSubmission}
+                            onNavigateToVocab={
+                                vocabContent
+                                    ? () => openLinkedActivity(vocabContent, 'vocab')
+                                    : undefined
+                            }
                         />
                     )}
                     {activityKind === 'vocab' && (
                         <VocabularySetCard
                             data={selectedActivity as never}
                             onSubmissionSuccess={refreshDashboardAfterSubmission}
+                            onNavigateToStory={
+                                storyContent
+                                    ? () => openLinkedActivity(storyContent, 'story')
+                                    : undefined
+                            }
                         />
                     )}
                     {activityKind === 'conversation' && Array.isArray(meta.dialogue) && (
@@ -375,44 +421,164 @@ const UserDashboardPage: React.FC = () => {
                                 const { participant1, participant2 } =
                                     getConversationParticipants(meta);
                                 return (
-                                    <ConversationChat
-                                        dialogue={normalizeDialogue(
-                                            meta.dialogue,
-                                            participant1,
-                                            participant2
-                                        )}
-                                        participant1={participant1}
-                                        participant2={participant2}
-                                        scenarioTitle={String(
-                                            meta.scenarioTitle || selectedActivity.title || ''
-                                        )}
-                                        scenarioTitleHi={String(meta.scenarioTitle_hi || '')}
-                                    />
+                                    <>
+                                        <ConversationChat
+                                            dialogue={normalizeDialogue(
+                                                meta.dialogue,
+                                                participant1,
+                                                participant2
+                                            )}
+                                            participant1={participant1}
+                                            participant2={participant2}
+                                            scenarioTitle={String(
+                                                meta.scenarioTitle || selectedActivity.title || ''
+                                            )}
+                                            scenarioTitleHi={String(meta.scenarioTitle_hi || '')}
+                                            displayNumber={getContentDisplayNumber(
+                                                selectedActivity.sequenceNumber
+                                            )}
+                                        />
+                                        <Paper
+                                            elevation={0}
+                                            sx={{
+                                                mt: 2,
+                                                px: { xs: 1.5, sm: 2.5 },
+                                                py: 0.5,
+                                                borderRadius: 2,
+                                                bgcolor: '#0f172a',
+                                                border: `1px solid ${alpha(TIER_COLORS.SILVER, 0.28)}`,
+                                            }}
+                                        >
+                                            <ActivityTierNavFooter
+                                                variant="dark"
+                                                accentColor={TIER_COLORS.SILVER}
+                                                left={{
+                                                    label: 'Spot the Sentence',
+                                                    onClick: puzzleSpotContent
+                                                        ? () =>
+                                                              openLinkedActivity(
+                                                                  puzzleSpotContent,
+                                                                  'puzzle_spot'
+                                                              )
+                                                        : undefined,
+                                                }}
+                                                center={{
+                                                    label: '→ Grammar Puzzle',
+                                                    onClick: puzzleGrammarContent
+                                                        ? () =>
+                                                              openLinkedActivity(
+                                                                  puzzleGrammarContent,
+                                                                  'puzzle_grammar'
+                                                              )
+                                                        : undefined,
+                                                }}
+                                            />
+                                        </Paper>
+                                    </>
                                 );
                             })()}
                         </Box>
                     )}
                     {(activityKind === 'puzzle_spot' || activityKind === 'puzzle_grammar') && (
-                        <PuzzleCard
-                            data={selectedActivity}
-                            puzzleType={
-                                activityKind === 'puzzle_grammar'
-                                    ? 'GRAMMAR_FILL_BLANK'
-                                    : 'SPOT_CORRECT_SENTENCE'
-                            }
-                            onSubmissionSuccess={refreshDashboardAfterSubmission}
-                        />
+                        <>
+                            <PuzzleCard
+                                data={selectedActivity}
+                                puzzleType={
+                                    activityKind === 'puzzle_grammar'
+                                        ? 'GRAMMAR_FILL_BLANK'
+                                        : 'SPOT_CORRECT_SENTENCE'
+                                }
+                                onSubmissionSuccess={refreshDashboardAfterSubmission}
+                                tierNav={{
+                                    accentColor: TIER_COLORS.SILVER,
+                                    left: {
+                                        label: 'Practical Conversations',
+                                        onClick: conversationContent
+                                            ? () =>
+                                                  openLinkedActivity(
+                                                      conversationContent,
+                                                      'conversation'
+                                                  )
+                                            : undefined,
+                                    },
+                                    center: {
+                                        label:
+                                            activityKind === 'puzzle_spot'
+                                                ? '→ Grammar Puzzle'
+                                                : '← Spot the Sentence',
+                                        onClick:
+                                            activityKind === 'puzzle_spot'
+                                                ? puzzleGrammarContent
+                                                    ? () =>
+                                                          openLinkedActivity(
+                                                              puzzleGrammarContent,
+                                                              'puzzle_grammar'
+                                                          )
+                                                    : undefined
+                                                : puzzleSpotContent
+                                                  ? () =>
+                                                        openLinkedActivity(
+                                                            puzzleSpotContent,
+                                                            'puzzle_spot'
+                                                        )
+                                                  : undefined,
+                                    },
+                                }}
+                            />
+                        </>
                     )}
                     {activityKind === 'scene' && (
                         <SceneCard
                             data={selectedActivity as never}
                             hasGoldAccess={canAccessGoldTierContent(user)}
                             onSubmissionSuccess={refreshDashboardAfterSubmission}
+                            onNavigateToProfessional={() =>
+                                navigate('/professional-conversations', {
+                                    state: { sceneContent: selectedActivity },
+                                })
+                            }
                         />
                     )}
-                    {activityKind === 'speech' && <SpeechCard data={selectedActivity as never} />}
-                    {activityKind === 'lyrics' && <LyricsCard data={selectedActivity as never} />}
-                    {activityKind === 'feed' && <InstagramFeedsCard data={selectedActivity as never} />}
+                    {activityKind === 'speech' && (
+                        <SpeechCard
+                            data={selectedActivity as never}
+                            onNavigateToLyrics={
+                                lyricsContent
+                                    ? () => openLinkedActivity(lyricsContent, 'lyrics')
+                                    : undefined
+                            }
+                        />
+                    )}
+                    {activityKind === 'lyrics' && (
+                        <LyricsCard
+                            data={selectedActivity as never}
+                            onNavigateToSpeech={
+                                speechContent
+                                    ? () => openLinkedActivity(speechContent, 'speech')
+                                    : undefined
+                            }
+                            onNavigateToFeed={
+                                feedContent
+                                    ? () => openLinkedActivity(feedContent, 'feed')
+                                    : undefined
+                            }
+                        />
+                    )}
+                    {activityKind === 'feed' && (
+                        <InstagramFeedsCard
+                            data={selectedActivity as never}
+                            onNavigateToSpeech={
+                                speechContent
+                                    ? () => openLinkedActivity(speechContent, 'speech')
+                                    : undefined
+                            }
+                            onNavigateToLyrics={
+                                lyricsContent
+                                    ? () => openLinkedActivity(lyricsContent, 'lyrics')
+                                    : undefined
+                            }
+                        />
+                    )}
                 </Container>
             </UserLayout>
         );
@@ -499,8 +665,8 @@ const UserDashboardPage: React.FC = () => {
                         freeTiles={activityTiles.freeTiles}
                         bronzeTiles={activityTiles.bronzeTiles}
                         silverTiles={activityTiles.silverTiles}
-                        goldTopTiles={activityTiles.goldTopTiles}
-                        goldBottomTiles={activityTiles.goldBottomTiles}
+                        goldCoreTiles={activityTiles.goldCoreTiles}
+                        goldBonusTiles={activityTiles.goldBonusTiles}
                         fullCourseHero={{
                             modulesTitle: 'Structured modules',
                             modulesSubtitle: 'Video path & certificate track',

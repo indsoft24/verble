@@ -125,53 +125,57 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                         </Box>
                     ))}
                 </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                        fullWidth
-                        label="Synonyms (comma-separated)"
-                        value={((metadata.synonyms as string[]) || []).join(', ')}
-                        onChange={(e) =>
-                            onChange(
-                                'synonyms',
-                                e.target.value
-                                    .split(',')
-                                    .map((s) => s.trim())
-                            )
-                        }
-                        helperText="Separate words with commas."
-                    />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                        fullWidth
-                        label="Antonyms (comma-separated)"
-                        value={((metadata.antonyms as string[]) || []).join(', ')}
-                        onChange={(e) =>
-                            onChange(
-                                'antonyms',
-                                e.target.value
-                                    .split(',')
-                                    .map((s) => s.trim())
-                            )
-                        }
-                    />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                        fullWidth
-                        label="Pronunciation (IPA, optional)"
-                        value={(metadata.pronunciation_ipa as string) || ''}
-                        onChange={(e) => onChange('pronunciation_ipa', e.target.value)}
-                    />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                        fullWidth
-                        label="Pronunciation (Devanagari, optional)"
-                        value={(metadata.pronunciation_devanagari as string) || ''}
-                        onChange={(e) => onChange('pronunciation_devanagari', e.target.value)}
-                    />
-                </Grid>
+                {type === 'WORD' && (
+                    <>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <TextField
+                                fullWidth
+                                label="Synonyms (comma-separated)"
+                                value={((metadata.synonyms as string[]) || []).join(', ')}
+                                onChange={(e) =>
+                                    onChange(
+                                        'synonyms',
+                                        e.target.value
+                                            .split(',')
+                                            .map((s) => s.trim())
+                                    )
+                                }
+                                helperText="Separate words with commas."
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <TextField
+                                fullWidth
+                                label="Antonyms (comma-separated)"
+                                value={((metadata.antonyms as string[]) || []).join(', ')}
+                                onChange={(e) =>
+                                    onChange(
+                                        'antonyms',
+                                        e.target.value
+                                            .split(',')
+                                            .map((s) => s.trim())
+                                    )
+                                }
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <TextField
+                                fullWidth
+                                label="Pronunciation (IPA, optional)"
+                                value={(metadata.pronunciation_ipa as string) || ''}
+                                onChange={(e) => onChange('pronunciation_ipa', e.target.value)}
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <TextField
+                                fullWidth
+                                label="Pronunciation (Devanagari, optional)"
+                                value={(metadata.pronunciation_devanagari as string) || ''}
+                                onChange={(e) => onChange('pronunciation_devanagari', e.target.value)}
+                            />
+                        </Grid>
+                    </>
+                )}
             </Grid>
         );
     }

@@ -20,11 +20,10 @@ import { keyframes } from '@emotion/react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import SendIcon from '@mui/icons-material/Send';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
+import ActivityContentHeader from './ActivityContentHeader';
 import {
     activityCardShell,
     getContentDisplayNumber,
@@ -39,12 +38,14 @@ import {
     type UserVocabSubmission,
 } from '../../services/vocabSubmissionService';
 import EvaluationStatusBanner from './EvaluationStatusBanner';
+import ActivityTierNavFooter from './ActivityTierNavFooter';
 
 
 interface VocabularySetCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
     onSubmissionSuccess?: () => void;
+    onNavigateToStory?: () => void;
 }
 
 interface VocabItem {
@@ -112,7 +113,12 @@ const ConfettiEffect: React.FC = () => {
     );
 };
 
-const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
+const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
+    data,
+    onContentChange,
+    onSubmissionSuccess,
+    onNavigateToStory,
+}) => {
     const { user } = useAuth();
     const [sentences, setSentences] = useState<SentenceData[]>([{ sentence: '', vocabWordsUsed: [] }]);
     const [selectedVocabWords, setSelectedVocabWords] = useState<{ [key: number]: Set<string> }>({});
@@ -433,20 +439,12 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
 
             <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                        <Typography variant="overline" sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2 }}>
-                            Weekly Essential Vocab
-                        </Typography>
-                        {displayNumber && (
-                            <Chip
-                                label={displayNumber}
-                                size="small"
-                                variant="outlined"
-                                sx={{ borderColor: alpha(GOLD_ACCENT, 0.6), color: GOLD_ACCENT }}
-                            />
-                        )}
-                        <Chip label={currentContent.level} size="small" variant="outlined" sx={{ color: alpha('#e2e8f0', 0.8) }} />
-                    </Box>
+                    <ActivityContentHeader
+                        contentType="VOCAB_SET"
+                        accentColor={GOLD_ACCENT}
+                        displayNumber={displayNumber}
+                        sx={{ mb: 2 }}
+                    />
 
                     <Typography
                         variant="h4"
@@ -533,26 +531,6 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                         ))}
                     </Box>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mt: 3 }}>
-                        <Button
-                            variant="text"
-                            startIcon={<ArrowBackIcon />}
-                            onClick={() => handleNavigation('prev')}
-                            disabled={!hasPrevious || isLoadingNav}
-                            sx={{ color: alpha('#e2e8f0', 0.85) }}
-                        >
-                            Previous Set
-                        </Button>
-                        <Button
-                            variant="text"
-                            endIcon={<ArrowForwardIcon />}
-                            onClick={() => handleNavigation('next')}
-                            disabled={!canGoNext || isLoadingNav}
-                            sx={{ color: alpha('#e2e8f0', 0.85) }}
-                        >
-                            Next Set
-                        </Button>
-                    </Box>
                 </CardContent>
             </Card>
 
@@ -763,6 +741,25 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({ data, onContentCh
                             )}
                         </Box>
                     )}
+                    <ActivityTierNavFooter
+                        accentColor={GOLD_ACCENT}
+                        left={{
+                            label: 'Previous Set',
+                            onClick: () => handleNavigation('prev'),
+                            disabled: !hasPrevious,
+                            loading: isLoadingNav,
+                        }}
+                        center={{
+                            label: '← One Minute Read',
+                            onClick: onNavigateToStory,
+                        }}
+                        right={{
+                            label: 'Next Set',
+                            onClick: () => handleNavigation('next'),
+                            disabled: !canGoNext,
+                            loading: isLoadingNav,
+                        }}
+                    />
                 </CardContent>
             </Card>
         </Box>

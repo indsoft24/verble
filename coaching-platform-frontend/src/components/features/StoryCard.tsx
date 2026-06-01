@@ -17,14 +17,13 @@ import { keyframes } from '@emotion/react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import SendIcon from '@mui/icons-material/Send';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getUserStorySubmission, type UserStorySubmission } from '../../services/storySubmissionService';
 import EvaluationStatusBanner from './EvaluationStatusBanner';
+import ActivityContentHeader from './ActivityContentHeader';
+import ActivityTierNavFooter from './ActivityTierNavFooter';
 import {
     activityCardShell,
     getContentDisplayNumber,
@@ -56,6 +55,7 @@ interface StoryCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
     onSubmissionSuccess?: () => void;
+    onNavigateToVocab?: () => void;
 }
 
 // Confetti animation keyframes
@@ -111,7 +111,12 @@ const ConfettiEffect: React.FC = () => {
     );
 };
 
-const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
+const StoryCard: React.FC<StoryCardProps> = ({
+    data,
+    onContentChange,
+    onSubmissionSuccess,
+    onNavigateToVocab,
+}) => {
     const { user } = useAuth();
     const [sentences, setSentences] = useState<string[]>(['', '']);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -401,20 +406,12 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
 
             <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                        <Typography variant="overline" sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2 }}>
-                            One Minute Read
-                        </Typography>
-                        {displayNumber && (
-                            <Chip
-                                label={displayNumber}
-                                size="small"
-                                variant="outlined"
-                                sx={{ borderColor: alpha(GOLD_ACCENT, 0.6), color: GOLD_ACCENT }}
-                            />
-                        )}
-                        <Chip label={currentContent.level} size="small" variant="outlined" sx={{ color: alpha('#e2e8f0', 0.8) }} />
-                    </Box>
+                    <ActivityContentHeader
+                        contentType="STORY"
+                        accentColor={GOLD_ACCENT}
+                        displayNumber={displayNumber}
+                        sx={{ mb: 2 }}
+                    />
 
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
                         <Typography
@@ -564,26 +561,6 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                         </Box>
                     )}
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mt: 3 }}>
-                        <Button
-                            variant="text"
-                            startIcon={<ArrowBackIcon />}
-                            onClick={() => handleNavigation('prev')}
-                            disabled={!hasPrevious || isLoadingNav}
-                            sx={{ color: alpha('#e2e8f0', 0.85) }}
-                        >
-                            Previous Story
-                        </Button>
-                        <Button
-                            variant="text"
-                            endIcon={<ArrowForwardIcon />}
-                            onClick={() => handleNavigation('next')}
-                            disabled={!canGoNext || isLoadingNav}
-                            sx={{ color: alpha('#e2e8f0', 0.85) }}
-                        >
-                            Next Story
-                        </Button>
-                    </Box>
                 </CardContent>
             </Card>
 
@@ -723,6 +700,25 @@ const StoryCard: React.FC<StoryCardProps> = ({ data, onContentChange, onSubmissi
                             )}
                         </Box>
                     )}
+                    <ActivityTierNavFooter
+                        accentColor={GOLD_ACCENT}
+                        left={{
+                            label: 'Previous Story',
+                            onClick: () => handleNavigation('prev'),
+                            disabled: !hasPrevious,
+                            loading: isLoadingNav,
+                        }}
+                        center={{
+                            label: '→ Essential Vocab',
+                            onClick: onNavigateToVocab,
+                        }}
+                        right={{
+                            label: 'Next Story',
+                            onClick: () => handleNavigation('next'),
+                            disabled: !canGoNext,
+                            loading: isLoadingNav,
+                        }}
+                    />
                 </CardContent>
             </Card>
         </Box>

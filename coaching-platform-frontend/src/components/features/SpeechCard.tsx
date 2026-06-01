@@ -10,7 +10,6 @@ import {
     CircularProgress,
     Alert,
     Divider,
-    Chip,
     List,
     ListItem,
     Accordion,
@@ -19,19 +18,20 @@ import {
 } from '@mui/material';
 import { keyframes } from '@emotion/react';
 import SendIcon from '@mui/icons-material/Send';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import ActivityContentHeader from './ActivityContentHeader';
+import ActivityTierNavFooter from './ActivityTierNavFooter';
 
 
 interface SpeechCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
     onSubmissionSuccess?: () => void;
+    onNavigateToLyrics?: () => void;
 }
 
 // Confetti animation keyframes
@@ -107,7 +107,12 @@ const extractYouTubeVideoId = (url: string): string | null => {
     return null;
 };
 
-const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange, onSubmissionSuccess }) => {
+const SpeechCard: React.FC<SpeechCardProps> = ({
+    data,
+    onContentChange,
+    onSubmissionSuccess,
+    onNavigateToLyrics,
+}) => {
     const { user } = useAuth();
     const [description, setDescription] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -246,12 +251,13 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange, onSubmis
             <CardContent sx={{ p: 4 }}>
                 {/* Header with Speech Number */}
                 <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <Typography variant="overline" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {speechDisplayTag ? `Famous Speech ${speechDisplayTag}` : 'Famous Speech'}
-                        </Typography>
-                        <Chip label={currentContent.level} size="small" color="primary" />
-                    </Box>
+                    <ActivityContentHeader
+                        contentType="SPEECH"
+                        accentColor="#00796b"
+                        displayNumber={speechDisplayTag}
+                        variant="light"
+                        sx={{ mb: 2 }}
+                    />
 
                     <Typography
                         variant="h4"
@@ -391,28 +397,6 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange, onSubmis
                     </Box>
                 )}
 
-                <Divider sx={{ my: 4 }} />
-
-                {/* Navigation Buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<ArrowBackIcon />}
-                        onClick={() => handleNavigation('prev')}
-                        disabled={!hasPrevious || isLoadingNav}
-                    >
-                        Previous Speech
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        endIcon={<ArrowForwardIcon />}
-                        onClick={() => handleNavigation('next')}
-                        disabled={!hasNext || isLoadingNav}
-                    >
-                        Next Speech
-                    </Button>
-                </Box>
-
                 {/* Description Submission Section */}
                 <Box>
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 1 }}>
@@ -458,6 +442,27 @@ const SpeechCard: React.FC<SpeechCardProps> = ({ data, onContentChange, onSubmis
                         )}
                     </Box>
                 </Box>
+
+                <ActivityTierNavFooter
+                    variant="light"
+                    accentColor="#ca8a04"
+                    left={{
+                        label: 'Previous Speech',
+                        onClick: () => handleNavigation('prev'),
+                        disabled: !hasPrevious,
+                        loading: isLoadingNav,
+                    }}
+                    center={{
+                        label: '→ Song Lyrics',
+                        onClick: onNavigateToLyrics,
+                    }}
+                    right={{
+                        label: 'Next Speech',
+                        onClick: () => handleNavigation('next'),
+                        disabled: !hasNext,
+                        loading: isLoadingNav,
+                    }}
+                />
             </CardContent>
         </Card>
     );

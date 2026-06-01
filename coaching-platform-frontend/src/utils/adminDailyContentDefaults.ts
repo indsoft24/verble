@@ -78,8 +78,6 @@ export function getDefaultMetadataForType(
                 meaning_hi: '',
                 audio: '',
                 examples: [],
-                synonyms: [],
-                antonyms: [],
             };
         case 'STORY':
             return {

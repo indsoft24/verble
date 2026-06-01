@@ -10,7 +10,6 @@ import {
     IconButton,
     CircularProgress,
     Alert,
-    Chip,
     Popover,
     List,
     alpha,
@@ -38,6 +37,7 @@ import {
     MAX_ACTIVITY_SENTENCES,
 } from '../../utils/dailyActivityUi';
 import { SubmissionHistoryItem } from './ActivitySubmissionHistory';
+import ActivityContentHeader from './ActivityContentHeader';
 
 interface PhraseOfTheDayCardProps {
     data: DailyContent;
@@ -283,15 +283,11 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 2 }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-                                <Typography variant="overline" sx={{ fontWeight: 800, color: GREEN_ACCENT, letterSpacing: 1.2 }}>
-                                    Phrase of the Day
-                                </Typography>
-                                {displayNumber && (
-                                    <Chip label={displayNumber} size="small" variant="outlined" sx={{ borderColor: alpha(GREEN_ACCENT, 0.6), color: GREEN_ACCENT }} />
-                                )}
-                                <Chip label={currentContent.level} size="small" variant="outlined" sx={{ color: alpha('#e2e8f0', 0.8) }} />
-                            </Box>
+                            <ActivityContentHeader
+                                contentType="PHRASE"
+                                accentColor={GREEN_ACCENT}
+                                displayNumber={displayNumber}
+                            />
                             <Typography
                                 variant="h3"
                                 sx={{
@@ -305,11 +301,6 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
                             >
                                 {phraseText}
                             </Typography>
-                            {meta.pronunciation_devanagari && (
-                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7), mt: 1 }}>
-                                    {meta.pronunciation_devanagari}
-                                </Typography>
-                            )}
                         </Box>
                         <IconButton
                             onClick={() => playText(phraseText, 'phrase-main', meta.audio)}
