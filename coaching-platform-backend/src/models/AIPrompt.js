@@ -17,6 +17,11 @@ const aiPromptSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Title is required'],
         trim: true,
+        index: true,
+    },
+    excerpt: {
+        type: String,
+        trim: true,
     },
     prompt: {
         type: String,
@@ -24,6 +29,10 @@ const aiPromptSchema = new mongoose.Schema({
         trim: true,
     },
     description: {
+        type: String,
+        trim: true,
+    },
+    content: {
         type: String,
         trim: true,
     },
@@ -59,6 +68,8 @@ const aiPromptSchema = new mongoose.Schema({
 aiPromptSchema.index({ topic: 1, isActive: 1 });
 aiPromptSchema.index({ category: 1, isActive: 1 });
 aiPromptSchema.index({ level: 1, isActive: 1 });
+aiPromptSchema.index({ tags: 1, isActive: 1 });
+aiPromptSchema.index({ title: 'text', excerpt: 'text', description: 'text', content: 'text', prompt: 'text' });
 
 const AIPrompt = mongoose.model('AIPrompt', aiPromptSchema);
 

@@ -39,7 +39,7 @@ const AIPromptsSection: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const data = await getAllAIPrompts('GOLD'); // Gold level prompts
+            const data = await getAllAIPrompts();
             setTopics(data.topics);
             setPromptsByTopic(data.promptsByTopic);
             // Expand first topic by default

@@ -29,9 +29,11 @@ import {
     Subscriptions as SubscriptionsIcon,
     HelpOutline as HelpOutlineIcon,
     EmojiEvents as EmojiEventsIcon,
+    AutoAwesome as AutoAwesomeIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { learnerBrandTheme } from './learnerBrandTheme';
+import { canAccessGoldTierContent } from '../../utils/userAccessState';
 
 const DRAWER_WIDTH = 280;
 const DRAWER_WIDTH_COLLAPSED = 64;
@@ -53,6 +55,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user, logout } = useAuth();
+    const showAIPrompts = Boolean(user && canAccessGoldTierContent(user));
 
     const menuItems: MenuItem[] = [
         {
@@ -85,6 +88,15 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
             path: '/my-rewards',
             icon: <EmojiEventsIcon />,
         },
+        ...(showAIPrompts
+            ? [
+                  {
+                      title: 'AI Prompt Guides',
+                      path: '/ai-prompts',
+                      icon: <AutoAwesomeIcon />,
+                  } satisfies MenuItem,
+              ]
+            : []),
         {
             title: 'Profile Settings',
             path: '/profile',

@@ -46,6 +46,7 @@ const ModuleVideosPage = lazy(() => import('./pages/ModuleVideosPage'));
 const ExamCategoryCoursesPage = lazy(() => import('./pages/ExamCategoryCoursesPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const ProfessionalConversationsPage = lazy(() => import('./pages/ProfessionalConversationsPage'));
+const AIPromptsPage = lazy(() => import('./pages/AIPromptsPage'));
 
 // Blog Pages
 const BlogListPage = lazy(() => import('./pages/BlogListPage'));
@@ -78,6 +79,7 @@ const AdminQuizValidationPage = lazy(() => import('./pages/AdminQuizValidationPa
 const AdminRewardsScoringPage = lazy(() => import('./pages/AdminRewardsScoringPage'));
 const AdminUserScoringDetailPage = lazy(() => import('./pages/AdminUserScoringDetailPage'));
 const MyRewardsPage = lazy(() => import('./pages/MyRewardsPage'));
+const AdminAIPromptsPage = lazy(() => import('./pages/AdminAIPromptsPage'));
 
 // Static Pages (Low priority - lazy load)
 const ContactUsPage = lazy(() => import('./pages/static/ContactUsPage'));
@@ -185,6 +187,7 @@ function AppContent() {
                             <Route path="/notifications" element={<NotificationsPage />} />
                             <Route path="/my-rewards" element={<MyRewardsPage />} />
                             <Route path="/professional-conversations" element={<ProfessionalConversationsPage />} />
+                            <Route path="/ai-prompts" element={<AIPromptsPage />} />
                             <Route path="/modules/:moduleId/videos" element={<ModuleVideosPage />} />
                             <Route path="/modules/:moduleId/quiz" element={<ModuleQuizPage />} />
                         </Route>
@@ -215,6 +218,7 @@ function AppContent() {
                             <Route path='/admin/promo-banner' element={<AdminPromoBannerPage />} />
                             <Route path='/admin/certification-management' element={<AdminCertificationManagementPage />} />
                             <Route path='/admin/module-quizzes' element={<AdminModuleQuizzesPage />} />
+                            <Route path='/admin/ai-prompts' element={<AdminAIPromptsPage />} />
                             <Route path='/admin/learning-settings' element={<AdminLearningSettingsPage />} />
                             <Route path='/admin/quiz-validation' element={<AdminQuizValidationPage />} />
                         </Route>

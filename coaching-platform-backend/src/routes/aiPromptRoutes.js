@@ -2,7 +2,9 @@
 import express from 'express';
 import {
     getAllPrompts,
+    getAllPromptsAdmin,
     getTopics,
+    getPromptById,
     incrementUsage,
     createPrompt,
     updatePrompt,
@@ -15,6 +17,8 @@ const router = express.Router();
 // Public routes (for logged-in users)
 router.get('/', protect, getAllPrompts);
 router.get('/topics', protect, getTopics);
+router.get('/admin/list', protect, restrictTo('admin'), getAllPromptsAdmin);
+router.get('/:id', protect, getPromptById);
 router.post('/:id/increment-usage', protect, incrementUsage);
 
 // Admin routes
