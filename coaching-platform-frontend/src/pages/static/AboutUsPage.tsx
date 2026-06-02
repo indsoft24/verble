@@ -138,7 +138,10 @@ const AboutUsPage: React.FC = () => {
     return (
         <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', overflow: 'hidden' }}>
             {/* Hero — two columns + stock image (landing style) */}
-            <LandingSection bgcolor={theme.palette.mode === 'dark' ? '#020617' : '#FFFFFF'}>
+            <LandingSection
+                bgcolor={theme.palette.mode === 'dark' ? '#020617' : '#FFFFFF'}
+                sx={{ py: { xs: 5, md: 6.5 } }}
+            >
                 <LandingContainer>
                     <Reveal>
                         <Grid container spacing={{ xs: 4, md: 6 }} alignItems="center">
@@ -216,7 +219,10 @@ const AboutUsPage: React.FC = () => {
             </LandingSection>
 
             {/* What is Verble + Mission */}
-            <LandingSection bgcolor={theme.palette.mode === 'dark' ? '#0F172A' : '#F9FAFB'}>
+            <LandingSection
+                bgcolor={theme.palette.mode === 'dark' ? '#0F172A' : '#F9FAFB'}
+                sx={{ py: { xs: 4.5, md: 6 } }}
+            >
                 <LandingContainer>
                     <Grid container spacing={CARD_GAP} alignItems="stretch">
                         <Grid size={{ xs: 12, md: 6 }}>
@@ -304,7 +310,10 @@ const AboutUsPage: React.FC = () => {
             </LandingSection>
 
             {/* Core Content */}
-            <LandingSection bgcolor={theme.palette.mode === 'dark' ? '#020617' : '#FFFFFF'}>
+            <LandingSection
+                bgcolor={theme.palette.mode === 'dark' ? '#020617' : '#FFFFFF'}
+                sx={{ py: { xs: 4.5, md: 6 } }}
+            >
                 <LandingContainer>
                     <Reveal>
                         <Box sx={{ textAlign: 'center', mb: { xs: SPACING.xl, md: SPACING.xxl } }}>
@@ -342,7 +351,7 @@ const AboutUsPage: React.FC = () => {
             <Box
                 sx={{
                     position: 'relative',
-                    py: { xs: 6, md: 8 },
+                    py: { xs: 4.5, md: 6 },
                     px: { xs: 2, sm: 2, md: 3 },
                     overflow: 'hidden',
                 }}
@@ -394,7 +403,10 @@ const AboutUsPage: React.FC = () => {
             </Box>
 
             {/* Why Verble Works */}
-            <LandingSection bgcolor={theme.palette.mode === 'dark' ? '#0F172A' : '#F9FAFB'}>
+            <LandingSection
+                bgcolor={theme.palette.mode === 'dark' ? '#0F172A' : '#F9FAFB'}
+                sx={{ py: { xs: 4.5, md: 6 } }}
+            >
                 <LandingContainer>
                     <Box sx={{ textAlign: 'center', mb: 4 }}>
                         <StarIcon sx={{ fontSize: 44, color: '#FACC15', mb: 1.5 }} />
@@ -437,7 +449,10 @@ const AboutUsPage: React.FC = () => {
             </LandingSection>
 
             {/* CTA */}
-            <LandingSection bgcolor={theme.palette.mode === 'dark' ? '#020617' : '#FFFFFF'}>
+            <LandingSection
+                bgcolor={theme.palette.mode === 'dark' ? '#020617' : '#FFFFFF'}
+                sx={{ py: { xs: 4.5, md: 6 } }}
+            >
                 <LandingContainer>
                     <Paper
                         elevation={0}

@@ -15,12 +15,16 @@ import {
     Button,
     Divider,
     Link as MuiLink,
+    Stack,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import SchoolIcon from '@mui/icons-material/School';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import DocumentHead from '../components/seo/DocumentHead';
-import UserLayout from '../components/layout/UserLayout';
 import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
 
 const HELP_SECTIONS = [
@@ -80,13 +84,20 @@ const HelpPage: React.FC = () => {
     const canonicalUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/help`;
 
     return (
-        <UserLayout title="Help Center">
+        <>
             <DocumentHead
                 title="Help Center | Verble - English Speaking & Learning Support"
                 description="Find answers about Verble: get started, use your dashboard, manage your account, access courses, and get support for English speaking practice and online learning."
                 canonicalUrl={canonicalUrl}
             />
-            <Container maxWidth="lg" component="main" sx={{ py: { xs: 3, md: 5 } }}>
+            <Box
+                sx={{
+                    background: `linear-gradient(180deg, ${alpha(learnerBrandTheme.accent, 0.08)} 0%, ${alpha('#ffffff', 0.95)} 35%)`,
+                    minHeight: 'calc(100vh - 120px)',
+                    py: { xs: 3, md: 5 },
+                }}
+            >
+            <Container maxWidth="lg" component="main">
                 <Box sx={{ textAlign: 'center', mb: 4 }} component="header">
                     <HelpOutlineIcon sx={{ fontSize: 60, color: learnerBrandTheme.accent, mb: 2 }} aria-hidden />
                     <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
@@ -96,6 +107,38 @@ const HelpPage: React.FC = () => {
                         Find answers to common questions and learn how to use our platform
                     </Typography>
                 </Box>
+                <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    spacing={1.2}
+                    sx={{ mb: 3 }}
+                >
+                    {[
+                        { icon: <SchoolIcon fontSize="small" />, title: 'Learning help', text: 'Courses, dashboard, quizzes' },
+                        { icon: <WorkspacePremiumIcon fontSize="small" />, title: 'Subscription help', text: 'Plans, billing, access' },
+                        { icon: <ChatBubbleOutlineIcon fontSize="small" />, title: 'Quick support', text: 'Contact us anytime' },
+                    ].map((item) => (
+                        <Card
+                            key={item.title}
+                            variant="outlined"
+                            sx={{
+                                flex: 1,
+                                borderRadius: 2,
+                                borderColor: alpha(learnerBrandTheme.border, 0.9),
+                                boxShadow: `0 8px 20px ${alpha('#0f172a', 0.05)}`,
+                            }}
+                        >
+                            <CardContent sx={{ py: 1.6 }}>
+                                <Stack direction="row" spacing={1.2} alignItems="center">
+                                    <Box sx={{ color: learnerBrandTheme.accent, display: 'flex' }}>{item.icon}</Box>
+                                    <Box>
+                                        <Typography variant="subtitle2" fontWeight={700}>{item.title}</Typography>
+                                        <Typography variant="caption" sx={{ color: learnerBrandTheme.textSecondary }}>{item.text}</Typography>
+                                    </Box>
+                                </Stack>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </Stack>
 
                 <Box sx={{ mb: 4 }}>
                     <TextField
@@ -140,7 +183,14 @@ const HelpPage: React.FC = () => {
                                 key={section.id}
                                 expanded={expandedArticle === section.id}
                                 onChange={(_e, isExpanded) => setExpandedArticle(isExpanded ? section.id : false)}
-                                sx={{ mb: 2, border: `1px solid ${learnerBrandTheme.border}` }}
+                                sx={{
+                                    mb: 1.5,
+                                    border: `1px solid ${alpha(learnerBrandTheme.border, 0.95)}`,
+                                    borderRadius: '12px !important',
+                                    overflow: 'hidden',
+                                    '&:before': { display: 'none' },
+                                    boxShadow: `0 6px 14px ${alpha('#0f172a', 0.04)}`,
+                                }}
                             >
                                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                     <Typography sx={{ fontWeight: 'bold' }} component="h3" variant="subtitle1">
@@ -168,7 +218,7 @@ const HelpPage: React.FC = () => {
                                 </AccordionDetails>
                             </Accordion>
                         ))}
-                        <Card variant="outlined" sx={{ mt: 4, p: 2 }}>
+                        <Card variant="outlined" sx={{ mt: 4, p: 2, borderRadius: 2 }}>
                             <CardContent sx={{ textAlign: 'center' }}>
                                 <Typography variant="body2" sx={{ color: learnerBrandTheme.textSecondary }} gutterBottom>
                                     Can&apos;t find what you need?
@@ -181,7 +231,8 @@ const HelpPage: React.FC = () => {
                     </Box>
                 )}
             </Container>
-        </UserLayout>
+            </Box>
+        </>
     );
 };
 

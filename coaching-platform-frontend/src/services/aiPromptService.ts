@@ -6,6 +6,9 @@ export interface AIPrompt {
     topic: string;
     title: string;
     excerpt?: string;
+    contentHtml?: string;
+    isRichContent?: boolean;
+    isLegacy?: boolean;
     prompt: string;
     content?: string;
     description?: string;
@@ -62,9 +65,8 @@ export interface SinglePromptResponse {
 export interface AIPromptInput {
     topic: string;
     title: string;
-    prompt: string;
+    contentHtml: string;
     excerpt?: string;
-    content?: string;
     description?: string;
     tags?: string[];
     category?: string;

@@ -23,9 +23,17 @@ const aiPromptSchema = new mongoose.Schema({
         type: String,
         trim: true,
     },
+    contentHtml: {
+        type: String,
+        trim: true,
+    },
+    isRichContent: {
+        type: Boolean,
+        default: false,
+        index: true,
+    },
     prompt: {
         type: String,
-        required: [true, 'Prompt text is required'],
         trim: true,
     },
     description: {
@@ -69,7 +77,14 @@ aiPromptSchema.index({ topic: 1, isActive: 1 });
 aiPromptSchema.index({ category: 1, isActive: 1 });
 aiPromptSchema.index({ level: 1, isActive: 1 });
 aiPromptSchema.index({ tags: 1, isActive: 1 });
-aiPromptSchema.index({ title: 'text', excerpt: 'text', description: 'text', content: 'text', prompt: 'text' });
+aiPromptSchema.index({
+    title: 'text',
+    excerpt: 'text',
+    description: 'text',
+    content: 'text',
+    prompt: 'text',
+    contentHtml: 'text',
+});
 
 const AIPrompt = mongoose.model('AIPrompt', aiPromptSchema);
 

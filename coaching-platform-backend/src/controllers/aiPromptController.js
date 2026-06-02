@@ -13,6 +13,9 @@ const normalizePromptDoc = (prompt) => ({
     _id: prompt._id,
     title: prompt.title,
     excerpt: prompt.excerpt || '',
+    contentHtml: prompt.contentHtml || '',
+    isRichContent: Boolean(prompt.isRichContent),
+    isLegacy: !prompt.isRichContent || !prompt.contentHtml,
     prompt: prompt.prompt,
     content: prompt.content || '',
     description: prompt.description,
@@ -88,6 +91,8 @@ export const getAllPrompts = asyncHandler(async (req, res) => {
     const query = {
         isActive: true,
         level: { $in: ['GOLD'] },
+        isRichContent: true,
+        contentHtml: { $exists: true, $ne: '' },
     };
 
     if (typeof topic === 'string' && topic.trim()) {
@@ -106,6 +111,7 @@ export const getAllPrompts = asyncHandler(async (req, res) => {
             { excerpt: { $regex: term, $options: 'i' } },
             { description: { $regex: term, $options: 'i' } },
             { content: { $regex: term, $options: 'i' } },
+            { contentHtml: { $regex: term, $options: 'i' } },
             { prompt: { $regex: term, $options: 'i' } },
             { tags: { $elemMatch: { $regex: term, $options: 'i' } } },
             { topic: { $regex: term, $options: 'i' } },
@@ -192,6 +198,7 @@ export const getAllPromptsAdmin = asyncHandler(async (req, res) => {
             { excerpt: { $regex: term, $options: 'i' } },
             { description: { $regex: term, $options: 'i' } },
             { content: { $regex: term, $options: 'i' } },
+            { contentHtml: { $regex: term, $options: 'i' } },
             { prompt: { $regex: term, $options: 'i' } },
             { tags: { $elemMatch: { $regex: term, $options: 'i' } } },
         ];
@@ -226,6 +233,8 @@ export const getTopics = asyncHandler(async (req, res) => {
     const baseMatch = {
         isActive: true,
         level: { $in: ['GOLD'] },
+        isRichContent: true,
+        contentHtml: { $exists: true, $ne: '' },
     };
     const [topicsAgg, tagsAgg, categories] = await Promise.all([
         AIPrompt.aggregate([
@@ -271,7 +280,13 @@ export const getTopics = asyncHandler(async (req, res) => {
  */
 export const getPromptById = asyncHandler(async (req, res) => {
     ensureGoldAccess(req);
-    const prompt = await AIPrompt.findOne({ _id: req.params.id, isActive: true, level: 'GOLD' });
+    const prompt = await AIPrompt.findOne({
+        _id: req.params.id,
+        isActive: true,
+        level: 'GOLD',
+        isRichContent: true,
+        contentHtml: { $exists: true, $ne: '' },
+    });
     if (!prompt) {
         res.status(404);
         throw new Error('Prompt not found');
@@ -293,7 +308,13 @@ export const incrementUsage = asyncHandler(async (req, res) => {
     ensureGoldAccess(req);
     const { id } = req.params;
 
-    const prompt = await AIPrompt.findOne({ _id: id, isActive: true, level: 'GOLD' });
+    const prompt = await AIPrompt.findOne({
+        _id: id,
+        isActive: true,
+        level: 'GOLD',
+        isRichContent: true,
+        contentHtml: { $exists: true, $ne: '' },
+    });
     if (!prompt) {
         res.status(404);
         throw new Error('Prompt not found');
@@ -316,23 +337,26 @@ export const incrementUsage = asyncHandler(async (req, res) => {
  * @access  Private (Admin only)
  */
 export const createPrompt = asyncHandler(async (req, res) => {
-    const { topic, category, title, prompt, description, excerpt, content, tags, level } = req.body;
+    const { topic, category, title, contentHtml, description, excerpt, tags, level, isActive } = req.body;
 
-    if (!topic || !title || !prompt) {
+    if (!topic || !title || !contentHtml?.trim()) {
         res.status(400);
-        throw new Error('Topic, title, and prompt are required');
+        throw new Error('Topic, title, and rich content are required');
     }
 
     const newPrompt = await AIPrompt.create({
         topic,
         category,
         title,
-        prompt,
+        contentHtml,
+        isRichContent: true,
+        prompt: '',
         description,
         excerpt,
-        content,
+        content: '',
         tags: tags || [],
         level: level || 'GOLD',
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
         createdBy: req.user._id,
     });
 
@@ -351,7 +375,7 @@ export const createPrompt = asyncHandler(async (req, res) => {
  */
 export const updatePrompt = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { topic, category, title, prompt, description, excerpt, content, tags, level, isActive } = req.body;
+    const { topic, category, title, contentHtml, description, excerpt, tags, level, isActive } = req.body;
 
     const existingPrompt = await AIPrompt.findById(id);
     if (!existingPrompt) {
@@ -362,10 +386,18 @@ export const updatePrompt = asyncHandler(async (req, res) => {
     if (topic) existingPrompt.topic = topic;
     if (category !== undefined) existingPrompt.category = category;
     if (title) existingPrompt.title = title;
-    if (prompt) existingPrompt.prompt = prompt;
+    if (contentHtml !== undefined) {
+        if (!String(contentHtml).trim()) {
+            res.status(400);
+            throw new Error('Rich content cannot be empty');
+        }
+        existingPrompt.contentHtml = contentHtml;
+        existingPrompt.isRichContent = true;
+        existingPrompt.prompt = '';
+        existingPrompt.content = '';
+    }
     if (description !== undefined) existingPrompt.description = description;
     if (excerpt !== undefined) existingPrompt.excerpt = excerpt;
-    if (content !== undefined) existingPrompt.content = content;
     if (tags) existingPrompt.tags = tags;
     if (level) existingPrompt.level = level;
     if (isActive !== undefined) existingPrompt.isActive = isActive;

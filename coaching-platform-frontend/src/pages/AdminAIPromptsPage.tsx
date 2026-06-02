@@ -34,13 +34,13 @@ import {
     type AIPromptInput,
     updateAIPrompt,
 } from '../services/aiPromptService';
+import TiptapEditor from '../components/features/blog/TiptapEditor';
 
 const EMPTY_FORM: AIPromptInput = {
     topic: '',
     title: '',
-    prompt: '',
+    contentHtml: '',
     excerpt: '',
-    content: '',
     description: '',
     category: '',
     tags: [],
@@ -58,6 +58,7 @@ const AdminAIPromptsPage: React.FC = () => {
     const [openForm, setOpenForm] = useState(false);
     const [editing, setEditing] = useState<AIPrompt | null>(null);
     const [form, setForm] = useState<AIPromptInput>(EMPTY_FORM);
+    const [attachmentToInsert, setAttachmentToInsert] = useState<{ id: string; label: string } | null>(null);
 
     const fetchPrompts = useCallback(async () => {
         setLoading(true);
@@ -90,9 +91,8 @@ const AdminAIPromptsPage: React.FC = () => {
         setForm({
             topic: prompt.topic || '',
             title: prompt.title || '',
-            prompt: prompt.prompt || '',
+            contentHtml: prompt.contentHtml || '',
             excerpt: prompt.excerpt || '',
-            content: prompt.content || '',
             description: prompt.description || '',
             category: prompt.category || '',
             tags: prompt.tags || [],
@@ -103,8 +103,8 @@ const AdminAIPromptsPage: React.FC = () => {
     };
 
     const handleSave = async () => {
-        if (!form.topic?.trim() || !form.title?.trim() || !form.prompt?.trim()) {
-            setError('Topic, title, and prompt are required.');
+        if (!form.topic?.trim() || !form.title?.trim() || !form.contentHtml?.trim()) {
+            setError('Topic, title, and rich content are required.');
             return;
         }
         setSaving(true);
@@ -115,7 +115,7 @@ const AdminAIPromptsPage: React.FC = () => {
                 ...form,
                 topic: form.topic.trim(),
                 title: form.title.trim(),
-                prompt: form.prompt.trim(),
+                contentHtml: form.contentHtml,
                 tags: (form.tags || []).map((t) => t.trim()).filter(Boolean),
                 level: 'GOLD',
             };
@@ -210,6 +210,9 @@ const AdminAIPromptsPage: React.FC = () => {
                                                 {(prompt.tags || []).map((tag) => (
                                                     <Chip key={`${prompt._id}-${tag}`} size="small" label={tag} />
                                                 ))}
+                                                {prompt.isLegacy && (
+                                                    <Chip size="small" color="warning" label="Legacy (hidden for learners)" />
+                                                )}
                                                 <Chip
                                                     size="small"
                                                     color={prompt.isActive ? 'success' : 'default'}
@@ -269,23 +272,24 @@ const AdminAIPromptsPage: React.FC = () => {
                                 multiline
                                 minRows={2}
                             />
-                            <TextField
-                                label="Guide content (blog-style explanation)"
-                                value={form.content || ''}
-                                onChange={(e) => setForm((prev) => ({ ...prev, content: e.target.value }))}
-                                fullWidth
-                                multiline
-                                minRows={6}
-                            />
-                            <TextField
-                                label="Copyable prompt"
-                                value={form.prompt}
-                                onChange={(e) => setForm((prev) => ({ ...prev, prompt: e.target.value }))}
-                                required
-                                fullWidth
-                                multiline
-                                minRows={4}
-                            />
+                            <Box>
+                                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                    Rich content article (single field)
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+                                    Write instructions + code/prompt blocks + images in one editor. Learner page will show copy buttons for code blocks.
+                                </Typography>
+                                <TiptapEditor
+                                    content={form.contentHtml || ''}
+                                    onChange={(newContent) => setForm((prev) => ({ ...prev, contentHtml: newContent }))}
+                                    onAddGatedFileClick={() => {
+                                        // AI prompts do not use gated-download attachments.
+                                        setAttachmentToInsert(null);
+                                    }}
+                                    attachmentToInsert={attachmentToInsert}
+                                    onAttachmentInserted={() => setAttachmentToInsert(null)}
+                                />
+                            </Box>
                             <TextField
                                 label="Description"
                                 value={form.description || ''}

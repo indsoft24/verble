@@ -1,22 +1,25 @@
 // src/pages/static/ContactUsPage.tsx
 import React, { useState } from 'react';
 import {
-    Container, Box, Typography, Grid, Paper, TextField, Button, CircularProgress, Alert
+    Container, Box, Typography, Grid, Paper, TextField, Button, CircularProgress, Alert, Stack, Chip
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import PhoneIcon from '@mui/icons-material/Phone';
 import EmailIcon from '@mui/icons-material/Email';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import SendIcon from '@mui/icons-material/Send';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 
 // A reusable component for contact information items
 const ContactInfoItem = ({ icon, title, text, href }: { icon: React.ReactNode, title: string, text: string, href?: string }) => (
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3 }}>
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2.5 }}>
         <Box sx={{
             mr: 2,
-            p: 1.5,
-            bgcolor: 'primary.main',
-            color: 'primary.contrastText',
-            borderRadius: '50%',
+            p: 1.2,
+            bgcolor: alpha('#2563EB', 0.12),
+            color: 'primary.main',
+            borderRadius: 2,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -30,7 +33,7 @@ const ContactInfoItem = ({ icon, title, text, href }: { icon: React.ReactNode, t
                 color="text.secondary"
                 component={href ? 'a' : 'p'}
                 href={href}
-                sx={{ textDecoration: 'none', color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                sx={{ textDecoration: 'none', color: 'text.secondary', '&:hover': { color: 'primary.main' }, lineHeight: 1.6 }}
             >
                 {text}
             </Typography>
@@ -80,21 +83,34 @@ const ContactUsPage: React.FC = () => {
     };
 
     return (
-        <Box sx={{ bgcolor: 'grey.50', py: { xs: 4, md: 8 } }}>
+        <Box sx={{ bgcolor: '#F7FAFF', py: { xs: 4, md: 7 } }}>
             <Container maxWidth="lg">
                 {/* --- HEADER --- */}
                 <Box sx={{ textAlign: 'center', mb: { xs: 4, md: 6 } }}>
-                    <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
                         Get in Touch
                     </Typography>
-                    <Typography variant="h6" color="text.secondary" sx={{ mt: 1, maxWidth: '600px', mx: 'auto' }}>
+                    <Typography variant="h6" color="text.secondary" sx={{ maxWidth: '650px', mx: 'auto', lineHeight: 1.55 }}>
                         We're here to help and answer any question you might have. We look forward to hearing from you.
                     </Typography>
+                    <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ mt: 2, rowGap: 1 }}>
+                        <Chip icon={<ChatBubbleOutlineIcon />} label="Fast support" size="small" />
+                        <Chip icon={<AccessTimeIcon />} label="Response within 24 hours" size="small" />
+                    </Stack>
                 </Box>
 
-                <Grid container spacing={5}>
-                    <Grid sx={{width: {xs: '100%', sm: '50%', md: '32%'}}} >
-                        <Paper elevation={0} sx={{ p: 4, bgcolor: 'transparent' }}>
+                <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, md: 4 }} >
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: { xs: 2.5, md: 3 },
+                                borderRadius: 3,
+                                border: '1px solid #E2E8F0',
+                                bgcolor: '#FFFFFF',
+                                boxShadow: '0 10px 28px rgba(15,23,42,0.06)',
+                            }}
+                        >
                             <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', mb: 3 }}>
                                 Contact Information
                             </Typography>
@@ -115,10 +131,24 @@ const ContactUsPage: React.FC = () => {
                                 text="+91 (123) 456-7890"
                                 href="tel:+911234567890"
                             />
+                            <ContactInfoItem
+                                icon={<AccessTimeIcon />}
+                                title="Support Hours"
+                                text="Mon - Sat, 9:00 AM to 7:00 PM"
+                            />
                         </Paper>
                         
                         {/* --- Embedded Map --- */}
-                        <Box sx={{ mt: 4, borderRadius: '12px', overflow: 'hidden', height: { xs: 250, md: 300 } }}>
+                        <Box
+                            sx={{
+                                mt: 2,
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                height: { xs: 230, md: 270 },
+                                border: '1px solid #E2E8F0',
+                                boxShadow: '0 8px 22px rgba(15,23,42,0.06)',
+                            }}
+                        >
                            <iframe
                                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d448196.526320295!2d76.81307299667618!3d28.64368463321354!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd5b347eb62d%3A0x52c2b7494e204dce!2sNew%20Delhi%2C%20Delhi!5e0!3m2!1sen!2sin!4v1718526563177!5m2!1sen!2sin"
                                 width="100%"
@@ -132,31 +162,43 @@ const ContactUsPage: React.FC = () => {
                     </Grid>
 
                     {/* --- Right Column: Contact Form --- */}
-                    <Grid sx={{width: {xs: '100%', md: '64%'}}}>
-                        <Paper elevation={3} sx={{ p: { xs: 2.5, sm: 4 }, borderRadius: '12px' }}>
+                    <Grid size={{ xs: 12, md: 8 }}>
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: { xs: 2.5, sm: 4 },
+                                borderRadius: '14px',
+                                border: '1px solid #E2E8F0',
+                                bgcolor: '#FFFFFF',
+                                boxShadow: '0 14px 30px rgba(15,23,42,0.07)',
+                            }}
+                        >
                             <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', mb: 3 }}>
                                 Send us a Message
                             </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+                                Fill in the form and our team will connect with you soon.
+                            </Typography>
                             <Box component="form" onSubmit={handleSubmit} noValidate>
                                 <Grid container spacing={2}>
-                                    <Grid sx={{width: {xs: '100%'}}} >
-                                        <TextField name="name" label="Your Name" required fullWidth disabled={isSubmitting} />
+                                    <Grid size={{ xs: 12, sm: 6 }} >
+                                        <TextField name="name" label="Your Name" required fullWidth disabled={isSubmitting} size="small" />
                                     </Grid>
-                                    <Grid sx={{width: {xs: '100%'}}}>
-                                        <TextField name="email" label="Your Email" type="email" required fullWidth disabled={isSubmitting} />
+                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                        <TextField name="email" label="Your Email" type="email" required fullWidth disabled={isSubmitting} size="small" />
                                     </Grid>
-                                    <Grid sx={{width: {xs: '100%'}}}>
-                                        <TextField name="subject" label="Subject" required fullWidth disabled={isSubmitting} />
+                                    <Grid size={{ xs: 12 }}>
+                                        <TextField name="subject" label="Subject" required fullWidth disabled={isSubmitting} size="small" />
                                     </Grid>
-                                    <Grid sx={{width: {xs: '100%'}}}>
+                                    <Grid size={{ xs: 12 }}>
                                         <TextField name="message" label="Your Message" required multiline rows={6} fullWidth disabled={isSubmitting} />
                                     </Grid>
                                     {formStatus && (
-                                        <Grid sx={{width: {xs: '100%'}}}>
+                                        <Grid size={{ xs: 12 }}>
                                             <Alert severity={formStatus.type} sx={{ mt: 1 }}>{formStatus.message}</Alert>
                                         </Grid>
                                     )}
-                                    <Grid sx={{width: {xs: '100%'}}}>
+                                    <Grid size={{ xs: 12 }}>
                                         <Button
                                             type="submit"
                                             variant="contained"
@@ -164,7 +206,13 @@ const ContactUsPage: React.FC = () => {
                                             fullWidth
                                             disabled={isSubmitting}
                                             startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-                                            sx={{ py: 1.5 }}
+                                            sx={{
+                                                py: 1.4,
+                                                borderRadius: 2,
+                                                fontWeight: 700,
+                                                textTransform: 'none',
+                                                boxShadow: '0 8px 20px rgba(37,99,235,0.28)',
+                                            }}
                                         >
                                             {isSubmitting ? 'Sending...' : 'Send Message'}
                                         </Button>

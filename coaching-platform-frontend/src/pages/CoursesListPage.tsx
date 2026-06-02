@@ -17,6 +17,7 @@ import {
     Stack,
     Typography
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LockIcon from '@mui/icons-material/Lock';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
@@ -64,18 +65,28 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isAuthenticated, handle
         course.image && course.image.trim() !== '' ? getImageUrl(course.image, 'course') : getSplashImageUrl();
     const showFadeIn = courseImageUrl !== getSplashImageUrl();
 
+    const cleanDescription = course.description
+        ? course.description.replace(/<[^>]+>/g, '').trim() || 'Explore this course to unlock your potential.'
+        : 'Explore this course to unlock your potential.';
+    const examCategoryLabel =
+        typeof course.examCategory === 'object' && course.examCategory
+            ? course.examCategory.name
+            : typeof course.examCategory === 'string'
+              ? course.examCategory
+              : '';
+
     return (
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+        <Grid size={{ xs: 12 }}>
             <Card
                 sx={{
                     height: '100%',
-                    borderRadius: 4,
+                    borderRadius: 3,
                     border: '1px solid #E5E7EB',
-                    boxShadow: '0 1px 2px rgba(15,23,42,0.06)',
+                    boxShadow: '0 2px 6px rgba(15,23,42,0.06)',
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                        boxShadow: '0 10px 24px rgba(15,23,42,0.1)',
-                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 28px rgba(15,23,42,0.11)',
+                        transform: 'translateY(-3px)',
                     },
                 }}
             >
@@ -83,9 +94,24 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isAuthenticated, handle
                     component={RouterLink}
                     to={`/courses/${courseId}`}
                     onClick={(event) => handleCardClick(event, courseId)}
-                    sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
+                    sx={{
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: { xs: 'column', md: 'row' },
+                        alignItems: 'stretch',
+                    }}
                 >
-                    <Box sx={{ width: '100%', height: { xs: 192, md: 184 }, overflow: 'hidden', bgcolor: '#F3F4F6', position: 'relative' }}>
+                    <Box
+                        sx={{
+                            width: { xs: '100%', md: 340, lg: 380 },
+                            minWidth: { md: 300, lg: 340 },
+                            height: { xs: 214, md: 'auto' },
+                            overflow: 'hidden',
+                            bgcolor: '#F3F4F6',
+                            position: 'relative',
+                            borderRight: { md: '1px solid #E5E7EB' },
+                        }}
+                    >
                         <Box
                             component="img"
                             src={courseImageUrl}
@@ -110,7 +136,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isAuthenticated, handle
                             }}
                         />
                     </Box>
-                    <CardContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.2, flexGrow: 1 }}>
+                    <CardContent sx={{ p: { xs: 2, md: 2.5 }, display: 'flex', flexDirection: 'column', gap: 1.2, flexGrow: 1 }}>
                         <Typography
                             variant="h6"
                             component="h2"
@@ -121,25 +147,74 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isAuthenticated, handle
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
-                                minHeight: '2.7em',
+                                minHeight: { xs: '2.7em', md: '2.4em' },
                             }}
                         >
                             {course.title}
                         </Typography>
+                        <Stack direction="row" flexWrap="wrap" spacing={1} sx={{ rowGap: 0.9 }}>
+                            {!!course.moduleCount && (
+                                <Box
+                                    sx={{
+                                        px: 1.1,
+                                        py: 0.4,
+                                        borderRadius: 999,
+                                        fontSize: '0.74rem',
+                                        fontWeight: 700,
+                                        color: '#1D4ED8',
+                                        bgcolor: alpha('#2563EB', 0.12),
+                                        border: `1px solid ${alpha('#2563EB', 0.24)}`,
+                                    }}
+                                >
+                                    {course.moduleCount} modules
+                                </Box>
+                            )}
+                            {!!examCategoryLabel && (
+                                <Box
+                                    sx={{
+                                        px: 1.1,
+                                        py: 0.4,
+                                        borderRadius: 999,
+                                        fontSize: '0.74rem',
+                                        fontWeight: 700,
+                                        color: '#065F46',
+                                        bgcolor: alpha('#10B981', 0.13),
+                                        border: `1px solid ${alpha('#10B981', 0.26)}`,
+                                    }}
+                                >
+                                    {examCategoryLabel}
+                                </Box>
+                            )}
+                            <Box
+                                sx={{
+                                    px: 1.1,
+                                    py: 0.4,
+                                    borderRadius: 999,
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    color: '#7C2D12',
+                                    bgcolor: alpha('#F59E0B', 0.15),
+                                    border: `1px solid ${alpha('#F59E0B', 0.26)}`,
+                                }}
+                            >
+                                Self-paced
+                            </Box>
+                        </Stack>
                         <Typography
                             sx={{
                                 color: '#4B5563',
                                 lineHeight: 1.65,
                                 display: '-webkit-box',
-                                WebkitLineClamp: 3,
+                                WebkitLineClamp: { xs: 4, md: 5 },
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
-                                minHeight: '4.8em',
+                                minHeight: { xs: '5.2em', md: '6.4em' },
                             }}
                         >
-                            {course.description
-                                ? course.description.replace(/<[^>]+>/g, '').trim() || 'Explore this course to unlock your potential.'
-                                : 'Explore this course to unlock your potential.'}
+                            {cleanDescription}
+                        </Typography>
+                        <Typography sx={{ color: '#64748B', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                            Updated learning path with guided lessons, practical speaking prompts, and progress-friendly structure.
                         </Typography>
                         {!isAuthenticated && (
                             <Stack direction="row" justifyContent="flex-end">
@@ -639,6 +714,21 @@ const CoursesListPage: React.FC = () => {
                                             id: 'panel3',
                                             q: 'What skills will I improve?',
                                             a: 'You will improve English speaking confidence, grammar usage, vocabulary range, listening comprehension, and presentation communication skills.',
+                                        },
+                                        {
+                                            id: 'panel4',
+                                            q: 'Do I get module-wise structure and milestones?',
+                                            a: 'Yes. The syllabus is organized module-wise with practical outcomes so you always know what to learn next.',
+                                        },
+                                        {
+                                            id: 'panel5',
+                                            q: 'Are these courses useful for jobs and interviews?',
+                                            a: 'Absolutely. Lessons include workplace communication, interview speaking practice, and confidence-building scenarios.',
+                                        },
+                                        {
+                                            id: 'panel6',
+                                            q: 'Can I access content from mobile and desktop?',
+                                            a: 'Yes. You can continue learning from both mobile and desktop so your progress stays flexible and consistent.',
                                         },
                                     ].map((item) => (
                                         <Accordion
