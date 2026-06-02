@@ -60,6 +60,7 @@ export const getPlatformStats = asyncHandler(async (req, res) => {
 });
 
 const FREE_FOUNDATION_NAME = 'Free Foundation';
+const isStandaloneBonusPlanName = (name = '') => name.trim().toLowerCase() === 'bonus';
 
 const getActiveSubscriptions = (user) => {
     const now = new Date();
@@ -343,6 +344,12 @@ export const addSubscriptionToUser = asyncHandler(async (req, res) => {
     if (!plan) {
         return res.status(404).json({ status: 'fail', message: 'Plan not found.' });
     }
+    if (isStandaloneBonusPlanName(plan.name)) {
+        return res.status(400).json({
+            status: 'fail',
+            message: 'BONUS cannot be assigned directly. Assign GOLD plan instead.',
+        });
+    }
 
     const start = startDate ? new Date(startDate) : new Date();
     let computedEnd = endDate ? new Date(endDate) : null;
@@ -369,6 +376,21 @@ export const addSubscriptionToUser = asyncHandler(async (req, res) => {
     if (!computedEnd) {
         computedEnd = new Date(start);
         computedEnd.setFullYear(computedEnd.getFullYear() + 1);
+    }
+
+    const hasActiveSamePlan = (user.subscriptions || []).some((sub) => {
+        if (!sub?.planId || sub.status !== 'active') return false;
+        const subPlanId = sub.planId.toString();
+        const subStart = sub.startDate ? new Date(sub.startDate) : null;
+        const subEnd = sub.endDate ? new Date(sub.endDate) : null;
+        if (!subStart || !subEnd) return false;
+        return subPlanId === plan._id.toString() && subStart <= computedEnd && subEnd >= start;
+    });
+    if (hasActiveSamePlan) {
+        return res.status(409).json({
+            status: 'fail',
+            message: 'This subscription plan is already active for the selected date range.',
+        });
     }
 
     user.subscriptions.push({

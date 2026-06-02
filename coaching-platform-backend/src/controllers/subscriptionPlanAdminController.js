@@ -3,6 +3,10 @@ import Course from '../models/Course.js';
 import mongoose from 'mongoose';
 import { processAndUploadImage, deleteStoredImage } from '../utils/localImageStorage.js';
 
+const isStandaloneBonusPlanInput = (inputName = '') => {
+    return inputName.trim().toLowerCase() === 'bonus';
+};
+
 /**
  * @desc    Create a new subscription plan (Admin)
  * @route   POST /api/admin/subscription-plans
@@ -48,6 +52,12 @@ export const createSubscriptionPlan = async (req, res, next) => {
             return res.status(400).json({
                 status: 'fail',
                 message: 'Missing required fields: name, price, duration, and course.'
+            });
+        }
+        if (isStandaloneBonusPlanInput(name)) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'BONUS cannot be created as a standalone plan. Include BONUS benefits inside GOLD.',
             });
         }
 
@@ -228,6 +238,12 @@ export const updateSubscriptionPlanAdmin = async (req, res, next) => {
         }
 
         const fieldsToUpdate = {};
+        if (name !== undefined && isStandaloneBonusPlanInput(name)) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'BONUS cannot be used as a standalone plan name. Include BONUS benefits inside GOLD.',
+            });
+        }
         if (name !== undefined) fieldsToUpdate.name = name;
         if (description !== undefined) fieldsToUpdate.description = description;
         if (price !== undefined) fieldsToUpdate.price = price;

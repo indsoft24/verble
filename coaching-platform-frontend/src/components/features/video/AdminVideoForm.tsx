@@ -30,6 +30,8 @@ interface AdminVideoFormProps {
     availableModules: Module[];
     formTitle: string;
     submitButtonText: string;
+    lockedCourseId?: string;
+    lockedRequiredPlanId?: string;
 }
 
 const AdminVideoForm: React.FC<AdminVideoFormProps> = ({
@@ -40,7 +42,9 @@ const AdminVideoForm: React.FC<AdminVideoFormProps> = ({
     availableCourses,
     availableModules,
     formTitle,
-    submitButtonText
+    submitButtonText,
+    lockedCourseId,
+    lockedRequiredPlanId,
 }) => {
     const [formData, setFormData] = useState<VideoFormState>({
         title: '',
@@ -59,6 +63,14 @@ const AdminVideoForm: React.FC<AdminVideoFormProps> = ({
         setFormData(prev => ({ ...prev, ...initialData }));
     }, [initialData]);
 
+    useEffect(() => {
+        setFormData((prev) => ({
+            ...prev,
+            courseIds: lockedCourseId ? [lockedCourseId] : prev.courseIds,
+            requiredPlanIds: lockedRequiredPlanId ? [lockedRequiredPlanId] : prev.requiredPlanIds,
+        }));
+    }, [lockedCourseId, lockedRequiredPlanId]);
+
     const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type, checked } = event.target as HTMLInputElement;
         setFormData(prev => ({
@@ -69,6 +81,8 @@ const AdminVideoForm: React.FC<AdminVideoFormProps> = ({
     
     const handleMultiSelectChange = (event: any) => {
         const { target: { name, value } } = event;
+        if (name === 'courseIds' && lockedCourseId) return;
+        if (name === 'requiredPlanIds' && lockedRequiredPlanId) return;
         setFormData(prev => ({
             ...prev,
             [name]: typeof value === 'string' ? value.split(',') : value,
@@ -95,7 +109,7 @@ const AdminVideoForm: React.FC<AdminVideoFormProps> = ({
 
                 {/* Course Selection */}
                 <Grid sx={{width: {sm:'100%', md:'50%'}}}>
-                     <FormControl fullWidth>
+                     <FormControl fullWidth disabled={Boolean(lockedCourseId)}>
                         <InputLabel id="courses-select-label">Courses</InputLabel>
                         <Select
                             labelId="courses-select-label"
@@ -118,6 +132,11 @@ const AdminVideoForm: React.FC<AdminVideoFormProps> = ({
                             ))}
                         </Select>
                     </FormControl>
+                    {lockedCourseId && (
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1.5, mt: 0.75 }}>
+                            Defaulted by platform configuration.
+                        </Typography>
+                    )}
                 </Grid>
 
                 {/* Module Selection */}
@@ -149,7 +168,7 @@ const AdminVideoForm: React.FC<AdminVideoFormProps> = ({
 
                 {/* Subscription Plan Selection - THE FIX */}
                 <Grid sx={{width: {sm:'100%'}}}>
-                    <FormControl fullWidth>
+                    <FormControl fullWidth disabled={Boolean(lockedRequiredPlanId)}>
                         <InputLabel id="plans-select-label">Required Subscription Plans</InputLabel>
                         <Select
                             labelId="plans-select-label"
@@ -173,6 +192,11 @@ const AdminVideoForm: React.FC<AdminVideoFormProps> = ({
                             ))}
                         </Select>
                     </FormControl>
+                    {lockedRequiredPlanId && (
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1.5, mt: 0.75 }}>
+                            Defaulted by platform configuration.
+                        </Typography>
+                    )}
                 </Grid>
                 
                 <Grid sx={{width: {sm:'100%', md:'50%'}}}>

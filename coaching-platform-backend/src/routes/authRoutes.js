@@ -13,6 +13,7 @@ import {
     loginWithPhonePin,
     changeLoginPin,
     forgotLoginPin,
+    regenerateLoginPinAfterVerification,
 } from '../controllers/phonePinAuthController.js';
 import {
     sendMobileOTP,
@@ -28,6 +29,7 @@ const router = express.Router();
 router.post('/phone-pin/login', loginWithPhonePin);
 router.post('/phone-pin/forgot-pin', forgotLoginPin);
 router.patch('/phone-pin/change-pin', protect, changeLoginPin);
+router.post('/phone-pin/regenerate-after-verify', protect, regenerateLoginPinAfterVerification);
 
 // Registration & verification
 router.post('/register', register);

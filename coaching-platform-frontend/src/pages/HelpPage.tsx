@@ -20,6 +20,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import DocumentHead from '../components/seo/DocumentHead';
+import UserLayout from '../components/layout/UserLayout';
+import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
 
 const HELP_SECTIONS = [
     {
@@ -78,19 +80,19 @@ const HelpPage: React.FC = () => {
     const canonicalUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/help`;
 
     return (
-        <Box sx={{ bgcolor: 'grey.50', minHeight: '100vh', py: { xs: 4, md: 6 } }}>
+        <UserLayout title="Help Center">
             <DocumentHead
                 title="Help Center | Verble - English Speaking & Learning Support"
                 description="Find answers about Verble: get started, use your dashboard, manage your account, access courses, and get support for English speaking practice and online learning."
                 canonicalUrl={canonicalUrl}
             />
-            <Container maxWidth="lg" component="main">
+            <Container maxWidth="lg" component="main" sx={{ py: { xs: 3, md: 5 } }}>
                 <Box sx={{ textAlign: 'center', mb: 4 }} component="header">
-                    <HelpOutlineIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} aria-hidden />
+                    <HelpOutlineIcon sx={{ fontSize: 60, color: learnerBrandTheme.accent, mb: 2 }} aria-hidden />
                     <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
                         Help Center
                     </Typography>
-                    <Typography variant="h6" color="text.secondary">
+                    <Typography variant="h6" sx={{ color: learnerBrandTheme.textSecondary }}>
                         Find answers to common questions and learn how to use our platform
                     </Typography>
                 </Box>
@@ -109,7 +111,7 @@ const HelpPage: React.FC = () => {
                             ),
                         }}
                         sx={{
-                            backgroundColor: 'white',
+                            backgroundColor: learnerBrandTheme.surface,
                             '& .MuiOutlinedInput-root': { borderRadius: 2 },
                         }}
                     />
@@ -118,9 +120,9 @@ const HelpPage: React.FC = () => {
                 <Divider sx={{ my: 4 }} />
 
                 {filteredSections.length === 0 ? (
-                    <Card>
+                    <Card sx={{ border: `1px solid ${learnerBrandTheme.border}` }}>
                         <CardContent sx={{ textAlign: 'center', py: 6 }}>
-                            <Typography variant="h6" color="text.secondary">
+                            <Typography variant="h6" sx={{ color: learnerBrandTheme.textSecondary }}>
                                 No topics match your search.
                             </Typography>
                             <Button variant="outlined" onClick={() => setSearchTerm('')} sx={{ mt: 2 }}>
@@ -138,7 +140,7 @@ const HelpPage: React.FC = () => {
                                 key={section.id}
                                 expanded={expandedArticle === section.id}
                                 onChange={(_e, isExpanded) => setExpandedArticle(isExpanded ? section.id : false)}
-                                sx={{ mb: 2 }}
+                                sx={{ mb: 2, border: `1px solid ${learnerBrandTheme.border}` }}
                             >
                                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                     <Typography sx={{ fontWeight: 'bold' }} component="h3" variant="subtitle1">
@@ -150,7 +152,7 @@ const HelpPage: React.FC = () => {
                                         {section.content}
                                     </Typography>
                                     <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                                        <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
+                                        <Typography variant="caption" sx={{ mr: 1, color: learnerBrandTheme.textMuted }}>
                                             Related:
                                         </Typography>
                                         {section.keywords.map((keyword) => (
@@ -168,7 +170,7 @@ const HelpPage: React.FC = () => {
                         ))}
                         <Card variant="outlined" sx={{ mt: 4, p: 2 }}>
                             <CardContent sx={{ textAlign: 'center' }}>
-                                <Typography variant="body2" color="text.secondary" gutterBottom>
+                                <Typography variant="body2" sx={{ color: learnerBrandTheme.textSecondary }} gutterBottom>
                                     Can&apos;t find what you need?
                                 </Typography>
                                 <Button component={MuiLink} href="/contact-us" variant="outlined" size="small">
@@ -179,7 +181,7 @@ const HelpPage: React.FC = () => {
                     </Box>
                 )}
             </Container>
-        </Box>
+        </UserLayout>
     );
 };
 

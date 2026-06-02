@@ -6,6 +6,7 @@ import type { DailyContent } from '../../services/dailyContentService';
 import { getContentDisplayNumber } from '../../utils/dailyActivityUi';
 import { getAdjacentTag } from '../../utils/professionalConversationLibraryUtils';
 import { professionalConversationTheme as theme } from './professionalConversationTheme';
+import { conversationBackButtonSx } from './conversationExperienceStyles';
 import ProfessionalConversationNavBar from './ProfessionalConversationNavBar';
 
 export interface ProfessionalConversationsTagListViewProps {
@@ -29,19 +30,8 @@ const ProfessionalConversationsTagListView: React.FC<ProfessionalConversationsTa
     const nextTag = getAdjacentTag(sortedTags, activeTag, 'next');
 
     return (
-        <Box
-            sx={{
-                width: theme.frameWidth,
-                maxWidth: { xs: '100%', sm: 720 },
-                mx: 'auto',
-                px: { xs: 1, sm: 0 },
-            }}
-        >
-            <Button
-                startIcon={<ArrowBackIcon />}
-                onClick={onBack}
-                sx={{ color: theme.accent, mb: 2, fontWeight: 600 }}
-            >
+        <Box sx={{ width: '100%', maxWidth: 720, mx: 'auto' }}>
+            <Button startIcon={<ArrowBackIcon />} onClick={onBack} sx={conversationBackButtonSx}>
                 All topics
             </Button>
 
@@ -88,10 +78,11 @@ const ProfessionalConversationsTagListView: React.FC<ProfessionalConversationsTa
                                     onClick={() => onSelectConversation(conv)}
                                     divider={idx < conversations.length - 1}
                                     sx={{
-                                        py: 2,
-                                        px: 2.5,
+                                        py: 1.25,
+                                        px: 2,
                                         borderColor: alpha(theme.accent, 0.15),
-                                        '&:hover': { bgcolor: alpha(theme.accent, 0.08) },
+                                        transition: 'background-color 0.15s',
+                                        '&:hover': { bgcolor: alpha(theme.accent, 0.12) },
                                     }}
                                 >
                                     <ListItemText

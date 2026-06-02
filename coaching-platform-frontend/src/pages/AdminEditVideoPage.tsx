@@ -13,6 +13,12 @@ import { getAllSubscriptionPlansAdmin, type SubscriptionPlan } from '../services
 import { getAllCoursesAdmin, type Course } from '../services/courseAdminService';
 import { getModulesForCourseAdmin, type Module } from '../services/moduleAdminService';
 import AssociatedMaterials from '../components/features/Material/AssociatedMaterials'
+import {
+    DEFAULT_VIDEO_COURSE_ID,
+    DEFAULT_VIDEO_REQUIRED_PLAN_ID,
+    FALLBACK_VIDEO_COURSE_NAME,
+    FALLBACK_VIDEO_REQUIRED_PLAN_NAME,
+} from '../config/adminDefaults';
 
 const AdminEditVideoPage: React.FC = () => {
     const { id: videoId } = useParams<{ id: string }>();
@@ -21,6 +27,8 @@ const AdminEditVideoPage: React.FC = () => {
     const [allSubscriptionPlans, setAllSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
     const [allCourses, setAllCourses] = useState<Course[]>([]);
     const [allModules, setAllModules] = useState<Module[]>([]);
+    const [lockedCourseId, setLockedCourseId] = useState<string>('');
+    const [lockedRequiredPlanId, setLockedRequiredPlanId] = useState<string>('');
 
     const [fullVideoMetadata, setFullVideoMetadata] = useState<VideoMetadata | null>(null);
     
@@ -51,6 +59,26 @@ const AdminEditVideoPage: React.FC = () => {
             setFullVideoMetadata(videoData);
             setAllSubscriptionPlans(plansData || []);
             setAllCourses(coursesData || []);
+            const resolvedCourseId =
+                (coursesData || []).find((course) => course._id === DEFAULT_VIDEO_COURSE_ID)?._id ||
+                (coursesData || []).find(
+                    (course) =>
+                        course.title.trim().toLowerCase() ===
+                        FALLBACK_VIDEO_COURSE_NAME.trim().toLowerCase()
+                )?._id ||
+                (coursesData || [])[0]?._id ||
+                '';
+            const resolvedPlanId =
+                (plansData || []).find((plan) => plan._id === DEFAULT_VIDEO_REQUIRED_PLAN_ID)?._id ||
+                (plansData || []).find(
+                    (plan) =>
+                        plan.name.trim().toLowerCase() ===
+                        FALLBACK_VIDEO_REQUIRED_PLAN_NAME.trim().toLowerCase()
+                )?._id ||
+                (plansData || [])[0]?._id ||
+                '';
+            setLockedCourseId(resolvedCourseId);
+            setLockedRequiredPlanId(resolvedPlanId);
 
             // After fetching courses, fetch all their associated modules
             if (coursesData && coursesData.length > 0) {
@@ -70,9 +98,9 @@ const AdminEditVideoPage: React.FC = () => {
                 isPublished: videoData.isPublished || false,
                 order: videoData.order || 0,
                 tags: videoData.tags || [],
-                courseIds: currentCourseIds,
+                courseIds: resolvedCourseId ? [resolvedCourseId] : currentCourseIds,
                 moduleIds: currentModuleIds,
-                requiredPlanIds: currentRequiredPlanIds,
+                requiredPlanIds: resolvedPlanId ? [resolvedPlanId] : currentRequiredPlanIds,
             });
 
         } catch (err: any) {
@@ -99,9 +127,9 @@ const AdminEditVideoPage: React.FC = () => {
             isPublished: submittedFormData.isPublished,
             order: submittedFormData.order,
             tags: submittedFormData.tags,
-            courseIds: submittedFormData.courseIds,
+            courseIds: lockedCourseId ? [lockedCourseId] : submittedFormData.courseIds,
             moduleIds: submittedFormData.moduleIds,
-            requiredPlans: submittedFormData.requiredPlanIds,
+            requiredPlans: lockedRequiredPlanId ? [lockedRequiredPlanId] : submittedFormData.requiredPlanIds,
         };
 
         try {
@@ -153,6 +181,8 @@ const AdminEditVideoPage: React.FC = () => {
                         availableSubscriptionPlans={allSubscriptionPlans}
                         availableCourses={allCourses}
                         availableModules={allModules}
+                        lockedCourseId={lockedCourseId}
+                        lockedRequiredPlanId={lockedRequiredPlanId}
                         formTitle="Edit Video Metadata"
                         submitButtonText="Save Metadata Changes"
                     />

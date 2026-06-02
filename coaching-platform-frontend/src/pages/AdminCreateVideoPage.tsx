@@ -14,6 +14,13 @@ import {
 import { getAllSubscriptionPlansAdmin, type SubscriptionPlan } from '../services/subscriptionPlanAdminService';
 import { getAllCoursesAdmin, type Course } from '../services/courseAdminService';
 import { getModulesForCourseAdmin, type Module } from '../services/moduleAdminService';
+import AdminLayout from '../components/layout/AdminLayout';
+import {
+    DEFAULT_VIDEO_COURSE_ID,
+    DEFAULT_VIDEO_REQUIRED_PLAN_ID,
+    FALLBACK_VIDEO_COURSE_NAME,
+    FALLBACK_VIDEO_REQUIRED_PLAN_NAME,
+} from '../config/adminDefaults';
 
 type UploadPhase = 'idle' | 'creating' | 'uploading' | 'done';
 
@@ -37,6 +44,7 @@ const AdminCreateVideoPage: React.FC = () => {
     const [allModules, setAllModules] = useState<Module[]>([]);
 
     const isSubmitting = uploadPhase === 'creating' || uploadPhase === 'uploading';
+    const configuredDefaultsLocked = true;
 
     const fetchOptions = useCallback(async () => {
         setIsLoadingOptions(true);
@@ -48,6 +56,26 @@ const AdminCreateVideoPage: React.FC = () => {
             
             setAvailablePlans(plansData || []);
             setAvailableCourses(coursesData || []);
+            const resolvedCourseId =
+                (coursesData || []).find((course) => course._id === DEFAULT_VIDEO_COURSE_ID)?._id ||
+                (coursesData || []).find(
+                    (course) =>
+                        course.title.trim().toLowerCase() ===
+                        FALLBACK_VIDEO_COURSE_NAME.trim().toLowerCase()
+                )?._id ||
+                (coursesData || [])[0]?._id ||
+                '';
+            const resolvedPlanId =
+                (plansData || []).find((plan) => plan._id === DEFAULT_VIDEO_REQUIRED_PLAN_ID)?._id ||
+                (plansData || []).find(
+                    (plan) =>
+                        plan.name.trim().toLowerCase() ===
+                        FALLBACK_VIDEO_REQUIRED_PLAN_NAME.trim().toLowerCase()
+                )?._id ||
+                (plansData || [])[0]?._id ||
+                '';
+            setCourseIds(resolvedCourseId ? [resolvedCourseId] : []);
+            setRequiredPlanIds(resolvedPlanId ? [resolvedPlanId] : []);
             if (coursesData && coursesData.length > 0) {
                 const modulePromises = coursesData.map(course => getModulesForCourseAdmin(course._id));
                 const modulesByCourse = await Promise.all(modulePromises);
@@ -81,17 +109,25 @@ const AdminCreateVideoPage: React.FC = () => {
         const values = typeof value === 'string' ? value.split(',') : value;
 
         if (name === 'courseIds') {
+            if (configuredDefaultsLocked) return;
             setCourseIds(values);
             setModuleIds([]); 
         }
         if (name === 'moduleIds') setModuleIds(values);
-        if (name === 'requiredPlanIds') setRequiredPlanIds(values);
+        if (name === 'requiredPlanIds') {
+            if (configuredDefaultsLocked) return;
+            setRequiredPlanIds(values);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!selectedFile || !title.trim()) {
             setError("A title and video file are required.");
+            return;
+        }
+        if (courseIds.length === 0 || requiredPlanIds.length === 0) {
+            setError('Default course/plan configuration is missing. Please set admin default IDs.');
             return;
         }
 
@@ -101,7 +137,11 @@ const AdminCreateVideoPage: React.FC = () => {
 
         try {
             const payload: InitiateUploadPayload = {
-                title, description, courseIds, moduleIds, requiredPlans: requiredPlanIds
+                title,
+                description,
+                courseIds,
+                moduleIds,
+                requiredPlans: requiredPlanIds,
             };
             const { video } = await initiateVideoUpload(payload);
 
@@ -136,10 +176,17 @@ const AdminCreateVideoPage: React.FC = () => {
               : '';
 
     if (isLoadingOptions) {
-        return <Container sx={{ display: 'flex', justifyContent: 'center', my: 5 }}><CircularProgress /></Container>;
+        return (
+            <AdminLayout title="Create Video">
+                <Container sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
+                    <CircularProgress />
+                </Container>
+            </AdminLayout>
+        );
     }
 
     return (
+        <AdminLayout title="Create Video">
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
             <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
                 <MuiLink component={RouterLink} underline="hover" color="inherit" to="/admin/dashboard">Admin</MuiLink>
@@ -177,11 +224,16 @@ const AdminCreateVideoPage: React.FC = () => {
                         <TextField fullWidth label="Video Description" multiline rows={4} value={description} onChange={(e) => setDescription(e.target.value)} disabled={isSubmitting} />
                     </Grid>
                     <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
-                        <FormControl fullWidth>
+                        <FormControl fullWidth disabled={configuredDefaultsLocked}>
                             <InputLabel>Assign to Courses</InputLabel>
                             <Select name="courseIds" label="Assign to Courses" multiple value={courseIds} onChange={handleMultiSelectChange} input={<OutlinedInput label="Assign to Courses" />} renderValue={(selected) => (<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{selected.map(id => (<Chip key={id} label={availableCourses.find(c => c._id === id)?.title || '...'} />))}</Box>)}>
                                 {availableCourses.map((course) => <MenuItem key={course._id} value={course._id}>{course.title}</MenuItem>)}
                             </Select>
+                            {configuredDefaultsLocked && (
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, ml: 1.5 }}>
+                                    Defaulted by platform configuration.
+                                </Typography>
+                            )}
                         </FormControl>
                     </Grid>
                     <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
@@ -197,11 +249,16 @@ const AdminCreateVideoPage: React.FC = () => {
                         </FormControl>
                     </Grid>
                     <Grid sx={{ width: '100%' }}>
-                        <FormControl fullWidth>
+                        <FormControl fullWidth disabled={configuredDefaultsLocked}>
                             <InputLabel>Required Subscription Plans</InputLabel>
                             <Select name="requiredPlanIds" label="Required Subscription Plans" multiple value={requiredPlanIds} onChange={handleMultiSelectChange} input={<OutlinedInput label="Required Subscription Plans" />} renderValue={(selected) => (<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{selected.map(id => (<Chip key={id} label={availablePlans.find(p => p._id === id)?.name || '...'} />))}</Box>)}>
                                 {availablePlans.map((plan) => <MenuItem key={plan._id} value={plan._id}>{plan.name}</MenuItem>)}
                             </Select>
+                            {configuredDefaultsLocked && (
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, ml: 1.5 }}>
+                                    Defaulted by platform configuration.
+                                </Typography>
+                            )}
                         </FormControl>
                     </Grid>
                     <Grid sx={{ width: '100%' }}>
@@ -225,6 +282,7 @@ const AdminCreateVideoPage: React.FC = () => {
                 </Grid>
             </Paper>
         </Container>
+        </AdminLayout>
     );
 };
 

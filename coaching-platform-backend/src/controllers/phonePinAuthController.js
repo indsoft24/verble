@@ -11,6 +11,8 @@ const FORGOT_PIN_PREFIX = 'loginpin:forgot:';
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_LOCK_SECONDS = 15 * 60;
 const FORGOT_PIN_COOLDOWN_SECONDS = 60;
+const REGENERATE_PIN_PREFIX = 'loginpin:regen:';
+const REGENERATE_PIN_COOLDOWN_SECONDS = 30;
 
 const normalizePhone = (phoneNumber) =>
     formatMobileNumber(phoneNumber, process.env.DEFAULT_COUNTRY_CODE || '+91');
@@ -231,6 +233,66 @@ export const forgotLoginPin = asyncHandler(async (req, res) => {
     }
 
     res.status(200).json({ status: 'success', message: genericMessage });
+});
+
+/**
+ * @desc    Regenerate login PIN after verifying current PIN (authenticated)
+ * @route   POST /api/auth/phone-pin/regenerate-after-verify
+ */
+export const regenerateLoginPinAfterVerification = asyncHandler(async (req, res) => {
+    const { currentPin } = req.body;
+    if (!currentPin) {
+        return res.status(400).json({ status: 'fail', message: 'Current PIN is required.' });
+    }
+    if (!isValidLoginPinFormat(currentPin)) {
+        return res.status(400).json({ status: 'fail', message: 'Current PIN must be a 6-digit number.' });
+    }
+
+    const user = await User.findById(req.user._id).select('+loginPin');
+    if (!user) {
+        return res.status(404).json({ status: 'fail', message: 'User not found.' });
+    }
+    if (!user.loginPin) {
+        return res.status(400).json({ status: 'fail', message: 'No login PIN is set for this account.' });
+    }
+
+    if (redisClient.isOpen) {
+        const cooldownKey = `${REGENERATE_PIN_PREFIX}${user._id.toString()}`;
+        const exists = await redisClient.get(cooldownKey);
+        if (exists) {
+            const ttl = await redisClient.ttl(cooldownKey);
+            return res.status(429).json({
+                status: 'fail',
+                message: `Please wait ${ttl > 0 ? ttl : REGENERATE_PIN_COOLDOWN_SECONDS} seconds before requesting again.`,
+            });
+        }
+    }
+
+    const isMatch = await user.compareLoginPin(currentPin);
+    if (!isMatch) {
+        return res.status(401).json({ status: 'fail', message: 'Current PIN is incorrect.' });
+    }
+
+    const newPin = generateLoginPin();
+    user.loginPin = newPin;
+    await user.save();
+
+    try {
+        await sendLoginPinEmail(user, newPin);
+        if (redisClient.isOpen) {
+            await redisClient.set(`${REGENERATE_PIN_PREFIX}${user._id.toString()}`, '1', {
+                EX: REGENERATE_PIN_COOLDOWN_SECONDS,
+            });
+        }
+    } catch (err) {
+        console.error('[RegeneratePin] Email failed:', err);
+    }
+
+    res.status(200).json({
+        status: 'success',
+        message: 'A new PIN has been generated after verification.',
+        data: { newPin },
+    });
 });
 
 /** Issue a new PIN and email it (used after email verification). */

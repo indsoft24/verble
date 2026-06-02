@@ -13,6 +13,21 @@ import { queueVideoTranscodeJob } from "../services/videoTranscodeService.js";
 import { deleteVideoStorageAssets, cleanupOrphanVideoStorage } from "../utils/videoStorageCleanup.js";
 import { getStreamProvider } from "../utils/videoStreamProvider.js";
 
+const normalizeConfiguredId = (value) => (typeof value === "string" && value.trim() ? value.trim() : "");
+const STRICT_VIDEO_DEFAULTS = String(process.env.VIDEO_DEFAULTS_STRICT || "true").toLowerCase() !== "false";
+const DEFAULT_VIDEO_COURSE_ID = normalizeConfiguredId(process.env.DEFAULT_VIDEO_COURSE_ID);
+const DEFAULT_VIDEO_REQUIRED_PLAN_ID = normalizeConfiguredId(process.env.DEFAULT_VIDEO_REQUIRED_PLAN_ID);
+
+const enforceDefaultVideoIds = (courseIds = [], requiredPlanIds = []) => {
+    if (!STRICT_VIDEO_DEFAULTS) {
+        return { courseIds, requiredPlanIds };
+    }
+    return {
+        courseIds: DEFAULT_VIDEO_COURSE_ID ? [DEFAULT_VIDEO_COURSE_ID] : courseIds,
+        requiredPlanIds: DEFAULT_VIDEO_REQUIRED_PLAN_ID ? [DEFAULT_VIDEO_REQUIRED_PLAN_ID] : requiredPlanIds,
+    };
+};
+
 /**
  * @desc    Securely initiates a direct video upload.
  * @route   POST /api/admin/videos/initiate-upload
@@ -29,14 +44,18 @@ export const initiateUpload = async (req, res) => {
         await ensureVideoStorageDirs();
         const localStorageId = randomUUID();
 
-        const coursesToSave = Array.isArray(courseIds)
-            ? courseIds.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id))
+        const normalizedIds = enforceDefaultVideoIds(
+            Array.isArray(courseIds) ? courseIds : [],
+            Array.isArray(requiredPlans) ? requiredPlans : []
+        );
+        const coursesToSave = Array.isArray(normalizedIds.courseIds)
+            ? normalizedIds.courseIds.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id))
             : [];
         const modulesToSave = Array.isArray(moduleIds)
             ? moduleIds.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id))
             : [];
-        const plansToSave = Array.isArray(requiredPlans)
-            ? requiredPlans.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id))
+        const plansToSave = Array.isArray(normalizedIds.requiredPlanIds)
+            ? normalizedIds.requiredPlanIds.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id))
             : [];
 
         const newVideoData = {
@@ -490,7 +509,7 @@ export const getVideoById = async (req, res, next) => {
 export const updateVideo = async (req, res, next) => {
   try {
     const { id: videoId } = req.params;
-    const { courseIds, moduleIds, ...updateData } = req.body;
+    const { courseIds, moduleIds, requiredPlans, ...updateData } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(videoId)) {
       return res.status(400).json({ status: "fail", message: "Invalid video ID format." });
@@ -502,11 +521,19 @@ export const updateVideo = async (req, res, next) => {
     }
     const wasPublished = videoToUpdate.isPublished;
 
-    if (courseIds) {
-        updateData.courses = courseIds;
+    const normalizedIds = enforceDefaultVideoIds(
+        Array.isArray(courseIds) ? courseIds : [],
+        Array.isArray(requiredPlans) ? requiredPlans : []
+    );
+
+    if (courseIds || (STRICT_VIDEO_DEFAULTS && DEFAULT_VIDEO_COURSE_ID)) {
+        updateData.courses = normalizedIds.courseIds;
     }
     if (moduleIds) {
         updateData.modules = moduleIds;
+    }
+    if (requiredPlans || (STRICT_VIDEO_DEFAULTS && DEFAULT_VIDEO_REQUIRED_PLAN_ID)) {
+        updateData.requiredPlans = normalizedIds.requiredPlanIds;
     }
 
     const updatedVideo = await Video.findByIdAndUpdate(

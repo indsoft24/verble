@@ -4,6 +4,7 @@ export const USER_APP_ROUTE_PREFIXES = [
     '/profile',
     '/my-courses',
     '/videos',
+    '/my-rewards',
     '/my-subscription',
     '/notifications',
     '/professional-conversations',

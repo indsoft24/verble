@@ -23,6 +23,7 @@ import { getMySubscriptionDetailsUser, type UserSubscriptionInstance, type Subsc
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
 
 const MySubscriptionPage: React.FC = () => {
     const [activeSubscriptions, setActiveSubscriptions] = useState<UserSubscriptionInstance[]>([]);
@@ -85,15 +86,28 @@ const MySubscriptionPage: React.FC = () => {
     return (
         <UserLayout title="My Subscription">
             <Container maxWidth="md">
-                <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
+                <Typography
+                    variant="h5"
+                    component="h1"
+                    gutterBottom
+                    sx={{ mb: 3, fontWeight: 600, color: learnerBrandTheme.textPrimary }}
+                >
                     My Active Subscriptions
                 </Typography>
             {activeSubscriptions.length === 0 ? (
-                <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+                <Paper
+                    elevation={1}
+                    sx={{ p: 4, textAlign: 'center', border: `1px solid ${learnerBrandTheme.border}` }}
+                >
                     <Typography variant="h6" gutterBottom>
                         You have no active subscriptions.
                     </Typography>
-                    <Button component={RouterLink} to="/subscription-plans" variant="contained" color="primary" sx={{ mt: 2 }}>
+                    <Button
+                        component={RouterLink}
+                        to="/subscription-plans"
+                        variant="contained"
+                        sx={{ mt: 2, bgcolor: learnerBrandTheme.accent, '&:hover': { bgcolor: learnerBrandTheme.accentStrong } }}
+                    >
                         View Available Plans
                     </Button>
                 </Paper>
@@ -104,7 +118,7 @@ const MySubscriptionPage: React.FC = () => {
 
                         return (
                             <Grid sx={{width: {xs: '100%'}}} key={sub._id}>
-                                <Card elevation={3}>
+                                <Card elevation={1} sx={{ border: `1px solid ${learnerBrandTheme.border}` }}>
                                     <CardContent sx={{ position: 'relative' }}>
                                         <Chip
                                             label={sub.status?.toUpperCase() || 'N/A'}

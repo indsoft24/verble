@@ -46,14 +46,7 @@ const ProfessionalConversationsTagsView: React.FC<ProfessionalConversationsTagsV
     const tags = tagIndex?.sortedTags ?? [];
 
     return (
-        <Box
-            sx={{
-                width: theme.frameWidth,
-                maxWidth: theme.frameMaxWidth,
-                mx: 'auto',
-                px: { xs: 1, sm: 0 },
-            }}
-        >
+        <Box sx={{ width: '100%' }}>
             <Paper
                 elevation={0}
                 sx={{

@@ -71,6 +71,8 @@ const gridDateFormatter: GridDateFormatter = (value) => {
     }
 };
 
+const isStandaloneBonusPlanName = (name: string): boolean => name.trim().toLowerCase() === 'bonus';
+
 
 const AdminSubscriptionPlansListPage: React.FC = () => {
     const [plansForGrid, setPlansForGrid] = useState<SubscriptionPlanRow[]>([]);
@@ -265,6 +267,10 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
     const handleFormSubmit = async () => {
         if (!currentPlan || !currentPlan.course) {
             setFormError("A course must be selected for this plan.");
+            return;
+        }
+        if (isStandaloneBonusPlanName(currentPlan.name || '')) {
+            setFormError('BONUS cannot be created as a standalone plan. Include BONUS inside GOLD.');
             return;
         }
         setFormError(null);

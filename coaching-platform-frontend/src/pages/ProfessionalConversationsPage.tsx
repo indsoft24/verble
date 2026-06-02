@@ -1,12 +1,14 @@
 // src/pages/ProfessionalConversationsPage.tsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
-import { Box, Breadcrumbs, Link, Typography } from '@mui/material';
+import { Breadcrumbs, Link, Typography } from '@mui/material';
 import UserLayout from '../components/layout/UserLayout';
+import ConversationExperienceShell from '../components/features/ConversationExperienceShell';
 import ProfessionalConversationsTagsView from '../components/features/ProfessionalConversationsTagsView';
 import ProfessionalConversationsTagListView from '../components/features/ProfessionalConversationsTagListView';
 import ProfessionalConversationViewer from '../components/features/ProfessionalConversationViewer';
 import ActivityTierNavFooter from '../components/features/ActivityTierNavFooter';
+import { conversationBreadcrumbSx } from '../components/features/conversationExperienceStyles';
 import { getProfessionalLibrary, type DailyContent } from '../services/dailyContentService';
 import { buildTagIndex } from '../utils/professionalConversationLibraryUtils';
 import { TIER_COLORS } from '../components/dashboard/DashboardActivitiesPanel';
@@ -97,18 +99,20 @@ const ProfessionalConversationsPage: React.FC = () => {
                           {activeTag}
                       </Link>
                   ),
-                  <Typography key="detail" color="text.primary">
+                  <Typography key="detail" color="inherit">
                       {selectedConversation.metadata?.topicName || selectedConversation.title}
                   </Typography>,
               ].filter(Boolean)
             : view === 'tagList' && activeTag
-              ? [<Typography key="tag" color="text.primary">{activeTag}</Typography>]
+              ? [<Typography key="tag" color="inherit">{activeTag}</Typography>]
               : [];
 
+    const shellMaxWidth = view === 'detail' ? ('sm' as const) : ('lg' as const);
+
     return (
-        <UserLayout title="Professional Conversations">
-            <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
-                <Breadcrumbs sx={{ mb: 2 }}>
+        <UserLayout title="Professional Conversations" variant="conversations">
+            <ConversationExperienceShell tier="gold" maxWidth={shellMaxWidth}>
+                <Breadcrumbs sx={conversationBreadcrumbSx}>
                     <Link component={RouterLink} to="/dashboard" underline="hover" color="inherit">
                         Dashboard
                     </Link>
@@ -124,7 +128,7 @@ const ProfessionalConversationsPage: React.FC = () => {
                             Professional Conversations
                         </Link>
                     ) : (
-                        <Typography color="text.primary">Professional Conversations</Typography>
+                        <Typography color="inherit">Professional Conversations</Typography>
                     )}
                     {breadcrumbTail}
                 </Breadcrumbs>
@@ -175,7 +179,7 @@ const ProfessionalConversationsPage: React.FC = () => {
                         sx={{ mt: 3 }}
                     />
                 )}
-            </Box>
+            </ConversationExperienceShell>
         </UserLayout>
     );
 };

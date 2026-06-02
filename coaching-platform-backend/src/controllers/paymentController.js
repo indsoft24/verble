@@ -23,6 +23,15 @@ const calculateEndDate = (startDate, duration) => {
     }
     return date;
 };
+const isStandaloneBonusPlanName = (name = '') => name.trim().toLowerCase() === 'bonus';
+const hasActivePlanOverlap = (subscriptions = [], planId, startDate, endDate) =>
+    subscriptions.some((sub) => {
+        if (!sub?.planId || sub.status !== 'active') return false;
+        const subStart = sub.startDate ? new Date(sub.startDate) : null;
+        const subEnd = sub.endDate ? new Date(sub.endDate) : null;
+        if (!subStart || !subEnd) return false;
+        return sub.planId.toString() === planId.toString() && subStart <= endDate && subEnd >= startDate;
+    });
 
 export const createRazorpayOrder = async (req, res) => {
     try {
@@ -40,6 +49,12 @@ export const createRazorpayOrder = async (req, res) => {
                 status: 'fail',
                 message:
                     'This plan is free and is activated when you register. Go to your dashboard to use Free Foundation.',
+            });
+        }
+        if (isStandaloneBonusPlanName(plan.name)) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'BONUS cannot be purchased separately. Please choose GOLD plan.',
             });
         }
 
@@ -123,6 +138,12 @@ export const verifyPayment = async (req, res) => {
         if (!plan || !user) {
             return res.status(404).json({ status: 'fail', message: 'Plan or User not found.' });
         }
+        if (isStandaloneBonusPlanName(plan.name)) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'BONUS cannot be purchased separately. Please choose GOLD plan.',
+            });
+        }
         
         const alreadySubscribed = user.subscriptions.some(sub => 
           sub.paymentDetails && sub.paymentDetails.razorpay_payment_id === razorpay_payment_id
@@ -134,6 +155,12 @@ export const verifyPayment = async (req, res) => {
 
         const startDate = new Date();
         const endDate = calculateEndDate(startDate, plan.duration);
+        if (hasActivePlanOverlap(user.subscriptions, plan._id, startDate, endDate)) {
+            return res.status(409).json({
+                status: 'fail',
+                message: 'This subscription is already active on your account.',
+            });
+        }
 
         const newSubscriptionInstance = {
             planId: plan._id,
@@ -218,6 +245,9 @@ export const razorpayWebhook = async (req, res) => {
             const plan = await SubscriptionPlan.findById(planId);
             
             if (user && plan) {
+                if (isStandaloneBonusPlanName(plan.name)) {
+                    return res.status(200).json({ status: 'ok' });
+                }
                 const alreadySubscribed = user.subscriptions.some(sub => 
                     sub.paymentDetails && sub.paymentDetails.razorpay_payment_id === paymentEntity.id
                 );
@@ -225,6 +255,9 @@ export const razorpayWebhook = async (req, res) => {
                 if (!alreadySubscribed) {
                     const startDate = new Date();
                     const endDate = calculateEndDate(startDate, plan.duration);
+                    if (hasActivePlanOverlap(user.subscriptions, plan._id, startDate, endDate)) {
+                        return res.status(200).json({ status: 'ok' });
+                    }
                     user.subscriptions.push({
                         planId: plan._id,
                         planName: plan.name,

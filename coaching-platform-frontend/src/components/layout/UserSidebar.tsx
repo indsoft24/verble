@@ -28,8 +28,10 @@ import {
     Logout as LogoutIcon,
     Subscriptions as SubscriptionsIcon,
     HelpOutline as HelpOutlineIcon,
+    EmojiEvents as EmojiEventsIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import { learnerBrandTheme } from './learnerBrandTheme';
 
 const DRAWER_WIDTH = 280;
 const DRAWER_WIDTH_COLLAPSED = 64;
@@ -79,6 +81,11 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
             icon: <PlaylistPlayIcon />,
         },
         {
+            title: 'Rewards & Scoring',
+            path: '/my-rewards',
+            icon: <EmojiEventsIcon />,
+        },
+        {
             title: 'Profile Settings',
             path: '/profile',
             icon: <PersonIcon />,
@@ -117,15 +124,17 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                             minHeight: 48,
                             justifyContent: open ? 'initial' : 'center',
                             px: 2.5,
-                            backgroundColor: active ? theme.palette.primary.light + '20' : 'transparent',
-                            borderLeft: active ? `3px solid ${theme.palette.primary.main}` : '3px solid transparent',
+                            backgroundColor: active ? learnerBrandTheme.sidebarActiveBg : 'transparent',
+                            borderLeft: active
+                                ? `3px solid ${learnerBrandTheme.sidebarActiveBorder}`
+                                : '3px solid transparent',
                             '&:hover': {
-                                backgroundColor: theme.palette.primary.light + '20',
+                                backgroundColor: learnerBrandTheme.sidebarHoverBg,
                             },
                             '&.Mui-selected': {
-                                backgroundColor: theme.palette.primary.light + '20',
+                                backgroundColor: learnerBrandTheme.sidebarActiveBg,
                                 '&:hover': {
-                                    backgroundColor: theme.palette.primary.light + '30',
+                                    backgroundColor: learnerBrandTheme.sidebarHoverBg,
                                 },
                             },
                         }}
@@ -135,7 +144,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                                 minWidth: 0,
                                 mr: open ? 3 : 'auto',
                                 justifyContent: 'center',
-                                color: active ? theme.palette.primary.main : 'inherit',
+                                color: active ? learnerBrandTheme.accent : learnerBrandTheme.textSecondary,
                             }}
                         >
                             {item.icon}
@@ -146,7 +155,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                                 primaryTypographyProps={{
                                     fontSize: '0.95rem',
                                     fontWeight: active ? 600 : 400,
-                                    color: active ? theme.palette.primary.main : 'inherit',
+                                    color: active ? learnerBrandTheme.accent : learnerBrandTheme.textPrimary,
                                 }}
                             />
                         )}
@@ -166,14 +175,15 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                     justifyContent: open ? 'space-between' : 'center',
                     p: 2,
                     minHeight: 64,
-                    borderBottom: `1px solid ${theme.palette.divider}`,
+                    borderBottom: `1px solid ${learnerBrandTheme.border}`,
+                    bgcolor: learnerBrandTheme.sidebarBg,
                 }}
             >
                 {open && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
                         <Avatar
                             sx={{
-                                bgcolor: theme.palette.primary.main,
+                                bgcolor: learnerBrandTheme.accent,
                                 width: 40,
                                 height: 40,
                             }}
@@ -181,14 +191,23 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                             {user?.name?.charAt(0).toUpperCase() || 'U'}
                         </Avatar>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography variant="subtitle2" fontWeight={600} noWrap>
+                            <Typography
+                                variant="subtitle2"
+                                fontWeight={600}
+                                noWrap
+                                sx={{ color: learnerBrandTheme.textPrimary }}
+                            >
                                 {user?.name || 'User'}
                             </Typography>
                         </Box>
                     </Box>
                 )}
                 {!isMobile && (
-                    <IconButton onClick={onToggle} size="small" sx={{ ml: open ? 1 : 0 }}>
+                    <IconButton
+                        onClick={onToggle}
+                        size="small"
+                        sx={{ ml: open ? 1 : 0, color: learnerBrandTheme.icon }}
+                    >
                         {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
                     </IconButton>
                 )}
@@ -201,7 +220,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                 </List>
             </Box>
 
-            <Divider />
+            <Divider sx={{ borderColor: learnerBrandTheme.border }} />
 
             {/* Footer Actions */}
             <Box sx={{ p: 1 }}>
@@ -214,6 +233,8 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                         px: 2.5,
                         borderRadius: 1,
                         mb: 1,
+                        color: learnerBrandTheme.textPrimary,
+                        '&:hover': { backgroundColor: learnerBrandTheme.sidebarHoverBg },
                     }}
                 >
                     <ListItemIcon
@@ -221,6 +242,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                             minWidth: 0,
                             mr: open ? 3 : 'auto',
                             justifyContent: 'center',
+                            color: learnerBrandTheme.icon,
                         }}
                     >
                         <HomeIcon />
@@ -273,7 +295,8 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
                         duration: theme.transitions.duration.enteringScreen,
                     }),
                     overflowX: 'hidden',
-                    borderRight: `1px solid ${theme.palette.divider}`,
+                    borderRight: `1px solid ${learnerBrandTheme.border}`,
+                    bgcolor: learnerBrandTheme.sidebarBg,
                 },
             }}
         >

@@ -32,6 +32,7 @@ import { useAuth } from '../contexts/AuthContext';
 import UserLayout from '../components/layout/UserLayout';
 import { brandAssets } from '../assets/brandAssets';
 import { getPlanTierStyle, formatDurationLabel } from '../utils/planTierStyles';
+import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
 
 const SubscriptionPlansPage: React.FC = () => {
     const navigate = useNavigate();
@@ -131,7 +132,7 @@ const SubscriptionPlansPage: React.FC = () => {
                     contact: user.phoneNumber || user.mobile || '',
                 },
                 notes: { plan_id: plan._id, user_id: user._id },
-                theme: { color: '#4338CA' },
+                theme: { color: learnerBrandTheme.accent },
             };
 
             const rzp = new (window as unknown as { Razorpay: new (o: object) => { open: () => void; on: (e: string, cb: (r: { error: { description: string } }) => void) => void } }).Razorpay(options);
@@ -165,7 +166,10 @@ const SubscriptionPlansPage: React.FC = () => {
                     overflow: 'hidden',
                     mb: 4,
                     p: { xs: 3, md: 5 },
-                    background: 'linear-gradient(165deg, #1e1b4b 0%, #312e81 40%, #0f172a 100%)',
+                    background: `linear-gradient(165deg, ${alpha(learnerBrandTheme.accent, 0.96)} 0%, ${alpha(
+                        '#0f766e',
+                        0.92
+                    )} 40%, ${alpha('#134e4a', 0.96)} 100%)`,
                     color: '#fff',
                     position: 'relative',
                 }}

@@ -14,6 +14,8 @@ import UserSidebar from './UserSidebar';
 import { brandAssets } from '../../assets/brandAssets';
 import { alpha } from '@mui/material/styles';
 import { courseLearningTheme } from '../course/courseLearningTheme';
+import { conversationPageBg } from '../features/conversationExperienceStyles';
+import { learnerBrandTheme } from './learnerBrandTheme';
 
 interface UserLayoutProps {
     children: React.ReactNode;
@@ -21,7 +23,7 @@ interface UserLayoutProps {
     /** Less padding for full-width content (e.g. video player) */
     fullWidth?: boolean;
     /** Dark Full Course learning pages */
-    variant?: 'default' | 'learning';
+    variant?: 'default' | 'learning' | 'conversations';
 }
 
 const UserLayout: React.FC<UserLayoutProps> = ({
@@ -31,6 +33,8 @@ const UserLayout: React.FC<UserLayoutProps> = ({
     variant = 'default',
 }) => {
     const isLearning = variant === 'learning';
+    const isConversations = variant === 'conversations';
+    const isDarkMain = isLearning || isConversations;
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const location = useLocation();
@@ -56,10 +60,28 @@ const UserLayout: React.FC<UserLayoutProps> = ({
 
     const drawerWidth = sidebarOpen ? 280 : 64;
 
-    const mainBg = isLearning ? courseLearningTheme.pageBg : 'grey.50';
+    const mainBg = isConversations
+        ? conversationPageBg
+        : isLearning
+          ? courseLearningTheme.pageBg
+          : learnerBrandTheme.pageBg;
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: mainBg }}>
+        <Box
+            sx={{
+                display: 'flex',
+                minHeight: '100vh',
+                bgcolor: mainBg,
+                backgroundImage: !isDarkMain && !isConversations ? learnerBrandTheme.pageBgGradient : 'none',
+                '& .MuiPaper-root': !isDarkMain
+                    ? {
+                          bgcolor: learnerBrandTheme.surface,
+                          borderColor: learnerBrandTheme.border,
+                      }
+                    : {},
+                '& .MuiSvgIcon-root': !isDarkMain ? { color: learnerBrandTheme.icon } : {},
+            }}
+        >
             <UserSidebar open={sidebarOpen} onToggle={handleSidebarToggle} />
 
             <Box
@@ -83,10 +105,12 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                         position="sticky"
                         elevation={0}
                         sx={{
-                            bgcolor: isLearning ? courseLearningTheme.bandBg : 'background.paper',
+                            bgcolor: isDarkMain ? courseLearningTheme.bandBg : learnerBrandTheme.surface,
                             borderBottom: '1px solid',
-                            borderColor: isLearning ? alpha(courseLearningTheme.accent, 0.25) : 'divider',
-                            color: isLearning ? courseLearningTheme.textPrimary : 'text.primary',
+                            borderColor: isDarkMain
+                                ? alpha(courseLearningTheme.accent, 0.25)
+                                : learnerBrandTheme.border,
+                            color: isDarkMain ? courseLearningTheme.textPrimary : learnerBrandTheme.textPrimary,
                             zIndex: theme.zIndex.drawer + 1,
                         }}
                     >
@@ -95,7 +119,11 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                                 onClick={handleSidebarToggle}
                                 edge="start"
                                 aria-label="Open menu"
-                                sx={isLearning ? { color: courseLearningTheme.textPrimary } : undefined}
+                                sx={
+                                    isDarkMain
+                                        ? { color: courseLearningTheme.textPrimary }
+                                        : { color: learnerBrandTheme.icon }
+                                }
                             >
                                 <MenuIcon />
                             </IconButton>
@@ -120,9 +148,9 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                 <Box
                     sx={{
                         flexGrow: 1,
-                        p: fullWidth || isLearning ? { xs: 0, sm: 0 } : { xs: 2, sm: 3 },
-                        maxWidth: fullWidth || isLearning ? 'none' : '1600px',
-                        mx: fullWidth || isLearning ? 0 : 'auto',
+                        p: fullWidth || isDarkMain ? { xs: 0, sm: 0 } : { xs: 2, sm: 3 },
+                        maxWidth: fullWidth || isDarkMain ? 'none' : '1600px',
+                        mx: fullWidth || isDarkMain ? 0 : 'auto',
                         width: '100%',
                         boxSizing: 'border-box',
                     }}

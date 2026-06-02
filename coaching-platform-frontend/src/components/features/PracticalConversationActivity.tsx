@@ -332,8 +332,8 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                             <Box
                                 key={index}
                                 sx={{
-                                    mb: 2,
-                                    p: 2,
+                                    mb: 1.5,
+                                    p: { xs: 1.25, md: 1.5 },
                                     borderRadius: 2,
                                     border: `1px solid ${alpha(theme.accent, 0.3)}`,
                                     bgcolor: alpha(theme.chatBg, 0.6),
@@ -344,7 +344,7 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
-                                        mb: 1.5,
+                                        mb: 1,
                                     }}
                                 >
                                     <Chip
@@ -367,13 +367,25 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                                         </IconButton>
                                     )}
                                 </Box>
-                                <Grid container columnSpacing="10px" rowSpacing="10px">
-                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                <Grid container columnSpacing={1.5} rowSpacing={1}>
+                                    <Grid size={{ xs: 12, md: 6 }}>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: theme.bubbleLabel,
+                                                fontWeight: 700,
+                                                display: 'block',
+                                                mb: 0.5,
+                                            }}
+                                        >
+                                            ← {participant1}
+                                        </Typography>
                                         <TextField
                                             fullWidth
+                                            size="small"
                                             multiline
-                                            minRows={2}
-                                            label={participant1}
+                                            minRows={1}
+                                            maxRows={2}
                                             placeholder={`What does ${participant1} say?`}
                                             value={row.participant1Line}
                                             onChange={(e) =>
@@ -384,17 +396,31 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: alpha(theme.bubbleOther, 0.5),
                                                     color: theme.bubbleOtherText,
+                                                    alignItems: 'flex-start',
                                                 },
-                                                '& .MuiInputLabel-root': { color: theme.headerMuted },
+                                                '& .MuiInputBase-input': { py: 0.75 },
                                             }}
                                         />
                                     </Grid>
-                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                    <Grid size={{ xs: 12, md: 6 }}>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: theme.bubbleLabel,
+                                                fontWeight: 700,
+                                                display: 'block',
+                                                mb: 0.5,
+                                                textAlign: { xs: 'left', md: 'right' },
+                                            }}
+                                        >
+                                            {participant2} →
+                                        </Typography>
                                         <TextField
                                             fullWidth
+                                            size="small"
                                             multiline
-                                            minRows={2}
-                                            label={participant2}
+                                            minRows={1}
+                                            maxRows={2}
                                             placeholder={`What do you (${participant2}) say?`}
                                             value={row.participant2Line}
                                             onChange={(e) =>
@@ -405,17 +431,20 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: alpha(theme.bubbleUser, 0.4),
                                                     color: theme.bubbleUserText,
+                                                    alignItems: 'flex-start',
                                                 },
-                                                '& .MuiInputLabel-root': { color: theme.headerMuted },
+                                                '& .MuiInputBase-input': { py: 0.75 },
                                             }}
                                         />
                                     </Grid>
                                 </Grid>
-                                <ExchangePreview
-                                    participant1={participant1}
-                                    participant2={participant2}
-                                    exchange={row}
-                                />
+                                <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                                    <ExchangePreview
+                                        participant1={participant1}
+                                        participant2={participant2}
+                                        exchange={row}
+                                    />
+                                </Box>
                             </Box>
                         ))}
 
@@ -439,6 +468,7 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                         <Button
                             type="submit"
                             variant="contained"
+                            fullWidth
                             disabled={isSubmitting}
                             startIcon={isSubmitting ? <CircularProgress size={18} color="inherit" /> : <SendIcon />}
                             sx={{

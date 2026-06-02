@@ -14,16 +14,26 @@ import {
     Divider,
     Chip,
     Link as MuiLink,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    IconButton,
+    InputAdornment,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import SaveIcon from '@mui/icons-material/Save';
 import PinIcon from '@mui/icons-material/Pin';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LockResetIcon from '@mui/icons-material/LockReset';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useAuth } from '../contexts/AuthContext';
 import { getCurrentUserProfile, updateCurrentUserProfile, type UpdateProfileData } from '../services/userService';
-import { changeLoginPin, forgotLoginPin } from '../services/authService';
+import { changeLoginPin, regenerateLoginPinAfterVerification } from '../services/authService';
 import type { User as AuthUser } from '../services/authService';
+import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
 
 const PIN_LENGTH = 6;
 
@@ -54,7 +64,11 @@ const ProfilePage: React.FC = () => {
         text: string;
     } | null>(null);
     const [isPinSectionVisible, setIsPinSectionVisible] = useState(false);
-    const [forgotPinLoading, setForgotPinLoading] = useState(false);
+    const [isRegeneratePinDialogOpen, setIsRegeneratePinDialogOpen] = useState(false);
+    const [regenerateCurrentPin, setRegenerateCurrentPin] = useState('');
+    const [isRegeneratePinLoading, setIsRegeneratePinLoading] = useState(false);
+    const [generatedPin, setGeneratedPin] = useState<string | null>(null);
+    const [showGeneratedPin, setShowGeneratedPin] = useState(false);
 
     const fetchProfile = useCallback(async () => {
         setIsLoading(true);
@@ -182,21 +196,24 @@ const ProfilePage: React.FC = () => {
         setConfirmPin('');
     };
 
-    const handleForgotPinEmail = async () => {
-        const phone = phoneNumber.trim() || profileData?.phoneNumber || profileData?.mobile;
-        if (!phone) {
-            setPinUpdateMessage({ type: 'error', text: 'Add a phone number to your profile first.' });
+    const handleRegeneratePin = async () => {
+        if (regenerateCurrentPin.length !== PIN_LENGTH) {
+            setPinUpdateMessage({ type: 'error', text: 'Enter your current 6-digit PIN.' });
             return;
         }
-        setForgotPinLoading(true);
+        setIsRegeneratePinLoading(true);
         try {
-            const msg = await forgotLoginPin(phone);
-            setPinUpdateMessage({ type: 'success', text: msg });
+            const result = await regenerateLoginPinAfterVerification({ currentPin: regenerateCurrentPin });
+            setGeneratedPin(result.newPin || null);
+            setShowGeneratedPin(false);
+            setPinUpdateMessage({ type: 'success', text: result.message });
+            setIsRegeneratePinDialogOpen(false);
+            setRegenerateCurrentPin('');
         } catch (err: unknown) {
             const e = err as { message?: string };
-            setPinUpdateMessage({ type: 'error', text: e.message || 'Could not email a new PIN.' });
+            setPinUpdateMessage({ type: 'error', text: e.message || 'Could not generate a new PIN.' });
         } finally {
-            setForgotPinLoading(false);
+            setIsRegeneratePinLoading(false);
         }
     };
 
@@ -233,11 +250,28 @@ const ProfilePage: React.FC = () => {
     return (
         <UserLayout title="Profile Settings">
             <Container maxWidth="md">
-                <Typography variant="h5" component="h1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                <Typography
+                    variant="h5"
+                    component="h1"
+                    sx={{ mb: 2, fontWeight: 'bold', color: learnerBrandTheme.textPrimary }}
+                >
                     Account Settings
                 </Typography>
 
-                <Paper elevation={1} sx={{ p: 2, mb: 3, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                <Paper
+                    elevation={1}
+                    sx={{
+                        p: 2,
+                        mb: 3,
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        border: `1px solid ${learnerBrandTheme.border}`,
+                    }}
+                >
                     <Box>
                         <Typography variant="subtitle1" fontWeight={700}>
                             Rewards & scoring
@@ -251,7 +285,10 @@ const ProfilePage: React.FC = () => {
                     </Button>
                 </Paper>
 
-                <Paper elevation={2} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3 }}>
+                <Paper
+                    elevation={1}
+                    sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3, border: `1px solid ${learnerBrandTheme.border}` }}
+                >
                     <Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                             <AccountCircleIcon color="primary" sx={{ mr: 1.5 }} />
@@ -363,6 +400,48 @@ const ProfilePage: React.FC = () => {
                                 {pinUpdateMessage.text}
                             </Alert>
                         )}
+                        {generatedPin && !isPinSectionVisible && (
+                            <Alert
+                                severity="success"
+                                sx={{ mb: 2 }}
+                                onClose={() => {
+                                    setGeneratedPin(null);
+                                    setShowGeneratedPin(false);
+                                }}
+                                action={
+                                    <Button
+                                        color="inherit"
+                                        size="small"
+                                        startIcon={<ContentCopyIcon fontSize="small" />}
+                                        onClick={() => void navigator.clipboard?.writeText(generatedPin)}
+                                    >
+                                        Copy
+                                    </Button>
+                                }
+                            >
+                                <Typography variant="body2" sx={{ mb: 0.75 }}>
+                                    New PIN generated after verification. Save it securely.
+                                </Typography>
+                                <Box sx={{ mt: 0.5, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Chip
+                                        label={showGeneratedPin ? generatedPin : '••••••'}
+                                        color="success"
+                                        variant="outlined"
+                                    />
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setShowGeneratedPin((prev) => !prev)}
+                                        aria-label={showGeneratedPin ? 'Hide PIN' : 'Show PIN'}
+                                    >
+                                        {showGeneratedPin ? (
+                                            <VisibilityOffIcon fontSize="small" />
+                                        ) : (
+                                            <VisibilityIcon fontSize="small" />
+                                        )}
+                                    </IconButton>
+                                </Box>
+                            </Alert>
+                        )}
 
                         {isPinSectionVisible ? (
                             <Box component="form" onSubmit={handlePinUpdateSubmit} noValidate>
@@ -449,10 +528,13 @@ const ProfilePage: React.FC = () => {
                                 </Button>
                                 <Button
                                     variant="outlined"
-                                    onClick={() => void handleForgotPinEmail()}
-                                    disabled={forgotPinLoading}
+                                    onClick={() => {
+                                        setPinUpdateMessage(null);
+                                        setIsRegeneratePinDialogOpen(true);
+                                    }}
+                                    disabled={isRegeneratePinLoading}
                                 >
-                                    {forgotPinLoading ? (
+                                    {isRegeneratePinLoading ? (
                                         <CircularProgress size={20} />
                                     ) : (
                                         'Email me a new PIN'
@@ -469,6 +551,57 @@ const ProfilePage: React.FC = () => {
                         </Typography>
                     </Box>
                 </Paper>
+                <Dialog
+                    open={isRegeneratePinDialogOpen}
+                    onClose={() => {
+                        if (isRegeneratePinLoading) return;
+                        setIsRegeneratePinDialogOpen(false);
+                        setRegenerateCurrentPin('');
+                    }}
+                    fullWidth
+                    maxWidth="xs"
+                >
+                    <DialogTitle>Verify current PIN</DialogTitle>
+                    <DialogContent>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            For security, confirm your current PIN to generate and view a new one.
+                        </Typography>
+                        <TextField
+                            label="Current PIN"
+                            value={regenerateCurrentPin}
+                            onChange={(e) => setRegenerateCurrentPin(digitsOnly(e.target.value))}
+                            fullWidth
+                            required
+                            disabled={isRegeneratePinLoading}
+                            {...pinFieldProps}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <PinIcon fontSize="small" />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={() => {
+                                setIsRegeneratePinDialogOpen(false);
+                                setRegenerateCurrentPin('');
+                            }}
+                            disabled={isRegeneratePinLoading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={() => void handleRegeneratePin()}
+                            disabled={isRegeneratePinLoading}
+                        >
+                            {isRegeneratePinLoading ? <CircularProgress size={20} color="inherit" /> : 'Generate PIN'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Container>
         </UserLayout>
     );

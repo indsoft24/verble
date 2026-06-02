@@ -13,6 +13,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import { useAuth } from '../contexts/AuthContext';
 import { extractId } from '../utils/idUtils';
 import { getSplashImageUrl, resolveBackendMediaUrl } from '../utils/imageUtils';
+import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
 
 const useDebounce = (value: string, delay: number) => {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -132,7 +133,12 @@ const VideosListPage: React.FC = () => {
     return (
         <UserLayout title="My Videos">
             <Container maxWidth="xl">
-                <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 1, fontWeight: 'bold' }}>
+                <Typography
+                    variant="h5"
+                    component="h1"
+                    gutterBottom
+                    sx={{ mb: 1, fontWeight: 'bold', color: learnerBrandTheme.textPrimary }}
+                >
                     Explore Our Videos
                 </Typography>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
@@ -141,7 +147,10 @@ const VideosListPage: React.FC = () => {
                     variant="outlined"
                     value={searchTerm}
                     onChange={handleSearchChange}
-                    sx={{ width: { xs: '100%', sm: '70%', md: '50%' } }}
+                    sx={{
+                        width: { xs: '100%', sm: '70%', md: '50%' },
+                        '& .MuiOutlinedInput-root': { bgcolor: learnerBrandTheme.surface },
+                    }}
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
@@ -164,7 +173,7 @@ const VideosListPage: React.FC = () => {
             )}
             
             {!isLoading && videos.length === 0 && !error && (
-                <Paper sx={{p:3, textAlign:'center', mt: 3}}>
+                <Paper sx={{ p: 3, textAlign: 'center', mt: 3, border: `1px solid ${learnerBrandTheme.border}` }}>
                     <Typography variant="subtitle1">
                         {debouncedSearchTerm ? `No videos found matching "${debouncedSearchTerm}".` : "No videos available at the moment. Please check back soon!"}
                     </Typography>
@@ -190,6 +199,7 @@ const VideosListPage: React.FC = () => {
                         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', 
                                     opacity: cardOpacity,
                                     backgroundColor: cardBg,
+                                    border: `1px solid ${learnerBrandTheme.border}`,
                                     boxShadow: 3, '&:hover': { boxShadow: 7, transform: !disableNavigation ? 'translateY(-4px)' : 'none' }, 
                                     transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out' }}>
                             <CardActionArea 

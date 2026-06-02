@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, alpha } from '@mui/material';
+import { Box, Button, alpha, useMediaQuery, useTheme } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { professionalConversationTheme as theme } from './professionalConversationTheme';
@@ -13,6 +13,24 @@ export interface ProfessionalConversationNavBarProps {
     rightDisabled?: boolean;
 }
 
+const pillSx = {
+    borderRadius: 999,
+    borderColor: alpha(theme.accent, 0.5),
+    color: theme.headerText,
+    fontWeight: 600,
+    textTransform: 'none' as const,
+    px: { xs: 1.5, sm: 2 },
+    py: 0.75,
+    '&:hover': {
+        borderColor: theme.accent,
+        bgcolor: alpha(theme.accent, 0.12),
+    },
+    '&.Mui-disabled': {
+        borderColor: alpha(theme.accent, 0.2),
+        color: alpha(theme.headerText, 0.35),
+    },
+};
+
 const ProfessionalConversationNavBar: React.FC<ProfessionalConversationNavBarProps> = ({
     leftLabel,
     rightLabel,
@@ -21,9 +39,13 @@ const ProfessionalConversationNavBar: React.FC<ProfessionalConversationNavBarPro
     leftDisabled = false,
     rightDisabled = false,
 }) => {
+    const muiTheme = useTheme();
+    const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
     const showLeft = Boolean(leftLabel);
     const showRight = Boolean(rightLabel);
     if (!showLeft && !showRight) return null;
+
+    const usePills = !isMobile;
 
     return (
         <Box
@@ -44,17 +66,18 @@ const ProfessionalConversationNavBar: React.FC<ProfessionalConversationNavBarPro
         >
             {showLeft ? (
                 <Button
-                    variant="text"
+                    variant={usePills ? 'outlined' : 'text'}
+                    size="small"
                     startIcon={<ArrowBackIcon />}
                     onClick={onLeft}
                     disabled={leftDisabled || !onLeft}
                     aria-label={leftLabel}
                     sx={{
-                        color: theme.headerText,
-                        fontWeight: 600,
+                        ...(usePills ? pillSx : {}),
                         flex: '1 1 0',
                         minWidth: 0,
                         justifyContent: 'flex-start',
+                        ...(!usePills && { color: theme.headerText, fontWeight: 600 }),
                     }}
                 >
                     {leftLabel}
@@ -64,17 +87,18 @@ const ProfessionalConversationNavBar: React.FC<ProfessionalConversationNavBarPro
             )}
             {showRight ? (
                 <Button
-                    variant="text"
+                    variant={usePills ? 'outlined' : 'text'}
+                    size="small"
                     endIcon={<ArrowForwardIcon />}
                     onClick={onRight}
                     disabled={rightDisabled || !onRight}
                     aria-label={rightLabel}
                     sx={{
-                        color: theme.headerText,
-                        fontWeight: 600,
+                        ...(usePills ? pillSx : {}),
                         flex: '1 1 0',
                         minWidth: 0,
                         justifyContent: 'flex-end',
+                        ...(!usePills && { color: theme.headerText, fontWeight: 600 }),
                     }}
                 >
                     {rightLabel}

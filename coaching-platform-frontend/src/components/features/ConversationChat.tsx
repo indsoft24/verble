@@ -14,6 +14,7 @@ import { keyframes } from '@emotion/react';
 import { isParticipant2Speaker, type DialogueLine } from '../../utils/conversationDialogueUtils';
 import ActivityContentHeader from './ActivityContentHeader';
 import { practicalConversationTheme as theme } from './practicalConversationTheme';
+import { TIER_COLORS } from '../dashboard/DashboardActivitiesPanel';
 
 const pulse = keyframes`
     0%, 100% { opacity: 1; }
@@ -27,6 +28,8 @@ export interface ConversationChatProps {
     scenarioTitle?: string;
     scenarioTitleHi?: string;
     displayNumber?: string | null;
+    labelOverride?: string;
+    accentTier?: 'silver' | 'gold';
 }
 
 const ConversationChat: React.FC<ConversationChatProps> = ({
@@ -36,6 +39,8 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
     scenarioTitle,
     scenarioTitleHi,
     displayNumber,
+    labelOverride,
+    accentTier = 'silver',
 }) => {
     const [showHindi, setShowHindi] = useState<Record<number, boolean>>({});
     const [playingAudio, setPlayingAudio] = useState<number | null>(null);
@@ -114,6 +119,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
     };
 
     const headerTitle = scenarioTitle?.trim() || 'Practical Conversation';
+    const ringColor = accentTier === 'gold' ? TIER_COLORS.GOLD : theme.silverRing;
 
     return (
         <Paper
@@ -129,7 +135,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                 margin: '0 auto',
                 borderRadius: 3,
                 overflow: 'hidden',
-                border: `2px solid ${theme.silverRing}`,
+                border: `2px solid ${ringColor}`,
                 boxShadow: theme.cardShadow,
             }}
         >
@@ -138,6 +144,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                     contentType="CONVERSATION"
                     accentColor={theme.headerAccentLabel}
                     displayNumber={displayNumber}
+                    labelOverride={labelOverride}
                     sx={{ mb: 0.75 }}
                 />
                 <Typography variant="h6" fontWeight={800}>
@@ -196,14 +203,17 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                                             fontWeight: 700,
                                         }}
                                     >
-                                        {item.speaker || participant1}
+                                        {participant1}
                                     </Typography>
                                 )}
                                 <Paper
                                     elevation={0}
                                     sx={{
-                                        px: 1.5,
-                                        py: 1,
+                                        // Match the “conversation pill” spacing:
+                                        // horizontal padding ~16px, top padding ~10px, bottom padding ~8px.
+                                        px: 2,
+                                        pt: 1.25,
+                                        pb: 1,
                                         borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                                         bgcolor: isUser ? theme.bubbleUser : theme.bubbleOther,
                                         boxShadow: '0 1px 2px rgba(0,0,0,0.2)',

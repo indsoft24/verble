@@ -174,6 +174,25 @@ export const forgotLoginPin = async (phoneNumber: string): Promise<string> => {
     }
 };
 
+export const regenerateLoginPinAfterVerification = async (payload: {
+    currentPin: string;
+}): Promise<{ message: string; newPin: string }> => {
+    try {
+        const response = await apiClient.post<{
+            status: string;
+            message: string;
+            data?: { newPin?: string };
+        }>(`${API_URL_AUTH}/phone-pin/regenerate-after-verify`, payload);
+        return {
+            message: response.data.message || 'New PIN generated.',
+            newPin: response.data.data?.newPin || '',
+        };
+    } catch (error: any) {
+        const err = error.response?.data || error;
+        throw new Error(err.message || 'Failed to regenerate PIN.');
+    }
+};
+
 export const changeLoginPin = async (payload: {
     currentPin?: string;
     newPin: string;

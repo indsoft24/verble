@@ -37,6 +37,7 @@ import { getAllSubscriptionPlansAdmin, type SubscriptionPlan } from '../services
 import { formatPlanDurationLabel } from '../utils/adminUserDisplay';
 
 const subscriptionStatuses: AdminAddUserSubscriptionPayload['status'][] = ['active', 'pending_cancellation', 'cancelled', 'expired', 'trial', 'future_active', 'none'];
+const isStandaloneBonusPlanName = (name: string): boolean => name.trim().toLowerCase() === 'bonus';
 
 const InfoField: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
     <Box>
@@ -77,6 +78,20 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
     const [displayedLoginPin, setDisplayedLoginPin] = useState<string | null>(null);
     const [isRegeneratingPin, setIsRegeneratingPin] = useState(false);
     const [pinCopyHint, setPinCopyHint] = useState<string | null>(null);
+    const now = new Date();
+    const activePlanIds = new Set(
+        (user?.subscriptions || [])
+            .filter((sub) => {
+                if (sub.status !== 'active' || !sub.startDate || !sub.endDate) return false;
+                const start = new Date(sub.startDate);
+                const end = new Date(sub.endDate);
+                return start <= now && end >= now;
+            })
+            .map((sub) =>
+                typeof sub.planId === 'string' ? sub.planId : (sub.planId as { _id?: string })?._id || ''
+            )
+            .filter(Boolean)
+    );
 
     const calculateEndDate = (startDate: Date, duration: SubscriptionPlan['duration']): Date => { 
         const date = new Date(startDate);
@@ -99,7 +114,7 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
         try {
             const [userData, plansData] = await Promise.all([ getUserByIdAdmin(userId), getAllSubscriptionPlansAdmin() ]);
             setUser(userData);
-            setAllPlans(plansData.filter(plan => plan.isActive));
+            setAllPlans(plansData.filter((plan) => plan.isActive && !isStandaloneBonusPlanName(plan.name)));
             // Initialize edit form with current user data
             setEditedUserName(userData.name || '');
             setEditedUserPhone(userData.phoneNumber || '');
@@ -111,6 +126,10 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
 
     const handleAddSubscription = async () => { 
         if (!userId || !newSubPlanId) { setError("User ID and Plan selection are required."); return; }
+        if (activePlanIds.has(newSubPlanId)) {
+            setError('This plan is already active for the user.');
+            return;
+        }
         setIsSubmitting(true); setError(null); setSuccess(null);
         const selectedPlanForEndDateCalc = allPlans.find(p => p._id === newSubPlanId);
         const payload: AdminAddUserSubscriptionPayload = { planId: newSubPlanId, status: newSubStatus };
@@ -541,12 +560,14 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                                 >
                                     <MenuItem value=""><em>-- Select a Plan --</em></MenuItem>
                                     {allPlans.map((plan) => (
-                                        <MenuItem key={plan._id} value={plan._id}>
+                                        <MenuItem key={plan._id} value={plan._id} disabled={activePlanIds.has(plan._id)}>
                                             {plan.name} — {formatPlanDurationLabel(plan) || `${plan.duration?.value} ${plan.duration?.unit}`}
+                                            {activePlanIds.has(plan._id) ? ' (Already active)' : ''}
                                         </MenuItem>
                                     ))}
                                 </Select>
                                 {allPlans.length === 0 && <FormHelperText error>No active plans available to assign.</FormHelperText>}
+                                {allPlans.length > 0 && <FormHelperText>Already active plans are disabled.</FormHelperText>}
                             </FormControl>
                         </Grid>
                         <Grid sx={{ width:{ xs: '100%', sm: '50%' }}}>

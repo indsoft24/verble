@@ -45,6 +45,8 @@ import PhraseOfTheDayCard from '../components/features/PhraseOfTheDayCard';
 import StoryCard from '../components/features/StoryCard';
 import VocabularySetCard from '../components/features/VocabularySetCard';
 import PracticalConversationActivity from '../components/features/PracticalConversationActivity';
+import ConversationExperienceShell from '../components/features/ConversationExperienceShell';
+import { conversationBackButtonSx } from '../components/features/conversationExperienceStyles';
 import PuzzleCard from '../components/features/PuzzleCard';
 import SceneCard from '../components/features/SceneCard';
 import SpeechCard from '../components/features/SpeechCard';
@@ -361,8 +363,53 @@ const UserDashboardPage: React.FC = () => {
     const displayStreak = getStreakForDisplayLevel(user);
 
     if (selectedActivity && activityKind) {
+        const isConversationActivity = activityKind === 'conversation';
+
         return (
-            <UserLayout title="Activity">
+            <UserLayout title="Activity" variant={isConversationActivity ? 'conversations' : 'default'}>
+                {isConversationActivity ? (
+                    <ConversationExperienceShell tier="silver" maxWidth="lg">
+                        <Button
+                            onClick={handleCloseActivity}
+                            startIcon={<ArrowBackIcon />}
+                            sx={conversationBackButtonSx}
+                        >
+                            Back to Dashboard
+                        </Button>
+                        <PracticalConversationActivity
+                            data={selectedActivity}
+                            onSubmissionSuccess={refreshDashboardAfterSubmission}
+                        />
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                mt: 2,
+                                px: { xs: 1.5, sm: 2.5 },
+                                py: 0.5,
+                                borderRadius: 2,
+                                bgcolor: '#0f172a',
+                                border: `1px solid ${alpha(TIER_COLORS.SILVER, 0.28)}`,
+                            }}
+                        >
+                            <ActivityTierNavFooter
+                                variant="dark"
+                                accentColor={TIER_COLORS.SILVER}
+                                left={{
+                                    label: 'Spot the Sentence',
+                                    onClick: puzzleSpotContent
+                                        ? () => openLinkedActivity(puzzleSpotContent, 'puzzle_spot')
+                                        : undefined,
+                                }}
+                                center={{
+                                    label: '→ Grammar Puzzle',
+                                    onClick: puzzleGrammarContent
+                                        ? () => openLinkedActivity(puzzleGrammarContent, 'puzzle_grammar')
+                                        : undefined,
+                                }}
+                            />
+                        </Paper>
+                    </ConversationExperienceShell>
+                ) : (
                 <Container maxWidth="lg" sx={{ py: 2 }}>
                     <Button onClick={handleCloseActivity} startIcon={<ArrowBackIcon />} sx={{ mb: 2 }}>
                         Back to Dashboard
@@ -408,52 +455,6 @@ const UserDashboardPage: React.FC = () => {
                                     : undefined
                             }
                         />
-                    )}
-                    {activityKind === 'conversation' && (
-                        <Box sx={{ minHeight: '70vh', py: 2 }}>
-                            <>
-                                <PracticalConversationActivity
-                                    data={selectedActivity}
-                                    onSubmissionSuccess={refreshDashboardAfterSubmission}
-                                />
-                                <Paper
-                                            elevation={0}
-                                            sx={{
-                                                mt: 2,
-                                                px: { xs: 1.5, sm: 2.5 },
-                                                py: 0.5,
-                                                borderRadius: 2,
-                                                bgcolor: '#0f172a',
-                                                border: `1px solid ${alpha(TIER_COLORS.SILVER, 0.28)}`,
-                                            }}
-                                        >
-                                            <ActivityTierNavFooter
-                                                variant="dark"
-                                                accentColor={TIER_COLORS.SILVER}
-                                                left={{
-                                                    label: 'Spot the Sentence',
-                                                    onClick: puzzleSpotContent
-                                                        ? () =>
-                                                              openLinkedActivity(
-                                                                  puzzleSpotContent,
-                                                                  'puzzle_spot'
-                                                              )
-                                                        : undefined,
-                                                }}
-                                                center={{
-                                                    label: '→ Grammar Puzzle',
-                                                    onClick: puzzleGrammarContent
-                                                        ? () =>
-                                                              openLinkedActivity(
-                                                                  puzzleGrammarContent,
-                                                                  'puzzle_grammar'
-                                                              )
-                                                        : undefined,
-                                                }}
-                                            />
-                                        </Paper>
-                            </>
-                        </Box>
                     )}
                     {(activityKind === 'puzzle_spot' || activityKind === 'puzzle_grammar') && (
                         <>
@@ -556,6 +557,7 @@ const UserDashboardPage: React.FC = () => {
                         />
                     )}
                 </Container>
+                )}
             </UserLayout>
         );
     }

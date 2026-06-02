@@ -7,6 +7,7 @@ import type { DailyContent } from '../../services/dailyContentService';
 import { getContentDisplayNumber } from '../../utils/dailyActivityUi';
 import { getAdjacentConversation } from '../../utils/professionalConversationLibraryUtils';
 import { professionalConversationTheme as theme } from './professionalConversationTheme';
+import { conversationBackButtonSx } from './conversationExperienceStyles';
 import ProfessionalConversationNavBar from './ProfessionalConversationNavBar';
 
 export interface ProfessionalConversationViewerProps {
@@ -42,60 +43,28 @@ const ProfessionalConversationViewer: React.FC<ProfessionalConversationViewerPro
     const idx = tagConversations.findIndex((c) => c._id === conversation._id);
 
     return (
-        <Box
-            sx={{
-                width: theme.frameWidth,
-                maxWidth: theme.frameMaxWidth,
-                mx: 'auto',
-                px: { xs: 0, sm: 0 },
-            }}
-        >
-            <Button
-                startIcon={<ArrowBackIcon />}
-                onClick={onBack}
-                sx={{ color: theme.accent, mb: 2, fontWeight: 600 }}
-            >
+        <Box sx={{ width: '100%', maxWidth: theme.frameMaxWidth, mx: 'auto' }}>
+            <Button startIcon={<ArrowBackIcon />} onClick={onBack} sx={conversationBackButtonSx}>
                 {activeTag}
             </Button>
 
-            <Paper
-                elevation={0}
-                sx={{
-                    p: { xs: 1.5, sm: 2 },
-                    mb: 2,
-                    borderRadius: 3,
-                    bgcolor: theme.headerBg,
-                    border: theme.practiceBorder,
-                }}
-            >
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
-                    {getContentDisplayNumber(conversation.sequenceNumber) && (
-                        <Chip
-                            label={getContentDisplayNumber(conversation.sequenceNumber)}
-                            size="small"
-                            sx={{
-                                bgcolor: alpha(theme.accent, 0.2),
-                                color: theme.headerAccentLabel,
-                                fontWeight: 700,
-                            }}
-                        />
-                    )}
-                    {idx >= 0 && tagConversations.length > 1 && (
-                        <Typography variant="caption" sx={{ color: theme.headerMuted }}>
-                            {idx + 1} of {tagConversations.length}
-                        </Typography>
-                    )}
-                </Box>
-                <Typography variant="h6" fontWeight={800} sx={{ color: theme.headerText }}>
-                    {scenarioTitle}
-                </Typography>
-                {description && (
-                    <Typography variant="body2" sx={{ color: theme.headerMuted, mt: 0.5 }}>
-                        {description}
-                    </Typography>
-                )}
-                {tags.length > 0 && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1.5 }}>
+            {(description || tags.length > 0 || tagConversations.length > 1) && (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: { xs: 1.25, sm: 1.5 },
+                        mb: 1.5,
+                        borderRadius: 2,
+                        bgcolor: alpha(theme.headerBg, 0.85),
+                        border: theme.practiceBorder,
+                    }}
+                >
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}>
+                        {idx >= 0 && tagConversations.length > 1 && (
+                            <Typography variant="caption" sx={{ color: theme.headerMuted, fontWeight: 600 }}>
+                                {idx + 1} of {tagConversations.length}
+                            </Typography>
+                        )}
                         {tags.map((tag: string) => (
                             <Chip
                                 key={tag}
@@ -104,13 +73,19 @@ const ProfessionalConversationViewer: React.FC<ProfessionalConversationViewerPro
                                 sx={{
                                     borderColor: alpha(theme.accent, 0.5),
                                     color: theme.headerAccentLabel,
+                                    height: 24,
                                 }}
                                 variant="outlined"
                             />
                         ))}
                     </Box>
-                )}
-            </Paper>
+                    {description && (
+                        <Typography variant="body2" sx={{ color: theme.headerMuted, mt: 0.75 }}>
+                            {description}
+                        </Typography>
+                    )}
+                </Paper>
+            )}
 
             {dialogue.length > 0 ? (
                 <ConversationChat
@@ -120,6 +95,8 @@ const ProfessionalConversationViewer: React.FC<ProfessionalConversationViewerPro
                     scenarioTitle={scenarioTitle}
                     scenarioTitleHi={scenarioTitleHi}
                     displayNumber={getContentDisplayNumber(conversation.sequenceNumber)}
+                    labelOverride="Professional Conversations"
+                    accentTier="gold"
                 />
             ) : (
                 <Paper

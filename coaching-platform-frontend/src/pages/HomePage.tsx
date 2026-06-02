@@ -26,6 +26,8 @@ import SchoolIcon from '@mui/icons-material/School';
 import WordOfTheDayCard from '../components/features/WordOfTheDayCard';
 import StoryCard from '../components/features/StoryCard';
 import PracticalConversationActivity from '../components/features/PracticalConversationActivity';
+import ConversationExperienceShell from '../components/features/ConversationExperienceShell';
+import { conversationBackButtonSx } from '../components/features/conversationExperienceStyles';
 import LevelUnlockDialog from '../components/features/LevelUnlockDialog';
 import { getTodaysDailyContent, type DailyContent } from '../services/dailyContentService';
 import { getContentTypeConfig, type ContentType } from '../utils/contentTypeConfig';
@@ -207,6 +209,21 @@ const HomePage: React.FC = () => {
 
     // Show activity modal if selected
     if (selectedActivity && activityType) {
+        if (activityType === 'conversation') {
+            return (
+                <ConversationExperienceShell tier="silver" maxWidth="lg">
+                    <Typography
+                        variant="h6"
+                        onClick={handleCloseActivity}
+                        sx={{ ...conversationBackButtonSx, cursor: 'pointer', display: 'inline-block' }}
+                    >
+                        ← Back to Dashboard
+                    </Typography>
+                    <PracticalConversationActivity data={selectedActivity} />
+                </ConversationExperienceShell>
+            );
+        }
+
         return (
             <Container maxWidth="lg" sx={{ py: 4 }}>
                 <Box sx={{ mb: 2 }}>
@@ -219,11 +236,6 @@ const HomePage: React.FC = () => {
                 )}
                 {activityType === 'story' && (
                     <StoryCard data={selectedActivity as any} />
-                )}
-                {activityType === 'conversation' && (
-                    <Box sx={{ py: 2 }}>
-                        <PracticalConversationActivity data={selectedActivity} />
-                    </Box>
                 )}
             </Container>
         );

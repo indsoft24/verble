@@ -31,6 +31,10 @@ import {
     type QuizQuestionInput,
 } from '../services/moduleQuizAdminService';
 import type { ModuleQuizImportPayload } from '../utils/moduleQuizBulkCsv';
+import {
+    DEFAULT_QUIZ_COURSE_ID,
+    FALLBACK_QUIZ_COURSE_NAME,
+} from '../config/adminDefaults';
 
 const DEFAULT_OPTION_COUNT = 4;
 const MIN_OPTIONS = 2;
@@ -62,7 +66,7 @@ const AdminModuleQuizzesPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [courses, setCourses] = useState<Course[]>([]);
     const [modules, setModules] = useState<Module[]>([]);
-    const [courseId, setCourseId] = useState(searchParams.get('courseId') || '');
+    const [courseId, setCourseId] = useState(searchParams.get('courseId') || DEFAULT_QUIZ_COURSE_ID || '');
     const [moduleId, setModuleId] = useState(searchParams.get('moduleId') || '');
     const [quizId, setQuizId] = useState<string | null>(null);
     const [title, setTitle] = useState('');
@@ -77,7 +81,27 @@ const AdminModuleQuizzesPage: React.FC = () => {
     const [bulkOpen, setBulkOpen] = useState(false);
 
     useEffect(() => {
-        getAllCoursesAdmin().then(setCourses).catch(() => setError('Failed to load courses'));
+        getAllCoursesAdmin()
+            .then((fetchedCourses) => {
+                setCourses(fetchedCourses);
+                const queryCourseId = searchParams.get('courseId') || '';
+                const currentCourseExists = fetchedCourses.some((course) => course._id === courseId);
+                const resolvedCourseId =
+                    fetchedCourses.find((course) => course._id === queryCourseId)?._id ||
+                    fetchedCourses.find((course) => course._id === DEFAULT_QUIZ_COURSE_ID)?._id ||
+                    fetchedCourses.find(
+                        (course) =>
+                            course.title.trim().toLowerCase() ===
+                            FALLBACK_QUIZ_COURSE_NAME.trim().toLowerCase()
+                    )?._id ||
+                    fetchedCourses[0]?._id ||
+                    '';
+
+                if (!currentCourseExists || !courseId) {
+                    setCourseId(resolvedCourseId);
+                }
+            })
+            .catch(() => setError('Failed to load courses'));
     }, []);
 
     useEffect(() => {
@@ -231,6 +255,7 @@ const AdminModuleQuizzesPage: React.FC = () => {
                             <Select
                                 label="Course"
                                 value={courseId}
+                                disabled={courses.length <= 1}
                                 onChange={(e) => {
                                     setCourseId(e.target.value);
                                     setModuleId('');
@@ -244,6 +269,11 @@ const AdminModuleQuizzesPage: React.FC = () => {
                                     </MenuItem>
                                 ))}
                             </Select>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, ml: 1.5 }}>
+                                {courses.length <= 1
+                                    ? 'Defaulted by platform configuration.'
+                                    : 'Defaulted by platform configuration (editable if other courses exist).'}
+                            </Typography>
                         </FormControl>
                         <FormControl fullWidth size="small" disabled={!courseId}>
                             <InputLabel>Module</InputLabel>
