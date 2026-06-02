@@ -54,6 +54,18 @@ export const getTodaysDailyContent = async (): Promise<DailyContent[]> => {
     return response.data.data.content || [];
 };
 
+/** GOLD professional conversation library (not date-filtered). */
+export const getProfessionalLibrary = async (tag?: string): Promise<DailyContent[]> => {
+    const params: Record<string, string> = {};
+    if (tag) {
+        params.tag = tag;
+    }
+    const response = await apiClient.get<DailyContentResponse>('/daily-content/professional-library', {
+        params,
+    });
+    return response.data.data.content || [];
+};
+
 /** Sequence-based prev/next (same type + level). */
 export const getAdjacentContent = async (
     contentId: string,

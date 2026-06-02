@@ -75,6 +75,9 @@ const AdminCertificationManagementPage = lazy(() => import('./pages/AdminCertifi
 const AdminModuleQuizzesPage = lazy(() => import('./pages/AdminModuleQuizzesPage'));
 const AdminLearningSettingsPage = lazy(() => import('./pages/AdminLearningSettingsPage'));
 const AdminQuizValidationPage = lazy(() => import('./pages/AdminQuizValidationPage'));
+const AdminRewardsScoringPage = lazy(() => import('./pages/AdminRewardsScoringPage'));
+const AdminUserScoringDetailPage = lazy(() => import('./pages/AdminUserScoringDetailPage'));
+const MyRewardsPage = lazy(() => import('./pages/MyRewardsPage'));
 
 // Static Pages (Low priority - lazy load)
 const ContactUsPage = lazy(() => import('./pages/static/ContactUsPage'));
@@ -180,6 +183,7 @@ function AppContent() {
                             <Route path="/subscription-plans/:planId" element={<SubscriptionPlanDetailPage />} />
                             <Route path="/my-subscription" element={<MySubscriptionPage />} />
                             <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route path="/my-rewards" element={<MyRewardsPage />} />
                             <Route path="/professional-conversations" element={<ProfessionalConversationsPage />} />
                             <Route path="/modules/:moduleId/videos" element={<ModuleVideosPage />} />
                             <Route path="/modules/:moduleId/quiz" element={<ModuleQuizPage />} />
@@ -189,6 +193,8 @@ function AppContent() {
                         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
                             <Route path="/admin/users" element={<AdminUsersListPage />} />
+                            <Route path="/admin/rewards-scoring" element={<AdminRewardsScoringPage />} />
+                            <Route path="/admin/users/:userId/scoring" element={<AdminUserScoringDetailPage />} />
                             <Route path="/admin/users/:userId/manage-subscription" element={<AdminManageUserSubscriptionPage />} />
                             <Route path="/admin/videos" element={<AdminVideosListPage />} />
                             <Route path="/admin/videos/new" element={<AdminCreateVideoPage />} />

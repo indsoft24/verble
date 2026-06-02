@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, alpha } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { courseLearningTheme } from './courseLearningTheme';
 
 export interface CourseLearningHeroProps {

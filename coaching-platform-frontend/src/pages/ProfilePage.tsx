@@ -233,9 +233,23 @@ const ProfilePage: React.FC = () => {
     return (
         <UserLayout title="Profile Settings">
             <Container maxWidth="md">
-                <Typography variant="h5" component="h1" sx={{ mb: 3, fontWeight: 'bold' }}>
+                <Typography variant="h5" component="h1" sx={{ mb: 2, fontWeight: 'bold' }}>
                     Account Settings
                 </Typography>
+
+                <Paper elevation={1} sx={{ p: 2, mb: 3, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                    <Box>
+                        <Typography variant="subtitle1" fontWeight={700}>
+                            Rewards & scoring
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            View your leaderboard points, evaluation scores, and activity history.
+                        </Typography>
+                    </Box>
+                    <Button component={RouterLink} to="/my-rewards" variant="outlined" sx={{ textTransform: 'none' }}>
+                        Open history
+                    </Button>
+                </Paper>
 
                 <Paper elevation={2} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3 }}>
                     <Box>

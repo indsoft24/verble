@@ -9,6 +9,7 @@ import {
     getUserProfile,
     requestAccountDeletion
 } from '../controllers/userController.js';
+import { getMyScoringSummary, getMyScoringHistory } from '../controllers/scoringHistoryController.js';
 const router = express.Router();
 
 router.post('/request-account-deletion', requestAccountDeletion);
@@ -27,7 +28,7 @@ router.patch('/me/update-profile', updateMyProfileDetails);
 router.patch('/me/update-password', updateMyPasswordDetails);
 
 router.get('/me/accessible-courses', getMyAccessibleCourses);
-
-
+router.get('/me/scoring-summary', getMyScoringSummary);
+router.get('/me/scoring-history', getMyScoringHistory);
 
 export default router;

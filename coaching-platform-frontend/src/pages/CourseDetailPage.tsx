@@ -316,49 +316,22 @@ const CourseDetailPage: React.FC = () => {
                     />
 
                     <CourseLearningBand headerLabel="FULL COURSE" ribbon="ULTIMATE">
-                        <Grid container spacing={0} sx={{ gap: courseLearningTheme.gridGap, alignItems: { xs: 'stretch', sm: 'center' } }}>
-                            <Grid size={{ xs: 12, sm: 5 }}>
-                                <Box
-                                    sx={{
-                                        borderRadius: 1.5,
-                                        overflow: 'hidden',
-                                        aspectRatio: { xs: '16 / 9', sm: '4 / 3' },
-                                        maxHeight: { sm: 200 },
-                                        bgcolor: courseLearningTheme.surfaceRaised,
-                                    }}
-                                >
-                                    <Box
-                                        component="img"
-                                        src={course.image ? getImageUrl(course.image, 'course') : getSplashImageUrl()}
-                                        alt={course.title}
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).src = getSplashImageUrl();
-                                        }}
-                                        sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                                    />
-                                </Box>
-                            </Grid>
-                            <Grid size={{ xs: 12, sm: 7 }}>
-                                <Stack sx={{ ...courseLearningTheme.learningColStackSx }}>
-                                    <Typography
-                                        variant="h5"
-                                        component="h1"
-                                        sx={{
-                                            fontWeight: 800,
-                                            lineHeight: 1.3,
-                                            color: courseLearningTheme.textPrimary,
-                                            fontSize: { xs: '1.25rem', sm: '1.45rem' },
-                                        }}
-                                    >
-                                        {course.title}
-                                    </Typography>
+                        <CourseLearningHero
+                            imageUrl={course.image ? getImageUrl(course.image, 'course') : getSplashImageUrl()}
+                            imageAlt={course.title}
+                            onImageError={(e) => {
+                                (e.target as HTMLImageElement).src = getSplashImageUrl();
+                            }}
+                            title={course.title}
+                            meta={
+                                <>
                                     {typeof course.examCategory === 'object' && course.examCategory && (
                                         <Chip
                                             icon={<SchoolIcon sx={{ fontSize: 16, color: courseLearningTheme.accent }} />}
                                             label={course.examCategory.name}
                                             size="small"
                                             variant="outlined"
-                                            sx={{ ...courseChipOutlinedSx, alignSelf: 'flex-start' }}
+                                            sx={courseChipOutlinedSx}
                                         />
                                     )}
                                     {moduleCount > 0 && (
@@ -376,9 +349,9 @@ const CourseDetailPage: React.FC = () => {
                                             </Typography>
                                         </Stack>
                                     )}
-                                </Stack>
-                            </Grid>
-                        </Grid>
+                                </>
+                            }
+                        />
                     </CourseLearningBand>
 
                     <CourseLearningBand headerLabel="OVERVIEW" subtitle="What you will cover in this program.">

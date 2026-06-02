@@ -97,6 +97,7 @@ export const submitModuleQuiz = async (
                 correctAnswers: number;
                 totalQuestions: number;
                 moduleCompleted: boolean;
+                retakeMessage?: string;
                 answers: { questionId: string; isCorrect: boolean; pointsEarned: number }[];
             };
         }>

@@ -77,7 +77,22 @@ async function applyEvaluationToSubmission(submission, submissionType, evaluatio
     await submission.save();
 
     if (delta !== 0) {
-        await GamificationService.applyEvaluationDelta(submission.userId.toString(), delta);
+        const sourceTypeMap = {
+            sentence: 'sentence_submission',
+            story: 'story_submission',
+            vocab: 'vocab_submission',
+            scene: 'scene_submission',
+            speech: 'speech_submission',
+            conversation: 'conversation_submission',
+        };
+        await GamificationService.applyEvaluationDelta(submission.userId.toString(), delta, {
+            title: `Review: ${submissionType} submission`,
+            sourceType: sourceTypeMap[submissionType] || 'submission',
+            sourceId: submission._id.toString(),
+            points: evaluationPoints,
+            occurredAt: submission.reviewedAt || new Date(),
+            meta: { submissionType, sentencesCorrect },
+        });
     }
 
     return { evaluationPoints, delta, previous };

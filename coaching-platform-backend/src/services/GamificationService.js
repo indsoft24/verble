@@ -2,6 +2,7 @@
 import User from '../models/User.js';
 import DailyContent from '../models/DailyContent.js';
 import mongoose from 'mongoose';
+import { appendLedgerEntry } from './scoreLedgerService.js';
 
 class GamificationService {
     /**
@@ -77,6 +78,21 @@ class GamificationService {
             // Save user
             await user.save();
 
+            const activityTitle = content.title || content.contentType || 'Daily activity';
+            await appendLedgerEntry({
+                userId,
+                category: 'participation',
+                points,
+                delta: points,
+                title: `Participation: ${activityTitle}`,
+                sourceType: 'daily_content',
+                sourceId: contentId.toString(),
+                eventKind: 'participation',
+                status: 'approved',
+                occurredAt: new Date(),
+                meta: { contentType: content.contentType },
+            });
+
             return {
                 success: true,
                 message: 'Activity recorded successfully',
@@ -92,7 +108,10 @@ class GamificationService {
      * @param {string} userId
      * @param {number} delta - Change in evaluation points (can be negative on re-review)
      */
-    static async applyEvaluationDelta(userId, delta) {
+    /**
+     * @param {object} [ledgerMeta] - optional { title, sourceType, sourceId, points, meta }
+     */
+    static async applyEvaluationDelta(userId, delta, ledgerMeta = null) {
         if (!delta || delta === 0) {
             return { success: true, delta: 0 };
         }
@@ -105,6 +124,23 @@ class GamificationService {
         }
         user.evaluationScore = Math.max(0, (user.evaluationScore || 0) + delta);
         await user.save();
+
+        if (ledgerMeta?.sourceType && ledgerMeta?.sourceId) {
+            await appendLedgerEntry({
+                userId,
+                category: 'evaluation',
+                points: ledgerMeta.points ?? Math.abs(delta),
+                delta,
+                title: ledgerMeta.title || 'Evaluation score update',
+                sourceType: ledgerMeta.sourceType,
+                sourceId: ledgerMeta.sourceId,
+                eventKind: 'evaluation',
+                status: 'approved',
+                occurredAt: ledgerMeta.occurredAt || new Date(),
+                meta: ledgerMeta.meta || {},
+            });
+        }
+
         return {
             success: true,
             delta,

@@ -173,3 +173,42 @@ export const getAdjacentContentBySequence = asyncHandler(async (req, res) => {
     const [withSeq] = await attachSequenceNumbers([neighbor]);
     res.status(200).json({ status: 'success', data: { content: withSeq } });
 });
+
+/**
+ * @route GET /api/daily-content/professional-library
+ * Curriculum GOLD conversations (not tied to calendar day).
+ */
+export const getProfessionalLibrary = asyncHandler(async (req, res) => {
+    const { tag } = req.query;
+    const unlockedLevels = getUnlockedLevelsForUser(req.user);
+
+    if (!unlockedLevels.includes('GOLD')) {
+        return res.status(200).json({ status: 'success', data: { content: [] } });
+    }
+
+    const query = {
+        type: 'CONVERSATION',
+        level: 'GOLD',
+        isActive: true,
+        'metadata.isProfessionalLibrary': true,
+    };
+
+    if (tag) {
+        if (tag === 'General') {
+            query.$or = [
+                { 'metadata.tags': { $exists: false } },
+                { 'metadata.tags': { $size: 0 } },
+                { 'metadata.tags': null },
+            ];
+        } else {
+            query['metadata.tags'] = tag;
+        }
+    }
+
+    const items = await DailyContent.find(query)
+        .sort({ sequenceNumber: 1, title: 1, _id: 1 })
+        .lean();
+
+    const content = await attachSequenceNumbers(items);
+    res.status(200).json({ status: 'success', data: { content } });
+});

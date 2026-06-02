@@ -20,6 +20,11 @@ import {
     putUserLearningOverride,
     postUserLearningReset,
 } from '../controllers/adminLearningSettingsController.js';
+import {
+    getAdminScoringUsers,
+    getAdminUserScoringSummary,
+    getAdminUserScoringHistory,
+} from '../controllers/scoringHistoryController.js';
 
 const router = express.Router();
 
@@ -27,7 +32,10 @@ router.use(protect);
 router.use(restrictTo('admin'));
 
 router.get('/stats', getPlatformStats);
+router.get('/scoring/users', getAdminScoringUsers);
 router.get('/users', getAllUsers);
+router.get('/users/:userId/scoring-summary', getAdminUserScoringSummary);
+router.get('/users/:userId/scoring-history', getAdminUserScoringHistory);
 router.get('/users/:userId', getUserById);
 router.post('/users', createUserByAdmin);
 router.post('/users/:userId/resend-login-pin', resendLoginPinForUser);

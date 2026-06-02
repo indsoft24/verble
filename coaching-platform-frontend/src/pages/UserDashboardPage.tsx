@@ -610,7 +610,10 @@ const UserDashboardPage: React.FC = () => {
                                 label={`${user.points || 0} lb pts`}
                                 size="small"
                                 variant="outlined"
-                                title="Participation points (leaderboard)"
+                                component={RouterLink}
+                                to="/my-rewards"
+                                clickable
+                                title="View rewards & scoring history"
                             />
                             {(myRank?.evaluationScore ?? user.evaluationScore ?? 0) > 0 && (
                                 <Chip
@@ -618,7 +621,10 @@ const UserDashboardPage: React.FC = () => {
                                     size="small"
                                     variant="outlined"
                                     color="secondary"
-                                    title="Evaluation score after admin review"
+                                    component={RouterLink}
+                                    to="/my-rewards"
+                                    clickable
+                                    title="View rewards & scoring history"
                                 />
                             )}
                         </Box>

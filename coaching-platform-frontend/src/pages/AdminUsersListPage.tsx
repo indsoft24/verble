@@ -34,6 +34,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import {
     getAllUsers,
     updateUserRole,
@@ -184,6 +185,10 @@ const AdminUsersListPage: React.FC = () => {
 
     const handleManageSubscription = (userId: string) => {
         navigate(`/admin/users/${userId}/manage-subscription`);
+    };
+
+    const handleViewScoring = (userId: string) => {
+        navigate(`/admin/users/${userId}/scoring`);
     };
 
     const handleResendPin = async (userId: string, userName: string) => {
@@ -343,6 +348,16 @@ const AdminUsersListPage: React.FC = () => {
                                                 sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', px: 1, py: 0.5 }}
                                             >
                                                 {busy ? <CircularProgress size={14} /> : 'Resend PIN'}
+                                            </MuiButton>
+                                            <MuiButton
+                                                variant="outlined"
+                                                size="small"
+                                                color="success"
+                                                startIcon={<EmojiEventsIcon sx={{ fontSize: '0.9rem' }} />}
+                                                onClick={() => handleViewScoring(user._id)}
+                                                sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', px: 1, py: 0.5 }}
+                                            >
+                                                Scoring
                                             </MuiButton>
                                             <MuiButton
                                                 variant="outlined"

@@ -40,6 +40,7 @@ import {
     WorkspacePremium as WorkspacePremiumIcon,
     Quiz as QuizIcon,
     Tune as TuneIcon,
+    EmojiEvents as EmojiEventsIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -72,7 +73,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
         const path = location.pathname;
         const sections: { name: string; paths: string[] }[] = [
             { name: 'Content Management', paths: ['/admin/daily-content', '/admin/promo-banner', '/admin/blog', '/admin/videos', '/admin/courses', '/admin/modules', '/admin/module-quizzes', '/admin/learning-settings', '/admin/exam-categories'] },
-            { name: 'User Management', paths: ['/admin/users'] },
+            { name: 'User Management', paths: ['/admin/users', '/admin/rewards-scoring'] },
             { name: 'Subscriptions', paths: ['/admin/subscription-plans'] },
             { name: 'Validation', paths: ['/admin/sentence-validation', '/admin/quiz-validation'] },
             { name: 'Platform Tools', paths: ['/admin/database-manager', '/admin/certification-management', '/admin/learning-settings'] },
@@ -170,6 +171,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
                     title: 'All Users',
                     path: '/admin/users',
                     icon: <PeopleIcon />,
+                },
+                {
+                    title: 'Rewards & Scoring',
+                    path: '/admin/rewards-scoring',
+                    icon: <EmojiEventsIcon />,
                 },
             ],
         },
