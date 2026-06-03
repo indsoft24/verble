@@ -23,15 +23,15 @@ export const SPACING = {
     hero: 12,
 } as const;
 
-/** Vertical padding between sections: 40px mobile, 56px tablet, 80px desktop */
+/** Vertical padding between sections: reduced for tighter layout */
 export const SECTION_PADDING_Y = {
-    xs: 5,   // 40px
-    sm: 7,   // 56px
-    md: 10,  // 80px
+    xs: 3,   // 24px
+    sm: 4,   // 32px
+    md: 5,   // 40px
 } as const;
 
-/** Outer section horizontal padding (24px) */
-export const SECTION_PADDING_X = SPACING.lg; // 3 = 24px
+/** Outer section horizontal padding (reduced from 24px) */
+export const SECTION_PADDING_X = SPACING.md; // 2 = 16px
 
 /** Max width of content container (1200px) */
 export const CONTAINER_MAX_WIDTH = 1200;

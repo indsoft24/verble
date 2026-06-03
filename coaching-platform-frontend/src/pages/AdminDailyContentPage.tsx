@@ -58,7 +58,7 @@ import {
     DAILY_CONTENT_CATALOG,
     LEVEL_CARD_COLORS,
     contentMatchesCatalogSlot,
-    getAdminCardDisplayTitle,
+    getAdminContentPreview,
     resolveAdminKeyFromContent,
     getCatalogEntry,
     findContentForSlot,
@@ -672,6 +672,7 @@ const AdminDailyContentPage: React.FC = () => {
                 adminKey={currentContent.adminKey}
                 metadata={(currentContent.metadata || {}) as Record<string, unknown>}
                 displayTitle={currentContent.title || ''}
+                syncKey={currentContent._id ?? `new-${currentContent.adminKey ?? currentContent.type}`}
                 onDisplayTitleChange={(value) =>
                     setCurrentContent((prev) => (prev ? { ...prev, title: value } : null))
                 }
@@ -799,8 +800,13 @@ const AdminDailyContentPage: React.FC = () => {
                                             {item ? (
                                                 <>
                                                     <Chip label="Scheduled" color="success" size="small" sx={{ mt: 1 }} />
-                                                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                                                        {getAdminCardDisplayTitle(item)}
+                                                    <Typography
+                                                        variant="caption"
+                                                        display="block"
+                                                        sx={{ mt: 1, lineHeight: 1.45 }}
+                                                        title={getAdminContentPreview(item)}
+                                                    >
+                                                        {getAdminContentPreview(item)}
                                                     </Typography>
                                                 </>
                                             ) : (
@@ -855,8 +861,19 @@ const AdminDailyContentPage: React.FC = () => {
                                                                 <Box sx={{ flex: 1 }}>
                                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                                                         <IconComponent sx={{ fontSize: 24, color: config.color }} />
-                                                                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                                                            {item.title}
+                                                                        <Typography
+                                                                            variant="body1"
+                                                                            sx={{
+                                                                                fontWeight: 600,
+                                                                                lineHeight: 1.45,
+                                                                                display: '-webkit-box',
+                                                                                WebkitLineClamp: 2,
+                                                                                WebkitBoxOrient: 'vertical',
+                                                                                overflow: 'hidden',
+                                                                            }}
+                                                                            title={getAdminContentPreview(item)}
+                                                                        >
+                                                                            {getAdminContentPreview(item)}
                                                                         </Typography>
                                                                     </Box>
                                                                     <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>

@@ -83,7 +83,7 @@ const ContactUsPage: React.FC = () => {
     };
 
     return (
-        <Box sx={{ bgcolor: '#F7FAFF', py: { xs: 4, md: 7 } }}>
+        <Box sx={{ bgcolor: '#F7FAFF', py: { xs: 2.5, md: 4 } }}>
             <Container maxWidth="lg">
                 {/* --- HEADER --- */}
                 <Box sx={{ textAlign: 'center', mb: { xs: 4, md: 6 } }}>

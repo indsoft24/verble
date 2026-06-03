@@ -351,7 +351,7 @@ const AboutUsPage: React.FC = () => {
             <Box
                 sx={{
                     position: 'relative',
-                    py: { xs: 4.5, md: 6 },
+                    py: { xs: 3, md: 4 },
                     px: { xs: 2, sm: 2, md: 3 },
                     overflow: 'hidden',
                 }}

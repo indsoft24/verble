@@ -164,6 +164,89 @@ export function contentMatchesCatalogSlot(
     return true;
 }
 
+function truncatePreview(text: string, max = 100): string {
+    const normalized = text.replace(/\s+/g, ' ').trim();
+    if (!normalized) return '';
+    if (normalized.length <= max) return normalized;
+    return `${normalized.slice(0, max).trim()}…`;
+}
+
+/** Primary learner-facing text for admin lists (word, phrase, story excerpt, etc.). */
+export function getAdminContentPreview(item: DailyContent): string {
+    const meta = (item.metadata || {}) as Record<string, unknown>;
+    const adminKey = resolveAdminKeyFromContent(item);
+
+    switch (item.type) {
+        case 'WORD':
+        case 'PHRASE': {
+            const text = String(meta.text || '').trim();
+            const meaning = String(meta.meaning_en || meta.meaning_hi || '').trim();
+            if (text && meaning) return `${text} — ${truncatePreview(meaning, 60)}`;
+            return text || meaning || getAdminCardDisplayTitle(item);
+        }
+        case 'STORY': {
+            const headline = String(meta.title || item.title || '').trim();
+            const body = String(meta.text_content || '').trim();
+            if (headline) return truncatePreview(headline, 100);
+            return truncatePreview(body, 100) || getAdminCardDisplayTitle(item);
+        }
+        case 'VOCAB_SET': {
+            const theme = String(meta.theme || '').trim();
+            const vocabItems = (meta.vocabItems as Array<{ word?: string }>) || [];
+            const words = vocabItems
+                .map((v) => String(v?.word || '').trim())
+                .filter(Boolean)
+                .slice(0, 5);
+            if (theme && words.length) return `${theme}: ${words.join(', ')}`;
+            return theme || words.join(', ') || getAdminCardDisplayTitle(item);
+        }
+        case 'CONVERSATION': {
+            if (adminKey === 'PROFESSIONAL_CONVERSATION') {
+                const topic = String(meta.topicName || '').trim();
+                const desc = String(meta.description || '').trim();
+                if (topic && desc) return `${topic} — ${truncatePreview(desc, 55)}`;
+                return topic || truncatePreview(desc, 90) || getAdminCardDisplayTitle(item);
+            }
+            const scenario = String(meta.scenarioTitle || item.title || '').trim();
+            const dialogue = (meta.dialogue as Array<{ text_en?: string }>) || [];
+            const firstLine = dialogue.map((d) => String(d?.text_en || '').trim()).find(Boolean);
+            if (scenario && firstLine) return `${scenario} — ${truncatePreview(firstLine, 50)}`;
+            return scenario || firstLine || getAdminCardDisplayTitle(item);
+        }
+        case 'PUZZLE': {
+            const questions = (meta.questions as Array<{ question?: string }>) || [];
+            const first = questions.map((q) => String(q?.question || '').trim()).find(Boolean);
+            return first ? truncatePreview(first, 100) : getAdminCardDisplayTitle(item);
+        }
+        case 'SCENE': {
+            const title = String(meta.title || item.title || '').trim();
+            const explanation = String(meta.explanation || meta.hindiSummary || '').trim();
+            if (title && explanation) return `${title} — ${truncatePreview(explanation, 50)}`;
+            return title || truncatePreview(explanation, 100) || getAdminCardDisplayTitle(item);
+        }
+        case 'SPEECH': {
+            const speaker = String(meta.speaker || '').trim();
+            const transcript = String(meta.transcript || '').trim();
+            if (speaker && transcript) return `${speaker}: ${truncatePreview(transcript, 70)}`;
+            return speaker || truncatePreview(transcript, 90) || getAdminCardDisplayTitle(item);
+        }
+        case 'LYRICS': {
+            const artist = String(meta.artist || '').trim();
+            const lyrics = String(meta.lyrics || '').trim();
+            const firstLine = lyrics.split('\n').map((l) => l.trim()).find(Boolean) || '';
+            if (artist && firstLine) return `${artist} — ${truncatePreview(firstLine, 60)}`;
+            return artist || truncatePreview(lyrics, 90) || getAdminCardDisplayTitle(item);
+        }
+        case 'FEED': {
+            const posts = (meta.posts as Array<{ caption?: string }>) || [];
+            const caption = posts.map((p) => String(p?.caption || '').trim()).find(Boolean);
+            return caption ? truncatePreview(caption, 100) : getAdminCardDisplayTitle(item);
+        }
+        default:
+            return getAdminCardDisplayTitle(item);
+    }
+}
+
 export function getAdminCardDisplayTitle(item: DailyContent): string {
     if (item.type === 'STORY') {
         const storyTitle = String(item.metadata?.title ?? '').trim();

@@ -45,7 +45,7 @@ type SectionWrapperProps = {
 };
 
 const SectionWrapper: React.FC<SectionWrapperProps> = ({ children, id, sx }) => (
-    <Box component="section" id={id} sx={{ py: { xs: 6, md: 8 }, ...sx }}>
+    <Box component="section" id={id} sx={{ py: { xs: 2, md: 3 }, ...sx }}>
         {children}
     </Box>
 );
@@ -302,8 +302,8 @@ const CoursesListPage: React.FC = () => {
                     maxWidth: '1200px',
                     mx: 'auto',
                     px: { xs: 3, md: 6 },
-                    py: { xs: 6, md: 6 },
-                    pb: { xs: 8, md: 10 },
+                    py: { xs: 3, md: 4 },
+                    pb: { xs: 4, md: 5 },
                 }}
             >
                 <SectionWrapper sx={{ pb: { xs: 2, md: 3 }, pt: 0 }}>

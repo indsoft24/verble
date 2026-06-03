@@ -34,6 +34,7 @@ import {
     type AIPromptInput,
     updateAIPrompt,
 } from '../services/aiPromptService';
+import CommaSeparatedTextField from '../components/common/CommaSeparatedTextField';
 import TiptapEditor from '../components/features/blog/TiptapEditor';
 
 const EMPTY_FORM: AIPromptInput = {
@@ -88,6 +89,7 @@ const AdminAIPromptsPage: React.FC = () => {
 
     const openEdit = (prompt: AIPrompt) => {
         setEditing(prompt);
+        const tags = prompt.tags || [];
         setForm({
             topic: prompt.topic || '',
             title: prompt.title || '',
@@ -95,7 +97,7 @@ const AdminAIPromptsPage: React.FC = () => {
             excerpt: prompt.excerpt || '',
             description: prompt.description || '',
             category: prompt.category || '',
-            tags: prompt.tags || [],
+            tags,
             level: 'GOLD',
             isActive: prompt.isActive ?? true,
         });
@@ -116,7 +118,7 @@ const AdminAIPromptsPage: React.FC = () => {
                 topic: form.topic.trim(),
                 title: form.title.trim(),
                 contentHtml: form.contentHtml,
-                tags: (form.tags || []).map((t) => t.trim()).filter(Boolean),
+                tags: form.tags || [],
                 level: 'GOLD',
             };
             if (editing?._id) {
@@ -298,16 +300,13 @@ const AdminAIPromptsPage: React.FC = () => {
                                 multiline
                                 minRows={2}
                             />
-                            <TextField
-                                label="Tags (comma separated)"
-                                value={(form.tags || []).join(', ')}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        tags: e.target.value.split(',').map((tag) => tag.trim()).filter(Boolean),
-                                    }))
-                                }
+                            <CommaSeparatedTextField
+                                label="Tags"
+                                value={form.tags || []}
+                                syncKey={editing?._id ?? 'new'}
+                                onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
                                 fullWidth
+                                placeholder="e.g. writing, creative, blog"
                             />
                             <FormControl fullWidth disabled>
                                 <InputLabel>Level</InputLabel>

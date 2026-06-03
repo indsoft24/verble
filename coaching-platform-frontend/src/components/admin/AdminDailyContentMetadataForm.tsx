@@ -13,6 +13,7 @@ import {
     Typography,
 } from '@mui/material';
 import type { AdminContentTypeKey } from '../../utils/dailyContentTypeCatalog';
+import CommaSeparatedTextField from '../common/CommaSeparatedTextField';
 import AdminImageUploadField from './AdminImageUploadField';
 import AdminPracticalConversationForm from './AdminPracticalConversationForm';
 import AdminProfessionalConversationForm from './AdminProfessionalConversationForm';
@@ -34,6 +35,8 @@ export interface AdminDailyContentMetadataFormProps {
     displayTitle?: string;
     onDisplayTitleChange?: (value: string) => void;
     onChange: (field: string, value: unknown) => void;
+    /** Resets comma-separated inputs when switching create/edit records */
+    syncKey?: string;
 }
 
 const getPuzzleQuestionText = (q: ReturnType<typeof emptyPuzzleQuestion>) =>
@@ -46,6 +49,7 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
     displayTitle = '',
     onDisplayTitleChange,
     onChange,
+    syncKey,
 }) => {
     if (type === 'WORD' || type === 'PHRASE') {
         const examples = (metadata.examples as { en?: string; hi?: string }[]) || [];
@@ -128,34 +132,22 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                 {type === 'WORD' && (
                     <>
                         <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
+                            <CommaSeparatedTextField
                                 fullWidth
-                                label="Synonyms (comma-separated)"
-                                value={((metadata.synonyms as string[]) || []).join(', ')}
-                                onChange={(e) =>
-                                    onChange(
-                                        'synonyms',
-                                        e.target.value
-                                            .split(',')
-                                            .map((s) => s.trim())
-                                    )
-                                }
-                                helperText="Separate words with commas."
+                                label="Synonyms"
+                                value={(metadata.synonyms as string[]) || []}
+                                syncKey={syncKey}
+                                onChange={(next) => onChange('synonyms', next)}
+                                helperText="Separate words with commas"
                             />
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
+                            <CommaSeparatedTextField
                                 fullWidth
-                                label="Antonyms (comma-separated)"
-                                value={((metadata.antonyms as string[]) || []).join(', ')}
-                                onChange={(e) =>
-                                    onChange(
-                                        'antonyms',
-                                        e.target.value
-                                            .split(',')
-                                            .map((s) => s.trim())
-                                    )
-                                }
+                                label="Antonyms"
+                                value={(metadata.antonyms as string[]) || []}
+                                syncKey={syncKey}
+                                onChange={(next) => onChange('antonyms', next)}
                             />
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
@@ -451,6 +443,7 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                 onChange={onChange}
                 displayTitle={displayTitle}
                 onDisplayTitleChange={onDisplayTitleChange}
+                syncKey={syncKey}
             />
         );
     }

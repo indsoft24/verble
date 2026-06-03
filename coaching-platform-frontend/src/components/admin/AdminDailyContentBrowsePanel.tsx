@@ -37,7 +37,7 @@ import type { DailyContentPagination } from '../../services/dailyContentAdminSer
 import { getContentTypeConfig, type ContentType } from '../../utils/contentTypeConfig';
 import {
     DAILY_CONTENT_CATALOG,
-    getAdminCardDisplayTitle,
+    getAdminContentPreview,
     resolveAdminKeyFromContent,
     getCatalogEntry,
 } from '../../utils/dailyContentTypeCatalog';
@@ -196,7 +196,8 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                         <TextField
                             fullWidth
                             size="small"
-                            label="Search title"
+                            label="Search"
+                            placeholder="Title or display #"
                             value={filters.search}
                             onChange={(e) => onFiltersChange({ search: e.target.value })}
                             onKeyDown={(e) => e.key === 'Enter' && onApplyFilters()}
@@ -278,7 +279,7 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                                     <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Level</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Display #</TableCell>
-                                    <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, minWidth: 220 }}>Content</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Created</TableCell>
                                     <TableCell align="right" sx={{ fontWeight: 700 }}>
@@ -314,9 +315,20 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                                                     {getDisplayTag(item.sequenceNumber) || '—'}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell sx={{ maxWidth: 220 }}>
-                                                <Typography variant="body2" noWrap title={getAdminCardDisplayTitle(item)}>
-                                                    {getAdminCardDisplayTitle(item)}
+                                            <TableCell sx={{ maxWidth: 420, minWidth: 220 }}>
+                                                <Typography
+                                                    variant="body2"
+                                                    title={getAdminContentPreview(item)}
+                                                    sx={{
+                                                        lineHeight: 1.5,
+                                                        color: 'text.primary',
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical',
+                                                        overflow: 'hidden',
+                                                    }}
+                                                >
+                                                    {getAdminContentPreview(item)}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>

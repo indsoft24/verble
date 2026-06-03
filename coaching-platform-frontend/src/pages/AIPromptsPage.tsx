@@ -1,11 +1,9 @@
 // src/pages/AIPromptsPage.tsx
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Box,
     Button,
-    Card,
-    CardContent,
     Chip,
     CircularProgress,
     Grid,
@@ -17,7 +15,9 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import UserLayout from '../components/layout/UserLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessGoldTierContent } from '../utils/userAccessState';
@@ -28,6 +28,7 @@ import {
     type AIPrompt,
 } from '../services/aiPromptService';
 import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
+import AIPromptGuideContent from '../components/common/AIPromptGuideContent';
 
 const AIPromptsPage: React.FC = () => {
     const { user } = useAuth();
@@ -40,8 +41,8 @@ const AIPromptsPage: React.FC = () => {
     const [activeTopic, setActiveTopic] = useState('');
     const [activeTag, setActiveTag] = useState('');
     const [selectedPromptId, setSelectedPromptId] = useState<string>('');
+    const [view, setView] = useState<'list' | 'detail'>('list');
     const [copyMessage, setCopyMessage] = useState<string | null>(null);
-    const richContentRef = useRef<HTMLDivElement | null>(null);
 
     const hasAccess = canAccessGoldTierContent(user);
 
@@ -94,73 +95,24 @@ const AIPromptsPage: React.FC = () => {
     }, [filteredPrompts, selectedPromptId]);
 
     const selectedPrompt = filteredPrompts.find((item) => item._id === selectedPromptId) || null;
+    const selectedIndex = selectedPrompt ? filteredPrompts.findIndex((item) => item._id === selectedPrompt._id) : -1;
+    const previousPrompt = selectedIndex > 0 ? filteredPrompts[selectedIndex - 1] : null;
+    const nextPrompt = selectedIndex >= 0 && selectedIndex < filteredPrompts.length - 1 ? filteredPrompts[selectedIndex + 1] : null;
 
-    const handleCopy = async () => {
-        if (!selectedPrompt) return;
-        try {
-            const text = (selectedPrompt.prompt || '').trim();
-            if (!text) return;
-            await navigator.clipboard.writeText(text);
-            await incrementPromptUsage(selectedPrompt._id);
-            setCopyMessage('Prompt copied.');
-        } catch {
-            setCopyMessage('Could not copy prompt.');
-        }
+    const openPromptDetail = (promptId: string) => {
+        setSelectedPromptId(promptId);
+        setView('detail');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    useEffect(() => {
-        if (!selectedPrompt || !richContentRef.current) return;
-        const root = richContentRef.current;
-        const preBlocks = Array.from(root.querySelectorAll('pre'));
-
-        const cleanup: Array<() => void> = [];
-
-        preBlocks.forEach((pre, index) => {
-            if (pre.dataset.copyableMounted === 'true') return;
-            pre.dataset.copyableMounted = 'true';
-            pre.style.position = 'relative';
-            pre.style.background = '#f5f7fb';
-            pre.style.padding = '14px 12px 12px';
-            pre.style.borderRadius = '8px';
-            pre.style.overflowX = 'auto';
-            pre.style.border = '1px solid #d8e1ea';
-
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.textContent = 'Copy';
-            btn.style.position = 'absolute';
-            btn.style.top = '8px';
-            btn.style.right = '8px';
-            btn.style.fontSize = '12px';
-            btn.style.padding = '4px 8px';
-            btn.style.borderRadius = '6px';
-            btn.style.border = '1px solid #b8c7db';
-            btn.style.background = '#fff';
-            btn.style.cursor = 'pointer';
-
-            const handler = async () => {
-                const raw = pre.innerText || '';
-                try {
-                    await navigator.clipboard.writeText(raw);
-                    await incrementPromptUsage(selectedPrompt._id);
-                    setCopyMessage(`Code block ${index + 1} copied.`);
-                } catch {
-                    setCopyMessage('Could not copy code block.');
-                }
-            };
-
-            btn.addEventListener('click', handler);
-            pre.appendChild(btn);
-            cleanup.push(() => {
-                btn.removeEventListener('click', handler);
-                btn.remove();
-                delete pre.dataset.copyableMounted;
-            });
-        });
-
-        return () => {
-            cleanup.forEach((fn) => fn());
-        };
+    const handlePromptCopied = useCallback(async () => {
+        if (!selectedPrompt) return;
+        try {
+            await incrementPromptUsage(selectedPrompt._id);
+            setCopyMessage('Prompt copied — paste it into ChatGPT, Gemini, or Claude.');
+        } catch {
+            setCopyMessage('Copied to clipboard.');
+        }
     }, [selectedPrompt]);
 
     return (
@@ -229,36 +181,46 @@ const AIPromptsPage: React.FC = () => {
                                     }}
                                 />
                             </Stack>
-                            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 2, rowGap: 1 }}>
-                                <Chip
-                                    label="All topics"
-                                    color={activeTopic ? 'default' : 'primary'}
-                                    onClick={() => setActiveTopic('')}
-                                />
-                                {topics.map((topic) => (
+                            <Stack
+                                spacing={2}
+                                sx={{
+                                    mt: 2,
+                                    p: '10px',
+                                    borderRadius: 2,
+                                    bgcolor: alpha(learnerBrandTheme.accent, 0.04),
+                                }}
+                            >
+                                <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 1 }}>
                                     <Chip
-                                        key={topic.value}
-                                        label={`${topic.value} (${topic.count})`}
-                                        color={activeTopic === topic.value ? 'primary' : 'default'}
-                                        onClick={() => setActiveTopic(topic.value)}
+                                        label="All topics"
+                                        color={activeTopic ? 'default' : 'primary'}
+                                        onClick={() => setActiveTopic('')}
                                     />
-                                ))}
-                            </Stack>
-                            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1.5, rowGap: 1 }}>
-                                <Chip
-                                    label="All tags"
-                                    color={activeTag ? 'default' : 'primary'}
-                                    onClick={() => setActiveTag('')}
-                                />
-                                {tags.map((tag) => (
+                                    {topics.map((topic) => (
+                                        <Chip
+                                            key={topic.value}
+                                            label={`${topic.value} (${topic.count})`}
+                                            color={activeTopic === topic.value ? 'primary' : 'default'}
+                                            onClick={() => setActiveTopic(topic.value)}
+                                        />
+                                    ))}
+                                </Stack>
+                                <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 1 }}>
                                     <Chip
-                                        key={tag.value}
-                                        size="small"
-                                        label={`${tag.value} (${tag.count})`}
-                                        color={activeTag === tag.value ? 'primary' : 'default'}
-                                        onClick={() => setActiveTag(tag.value)}
+                                        label="All tags"
+                                        color={activeTag ? 'default' : 'primary'}
+                                        onClick={() => setActiveTag('')}
                                     />
-                                ))}
+                                    {tags.map((tag) => (
+                                        <Chip
+                                            key={tag.value}
+                                            size="small"
+                                            label={`${tag.value} (${tag.count})`}
+                                            color={activeTag === tag.value ? 'primary' : 'default'}
+                                            onClick={() => setActiveTag(tag.value)}
+                                        />
+                                    ))}
+                                </Stack>
                             </Stack>
                         </Paper>
 
@@ -267,75 +229,111 @@ const AIPromptsPage: React.FC = () => {
                                 <CircularProgress />
                             </Box>
                         ) : (
-                            <Grid container spacing={2}>
-                                <Grid size={{ xs: 12, md: 4 }}>
-                                    <Paper
-                                        sx={{
-                                            p: 1.5,
-                                            maxHeight: { xs: 'unset', md: '72vh' },
-                                            overflowY: 'auto',
-                                            borderRadius: 3,
-                                            border: `1px solid ${alpha(learnerBrandTheme.border, 0.72)}`,
-                                            boxShadow: `0 12px 26px ${alpha('#10243A', 0.08)}`,
-                                            position: { xs: 'relative', md: 'sticky' },
-                                            top: { md: 84 },
-                                        }}
-                                    >
-                                        <Stack spacing={1}>
+                            view === 'list' ? (
+                                <Paper
+                                    elevation={0}
+                                    sx={{
+                                        borderRadius: 3,
+                                        border: `1px solid ${alpha(learnerBrandTheme.border, 0.72)}`,
+                                        boxShadow: `0 8px 22px ${alpha('#10243A', 0.06)}`,
+                                        overflow: 'hidden',
+                                        bgcolor: learnerBrandTheme.surface,
+                                    }}
+                                >
+                                    {filteredPrompts.length === 0 ? (
+                                        <Typography variant="body2" color="text.secondary" sx={{ p: 2.5 }}>
+                                            No prompts found.
+                                        </Typography>
+                                    ) : (
+                                        <Grid container spacing={2} sx={{ p: 2 }}>
                                             {filteredPrompts.map((item) => (
-                                                <Card
-                                                    key={item._id}
-                                                    variant={selectedPromptId === item._id ? 'elevation' : 'outlined'}
-                                                    sx={{
-                                                        cursor: 'pointer',
-                                                        borderRadius: 2,
-                                                        borderColor: selectedPromptId === item._id
-                                                            ? alpha(learnerBrandTheme.accent, 0.45)
-                                                            : alpha(learnerBrandTheme.border, 0.7),
-                                                        backgroundColor: selectedPromptId === item._id
-                                                            ? alpha(learnerBrandTheme.accent, 0.09)
-                                                            : alpha('#fff', 0.95),
-                                                        boxShadow: selectedPromptId === item._id
-                                                            ? `0 8px 16px ${alpha(learnerBrandTheme.accent, 0.18)}`
-                                                            : 'none',
-                                                        transition: 'all 0.2s ease',
-                                                        '&:hover': {
-                                                            transform: 'translateY(-1px)',
-                                                            boxShadow: `0 8px 18px ${alpha('#152C43', 0.14)}`,
-                                                        },
-                                                    }}
-                                                    onClick={() => setSelectedPromptId(item._id)}
-                                                >
-                                                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                                                        <Typography fontWeight={700} variant="subtitle2">
+                                                <Grid key={item._id} size={{ xs: 12, md: 6 }}>
+                                                    <Box
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onClick={() => openPromptDetail(item._id)}
+                                                        onKeyDown={(event) => {
+                                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                                event.preventDefault();
+                                                                openPromptDetail(item._id);
+                                                            }
+                                                        }}
+                                                        sx={{
+                                                            p: 2,
+                                                            height: '100%',
+                                                            borderRadius: 2,
+                                                            cursor: 'pointer',
+                                                            bgcolor: '#fff',
+                                                            border: `1px solid ${alpha(learnerBrandTheme.border, 0.65)}`,
+                                                            transition: 'all 0.2s ease',
+                                                            '&:hover': {
+                                                                borderColor: alpha(learnerBrandTheme.accent, 0.45),
+                                                                boxShadow: `0 6px 16px ${alpha('#152C43', 0.1)}`,
+                                                                transform: 'translateY(-1px)',
+                                                            },
+                                                        }}
+                                                    >
+                                                        <Typography fontWeight={700} variant="subtitle1">
                                                             {item.title}
                                                         </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                                             {item.topic} {item.category ? `• ${item.category}` : ''}
                                                         </Typography>
-                                                    </CardContent>
-                                                </Card>
+                                                        {!!item.excerpt && (
+                                                            <Typography
+                                                                variant="body2"
+                                                                sx={{ mt: 1.25, color: learnerBrandTheme.textSecondary, lineHeight: 1.6 }}
+                                                            >
+                                                                {item.excerpt}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                </Grid>
                                             ))}
-                                            {filteredPrompts.length === 0 && (
-                                                <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                                                    No prompts found.
-                                                </Typography>
-                                            )}
-                                        </Stack>
-                                    </Paper>
-                                </Grid>
-                                <Grid size={{ xs: 12, md: 8 }}>
-                                    <Paper
-                                        sx={{
-                                            p: { xs: 1.75, md: 2.5 },
-                                            borderRadius: 3,
-                                            border: `1px solid ${alpha(learnerBrandTheme.border, 0.72)}`,
-                                            boxShadow: `0 14px 30px ${alpha('#10243A', 0.1)}`,
-                                            minHeight: { xs: 'auto', md: '72vh' },
-                                        }}
-                                    >
-                                        {selectedPrompt ? (
-                                            <Stack spacing={2}>
+                                        </Grid>
+                                    )}
+                                </Paper>
+                            ) : (
+                                <Paper
+                                    sx={{
+                                        p: { xs: 1.25, md: 2 },
+                                        borderRadius: 3,
+                                        border: `1px solid ${alpha(learnerBrandTheme.border, 0.72)}`,
+                                        boxShadow: `0 14px 30px ${alpha('#10243A', 0.1)}`,
+                                    }}
+                                >
+                                    {selectedPrompt ? (
+                                        <Stack spacing={2} sx={{ p: '10px' }}>
+                                            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={1}>
+                                                <Button
+                                                    startIcon={<ArrowBackIcon />}
+                                                    variant="outlined"
+                                                    onClick={() => setView('list')}
+                                                    sx={{ alignSelf: 'flex-start' }}
+                                                >
+                                                    Back to listing
+                                                </Button>
+                                                <Stack direction="row" spacing={1}>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        startIcon={<NavigateBeforeIcon />}
+                                                        disabled={!previousPrompt}
+                                                        onClick={() => previousPrompt && openPromptDetail(previousPrompt._id)}
+                                                    >
+                                                        Previous
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        endIcon={<NavigateNextIcon />}
+                                                        disabled={!nextPrompt}
+                                                        onClick={() => nextPrompt && openPromptDetail(nextPrompt._id)}
+                                                    >
+                                                        Next
+                                                    </Button>
+                                                </Stack>
+                                            </Stack>
                                                 <Box>
                                                     <Typography variant="h5" fontWeight={800}>
                                                         {selectedPrompt.title}
@@ -350,62 +348,35 @@ const AIPromptsPage: React.FC = () => {
                                                         {selectedPrompt.excerpt}
                                                     </Typography>
                                                 )}
-                                                <Box
-                                                    ref={richContentRef}
-                                                    sx={{
-                                                        '& img': { maxWidth: '100%', borderRadius: 2, border: `1px solid ${alpha(learnerBrandTheme.border, 0.5)}` },
-                                                        '& p': { mb: 1.25, lineHeight: 1.75, color: learnerBrandTheme.textPrimary },
-                                                        '& h1,& h2,& h3,& h4': { mt: 2, mb: 1 },
-                                                        '& ul,& ol': { pl: 3, mb: 1.25 },
-                                                        '& blockquote': {
-                                                            borderLeft: '3px solid',
-                                                            borderColor: learnerBrandTheme.accent,
-                                                            pl: 1.5,
-                                                            color: learnerBrandTheme.textSecondary,
-                                                            my: 1.5,
-                                                            backgroundColor: alpha(learnerBrandTheme.accent, 0.05),
-                                                            borderRadius: 1,
-                                                            py: 1,
-                                                        },
-                                                        '& code': {
-                                                            fontFamily: 'monospace',
-                                                            fontSize: '0.9rem',
-                                                        },
-                                                    }}
-                                                    dangerouslySetInnerHTML={{ __html: selectedPrompt.contentHtml || '' }}
-                                                />
-                                                {!!selectedPrompt.prompt?.trim() && (
-                                                    <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
-                                                        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1}>
-                                                            <Typography variant="subtitle2" fontWeight={700}>
-                                                                Legacy prompt snippet
-                                                            </Typography>
-                                                            <Button
-                                                                size="small"
-                                                                variant="contained"
-                                                                startIcon={<ContentCopyIcon />}
-                                                                onClick={() => void handleCopy()}
-                                                            >
-                                                                Copy prompt
-                                                            </Button>
-                                                        </Stack>
-                                                        <Typography component="pre" sx={{ mt: 1, mb: 0, whiteSpace: 'pre-wrap' }}>
-                                                            {selectedPrompt.prompt}
-                                                        </Typography>
-                                                    </Paper>
-                                                )}
-                                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                {selectedPrompt.contentHtml?.trim() ? (
+                                                    <AIPromptGuideContent
+                                                        contentHtml={selectedPrompt.contentHtml}
+                                                        legacyPrompt={selectedPrompt.prompt || ''}
+                                                        onCopied={() => void handlePromptCopied()}
+                                                        sx={{
+                                                            color: learnerBrandTheme.textPrimary,
+                                                            '& .tiptap-rendered-content p': {
+                                                                color: learnerBrandTheme.textPrimary,
+                                                            },
+                                                        }}
+                                                    />
+                                                ) : null}
+                                                <Stack
+                                                    direction="row"
+                                                    spacing={1}
+                                                    flexWrap="wrap"
+                                                    sx={{ display: 'flex', flexFlow: 'wrap', mt: 2, p: '10px', rowGap: '8px' }}
+                                                >
                                                     {(selectedPrompt.tags || []).map((tag) => (
                                                         <Chip key={`${selectedPrompt._id}-${tag}`} label={tag} size="small" />
                                                     ))}
                                                 </Stack>
-                                            </Stack>
-                                        ) : (
-                                            <Typography color="text.secondary">Select a prompt to read.</Typography>
-                                        )}
-                                    </Paper>
-                                </Grid>
-                            </Grid>
+                                        </Stack>
+                                    ) : (
+                                        <Typography color="text.secondary">Select a prompt to read.</Typography>
+                                    )}
+                                </Paper>
+                            )
                         )}
                     </>
                 )}

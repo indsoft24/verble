@@ -94,7 +94,7 @@ const HelpPage: React.FC = () => {
                 sx={{
                     background: `linear-gradient(180deg, ${alpha(learnerBrandTheme.accent, 0.08)} 0%, ${alpha('#ffffff', 0.95)} 35%)`,
                     minHeight: 'calc(100vh - 120px)',
-                    py: { xs: 3, md: 5 },
+                    py: { xs: 2, md: 3 },
                 }}
             >
             <Container maxWidth="lg" component="main">

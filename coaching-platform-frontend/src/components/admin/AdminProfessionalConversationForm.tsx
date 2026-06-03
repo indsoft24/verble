@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
+import CommaSeparatedTextField from '../common/CommaSeparatedTextField';
 import { emptyDialogueLine } from '../../utils/adminDailyContentDefaults';
 
 type Line = ReturnType<typeof emptyDialogueLine>;
@@ -26,6 +27,8 @@ export interface AdminProfessionalConversationFormProps {
     onChange: (field: string, value: unknown) => void;
     displayTitle?: string;
     onDisplayTitleChange?: (value: string) => void;
+    /** Resets comma-separated fields when switching create/edit records */
+    syncKey?: string;
 }
 
 function getDialogue(metadata: Record<string, unknown>): Line[] {
@@ -39,14 +42,15 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
     onChange,
     displayTitle = '',
     onDisplayTitleChange,
+    syncKey,
 }) => {
     const topicName =
         (metadata.topicName as string) || displayTitle || (metadata.title as string) || '';
     const description = (metadata.description as string) || '';
-    const tagsInput = Array.isArray(metadata.tags) ? (metadata.tags as string[]).join(', ') : '';
-    const relatedIdsInput = Array.isArray(metadata.relatedContentIds)
-        ? (metadata.relatedContentIds as string[]).join(', ')
-        : '';
+    const tags = Array.isArray(metadata.tags) ? (metadata.tags as string[]) : [];
+    const relatedContentIds = Array.isArray(metadata.relatedContentIds)
+        ? (metadata.relatedContentIds as string[])
+        : [];
     const dialogue = getDialogue(metadata);
 
     const updateLine = (idx: number, patch: Partial<Line>) => {
@@ -87,17 +91,13 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
                         />
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
+                        <CommaSeparatedTextField
                             fullWidth
-                            label="Tags (comma-separated)"
+                            label="Tags"
                             placeholder="interview, workplace, formal"
-                            value={tagsInput}
-                            onChange={(e) =>
-                                onChange(
-                                    'tags',
-                                    e.target.value.split(/[,;]/).map((t) => t.trim()).filter(Boolean)
-                                )
-                            }
+                            value={tags}
+                            syncKey={syncKey}
+                            onChange={(next) => onChange('tags', next)}
                             helperText="Learners see related conversations with matching tags"
                         />
                     </Grid>
@@ -112,17 +112,14 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
                         />
                     </Grid>
                     <Grid size={{ xs: 12 }}>
-                        <TextField
+                        <CommaSeparatedTextField
                             fullWidth
                             label="Related content IDs (optional)"
                             placeholder="id1, id2"
-                            value={relatedIdsInput}
-                            onChange={(e) =>
-                                onChange(
-                                    'relatedContentIds',
-                                    e.target.value.split(/[,;]/).map((t) => t.trim()).filter(Boolean)
-                                )
-                            }
+                            value={relatedContentIds}
+                            syncKey={syncKey}
+                            parseOptions={{ dedupeCaseInsensitive: false }}
+                            onChange={(next) => onChange('relatedContentIds', next)}
                             helperText="Pin specific conversation documents as related (otherwise tags are used)"
                         />
                     </Grid>

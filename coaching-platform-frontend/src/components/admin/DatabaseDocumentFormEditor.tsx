@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import CommaSeparatedTextField from '../common/CommaSeparatedTextField';
 import AdminDailyContentMetadataForm from './AdminDailyContentMetadataForm';
 import {
     Alert,
@@ -43,7 +44,8 @@ function BlogPostForm({
     onChange: (next: Record<string, unknown>) => void;
     mode: 'create' | 'update';
 }) {
-    const tagsStr = Array.isArray(value.tags) ? (value.tags as string[]).join(', ') : '';
+    const tags = Array.isArray(value.tags) ? (value.tags as string[]) : [];
+    const docSyncKey = String(value._id ?? 'new');
 
     return (
         <Grid container spacing={2} sx={{ pt: 1 }}>
@@ -114,22 +116,12 @@ function BlogPostForm({
                 />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
+                <CommaSeparatedTextField
                     fullWidth
-                    label="Tags (comma-separated)"
-                    value={tagsStr}
-                    onChange={(e) =>
-                        onChange(
-                            patch(
-                                value,
-                                'tags',
-                                e.target.value
-                                    .split(',')
-                                    .map((t) => t.trim())
-                                    .filter(Boolean)
-                            )
-                        )
-                    }
+                    label="Tags"
+                    value={tags}
+                    syncKey={docSyncKey}
+                    onChange={(next) => onChange(patch(value, 'tags', next))}
                 />
             </Grid>
             <Grid size={{ xs: 12 }}>
@@ -170,6 +162,8 @@ function DailyContentForm({
     value: Record<string, unknown>;
     onChange: (next: Record<string, unknown>) => void;
 }) {
+    const docSyncKey = String(value._id ?? 'new');
+
     return (
         <Grid container spacing={2} sx={{ pt: 1 }}>
             <Grid size={{ xs: 12, md: 4 }}>
@@ -230,6 +224,7 @@ function DailyContentForm({
                     type={String(value.type ?? 'WORD')}
                     metadata={(value.metadata ?? {}) as Record<string, unknown>}
                     displayTitle={String(value.title ?? '')}
+                    syncKey={docSyncKey}
                     onDisplayTitleChange={(t) => onChange(patch(value, 'title', t))}
                     onChange={(field, val) => {
                         const meta = { ...((value.metadata ?? {}) as Record<string, unknown>), [field]: val };
