@@ -36,7 +36,9 @@ import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
 import ActivitySourceCredit from './ActivitySourceCredit';
 import {
-    activityCardShell,
+    activityCardProps,
+    activitySubmittedTextSx,
+    activitySummaryTextFieldSx,
     GOLD_ACCENT,
     isContentScheduledToday,
     refreshAdjacentFlags,
@@ -253,7 +255,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
         <Box sx={{ maxWidth: { xs: '100%', sm: 800 }, mx: 'auto' }}>
             {showConfetti && <ConfettiEffect />}
 
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
                         contentType="SPEECH"
@@ -408,7 +410,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                 </CardContent>
             </Card>
 
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Typography
                         variant="overline"
@@ -521,21 +523,22 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                                                 </IconButton>
                                             )}
                                     </Box>
-                                    <TextField
-                                        fullWidth
-                                        multiline
-                                        minRows={3}
-                                        placeholder="Summarize part of the speech in your own words…"
-                                        value={locked ? displaySummaries[idx] || '' : summaryDrafts[idx] || ''}
-                                        onChange={(e) => updateSummaryDraft(idx, e.target.value)}
-                                        disabled={locked || !isToday || isSubmitting}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                bgcolor: alpha('#0f172a', 0.4),
-                                                color: '#e2e8f0',
-                                            },
-                                        }}
-                                    />
+                                    {locked ? (
+                                        <Typography component="div" sx={activitySubmittedTextSx}>
+                                            {displaySummaries[idx]?.trim() || '—'}
+                                        </Typography>
+                                    ) : (
+                                        <TextField
+                                            fullWidth
+                                            multiline
+                                            minRows={3}
+                                            placeholder="Summarize part of the speech in your own words…"
+                                            value={summaryDrafts[idx] || ''}
+                                            onChange={(e) => updateSummaryDraft(idx, e.target.value)}
+                                            disabled={!isToday || isSubmitting}
+                                            sx={activitySummaryTextFieldSx(GOLD_ACCENT)}
+                                        />
+                                    )}
                                 </Box>
                             );
                         })}

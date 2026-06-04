@@ -2,6 +2,7 @@
 import React from 'react';
 import { Container, Box, Typography, Paper, Link as MuiLink, Divider, Alert } from '@mui/material';
 import GavelIcon from '@mui/icons-material/Gavel';
+import { SITE_CONTACT, siteContactMailto, siteContactPhoneDisplay, siteContactTel } from '../../config/siteContact';
 
 const PolicySection = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <Box sx={{ mb: 4 }}>
@@ -153,7 +154,10 @@ const TermsAndConditionsPage: React.FC = () => {
                             For any questions regarding these Terms, please reach out to our support team:
                         </Typography>
                         <Typography color="text.secondary">
-                            Email: <MuiLink href="mailto:contact@verble.co.in">contact@verble.co.in</MuiLink>
+                            Email: <MuiLink href={siteContactMailto}>{SITE_CONTACT.email}</MuiLink>
+                        </Typography>
+                        <Typography color="text.secondary">
+                            Phone: <MuiLink href={siteContactTel}>{siteContactPhoneDisplay}</MuiLink>
                         </Typography>
                     </Box>
 

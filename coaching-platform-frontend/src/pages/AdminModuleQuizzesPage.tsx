@@ -35,6 +35,7 @@ import {
     DEFAULT_QUIZ_COURSE_ID,
     FALLBACK_QUIZ_COURSE_NAME,
 } from '../config/adminDefaults';
+import { normalizeQuestionOptions } from '../utils/quizOptionUtils';
 
 const DEFAULT_OPTION_COUNT = 4;
 const MIN_OPTIONS = 2;
@@ -47,10 +48,9 @@ const padOptions = (options: string[]): string[] => {
 };
 
 const normalizeQuestion = (q: QuizQuestionInput): QuizQuestionInput => {
-    const options = padOptions(q.options?.length ? q.options : ['', '']);
-    let correctAnswer = q.correctAnswer ?? 0;
-    if (correctAnswer >= options.length) correctAnswer = 0;
-    return { ...q, options, correctAnswer };
+    const padded = padOptions(q.options?.length ? q.options : ['', '']);
+    const { options, correctIndex } = normalizeQuestionOptions(padded, q.correctAnswer ?? 0);
+    return { ...q, options, correctAnswer: correctIndex };
 };
 
 const emptyQuestion = (): QuizQuestionInput =>

@@ -25,7 +25,7 @@ import EvaluationStatusBanner from './EvaluationStatusBanner';
 import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
 import {
-    activityCardShell,
+    activityCardProps,
     getContentDisplayNumber,
     isContentScheduledToday,
     canShowNextNavigation,
@@ -404,7 +404,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
         <Box sx={{ maxWidth: 800, mx: 'auto' }}>
             {showConfetti && <ConfettiEffect />}
 
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
                         contentType="STORY"
@@ -564,7 +564,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
                 </CardContent>
             </Card>
 
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Typography
                         variant="overline"

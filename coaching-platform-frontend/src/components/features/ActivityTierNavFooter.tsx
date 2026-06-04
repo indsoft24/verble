@@ -13,6 +13,8 @@ export interface NavFooterSlot {
 export interface ActivityTierNavFooterProps {
     accentColor: string;
     variant?: 'dark' | 'light';
+    /** Stacked: primary link full width, then side links in one row (best for puzzles on mobile). */
+    layout?: 'inline' | 'stacked';
     left?: NavFooterSlot;
     center?: NavFooterSlot;
     right?: NavFooterSlot;
@@ -26,6 +28,7 @@ export interface ActivityTierNavFooterProps {
 const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
     accentColor,
     variant = 'dark',
+    layout = 'inline',
     left,
     center,
     right,
@@ -47,6 +50,8 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
         const icon = side === 'left' ? <ArrowBackIcon /> : <ArrowForwardIcon />;
         const clickable = Boolean(slot.onClick) && !slot.disabled && !slot.loading;
 
+        const stacked = layout === 'stacked';
+
         return (
             <Button
                 variant="text"
@@ -57,17 +62,87 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
                 sx={{
                     color: textColor,
                     fontWeight: 600,
-                    flex: '1 1 0',
+                    fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+                    flex: stacked ? '1 1 50%' : '1 1 0',
                     minWidth: 0,
+                    minHeight: 44,
                     justifyContent: side === 'left' ? 'flex-start' : 'flex-end',
                     textAlign: side,
-                    px: { xs: 0.5, sm: 1 },
+                    px: { xs: 0.75, sm: 1 },
+                    lineHeight: 1.3,
+                    whiteSpace: 'nowrap',
+                    '& .MuiButton-startIcon, & .MuiButton-endIcon': {
+                        flexShrink: 0,
+                    },
                 }}
             >
                 {slot.loading ? 'Loading…' : slot.label}
             </Button>
         );
     };
+
+    const centerButton = showCenter ? (
+        <Button
+            variant="outlined"
+            size="medium"
+            fullWidth={layout === 'stacked'}
+            onClick={center!.onClick}
+            disabled={center!.disabled || center!.loading}
+            sx={{
+                borderColor: accentColor,
+                color: accentColor,
+                fontWeight: 700,
+                fontSize: '0.9375rem',
+                textTransform: 'none',
+                py: 1.1,
+                px: 2,
+                minHeight: 48,
+                flexShrink: 0,
+                '&:hover': {
+                    borderColor: accentColor,
+                    bgcolor: alpha(accentColor, isDark ? 0.14 : 0.08),
+                },
+                '&.Mui-disabled': {
+                    borderColor: isDark ? alpha('#e2e8f0', 0.25) : 'divider',
+                    color: isDark ? alpha('#e2e8f0', 0.4) : 'text.disabled',
+                },
+            }}
+        >
+            {center!.label}
+        </Button>
+    ) : null;
+
+    if (layout === 'stacked') {
+        return (
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    mt: 3,
+                    pt: 2.5,
+                    borderTop: `1px solid ${borderColor}`,
+                    ...sx,
+                }}
+            >
+                {centerButton}
+                {(showLeft || showRight) && (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 1,
+                            width: '100%',
+                        }}
+                    >
+                        {renderSide(left, 'left')}
+                        {renderSide(right, 'right')}
+                    </Box>
+                )}
+            </Box>
+        );
+    }
 
     return (
         <Box
@@ -84,38 +159,9 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
             }}
         >
             {renderSide(left, 'left')}
-
-            {showCenter ? (
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={center!.onClick}
-                    disabled={center!.disabled || center!.loading}
-                    sx={{
-                        borderColor: accentColor,
-                        color: accentColor,
-                        fontWeight: 700,
-                        px: 2,
-                        mx: { xs: 'auto', sm: 1 },
-                        order: { xs: -1, sm: 0 },
-                        width: { xs: '100%', sm: 'auto' },
-                        flexShrink: 0,
-                        '&:hover': {
-                            borderColor: accentColor,
-                            bgcolor: alpha(accentColor, isDark ? 0.12 : 0.08),
-                        },
-                        '&.Mui-disabled': {
-                            borderColor: isDark ? alpha('#e2e8f0', 0.2) : 'divider',
-                            color: isDark ? alpha('#e2e8f0', 0.35) : 'text.disabled',
-                        },
-                    }}
-                >
-                    {center!.label}
-                </Button>
-            ) : (
+            {centerButton ?? (
                 <Box sx={{ display: { xs: 'none', sm: 'block' }, width: 140, flexShrink: 0 }} />
             )}
-
             {renderSide(right, 'right')}
         </Box>
     );

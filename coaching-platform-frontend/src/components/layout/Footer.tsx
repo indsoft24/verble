@@ -6,6 +6,12 @@ import { Link as RouterLink } from 'react-router-dom';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import { brandAssets } from '../../assets/brandAssets';
+import {
+    SITE_CONTACT,
+    siteContactMailto,
+    siteContactPhoneDisplay,
+    siteContactTel,
+} from '../../config/siteContact';
 
 const FOOTER_BG = '#020617';
 
@@ -112,6 +118,33 @@ const Footer: React.FC = () => {
                         >
                             {t('footer.tagline')}
                         </Typography>
+                        <Box sx={{ mb: 1.5 }}>
+                            <MuiLink
+                                href={siteContactMailto}
+                                variant="body2"
+                                underline="hover"
+                                sx={{
+                                    display: 'block',
+                                    color: 'rgba(226,232,240,0.82)',
+                                    mb: 0.5,
+                                    '&:hover': { color: '#FFFFFF' },
+                                }}
+                            >
+                                {SITE_CONTACT.email}
+                            </MuiLink>
+                            <MuiLink
+                                href={siteContactTel}
+                                variant="body2"
+                                underline="hover"
+                                sx={{
+                                    display: 'block',
+                                    color: 'rgba(226,232,240,0.82)',
+                                    '&:hover': { color: '#FFFFFF' },
+                                }}
+                            >
+                                {siteContactPhoneDisplay}
+                            </MuiLink>
+                        </Box>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <IconButton
                                 href="https://youtube.com/@verble"

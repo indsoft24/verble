@@ -27,14 +27,18 @@ import {
     type ModuleQuizForStudent,
     type ModuleQuizAvailability,
 } from '../services/moduleQuizService';
+import { getFilledOptionEntries } from '../utils/quizOptionUtils';
 
 const optionRowSx = (selected: boolean) => ({
-    display: 'block',
+    display: 'flex',
+    alignItems: 'center',
     width: '100%',
     textAlign: 'left' as const,
-    p: 1.5,
-    mb: 1,
-    borderRadius: 1.5,
+    minHeight: { xs: 52, sm: 56 },
+    p: { xs: '12px 14px', sm: '14px 16px' },
+    mb: 0,
+    borderRadius: 2,
+    wordBreak: 'break-word' as const,
     border: `1px solid ${selected ? courseLearningTheme.accent : alpha(courseLearningTheme.accent, 0.25)}`,
     bgcolor: selected ? alpha(courseLearningTheme.accent, 0.15) : courseLearningTheme.surfaceRaised,
     color: courseLearningTheme.textPrimary,
@@ -320,19 +324,35 @@ const ModuleQuizPage: React.FC = () => {
                             <Box
                                 key={q._id}
                                 sx={{
-                                    p: 2,
+                                    p: { xs: 1.25, sm: 2 },
                                     borderRadius: 2,
                                     border: courseLearningTheme.tileBorder(),
                                     bgcolor: courseLearningTheme.tileBg,
                                 }}
                             >
                                 <Typography
-                                    sx={{ fontWeight: 700, color: courseLearningTheme.textPrimary, mb: 1.5, lineHeight: 1.4 }}
+                                    sx={{
+                                        fontWeight: 700,
+                                        color: courseLearningTheme.textPrimary,
+                                        mb: 1.5,
+                                        lineHeight: 1.5,
+                                        fontSize: { xs: '1rem', sm: '1.0625rem' },
+                                        wordBreak: 'break-word',
+                                    }}
                                 >
                                     {index + 1}. {q.question}
                                 </Typography>
-                                <Box component="div" role="radiogroup" aria-label={`Question ${index + 1}`}>
-                                    {q.options.map((opt, optIdx) => (
+                                <Box
+                                    component="div"
+                                    role="radiogroup"
+                                    aria-label={`Question ${index + 1}`}
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: { xs: 1.25, sm: 1.5 },
+                                    }}
+                                >
+                                    {getFilledOptionEntries(q.options).map(({ text, index: optIdx }) => (
                                         <Box
                                             key={optIdx}
                                             component="button"
@@ -344,7 +364,7 @@ const ModuleQuizPage: React.FC = () => {
                                             }
                                             sx={optionRowSx(answers[index] === optIdx)}
                                         >
-                                            {opt}
+                                            {text}
                                         </Box>
                                     ))}
                                 </Box>

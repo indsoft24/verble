@@ -7,7 +7,7 @@ import { normalizeInstagramPost } from '../../utils/mediaUrlUtils';
 import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
 import InstagramPostCard from './InstagramPostCard';
-import { activityCardShell, GOLD_ACCENT } from '../../utils/dailyActivityUi';
+import { activityCardProps, GOLD_ACCENT } from '../../utils/dailyActivityUi';
 
 const FEED_ACCENT = '#e1306c';
 
@@ -65,7 +65,7 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({
 
     return (
         <Box sx={{ maxWidth: { xs: '100%', sm: 800 }, mx: 'auto' }}>
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
                         contentType="FEED"

@@ -13,6 +13,7 @@ import PriceCheckIcon from '@mui/icons-material/PriceCheck';
 import CodeIcon from '@mui/icons-material/Code';
 import CreateIcon from '@mui/icons-material/Create';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import { SITE_CONTACT, siteContactMailto, siteContactPhoneDisplay, siteContactTel } from '../../config/siteContact';
 import BadgeIcon from '@mui/icons-material/Badge';
 import SchoolIcon from '@mui/icons-material/School';
 
@@ -133,10 +134,13 @@ const CareersPage: React.FC = () => {
                     </Typography>
                      <Box>
                         <Typography variant="h6" sx={{fontWeight: 'bold'}}>📩 Apply Now</Typography>
-                        <Button component={MuiLink} href="mailto:careers@verble.co.in" size="large" sx={{textTransform: 'none', fontSize: '1.1rem'}}>
-                            Send your resume to careers@verble.co.in
+                        <Button component={MuiLink} href={siteContactMailto} size="large" sx={{textTransform: 'none', fontSize: '1.1rem'}}>
+                            Send your resume to {SITE_CONTACT.email}
                         </Button>
-                         <Typography variant="body2" color="text.secondary">For queries, contact our HR team at +91-XXXXXXXXXX</Typography>
+                         <Typography variant="body2" color="text.secondary">
+                            For queries, contact our HR team at{' '}
+                            <MuiLink href={siteContactTel} underline="hover">{siteContactPhoneDisplay}</MuiLink>
+                         </Typography>
                      </Box>
                 </Container>
             </Box>

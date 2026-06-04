@@ -9,12 +9,12 @@ import {
     Radio,
     RadioGroup,
     FormControlLabel,
-    FormControl,
     CircularProgress,
     Alert,
     Divider,
     Chip,
-    LinearProgress
+    LinearProgress,
+    alpha,
 } from '@mui/material';
 import { keyframes } from '@emotion/react';
 import SendIcon from '@mui/icons-material/Send';
@@ -26,6 +26,25 @@ import { type DailyContent } from '../../services/dailyContentService';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
 import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter, { type NavFooterSlot } from './ActivityTierNavFooter';
+import { getFilledOptionEntries } from '../../utils/quizOptionUtils';
+import { activityCardProps } from '../../utils/dailyActivityUi';
+import {
+    PUZZLE_ACCENT,
+    puzzleActivityShellSx,
+    puzzleCardContentSx,
+    puzzleExplanationBoxSx,
+    puzzleFooterHintSx,
+    puzzleOptionRowSx,
+    puzzleOptionTextSx,
+    puzzleOptionsGroupSx,
+    puzzleQuestionBlockSx,
+    puzzleSubmitButtonSx,
+    puzzleQuestionLabelSx,
+    puzzleQuestionPromptSx,
+    puzzleResultsBoxSx,
+    puzzleSubtitleSx,
+    puzzleTitleSx,
+} from '../../utils/quizActivityStyles';
 
 interface PuzzleCardProps {
     data: DailyContent;
@@ -209,74 +228,58 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
     const displayNumber = getDisplayTag(data.sequenceNumber);
 
     return (
-        <Card
-            elevation={4}
-            sx={{
-                maxWidth: 800,
-                margin: '0 auto',
-                borderRadius: 3,
-                overflow: 'hidden',
-                position: 'relative',
-            }}
-        >
-            {/* Confetti Effect */}
+        <Box sx={puzzleActivityShellSx}>
             {showConfetti && <ConfettiEffect />}
 
-            <CardContent sx={{ p: 4 }}>
-                {/* Header */}
-                <Box sx={{ mb: 3 }}>
+            <Card {...activityCardProps(PUZZLE_ACCENT)}>
+            <CardContent sx={puzzleCardContentSx}>
+                <Box sx={{ mb: { xs: 2, sm: 2.5 } }}>
                     <ActivityContentHeader
                         contentType="PUZZLE"
-                        accentColor="#c2185b"
+                        accentColor={PUZZLE_ACCENT}
                         displayNumber={displayNumber}
                         labelOverride={puzzleHeaderLabel}
-                        variant="light"
-                        sx={{ mb: 2 }}
+                        variant="dark"
+                        sx={{ mb: 1.5 }}
                     />
 
-                    <Typography
-                        variant="h4"
-                        component="h1"
-                        sx={{
-                            fontWeight: 'bold',
-                            color: 'primary.main',
-                        }}
-                    >
+                    <Typography component="h1" sx={puzzleTitleSx(PUZZLE_ACCENT)}>
                         {puzzleTitle}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        {data.title}
-                    </Typography>
+                    <Typography sx={puzzleSubtitleSx}>{data.title}</Typography>
                 </Box>
 
-                <Divider sx={{ my: 3 }} />
+                <Divider sx={{ my: { xs: 2, sm: 2.5 }, borderColor: alpha(PUZZLE_ACCENT, 0.25) }} />
 
-                {/* Results Summary (if submitted) */}
                 {hasSubmitted && submissionResult && (
-                    <Box sx={{ mb: 4, p: 2, backgroundColor: 'primary.light', borderRadius: 2 }}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    <Box sx={puzzleResultsBoxSx(PUZZLE_ACCENT)}>
+                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 800, color: '#f8fafc' }}>
                             Your Results
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#f8fafc' }}>
                                 {submissionResult.correctCount} / 5
                             </Typography>
-                            <Typography variant="body1">
-                                Correct Answers
-                            </Typography>
+                            <Typography sx={{ color: alpha('#e2e8f0', 0.8) }}>correct</Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 1 }}>
+                            <Typography variant="h5" sx={{ fontWeight: 800, color: '#4ade80' }}>
                                 {submissionResult.pointsEarned} points
                             </Typography>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.65) }}>
                                 earned
                             </Typography>
                         </Box>
-                        <LinearProgress 
-                            variant="determinate" 
-                            value={(submissionResult.correctCount / 5) * 100} 
-                            sx={{ mt: 2, height: 8, borderRadius: 1 }}
+                        <LinearProgress
+                            variant="determinate"
+                            value={(submissionResult.correctCount / 5) * 100}
+                            sx={{
+                                mt: 2,
+                                height: 8,
+                                borderRadius: 1,
+                                bgcolor: alpha('#fff', 0.1),
+                                '& .MuiLinearProgress-bar': { bgcolor: PUZZLE_ACCENT },
+                            }}
                         />
                     </Box>
                 )}
@@ -292,33 +295,35 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
                         const isCorrect = userAnswer?.isCorrect;
 
                         return (
-                            <Box key={index} sx={{ mb: 4, p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
-                                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                            <Box key={index} sx={puzzleQuestionBlockSx(PUZZLE_ACCENT)}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                    <Typography sx={puzzleQuestionLabelSx}>
                                         Question {index + 1}
                                     </Typography>
-                                    {isSubmitted && (
-                                        isCorrect ? (
-                                            <CheckCircleIcon color="success" />
+                                    {isSubmitted &&
+                                        (isCorrect ? (
+                                            <CheckCircleIcon sx={{ color: '#4ade80', fontSize: 22 }} />
                                         ) : (
-                                            <CancelIcon color="error" />
-                                        )
-                                    )}
+                                            <CancelIcon sx={{ color: '#f87171', fontSize: 22 }} />
+                                        ))}
                                 </Box>
 
                                 {puzzleType === 'GRAMMAR_FILL_BLANK' ? (
-                                    <Typography variant="body1" sx={{ mb: 2, fontSize: '1.1rem' }}>
+                                    <Typography component="div" sx={puzzleQuestionPromptSx}>
                                         {question.question.split('___').map((part, i) => (
                                             <React.Fragment key={i}>
                                                 {part}
                                                 {i < question.question.split('___').length - 1 && (
-                                                    <Box component="span" sx={{ 
-                                                        borderBottom: '2px solid',
-                                                        borderColor: 'primary.main',
-                                                        px: 1,
-                                                        fontWeight: 'bold',
-                                                        color: 'primary.main'
-                                                    }}>
+                                                    <Box
+                                                        component="span"
+                                                        sx={{
+                                                            borderBottom: '2px solid',
+                                                            borderColor: PUZZLE_ACCENT,
+                                                            px: 0.75,
+                                                            fontWeight: 700,
+                                                            color: PUZZLE_ACCENT,
+                                                        }}
+                                                    >
                                                         {'___'}
                                                     </Box>
                                                 )}
@@ -326,84 +331,91 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
                                         ))}
                                     </Typography>
                                 ) : (
-                                    <Typography variant="body1" sx={{ mb: 2, fontSize: '1.1rem' }}>
+                                    <Typography component="div" sx={puzzleQuestionPromptSx}>
                                         {question.question}
                                     </Typography>
                                 )}
 
-                                <FormControl component="fieldset" fullWidth>
-                                    <RadioGroup
-                                        value={selectedAnswer !== undefined ? selectedAnswer : ''}
-                                        onChange={(e) => handleAnswerChange(index, parseInt(e.target.value))}
-                                    >
-                                        {question.options.map((option, optIndex) => {
-                                            const isSelected = selectedAnswer === optIndex;
-                                            const isCorrectOption = optIndex === question.correct_idx;
-                                            const showResult = isSubmitted && isSelected;
+                                <RadioGroup
+                                    value={selectedAnswer !== undefined ? selectedAnswer : ''}
+                                    onChange={(e) => handleAnswerChange(index, parseInt(e.target.value))}
+                                    sx={puzzleOptionsGroupSx}
+                                >
+                                    {getFilledOptionEntries(question.options).map(({ text, index: optIndex }) => {
+                                        const isSelected = selectedAnswer === optIndex;
+                                        const isCorrectOption = optIndex === question.correct_idx;
+                                        const showResult = Boolean(isSubmitted && isSelected);
 
-                                            return (
-                                                <FormControlLabel
-                                                    key={optIndex}
-                                                    value={optIndex}
-                                                    control={<Radio />}
-                                                    disabled={hasSubmitted}
-                                                    label={
-                                                        <Box sx={{ 
-                                                            display: 'flex', 
-                                                            alignItems: 'center', 
+                                        return (
+                                            <FormControlLabel
+                                                key={optIndex}
+                                                value={optIndex}
+                                                disabled={hasSubmitted}
+                                                control={<Radio size="medium" />}
+                                                label={
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
                                                             gap: 1,
-                                                            p: 1,
-                                                            borderRadius: 1,
-                                                            backgroundColor: showResult 
-                                                                ? (isCorrect ? 'success.light' : 'error.light')
-                                                                : 'transparent',
-                                                            width: '100%'
-                                                        }}>
-                                                            <Typography variant="body1">
-                                                                {option}
-                                                            </Typography>
-                                                            {showResult && (
-                                                                isCorrect ? (
-                                                                    <CheckCircleIcon color="success" fontSize="small" />
-                                                                ) : (
-                                                                    <CancelIcon color="error" fontSize="small" />
-                                                                )
-                                                            )}
-                                                            {isSubmitted && isCorrectOption && !isSelected && (
-                                                                <Chip 
-                                                                    label="Correct Answer" 
-                                                                    size="small" 
-                                                                    color="success" 
-                                                                    variant="outlined"
+                                                            width: '100%',
+                                                        }}
+                                                    >
+                                                        <Typography sx={puzzleOptionTextSx}>{text}</Typography>
+                                                        {showResult &&
+                                                            (isCorrect ? (
+                                                                <CheckCircleIcon
+                                                                    sx={{
+                                                                        color: '#4ade80',
+                                                                        fontSize: 22,
+                                                                        flexShrink: 0,
+                                                                    }}
                                                                 />
-                                                            )}
-                                                        </Box>
-                                                    }
-                                                    sx={{
-                                                        mb: 1,
-                                                        border: showResult 
-                                                            ? (isCorrect ? '2px solid' : '2px solid')
-                                                            : '1px solid',
-                                                        borderColor: showResult 
-                                                            ? (isCorrect ? 'success.main' : 'error.main')
-                                                            : 'divider',
-                                                        borderRadius: 1,
-                                                        '&:hover': {
-                                                            backgroundColor: hasSubmitted ? 'transparent' : 'action.hover'
-                                                        }
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </RadioGroup>
-                                </FormControl>
+                                                            ) : (
+                                                                <CancelIcon
+                                                                    sx={{
+                                                                        color: '#f87171',
+                                                                        fontSize: 22,
+                                                                        flexShrink: 0,
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                        {isSubmitted && isCorrectOption && !isSelected && (
+                                                            <Chip
+                                                                label="Correct"
+                                                                size="small"
+                                                                sx={{
+                                                                    flexShrink: 0,
+                                                                    borderColor: alpha('#4ade80', 0.6),
+                                                                    color: '#4ade80',
+                                                                    height: 26,
+                                                                }}
+                                                                variant="outlined"
+                                                            />
+                                                        )}
+                                                    </Box>
+                                                }
+                                                sx={puzzleOptionRowSx({
+                                                    accent: PUZZLE_ACCENT,
+                                                    selected: isSelected,
+                                                    showResult,
+                                                    isCorrect: Boolean(isCorrect),
+                                                    disabled: hasSubmitted,
+                                                })}
+                                            />
+                                        );
+                                    })}
+                                </RadioGroup>
 
                                 {isSubmitted && question.explanation && (
-                                    <Box sx={{ mt: 2, p: 2, backgroundColor: 'info.light', borderRadius: 1 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                            Explanation:
+                                    <Box sx={puzzleExplanationBoxSx}>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ fontWeight: 700, mb: 0.5, color: '#7dd3fc' }}
+                                        >
+                                            Explanation
                                         </Typography>
-                                        <Typography variant="body2">
+                                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.9), lineHeight: 1.5 }}>
                                             {question.explanation}
                                         </Typography>
                                     </Box>
@@ -419,19 +431,26 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
                     )}
 
                     {!hasSubmitted && (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                        <Box sx={{ mt: { xs: 3, sm: 3.5 }, px: { xs: 0, sm: 0 } }}>
                             <Button
                                 type="submit"
                                 variant="contained"
-                                color="primary"
                                 size="large"
-                                endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                                fullWidth
+                                disableElevation
+                                endIcon={
+                                    isSubmitting ? (
+                                        <CircularProgress size={20} sx={{ color: '#fff' }} />
+                                    ) : (
+                                        <SendIcon />
+                                    )
+                                }
                                 disabled={
                                     Object.keys(answers).length !== 5 ||
                                     isSubmitting ||
                                     !user
                                 }
-                                sx={{ minWidth: 200 }}
+                                sx={puzzleSubmitButtonSx(PUZZLE_ACCENT)}
                             >
                                 {isSubmitting ? 'Submitting...' : 'Submit Answers'}
                             </Button>
@@ -439,18 +458,22 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
                     )}
 
                     {!user && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                        <Typography
+                            variant="body2"
+                            sx={{ mt: 2, textAlign: 'center', color: alpha('#e2e8f0', 0.65) }}
+                        >
                             Please log in to submit answers.
                         </Typography>
                     )}
 
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 3, textAlign: 'center' }}>
+                    <Typography variant="body2" sx={puzzleFooterHintSx}>
                         You earn 10 points for each correct answer.
                     </Typography>
 
                     {tierNav && (
                         <ActivityTierNavFooter
-                            variant="light"
+                            variant="dark"
+                            layout="stacked"
                             accentColor={tierNav.accentColor}
                             left={tierNav.left}
                             center={tierNav.center}
@@ -459,7 +482,8 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
                     )}
                 </Box>
             </CardContent>
-        </Card>
+            </Card>
+        </Box>
     );
 };
 

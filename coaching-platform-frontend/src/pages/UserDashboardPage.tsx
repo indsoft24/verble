@@ -366,7 +366,7 @@ const UserDashboardPage: React.FC = () => {
         const isConversationActivity = activityKind === 'conversation';
 
         return (
-            <UserLayout title="Activity" variant={isConversationActivity ? 'conversations' : 'default'}>
+            <UserLayout title="Activity" variant={isConversationActivity ? 'conversations' : 'activity'}>
                 {isConversationActivity ? (
                     <ConversationExperienceShell tier="silver" maxWidth="lg">
                         <Button
@@ -410,7 +410,15 @@ const UserDashboardPage: React.FC = () => {
                         </Paper>
                     </ConversationExperienceShell>
                 ) : (
-                <Container maxWidth="lg" sx={{ py: 2 }}>
+                <Container
+                    maxWidth="md"
+                    disableGutters
+                    sx={{
+                        width: '100%',
+                        py: { xs: 0.5, sm: 1.5 },
+                        px: { xs: 0.75, sm: 2 },
+                    }}
+                >
                     <Button onClick={handleCloseActivity} startIcon={<ArrowBackIcon />} sx={{ mb: 2 }}>
                         Back to Dashboard
                     </Button>

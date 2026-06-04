@@ -39,7 +39,9 @@ import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
 import { Link as RouterLink } from 'react-router-dom';
 import { canAccessGoldTierContent } from '../../utils/userAccessState';
 import {
-    activityCardShell,
+    activityCardProps,
+    activitySubmittedTextSx,
+    activitySummaryTextFieldSx,
     getContentDisplayNumber,
     isContentScheduledToday,
     refreshAdjacentFlags,
@@ -382,7 +384,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
         <Box sx={{ maxWidth: 900, mx: 'auto' }}>
             {showConfetti && <ConfettiEffect />}
 
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
                         contentType="SCENE"
@@ -499,7 +501,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
                 </CardContent>
             </Card>
 
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Typography
                         variant="overline"
@@ -614,21 +616,22 @@ const SceneCard: React.FC<SceneCardProps> = ({
                                             </IconButton>
                                         )}
                                 </Box>
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    minRows={3}
-                                    placeholder="Describe part of the scene in your own words…"
-                                    value={locked ? displaySummaries[idx] || '' : summaryDrafts[idx] || ''}
-                                    onChange={(e) => updateSummaryDraft(idx, e.target.value)}
-                                    disabled={locked || !isToday || isSubmitting}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: alpha('#0f172a', 0.4),
-                                            color: '#e2e8f0',
-                                        },
-                                    }}
-                                />
+                                {locked ? (
+                                    <Typography component="div" sx={activitySubmittedTextSx}>
+                                        {displaySummaries[idx]?.trim() || '—'}
+                                    </Typography>
+                                ) : (
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        minRows={3}
+                                        placeholder="Describe part of the scene in your own words…"
+                                        value={summaryDrafts[idx] || ''}
+                                        onChange={(e) => updateSummaryDraft(idx, e.target.value)}
+                                        disabled={!isToday || isSubmitting}
+                                        sx={activitySummaryTextFieldSx(GOLD_ACCENT)}
+                                    />
+                                )}
                             </Box>
                         );
                         })}

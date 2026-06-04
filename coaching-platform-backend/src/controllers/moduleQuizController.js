@@ -14,6 +14,7 @@ import {
     resolveModuleQuizGate,
     handleQuizSubmissionFail,
 } from '../services/moduleQuizAccessService.js';
+import { isFilledOption, isValidFilledSelection } from '../utils/quizOptionUtils.js';
 
 /**
  * @desc    Get quiz for a module (without answers for students)
@@ -101,9 +102,20 @@ export const submitModuleQuiz = asyncHandler(async (req, res) => {
 
     let correctAnswers = 0;
     let totalPoints = 0;
+
+    for (let index = 0; index < answers.length; index++) {
+        const question = quiz.questions[index];
+        if (!isValidFilledSelection(question.options, answers[index].selectedAnswer)) {
+            res.status(400);
+            throw new Error(`Invalid answer for question ${index + 1}.`);
+        }
+    }
+
     const gradedAnswers = answers.map((answer, index) => {
         const question = quiz.questions[index];
-        const isCorrect = answer.selectedAnswer === question.correctAnswer;
+        const isCorrect =
+            answer.selectedAnswer === question.correctAnswer &&
+            isFilledOption(question.options[question.correctAnswer]);
         const pointsEarned = isCorrect ? question.points : 0;
 
         if (isCorrect) {

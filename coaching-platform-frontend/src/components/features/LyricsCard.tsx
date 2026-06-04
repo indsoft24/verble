@@ -21,7 +21,7 @@ import ActivityTierNavFooter from './ActivityTierNavFooter';
 import ActivitySourceCredit from './ActivitySourceCredit';
 import YouTubeAudioPlayer from './YouTubeAudioPlayer';
 import DirectAudioPlayer from './DirectAudioPlayer';
-import { activityCardShell, GOLD_ACCENT } from '../../utils/dailyActivityUi';
+import { activityCardProps, GOLD_ACCENT } from '../../utils/dailyActivityUi';
 
 const LYRICS_ACCENT = '#e91e63';
 
@@ -94,7 +94,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({
 
     return (
         <Box sx={{ maxWidth: { xs: '100%', sm: 800 }, mx: 'auto' }}>
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
                         contentType="LYRICS"

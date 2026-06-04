@@ -66,6 +66,7 @@ import {
     type AdminContentTypeKey,
 } from '../utils/dailyContentTypeCatalog';
 import { defaultMetadataForAdminKey } from '../utils/adminDailyContentDefaults';
+import { normalizeQuestionOptions } from '../utils/quizOptionUtils';
 import AdminDailyContentMetadataForm from '../components/admin/AdminDailyContentMetadataForm';
 import AdminDailyContentBulkDialog from '../components/admin/AdminDailyContentBulkDialog';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
@@ -504,11 +505,17 @@ const AdminDailyContentPage: React.FC = () => {
             payload.metadata = {
                 ...payload.metadata,
                 questions: (payload.metadata.questions as { question?: string; prompt?: string; options?: string[]; correct_idx?: number }[]).map(
-                    (q) => ({
-                        question: String(q.question ?? q.prompt ?? '').trim(),
-                        options: (q.options || []).map((o) => String(o).trim()),
-                        correct_idx: q.correct_idx ?? 0,
-                    })
+                    (q) => {
+                        const { options, correctIndex } = normalizeQuestionOptions(
+                            q.options,
+                            q.correct_idx ?? 0
+                        );
+                        return {
+                            question: String(q.question ?? q.prompt ?? '').trim(),
+                            options,
+                            correct_idx: correctIndex,
+                        };
+                    }
                 ),
             };
         }

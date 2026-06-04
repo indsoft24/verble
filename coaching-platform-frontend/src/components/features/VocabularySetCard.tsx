@@ -25,7 +25,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import ActivityContentHeader from './ActivityContentHeader';
 import {
-    activityCardShell,
+    activityCardProps,
     getContentDisplayNumber,
     isContentScheduledToday,
     refreshAdjacentFlags,
@@ -437,7 +437,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
         <Box sx={{ maxWidth: 800, mx: 'auto' }}>
             {showConfetti && <ConfettiEffect />}
 
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
                         contentType="VOCAB_SET"
@@ -534,7 +534,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                 </CardContent>
             </Card>
 
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Typography
                         variant="overline"

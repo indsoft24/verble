@@ -32,6 +32,7 @@ import { getAdjacentContent, getWordDisplayNumber } from '../../services/dailyCo
 import { getUserWordSubmissions, type UserWordSubmission } from '../../services/sentenceSubmissionService';
 import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
 import ActivityContentHeader from './ActivityContentHeader';
+import { activityCardProps, GOLD_ACCENT, GREEN_ACCENT } from '../../utils/dailyActivityUi';
 
 interface DailyContent {
     _id: string;
@@ -72,8 +73,6 @@ interface TabPanelProps {
 }
 
 const MAX_SENTENCES = 5;
-const GREEN_ACCENT = '#14b8a6';
-const GOLD_ACCENT = '#ca8a04';
 
 function TabPanel(props: TabPanelProps) {
     const { children, value, index, ...other } = props;
@@ -322,18 +321,6 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
     const validDraftCount = sentences.map((s) => s.trim()).filter(Boolean).length;
     const displayNumber = getWordDisplayNumber(currentData.sequenceNumber);
 
-    const cardShell = (borderColor: string) => ({
-        maxWidth: 800,
-        margin: '0 auto',
-        borderRadius: 3,
-        overflow: 'hidden',
-        position: 'relative' as const,
-        border: `2px solid ${borderColor}`,
-        bgcolor: '#0f172a',
-        boxShadow: `0 0 24px ${alpha(borderColor, 0.35)}`,
-        mb: 2.5,
-    });
-
     const SpeakerButton: React.FC<{ text: string; playKey: string; audioUrl?: string; size?: 'small' | 'medium' }> = ({
         text,
         playKey,
@@ -359,7 +346,7 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
             {showConfetti && <ConfettiEffect />}
 
             {/* Card 1 — Word & meanings */}
-            <Card elevation={0} sx={cardShell(GREEN_ACCENT)}>
+            <Card {...activityCardProps(GREEN_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, mb: 2 }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -607,7 +594,7 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
             </Card>
 
             {/* Card 2 — Practice & interact */}
-            <Card elevation={0} sx={cardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Typography
                         variant="overline"

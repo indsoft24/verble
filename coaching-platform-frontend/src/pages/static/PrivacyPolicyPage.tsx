@@ -3,6 +3,7 @@ import React from 'react';
 import { Container, Box, Typography, Paper, Link as MuiLink, List, ListItem, ListItemText, Divider } from '@mui/material';
 import SecurityIcon from '@mui/icons-material/Security';
 import GavelIcon from '@mui/icons-material/Gavel';
+import { SITE_CONTACT, siteContactMailto } from '../../config/siteContact';
 
 const PolicySection = ({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) => (
     <Box sx={{ mb: 4 }}>
@@ -152,7 +153,7 @@ const PrivacyPolicyPage: React.FC = () => {
                     <PolicySection icon={<GavelIcon />} title="6. Children's Privacy">
                         <Typography>
                             We prioritize the safety of younger learners. We do not knowingly collect data from children under 13 without verified parental consent. Parents can manage or delete their child’s learning account at any time by contacting{' '}
-                            <MuiLink href="mailto:privacy@verble.co.in">privacy@verble.co.in</MuiLink>.
+                            <MuiLink href={siteContactMailto}>{SITE_CONTACT.email}</MuiLink>.
                         </Typography>
                     </PolicySection>
 
@@ -195,7 +196,7 @@ const PrivacyPolicyPage: React.FC = () => {
                         </List>
                         <Typography sx={{ mt: 1.5 }}>
                             To exercise these rights, contact us at:{' '}
-                            <MuiLink href="mailto:privacy@verble.co.in">privacy@verble.co.in</MuiLink>
+                            <MuiLink href={siteContactMailto}>{SITE_CONTACT.email}</MuiLink>
                         </Typography>
                     </PolicySection>
 
@@ -220,7 +221,7 @@ const PrivacyPolicyPage: React.FC = () => {
                     <PolicySection icon={<GavelIcon />} title="13. Contact Us">
                         <Typography>
                             For any questions regarding your privacy at Verble, please reach out to our team at{' '}
-                            <MuiLink href="mailto:privacy@verble.co.in">privacy@verble.co.in</MuiLink>.
+                            <MuiLink href={siteContactMailto}>{SITE_CONTACT.email}</MuiLink>.
                         </Typography>
                     </PolicySection>
 

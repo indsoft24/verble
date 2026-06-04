@@ -16,14 +16,15 @@ import { alpha } from '@mui/material/styles';
 import { courseLearningTheme } from '../course/courseLearningTheme';
 import { conversationPageBg } from '../features/conversationExperienceStyles';
 import { learnerBrandTheme } from './learnerBrandTheme';
+import { ACTIVITY_PAGE_BG } from '../../utils/dailyActivityUi';
 
 interface UserLayoutProps {
     children: React.ReactNode;
     title?: string;
     /** Less padding for full-width content (e.g. video player) */
     fullWidth?: boolean;
-    /** Dark Full Course learning pages */
-    variant?: 'default' | 'learning' | 'conversations';
+    /** Dark Full Course learning pages; activity = daily content detail */
+    variant?: 'default' | 'learning' | 'conversations' | 'activity';
 }
 
 const UserLayout: React.FC<UserLayoutProps> = ({
@@ -34,7 +35,8 @@ const UserLayout: React.FC<UserLayoutProps> = ({
 }) => {
     const isLearning = variant === 'learning';
     const isConversations = variant === 'conversations';
-    const isDarkMain = isLearning || isConversations;
+    const isActivity = variant === 'activity';
+    const isDarkMain = isLearning || isConversations || isActivity;
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const location = useLocation();
@@ -64,7 +66,9 @@ const UserLayout: React.FC<UserLayoutProps> = ({
         ? conversationPageBg
         : isLearning
           ? courseLearningTheme.pageBg
-          : learnerBrandTheme.pageBg;
+          : isActivity
+            ? ACTIVITY_PAGE_BG
+            : learnerBrandTheme.pageBg;
 
     return (
         <Box
@@ -73,7 +77,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                 minHeight: '100vh',
                 bgcolor: mainBg,
                 backgroundImage: !isDarkMain && !isConversations ? learnerBrandTheme.pageBgGradient : 'none',
-                '& .MuiPaper-root': !isDarkMain
+                '& .MuiPaper-root:not(.daily-activity-card)': !isDarkMain
                     ? {
                           bgcolor: learnerBrandTheme.surface,
                           borderColor: learnerBrandTheme.border,
@@ -105,12 +109,20 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                         position="sticky"
                         elevation={0}
                         sx={{
-                            bgcolor: isDarkMain ? courseLearningTheme.bandBg : learnerBrandTheme.surface,
+                            bgcolor: isDarkMain
+                                ? isActivity
+                                    ? ACTIVITY_PAGE_BG
+                                    : courseLearningTheme.bandBg
+                                : learnerBrandTheme.surface,
                             borderBottom: '1px solid',
                             borderColor: isDarkMain
                                 ? alpha(courseLearningTheme.accent, 0.25)
                                 : learnerBrandTheme.border,
-                            color: isDarkMain ? courseLearningTheme.textPrimary : learnerBrandTheme.textPrimary,
+                            color: isDarkMain
+                                ? isActivity
+                                    ? '#f8fafc'
+                                    : courseLearningTheme.textPrimary
+                                : learnerBrandTheme.textPrimary,
                             zIndex: theme.zIndex.drawer + 1,
                         }}
                     >
@@ -121,7 +133,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                                 aria-label="Open menu"
                                 sx={
                                     isDarkMain
-                                        ? { color: courseLearningTheme.textPrimary }
+                                        ? { color: isActivity ? '#f8fafc' : courseLearningTheme.textPrimary }
                                         : { color: learnerBrandTheme.icon }
                                 }
                             >
@@ -148,9 +160,15 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                 <Box
                     sx={{
                         flexGrow: 1,
-                        p: fullWidth || isDarkMain ? { xs: 0, sm: 0 } : { xs: 2, sm: 3 },
-                        maxWidth: fullWidth || isDarkMain ? 'none' : '1600px',
-                        mx: fullWidth || isDarkMain ? 0 : 'auto',
+                        p: fullWidth
+                            ? { xs: 0, sm: 0 }
+                            : isActivity
+                              ? { xs: 1, sm: 2, md: 3 }
+                              : isDarkMain
+                                ? { xs: 0, sm: 0 }
+                                : { xs: 2, sm: 3 },
+                        maxWidth: fullWidth || (isDarkMain && !isActivity) ? 'none' : '1600px',
+                        mx: fullWidth || (isDarkMain && !isActivity) ? 0 : 'auto',
                         width: '100%',
                         boxSizing: 'border-box',
                     }}

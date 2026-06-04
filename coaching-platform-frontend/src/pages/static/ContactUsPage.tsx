@@ -10,6 +10,12 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import SendIcon from '@mui/icons-material/Send';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import {
+    SITE_CONTACT,
+    siteContactMailto,
+    siteContactPhoneDisplay,
+    siteContactTel,
+} from '../../config/siteContact';
 
 // A reusable component for contact information items
 const ContactInfoItem = ({ icon, title, text, href }: { icon: React.ReactNode, title: string, text: string, href?: string }) => (
@@ -117,24 +123,24 @@ const ContactUsPage: React.FC = () => {
                             <ContactInfoItem
                                 icon={<LocationOnIcon />}
                                 title="Our Office"
-                                text="New Delhi, Delhi, India"
+                                text={SITE_CONTACT.officeLocation}
                             />
                              <ContactInfoItem
                                 icon={<EmailIcon />}
                                 title="Email Us"
-                                text="support@verble.co.in"
-                                href="mailto:support@verble.co.in"
+                                text={SITE_CONTACT.email}
+                                href={siteContactMailto}
                             />
                             <ContactInfoItem
                                 icon={<PhoneIcon />}
                                 title="Call Us"
-                                text="+91 (123) 456-7890"
-                                href="tel:+911234567890"
+                                text={siteContactPhoneDisplay}
+                                href={siteContactTel}
                             />
                             <ContactInfoItem
                                 icon={<AccessTimeIcon />}
                                 title="Support Hours"
-                                text="Mon - Sat, 9:00 AM to 7:00 PM"
+                                text={SITE_CONTACT.supportHours}
                             />
                         </Paper>
                         

@@ -28,7 +28,7 @@ import { getUserWordSubmissions } from '../../services/sentenceSubmissionService
 import type { UserWordSubmission } from '../../services/sentenceSubmissionService';
 import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
 import {
-    activityCardShell,
+    activityCardProps,
     getContentDisplayNumber,
     isContentScheduledToday,
     refreshAdjacentFlags,
@@ -279,7 +279,7 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
         <Box sx={{ maxWidth: 800, mx: 'auto' }}>
             {showConfetti && <ConfettiEffect />}
 
-            <Card elevation={0} sx={activityCardShell(GREEN_ACCENT)}>
+            <Card {...activityCardProps(GREEN_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 2 }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -360,7 +360,7 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
                 </CardContent>
             </Card>
 
-            <Card elevation={0} sx={activityCardShell(GOLD_ACCENT)}>
+            <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <Typography variant="overline" sx={{ fontWeight: 800, color: GOLD_ACCENT, letterSpacing: 1.2, display: 'block', mb: 1 }}>
                         Practice and Interact — Make Sentences

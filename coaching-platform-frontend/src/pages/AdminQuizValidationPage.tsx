@@ -26,6 +26,7 @@ import {
     updateModuleQuizSubmissionNotesAdmin,
     type ModuleQuizSubmissionRow,
 } from '../services/moduleQuizAdminService';
+import { getFilledOptionEntries, getOptionLabelAt } from '../utils/quizOptionUtils';
 
 const AdminQuizValidationPage: React.FC = () => {
     const [rows, setRows] = useState<ModuleQuizSubmissionRow[]>([]);
@@ -160,22 +161,44 @@ const AdminQuizValidationPage: React.FC = () => {
                                 Score: {detail.score}% · {detail.passed ? 'Passed' : 'Failed'} ·{' '}
                                 {detail.correctAnswers}/{detail.totalQuestions} correct
                             </Typography>
-                            {detail.detailedAnswers?.map((a, i) => (
-                                <Paper key={i} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
-                                    <Typography fontWeight={600}>{i + 1}. {a.question}</Typography>
-                                    <Typography variant="body2" color={a.isCorrect ? 'success.main' : 'error.main'}>
-                                        Selected: {a.options[a.selectedAnswer] ?? '—'}
-                                        {!a.isCorrect && a.correctAnswer != null && (
-                                            <> · Correct: {a.options[a.correctAnswer]}</>
+                            {detail.detailedAnswers?.map((a, i) => {
+                                const filledOptions = getFilledOptionEntries(a.options);
+                                const selectedLabel = getOptionLabelAt(a.options, a.selectedAnswer);
+                                const correctLabel = getOptionLabelAt(a.options, a.correctAnswer);
+                                return (
+                                    <Paper key={i} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
+                                        <Typography fontWeight={600}>{i + 1}. {a.question}</Typography>
+                                        {filledOptions.length > 0 && (
+                                            <Box component="ul" sx={{ m: 0, pl: 2.25, mt: 1, mb: 1 }}>
+                                                {filledOptions.map(({ text, index: optIdx }) => (
+                                                    <Typography
+                                                        key={optIdx}
+                                                        component="li"
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        sx={{ mb: 0.25 }}
+                                                    >
+                                                        {text}
+                                                        {a.selectedAnswer === optIdx ? ' (selected)' : ''}
+                                                        {a.correctAnswer === optIdx ? ' (correct)' : ''}
+                                                    </Typography>
+                                                ))}
+                                            </Box>
                                         )}
-                                    </Typography>
-                                    {a.explanation && (
-                                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                                            {a.explanation}
+                                        <Typography variant="body2" color={a.isCorrect ? 'success.main' : 'error.main'}>
+                                            Selected: {selectedLabel || '—'}
+                                            {!a.isCorrect && a.correctAnswer != null && (
+                                                <> · Correct: {correctLabel || '—'}</>
+                                            )}
                                         </Typography>
-                                    )}
-                                </Paper>
-                            ))}
+                                        {a.explanation && (
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                                {a.explanation}
+                                            </Typography>
+                                        )}
+                                    </Paper>
+                                );
+                            })}
                             <TextField
                                 label="Admin notes"
                                 fullWidth

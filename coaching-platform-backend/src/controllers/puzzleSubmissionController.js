@@ -5,6 +5,7 @@ import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
 import { isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
+import { isFilledOption, isValidFilledSelection } from '../utils/quizOptionUtils.js';
 
 /**
  * @desc    Submit puzzle answers
@@ -72,12 +73,14 @@ export const submitPuzzle = asyncHandler(async (req, res) => {
             throw new Error(`Invalid question index for answer ${i}.`);
         }
 
-        if (typeof answer.selectedAnswer !== 'number' || answer.selectedAnswer < 0 || answer.selectedAnswer >= question.options.length) {
+        if (!isValidFilledSelection(question.options, answer.selectedAnswer)) {
             res.status(400);
             throw new Error(`Invalid answer index for question ${i}.`);
         }
 
-        const isCorrect = answer.selectedAnswer === question.correct_idx;
+        const isCorrect =
+            answer.selectedAnswer === question.correct_idx &&
+            isFilledOption(question.options[question.correct_idx]);
         if (isCorrect) {
             correctCount++;
             totalPoints += 10;

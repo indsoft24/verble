@@ -7,7 +7,11 @@ import type { DailyContent } from '../../services/dailyContentService';
 import { getContentDisplayNumber } from '../../utils/dailyActivityUi';
 import { getAdjacentConversation } from '../../utils/professionalConversationLibraryUtils';
 import { professionalConversationTheme as theme } from './professionalConversationTheme';
-import { conversationBackButtonSx } from './conversationExperienceStyles';
+import {
+    conversationBackButtonSx,
+    conversationMetaPanelSx,
+    conversationMetaTagsRowSx,
+} from './conversationExperienceStyles';
 import ProfessionalConversationNavBar from './ProfessionalConversationNavBar';
 
 export interface ProfessionalConversationViewerProps {
@@ -52,14 +56,12 @@ const ProfessionalConversationViewer: React.FC<ProfessionalConversationViewerPro
                 <Paper
                     elevation={0}
                     sx={{
-                        p: { xs: 1.25, sm: 1.5 },
-                        mb: 1.5,
-                        borderRadius: 2,
+                        ...conversationMetaPanelSx,
                         bgcolor: alpha(theme.headerBg, 0.85),
                         border: theme.practiceBorder,
                     }}
                 >
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}>
+                    <Box sx={conversationMetaTagsRowSx}>
                         {idx >= 0 && tagConversations.length > 1 && (
                             <Typography variant="caption" sx={{ color: theme.headerMuted, fontWeight: 600 }}>
                                 {idx + 1} of {tagConversations.length}
@@ -80,7 +82,7 @@ const ProfessionalConversationViewer: React.FC<ProfessionalConversationViewerPro
                         ))}
                     </Box>
                     {description && (
-                        <Typography variant="body2" sx={{ color: theme.headerMuted, mt: 0.75 }}>
+                        <Typography variant="body2" sx={{ color: theme.headerMuted, mt: 1 }}>
                             {description}
                         </Typography>
                     )}

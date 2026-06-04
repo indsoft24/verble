@@ -18,3 +18,18 @@ export const conversationBackButtonSx: SxProps<Theme> = {
     fontWeight: 600,
     '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.1) },
 };
+
+/** Meta panel above conversation chat (tags, description) */
+export const conversationMetaPanelSx: SxProps<Theme> = {
+    p: '10px',
+    mb: 1.5,
+    borderRadius: 2,
+};
+
+/** Tag / chip row inside meta panel */
+export const conversationMetaTagsRowSx: SxProps<Theme> = {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '8px',
+};
