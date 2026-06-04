@@ -32,6 +32,7 @@ import {
     getContentDisplayNumber,
     isContentScheduledToday,
     refreshAdjacentFlags,
+    activityNavSideButtonSx,
     GREEN_ACCENT,
     GOLD_ACCENT,
     MAX_ACTIVITY_SENTENCES,
@@ -462,7 +463,17 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
                     ) : null}
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 3, pt: 2, borderTop: `1px solid ${alpha(GOLD_ACCENT, 0.25)}` }}>
-                        <Button startIcon={<ArrowBackIcon />} onClick={() => handleNavigation('prev')} disabled={!hasPrevious || isLoadingNav} sx={{ color: alpha('#e2e8f0', 0.85) }}>
+                        <Button
+                            startIcon={<ArrowBackIcon />}
+                            onClick={() => hasPrevious && !isLoadingNav && handleNavigation('prev')}
+                            disabled={!hasPrevious || isLoadingNav}
+                            aria-disabled={!hasPrevious || isLoadingNav}
+                            sx={activityNavSideButtonSx({
+                                disabled: !hasPrevious || isLoadingNav,
+                                accentColor: GOLD_ACCENT,
+                                side: 'left',
+                            })}
+                        >
                             Previous Phrase
                         </Button>
                         <Button
@@ -487,7 +498,17 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
                         >
                             ← Word of the Day
                         </Button>
-                        <Button endIcon={<ArrowForwardIcon />} onClick={() => handleNavigation('next')} disabled={!hasNext || isLoadingNav} sx={{ color: alpha('#e2e8f0', 0.85) }}>
+                        <Button
+                            endIcon={<ArrowForwardIcon />}
+                            onClick={() => hasNext && !isLoadingNav && handleNavigation('next')}
+                            disabled={!hasNext || isLoadingNav}
+                            aria-disabled={!hasNext || isLoadingNav}
+                            sx={activityNavSideButtonSx({
+                                disabled: !hasNext || isLoadingNav,
+                                accentColor: GOLD_ACCENT,
+                                side: 'right',
+                            })}
+                        >
                             Next Phrase
                         </Button>
                     </Box>

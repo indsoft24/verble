@@ -25,7 +25,9 @@ import EvaluationStatusBanner from './EvaluationStatusBanner';
 import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
 import {
+    activityAlertOnDarkSx,
     activityCardProps,
+    activityContainedButtonSx,
     getContentDisplayNumber,
     isContentScheduledToday,
     canShowNextNavigation,
@@ -380,6 +382,28 @@ const StoryCard: React.FC<StoryCardProps> = ({
     const isToday = isContentScheduledToday(currentContent.date);
     const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
 
+    const tierNavFooter = (
+        <ActivityTierNavFooter
+            accentColor={GOLD_ACCENT}
+            left={{
+                label: 'Previous Story',
+                onClick: () => handleNavigation('prev'),
+                disabled: !hasPrevious,
+                loading: isLoadingNav,
+            }}
+            center={{
+                label: '→ Essential Vocab',
+                onClick: onNavigateToVocab,
+            }}
+            right={{
+                label: 'Next Story',
+                onClick: () => handleNavigation('next'),
+                disabled: !canGoNext,
+                loading: isLoadingNav,
+            }}
+        />
+    );
+
     const getSummaryReviewState = (index: number): boolean | null => {
         if (!existingSubmission?.sentenceValidations?.length) return null;
         const found = existingSubmission.sentenceValidations.find((v) => v.sentenceIndex === index);
@@ -561,6 +585,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
                         </Box>
                     )}
 
+                    {tierNavFooter}
                 </CardContent>
             </Card>
 
@@ -576,16 +601,17 @@ const StoryCard: React.FC<StoryCardProps> = ({
                         Write 2–5 sentences. +10 participation on submit; up to 10 + 2 per correct sentence after review.
                     </Typography>
                     {!isToday && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
+                        <Alert severity="info" sx={activityAlertOnDarkSx('info')}>
                             Past story — browse only. Submit summary on today&apos;s story.
                         </Alert>
                     )}
                     {existingSubmission && isToday && (
                         <>
-                            <Alert severity="success" sx={{ mb: 2 }}>
+                            <Alert severity="success" sx={activityAlertOnDarkSx('success')}>
                                 You already submitted your summary for this story.
                             </Alert>
                             <EvaluationStatusBanner
+                                variant="onDark"
                                 isCorrect={existingSubmission.isCorrect}
                                 evaluationPoints={existingSubmission.evaluationPoints}
                                 pointsEarned={existingSubmission.pointsEarned}
@@ -627,7 +653,10 @@ const StoryCard: React.FC<StoryCardProps> = ({
                         </>
                     )}
                     {submitStatus && (
-                        <Alert severity={submitStatus.type} sx={{ mb: 2 }}>
+                        <Alert
+                            severity={submitStatus.type}
+                            sx={activityAlertOnDarkSx(submitStatus.type === 'error' ? 'error' : 'success')}
+                        >
                             {submitStatus.message}
                         </Alert>
                     )}
@@ -685,7 +714,10 @@ const StoryCard: React.FC<StoryCardProps> = ({
                                     disabled={
                                         sentences.filter((s) => s.trim()).length < 2 || isSubmitting || !user
                                     }
-                                    sx={{ bgcolor: GOLD_ACCENT, color: '#0f172a', fontWeight: 800, minWidth: 160 }}
+                                    sx={{
+                                        ...activityContainedButtonSx(GOLD_ACCENT),
+                                        minWidth: 160,
+                                    }}
                                 >
                                     {isSubmitting ? 'Submitting…' : 'Submit summary'}
                                 </Button>
@@ -700,25 +732,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
                             )}
                         </Box>
                     )}
-                    <ActivityTierNavFooter
-                        accentColor={GOLD_ACCENT}
-                        left={{
-                            label: 'Previous Story',
-                            onClick: () => handleNavigation('prev'),
-                            disabled: !hasPrevious,
-                            loading: isLoadingNav,
-                        }}
-                        center={{
-                            label: '→ Essential Vocab',
-                            onClick: onNavigateToVocab,
-                        }}
-                        right={{
-                            label: 'Next Story',
-                            onClick: () => handleNavigation('next'),
-                            disabled: !canGoNext,
-                            loading: isLoadingNav,
-                        }}
-                    />
+                    {tierNavFooter}
                 </CardContent>
             </Card>
         </Box>

@@ -527,6 +527,7 @@ const UserDashboardPage: React.FC = () => {
                     {activityKind === 'speech' && (
                         <SpeechCard
                             data={selectedActivity as never}
+                            onSubmissionSuccess={refreshDashboardAfterSubmission}
                             onNavigateToLyrics={
                                 lyricsContent
                                     ? () => openLinkedActivity(lyricsContent, 'lyrics')
@@ -537,6 +538,7 @@ const UserDashboardPage: React.FC = () => {
                     {activityKind === 'lyrics' && (
                         <LyricsCard
                             data={selectedActivity as never}
+                            onSubmissionSuccess={refreshDashboardAfterSubmission}
                             onNavigateToSpeech={
                                 speechContent
                                     ? () => openLinkedActivity(speechContent, 'speech')

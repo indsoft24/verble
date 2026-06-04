@@ -28,6 +28,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, parseISO, subDays } from 'date-fns';
+import { formatScheduledDateDisplay } from '../../utils/scheduleDateUtils';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -118,14 +119,14 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
                     <FilterListIcon color="primary" fontSize="small" />
                     <Typography variant="subtitle1" fontWeight={700}>
-                        Filters &amp; date range
+                        Filters &amp; scheduled date range
                     </Typography>
                 </Stack>
                 <Grid container spacing={2} alignItems="flex-end">
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <LocalizationProvider dateAdapter={AdapterDateFns}>
                             <DatePicker
-                                label="From date"
+                                label="Scheduled from"
                                 value={filters.startDate}
                                 onChange={(v) => onFiltersChange({ startDate: v })}
                                 slotProps={{ textField: { size: 'small', fullWidth: true } }}
@@ -135,7 +136,7 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <LocalizationProvider dateAdapter={AdapterDateFns}>
                             <DatePicker
-                                label="To date"
+                                label="Scheduled to"
                                 value={filters.endDate}
                                 onChange={(v) => onFiltersChange({ endDate: v })}
                                 slotProps={{ textField: { size: 'small', fullWidth: true } }}
@@ -212,10 +213,10 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                     </Grid>
                     <Grid size={{ xs: 12, md: 2 }}>
                         <FormControl fullWidth size="small">
-                            <InputLabel>Sort by date</InputLabel>
+                            <InputLabel>Sort by scheduled date</InputLabel>
                             <Select
                                 value={filters.sortOrder}
-                                label="Sort by date"
+                                label="Sort by scheduled date"
                                 onChange={(e) =>
                                     onFiltersChange({ sortOrder: e.target.value as 'asc' | 'desc' })
                                 }
@@ -256,7 +257,7 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     Showing {content.length} of {pagination.total} items
                     {filters.startDate && filters.endDate
-                        ? ` · ${format(filters.startDate, 'MMM d, yyyy')} – ${format(filters.endDate, 'MMM d, yyyy')}`
+                        ? ` · scheduled ${format(filters.startDate, 'MMM d, yyyy')} – ${format(filters.endDate, 'MMM d, yyyy')}`
                         : ''}
                 </Typography>
             )}
@@ -296,7 +297,7 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                                     return (
                                         <TableRow key={item._id} hover>
                                             <TableCell>
-                                                {format(parseISO(item.date), 'EEE, MMM d, yyyy')}
+                                                {formatScheduledDateDisplay(item.date)}
                                             </TableCell>
                                             <TableCell>
                                                 <Stack direction="row" alignItems="center" spacing={0.75}>

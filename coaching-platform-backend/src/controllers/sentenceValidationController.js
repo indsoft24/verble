@@ -5,6 +5,7 @@ import UserStorySubmission from '../models/UserStorySubmission.js';
 import UserVocabSubmission from '../models/UserVocabSubmission.js';
 import UserSceneSubmission from '../models/UserSceneSubmission.js';
 import UserSpeechSubmission from '../models/UserSpeechSubmission.js';
+import UserLyricsSubmission from '../models/UserLyricsSubmission.js';
 import UserConversationSubmission from '../models/UserConversationSubmission.js';
 import GamificationService from '../services/GamificationService.js';
 import mongoose from 'mongoose';
@@ -47,7 +48,7 @@ function computeEvaluationPoints(submissionType, isCorrect, submission, pointsPe
             sentencesCorrect = exchanges.length;
             evaluationPoints = sentencesCorrect * pointsPerCorrect;
         }
-    } else if (submissionType === 'scene' || submissionType === 'speech') {
+    } else if (submissionType === 'scene' || submissionType === 'speech' || submissionType === 'lyrics') {
         const validations = submission.sentenceValidations || [];
         if (validations.length > 0) {
             validations.forEach((v) => {
@@ -83,6 +84,7 @@ async function applyEvaluationToSubmission(submission, submissionType, evaluatio
             vocab: 'vocab_submission',
             scene: 'scene_submission',
             speech: 'speech_submission',
+            lyrics: 'lyrics_submission',
             conversation: 'conversation_submission',
         };
         await GamificationService.applyEvaluationDelta(submission.userId.toString(), delta, {
@@ -145,6 +147,13 @@ export const validateSentenceSubmission = asyncHandler(async (req, res) => {
             res.status(400);
             throw new Error(
                 'Speech submissions must be reviewed via PUT /validate-sentence/speech/:submissionId/sentences'
+            );
+        }
+        const lyricsOnly = await UserLyricsSubmission.findById(submissionId);
+        if (lyricsOnly) {
+            res.status(400);
+            throw new Error(
+                'Lyrics submissions must be reviewed via PUT /validate-sentence/lyrics/:submissionId/sentences'
             );
         }
     }
@@ -473,7 +482,12 @@ async function validateSummaryBasedSubmission(req, res, Model, notFoundMessage, 
         submission.feedback = feedback;
     }
 
-    const submissionType = Model.modelName === 'UserSceneSubmission' ? 'scene' : 'speech';
+    const submissionType =
+        Model.modelName === 'UserSceneSubmission'
+            ? 'scene'
+            : Model.modelName === 'UserLyricsSubmission'
+              ? 'lyrics'
+              : 'speech';
     const { delta } = await applyEvaluationToSubmission(
         submission,
         submissionType,
@@ -512,6 +526,21 @@ export const validateSpeechSummaries = asyncHandler(async (req, res) =>
         UserSpeechSubmission,
         'Speech submission not found.',
         'Speech summaries validated successfully.'
+    )
+);
+
+/**
+ * @desc    Validate individual summaries in a lyrics submission
+ * @route   PUT /api/validate-sentence/lyrics/:submissionId/sentences
+ * @access  Private (Admin)
+ */
+export const validateLyricsSummaries = asyncHandler(async (req, res) =>
+    validateSummaryBasedSubmission(
+        req,
+        res,
+        UserLyricsSubmission,
+        'Lyrics submission not found.',
+        'Lyrics sentences validated successfully.'
     )
 );
 
@@ -660,6 +689,16 @@ export const getPendingSubmissions = asyncHandler(async (req, res) => {
         submissions.push(...speechSubs.map((s) => ({ ...s, submissionType: 'speech' })));
     }
 
+    if (!type || type === 'lyrics') {
+        const lyricsSubs = await UserLyricsSubmission.find(query)
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('lyricsId', 'title type level metadata')
+            .limit(parseInt(limit, 10))
+            .sort({ createdAt: -1 })
+            .lean();
+        submissions.push(...lyricsSubs.map((s) => ({ ...s, submissionType: 'lyrics' })));
+    }
+
     if (!type || type === 'conversation') {
         const conversationSubs = await UserConversationSubmission.find(query)
             .populate('userId', 'name email phoneNumber mobile')
@@ -752,6 +791,17 @@ export const getAllSubmissions = asyncHandler(async (req, res) => {
             .sort({ createdAt: -1 })
             .lean();
         submissions.push(...speechSubs.map((s) => ({ ...s, submissionType: 'speech' })));
+    }
+
+    if (!type || type === 'lyrics') {
+        const lyricsSubs = await UserLyricsSubmission.find(query)
+            .populate('userId', 'name email phoneNumber mobile')
+            .populate('lyricsId', 'title type level metadata')
+            .populate('reviewedBy', 'name email')
+            .limit(parseInt(limit, 10))
+            .sort({ createdAt: -1 })
+            .lean();
+        submissions.push(...lyricsSubs.map((s) => ({ ...s, submissionType: 'lyrics' })));
     }
 
     if (!type || type === 'conversation') {

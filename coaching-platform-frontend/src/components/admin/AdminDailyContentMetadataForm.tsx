@@ -769,6 +769,106 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                         rows={10}
                     />
                 </Grid>
+                <Grid size={{ xs: 12 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        Important words
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                        Shown on the learner Song Lyrics card in an accordion.
+                    </Typography>
+                    <Button size="small" onClick={() => onChange('words', [...((metadata.words as ReturnType<typeof emptySpeechKeyword>[]) || []), emptySpeechKeyword()])}>
+                        Add word
+                    </Button>
+                    {((metadata.words as ReturnType<typeof emptySpeechKeyword>[]) || []).map((kw, idx) => {
+                        const words = (metadata.words as ReturnType<typeof emptySpeechKeyword>[]) || [];
+                        return (
+                            <Box key={idx} sx={{ mt: 1, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                                <Grid container spacing={1}>
+                                    <Grid size={{ xs: 12, md: 4 }}>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            label="Word"
+                                            value={kw.word || ''}
+                                            onChange={(e) => {
+                                                const next = [...words];
+                                                next[idx] = { ...next[idx], word: e.target.value };
+                                                onChange('words', next);
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid size={{ xs: 12, md: 4 }}>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            label="English"
+                                            value={kw.meaning_en || ''}
+                                            onChange={(e) => {
+                                                const next = [...words];
+                                                next[idx] = { ...next[idx], meaning_en: e.target.value };
+                                                onChange('words', next);
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid size={{ xs: 12, md: 4 }}>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            label="Hindi"
+                                            value={kw.meaning_hi || ''}
+                                            onChange={(e) => {
+                                                const next = [...words];
+                                                next[idx] = { ...next[idx], meaning_hi: e.target.value };
+                                                onChange('words', next);
+                                            }}
+                                        />
+                                    </Grid>
+                                </Grid>
+                            </Box>
+                        );
+                    })}
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        Important phrases
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                        Shown on the learner card; learners can submit their own sentences after reading.
+                    </Typography>
+                    <Button size="small" onClick={() => onChange('phrases', [...((metadata.phrases as ReturnType<typeof emptySpeechPhrase>[]) || []), emptySpeechPhrase()])}>
+                        Add phrase
+                    </Button>
+                    {((metadata.phrases as ReturnType<typeof emptySpeechPhrase>[]) || []).map((ph, idx) => {
+                        const phrases = (metadata.phrases as ReturnType<typeof emptySpeechPhrase>[]) || [];
+                        return (
+                            <Box key={idx} sx={{ mt: 1, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label="Phrase"
+                                    value={ph.phrase || ''}
+                                    onChange={(e) => {
+                                        const next = [...phrases];
+                                        next[idx] = { ...next[idx], phrase: e.target.value };
+                                        onChange('phrases', next);
+                                    }}
+                                    sx={{ mb: 1 }}
+                                />
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label="English meaning"
+                                    value={ph.meaning_en || ''}
+                                    onChange={(e) => {
+                                        const next = [...phrases];
+                                        next[idx] = { ...next[idx], meaning_en: e.target.value };
+                                        onChange('phrases', next);
+                                    }}
+                                />
+                            </Box>
+                        );
+                    })}
+                </Grid>
             </Grid>
         );
     }

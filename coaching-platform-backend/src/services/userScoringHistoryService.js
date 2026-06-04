@@ -6,6 +6,7 @@ import UserStorySubmission from '../models/UserStorySubmission.js';
 import UserVocabSubmission from '../models/UserVocabSubmission.js';
 import UserSceneSubmission from '../models/UserSceneSubmission.js';
 import UserSpeechSubmission from '../models/UserSpeechSubmission.js';
+import UserLyricsSubmission from '../models/UserLyricsSubmission.js';
 import UserConversationSubmission from '../models/UserConversationSubmission.js';
 import UserPuzzleSubmission from '../models/UserPuzzleSubmission.js';
 import ModuleQuizSubmission from '../models/ModuleQuizSubmission.js';
@@ -77,15 +78,16 @@ async function loadContentTitles(contentIds) {
 async function countPendingReviews(userId) {
     const uid = new mongoose.Types.ObjectId(userId);
     const pending = { $or: [{ isCorrect: null }, { isCorrect: { $exists: false } }] };
-    const [s, st, v, sc, sp, c] = await Promise.all([
+    const [s, st, v, sc, sp, ly, c] = await Promise.all([
         UserSentenceSubmission.countDocuments({ userId: uid, ...pending }),
         UserStorySubmission.countDocuments({ userId: uid, ...pending }),
         UserVocabSubmission.countDocuments({ userId: uid, ...pending }),
         UserSceneSubmission.countDocuments({ userId: uid, ...pending }),
         UserSpeechSubmission.countDocuments({ userId: uid, ...pending }),
+        UserLyricsSubmission.countDocuments({ userId: uid, ...pending }),
         UserConversationSubmission.countDocuments({ userId: uid, ...pending }),
     ]);
-    return s + st + v + sc + sp + c;
+    return s + st + v + sc + sp + ly + c;
 }
 
 async function synthesizeHistoryEvents(userId) {
@@ -98,6 +100,7 @@ async function synthesizeHistoryEvents(userId) {
         vocabs,
         scenes,
         speeches,
+        lyricsSubs,
         conversations,
         puzzles,
         quizSubs,
@@ -107,6 +110,7 @@ async function synthesizeHistoryEvents(userId) {
         UserVocabSubmission.find({ userId: uid }).lean(),
         UserSceneSubmission.find({ userId: uid }).lean(),
         UserSpeechSubmission.find({ userId: uid }).lean(),
+        UserLyricsSubmission.find({ userId: uid }).lean(),
         UserConversationSubmission.find({ userId: uid }).lean(),
         UserPuzzleSubmission.find({ userId: uid }).lean(),
         ModuleQuizSubmission.find({ user: uid }).sort({ submittedAt: -1 }).lean(),
@@ -118,6 +122,7 @@ async function synthesizeHistoryEvents(userId) {
         ...vocabs.map((s) => s.vocabSetId),
         ...scenes.map((s) => s.sceneId),
         ...speeches.map((s) => s.speechId),
+        ...lyricsSubs.map((s) => s.lyricsId),
         ...conversations.map((s) => s.conversationId),
         ...puzzles.map((s) => s.puzzleId),
     ];
@@ -322,6 +327,45 @@ async function synthesizeHistoryEvents(userId) {
                     status: 'approved',
                     occurredAt: s.reviewedAt,
                     sourceType: 'speech_submission',
+                    sourceId: s._id,
+                    eventKind: 'evaluation',
+                    meta: { isCorrect: s.isCorrect },
+                })
+            );
+        }
+    }
+
+    for (const s of lyricsSubs) {
+        const cid = s.lyricsId?.toString();
+        const info = contentMap.get(cid) || { title: 'Song Lyrics' };
+        if (s.createdAt) {
+            events.push(
+                makeEvent({
+                    id: `syn-lyrics-part-${s._id}`,
+                    category: 'participation',
+                    title: `Participation: ${info.title}`,
+                    points: PARTICIPATION_POINTS,
+                    delta: PARTICIPATION_POINTS,
+                    status: 'approved',
+                    occurredAt: s.createdAt,
+                    sourceType: 'lyrics_submission',
+                    sourceId: s._id,
+                    eventKind: 'participation',
+                })
+            );
+        }
+        if (s.reviewedAt != null) {
+            const pts = s.evaluationPoints ?? s.pointsEarned ?? 0;
+            events.push(
+                makeEvent({
+                    id: `syn-lyrics-eval-${s._id}`,
+                    category: 'evaluation',
+                    title: `Review: ${info.title}`,
+                    points: pts,
+                    delta: pts,
+                    status: 'approved',
+                    occurredAt: s.reviewedAt,
+                    sourceType: 'lyrics_submission',
                     sourceId: s._id,
                     eventKind: 'evaluation',
                     meta: { isCorrect: s.isCorrect },

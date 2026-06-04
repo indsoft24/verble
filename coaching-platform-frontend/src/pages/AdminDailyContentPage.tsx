@@ -29,6 +29,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, parseISO, isValid } from 'date-fns';
+import { toScheduleDateKey, toScheduleDateParam } from '../utils/scheduleDateUtils';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -111,10 +112,10 @@ const AdminDailyContentPage: React.FC = () => {
                 sortOrder: filters.sortOrder,
             };
             if (filters.startDate) {
-                params.startDate = format(filters.startDate, 'yyyy-MM-dd');
+                params.scheduleStartDate = toScheduleDateParam(filters.startDate);
             }
             if (filters.endDate) {
-                params.endDate = format(filters.endDate, 'yyyy-MM-dd');
+                params.scheduleEndDate = toScheduleDateParam(filters.endDate);
             }
             if (filters.level) params.level = filters.level;
             if (filters.type) params.type = filters.type;
@@ -258,7 +259,7 @@ const AdminDailyContentPage: React.FC = () => {
             ...defaultMetadataForAdminKey(adminKey),
             ...(contentItem.metadata || {}),
         };
-        const dateKey = format(parseISO(contentItem.date), 'yyyy-MM-dd');
+        const dateKey = toScheduleDateKey(contentItem.date);
         setIsEditMode(true);
         setCurrentContent({
             _id: contentItem._id,
@@ -326,7 +327,7 @@ const AdminDailyContentPage: React.FC = () => {
                 return true;
             });
             const hasDateLocally = local.some(
-                (item) => format(parseISO(item.date), 'yyyy-MM-dd') === dateStr
+                (item) => toScheduleDateKey(item.date) === dateStr
             );
             if (hasDateLocally) return local;
             const { content: fetched } = await getAllDailyContentAdmin({ date: dateStr });
@@ -605,7 +606,7 @@ const AdminDailyContentPage: React.FC = () => {
     const contentByDate = useMemo(() => {
         const grouped: { [key: string]: DailyContent[] } = {};
         content.forEach(item => {
-            const dateKey = format(parseISO(item.date), 'yyyy-MM-dd');
+            const dateKey = toScheduleDateKey(item.date);
             if (!grouped[dateKey]) {
                 grouped[dateKey] = [];
             }
@@ -779,7 +780,7 @@ const AdminDailyContentPage: React.FC = () => {
                             const dateKey = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
                             const item = content.find(
                                 (c) =>
-                                    format(parseISO(c.date), 'yyyy-MM-dd') === dateKey &&
+                                    toScheduleDateKey(c.date) === dateKey &&
                                     contentMatchesCatalogSlot(c, slot)
                             );
                             const colors = LEVEL_CARD_COLORS[slot.level];

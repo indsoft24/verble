@@ -45,6 +45,13 @@ export interface SentenceSubmission {
         level?: string;
         metadata?: Record<string, unknown>;
     };
+    lyricsId?: {
+        _id: string;
+        title: string;
+        type: string;
+        level?: string;
+        metadata?: Record<string, unknown>;
+    };
     conversationId?: {
         _id: string;
         title: string;
@@ -76,7 +83,7 @@ export interface SentenceSubmission {
     reviewedAt?: string;
     createdAt: string;
     updatedAt: string;
-    submissionType: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech' | 'conversation';
+    submissionType: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech' | 'lyrics' | 'conversation';
 }
 
 export interface PendingSubmissionsResponse {
@@ -142,7 +149,7 @@ export interface ValidateSubmissionResponse {
  * Get all pending submissions for review
  */
 export const getPendingSubmissions = async (
-    type?: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech' | 'conversation',
+    type?: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech' | 'lyrics' | 'conversation',
     limit: number = 50
 ): Promise<SentenceSubmission[]> => {
     const params: any = { limit };
@@ -233,6 +240,17 @@ export const validateSpeechSummaries = async (
     return response.data;
 };
 
+export const validateLyricsSummaries = async (
+    submissionId: string,
+    data: ValidateSummarySentencesRequest
+): Promise<ValidateSubmissionResponse> => {
+    const response = await apiClient.put<ValidateSubmissionResponse>(
+        `/validate-sentence/lyrics/${submissionId}/sentences`,
+        data
+    );
+    return response.data;
+};
+
 export const validateSceneSummaries = async (
     submissionId: string,
     data: ValidateSummarySentencesRequest
@@ -248,7 +266,7 @@ export const validateSceneSummaries = async (
  * Get all submissions (pending and reviewed)
  */
 export const getAllSubmissions = async (
-    type?: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech' | 'conversation',
+    type?: 'sentence' | 'story' | 'vocab' | 'scene' | 'speech' | 'lyrics' | 'conversation',
     status?: 'pending' | 'reviewed' | 'all',
     limit: number = 100
 ): Promise<SentenceSubmission[]> => {

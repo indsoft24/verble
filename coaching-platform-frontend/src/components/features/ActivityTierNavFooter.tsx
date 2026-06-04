@@ -1,7 +1,19 @@
 import React from 'react';
-import { Box, Button, alpha, type SxProps, type Theme } from '@mui/material';
+import {
+    Box,
+    Button,
+    alpha,
+    useMediaQuery,
+    useTheme,
+    type SxProps,
+    type Theme,
+} from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import {
+    activityNavCenterButtonSx,
+    activityNavSideButtonSx,
+} from '../../utils/dailyActivityUi';
 
 export interface NavFooterSlot {
     label: string;
@@ -10,120 +22,121 @@ export interface NavFooterSlot {
     loading?: boolean;
 }
 
+export type ActivityTierNavFooterLayout = 'inline' | 'stacked' | 'auto';
+
 export interface ActivityTierNavFooterProps {
     accentColor: string;
     variant?: 'dark' | 'light';
-    /** Stacked: primary link full width, then side links in one row (best for puzzles on mobile). */
-    layout?: 'inline' | 'stacked';
+    /**
+     * `auto` (default): stacked on narrow screens when center + side nav exist;
+     * grid inline on wider screens. `stacked` / `inline` force that layout.
+     */
+    layout?: ActivityTierNavFooterLayout;
     left?: NavFooterSlot;
     center?: NavFooterSlot;
     right?: NavFooterSlot;
     sx?: SxProps<Theme>;
 }
 
+const shellBorderSx = (borderColor: string) => ({
+    mt: 3,
+    pt: 2,
+    borderTop: `1px solid ${borderColor}`,
+});
+
 /**
- * Bottom navigation bar matching Free tier (Word ↔ Phrase):
- * sequential prev (left) · peer link (center, outlined) · sequential next (right).
+ * Bottom navigation: prev (left) · peer link (center, outlined) · next (right).
  */
 const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
     accentColor,
     variant = 'dark',
-    layout = 'inline',
+    layout = 'auto',
     left,
     center,
     right,
     sx,
 }) => {
+    const muiTheme = useTheme();
+    const isNarrow = useMediaQuery(muiTheme.breakpoints.down('sm'));
+
     const showLeft = Boolean(left?.label);
     const showCenter = Boolean(center?.onClick);
     const showRight = Boolean(right?.label);
     if (!showLeft && !showCenter && !showRight) return null;
 
     const isDark = variant === 'dark';
-    const textColor = isDark ? alpha('#e2e8f0', 0.85) : 'text.primary';
     const borderColor = alpha(accentColor, isDark ? 0.25 : 0.35);
+
+    const useStacked =
+        layout === 'stacked' ||
+        (layout === 'auto' && isNarrow && showCenter && (showLeft || showRight));
 
     const renderSide = (slot: NavFooterSlot | undefined, side: 'left' | 'right') => {
         if (!slot?.label) {
-            return <Box sx={{ flex: '1 1 0', minWidth: { sm: 120 } }} />;
+            if (useStacked) {
+                return <Box sx={{ flex: '1 1 0', minWidth: 0 }} />;
+            }
+            return null;
         }
-        const icon = side === 'left' ? <ArrowBackIcon /> : <ArrowForwardIcon />;
+        const icon = side === 'left' ? <ArrowBackIcon fontSize="small" /> : <ArrowForwardIcon fontSize="small" />;
         const clickable = Boolean(slot.onClick) && !slot.disabled && !slot.loading;
-
-        const stacked = layout === 'stacked';
 
         return (
             <Button
                 variant="text"
                 startIcon={side === 'left' ? icon : undefined}
                 endIcon={side === 'right' ? icon : undefined}
-                onClick={slot.onClick}
-                disabled={!clickable}
-                sx={{
-                    color: textColor,
-                    fontWeight: 600,
-                    fontSize: { xs: '0.8125rem', sm: '0.875rem' },
-                    flex: stacked ? '1 1 50%' : '1 1 0',
-                    minWidth: 0,
-                    minHeight: 44,
-                    justifyContent: side === 'left' ? 'flex-start' : 'flex-end',
-                    textAlign: side,
-                    px: { xs: 0.75, sm: 1 },
-                    lineHeight: 1.3,
-                    whiteSpace: 'nowrap',
-                    '& .MuiButton-startIcon, & .MuiButton-endIcon': {
-                        flexShrink: 0,
-                    },
-                }}
+                onClick={clickable ? slot.onClick : undefined}
+                aria-disabled={!clickable}
+                tabIndex={clickable ? 0 : -1}
+                sx={activityNavSideButtonSx({
+                    disabled: !clickable,
+                    accentColor,
+                    side,
+                    inStackedRow: useStacked,
+                    isDark,
+                })}
             >
                 {slot.loading ? 'Loading…' : slot.label}
             </Button>
         );
     };
 
+    const centerClickable =
+        showCenter && Boolean(center!.onClick) && !center!.disabled && !center!.loading;
+
     const centerButton = showCenter ? (
         <Button
             variant="outlined"
             size="medium"
-            fullWidth={layout === 'stacked'}
-            onClick={center!.onClick}
-            disabled={center!.disabled || center!.loading}
-            sx={{
-                borderColor: accentColor,
-                color: accentColor,
-                fontWeight: 700,
-                fontSize: '0.9375rem',
-                textTransform: 'none',
-                py: 1.1,
-                px: 2,
-                minHeight: 48,
-                flexShrink: 0,
-                '&:hover': {
-                    borderColor: accentColor,
-                    bgcolor: alpha(accentColor, isDark ? 0.14 : 0.08),
-                },
-                '&.Mui-disabled': {
-                    borderColor: isDark ? alpha('#e2e8f0', 0.25) : 'divider',
-                    color: isDark ? alpha('#e2e8f0', 0.4) : 'text.disabled',
-                },
-            }}
+            fullWidth={useStacked}
+            onClick={centerClickable ? center!.onClick : undefined}
+            aria-disabled={!centerClickable}
+            tabIndex={centerClickable ? 0 : -1}
+            sx={activityNavCenterButtonSx({
+                disabled: !centerClickable,
+                accentColor,
+                isDark,
+                fullWidth: useStacked,
+            })}
         >
             {center!.label}
         </Button>
     ) : null;
 
-    if (layout === 'stacked') {
+    if (useStacked) {
         return (
             <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 1.5,
-                    mt: 3,
-                    pt: 2.5,
-                    borderTop: `1px solid ${borderColor}`,
-                    ...sx,
-                }}
+                sx={[
+                    shellBorderSx(borderColor),
+                    {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1.5,
+                        pt: 2.5,
+                    },
+                    ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+                ]}
             >
                 {centerButton}
                 {(showLeft || showRight) && (
@@ -134,6 +147,7 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
                             justifyContent: 'space-between',
                             gap: 1,
                             width: '100%',
+                            minWidth: 0,
                         }}
                     >
                         {renderSide(left, 'left')}
@@ -144,25 +158,55 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
         );
     }
 
+    const hasThreeColumns = showLeft && showCenter && showRight;
+
+    if (hasThreeColumns) {
+        return (
+            <Box
+                sx={[
+                    shellBorderSx(borderColor),
+                    {
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
+                        alignItems: 'center',
+                        columnGap: { xs: 1, sm: 1.5 },
+                        rowGap: 1,
+                        width: '100%',
+                        minWidth: 0,
+                    },
+                    ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+                ]}
+            >
+                <Box sx={{ minWidth: 0, justifySelf: 'start', width: '100%' }}>
+                    {renderSide(left, 'left')}
+                </Box>
+                <Box sx={{ justifySelf: 'center', maxWidth: '100%' }}>{centerButton}</Box>
+                <Box sx={{ minWidth: 0, justifySelf: 'end', width: '100%' }}>
+                    {renderSide(right, 'right')}
+                </Box>
+            </Box>
+        );
+    }
+
     return (
         <Box
-            sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: 1,
-                mt: 3,
-                pt: 2,
-                borderTop: `1px solid ${borderColor}`,
-                ...sx,
-            }}
+            sx={[
+                shellBorderSx(borderColor),
+                {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 1.5,
+                    width: '100%',
+                    minWidth: 0,
+                },
+                ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+            ]}
         >
-            {renderSide(left, 'left')}
-            {centerButton ?? (
-                <Box sx={{ display: { xs: 'none', sm: 'block' }, width: 140, flexShrink: 0 }} />
-            )}
-            {renderSide(right, 'right')}
+            {renderSide(left, 'left') ?? <Box sx={{ flex: '1 1 0', minWidth: 0 }} />}
+            {centerButton}
+            {renderSide(right, 'right') ?? <Box sx={{ flex: '1 1 0', minWidth: 0 }} />}
         </Box>
     );
 };

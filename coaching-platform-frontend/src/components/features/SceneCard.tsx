@@ -39,7 +39,9 @@ import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
 import { Link as RouterLink } from 'react-router-dom';
 import { canAccessGoldTierContent } from '../../utils/userAccessState';
 import {
+    activityAlertOnDarkSx,
     activityCardProps,
+    activityContainedButtonSx,
     activitySubmittedTextSx,
     activitySummaryTextFieldSx,
     getContentDisplayNumber,
@@ -300,6 +302,29 @@ const SceneCard: React.FC<SceneCardProps> = ({
     const displayNumber = getContentDisplayNumber(currentContent.sequenceNumber);
     const isToday = isContentScheduledToday(currentContent.date);
     const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
+
+    const tierNavFooter = (
+        <ActivityTierNavFooter
+            accentColor={GOLD_ACCENT}
+            left={{
+                label: 'Previous Scene',
+                onClick: () => handleNavigation('prev'),
+                disabled: !hasPrevious,
+                loading: isLoadingNav,
+            }}
+            center={{
+                label: '→ Professional Conversations',
+                onClick: onNavigateToProfessional,
+            }}
+            right={{
+                label: 'Next Scene',
+                onClick: () => handleNavigation('next'),
+                disabled: !canGoNext,
+                loading: isLoadingNav,
+            }}
+        />
+    );
+
     const sceneTitle = currentContent.title || '';
     const imageUrl = currentContent.metadata?.imageUrl || currentContent.metadata?.gifUrl || '';
     const explanation = currentContent.metadata?.explanation || '';
@@ -498,6 +523,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
                         </Box>
                     )}
 
+                    {tierNavFooter}
                 </CardContent>
             </Card>
 
@@ -515,14 +541,14 @@ const SceneCard: React.FC<SceneCardProps> = ({
                     </Typography>
 
                     {!isToday && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
+                        <Alert severity="info" sx={activityAlertOnDarkSx('info')}>
                             Past scene — browse only. Submit summaries on today&apos;s scene.
                         </Alert>
                     )}
 
                     {existingSubmission && (
                         <>
-                            <Alert severity="success" sx={{ mb: 2 }}>
+                            <Alert severity="success" sx={activityAlertOnDarkSx('success')}>
                                 You submitted {getSceneSubmissionSummaries(existingSubmission).length} summar
                                 {getSceneSubmissionSummaries(existingSubmission).length === 1 ? 'y' : 'ies'}
                                 {existingSubmission.createdAt
@@ -531,7 +557,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
                                 .
                             </Alert>
                             {hasReviewScore || existingSubmission.sentenceValidations?.length ? (
-                                <Alert severity="success" sx={{ mb: 2 }}>
+                                <Alert severity="success" sx={activityAlertOnDarkSx('success')}>
                                     <Typography variant="body2" fontWeight={700}>
                                         Evaluation score: {reviewedScore} / {SCENE_MAX_EVALUATION_SCORE}
                                     </Typography>
@@ -551,6 +577,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
                                 </Alert>
                             ) : (
                                 <EvaluationStatusBanner
+                                    variant="onDark"
                                     isCorrect={existingSubmission.isCorrect}
                                     evaluationPoints={existingSubmission.evaluationPoints}
                                     pointsEarned={existingSubmission.pointsEarned}
@@ -562,7 +589,10 @@ const SceneCard: React.FC<SceneCardProps> = ({
                     )}
 
                     {submitStatus && (
-                        <Alert severity={submitStatus.type} sx={{ mb: 2 }}>
+                        <Alert
+                            severity={submitStatus.type}
+                            sx={activityAlertOnDarkSx(submitStatus.type === 'error' ? 'error' : 'success')}
+                        >
                             {submitStatus.message}
                         </Alert>
                     )}
@@ -680,9 +710,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
                                         }
                                         disabled={!canSubmitSummaries || isSubmitting}
                                         sx={{
-                                            bgcolor: GOLD_ACCENT,
-                                            color: '#0f172a',
-                                            fontWeight: 800,
+                                            ...activityContainedButtonSx(GOLD_ACCENT),
                                             minWidth: 200,
                                         }}
                                     >
@@ -697,25 +725,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
                             </Typography>
                         )}
                     </Box>
-                    <ActivityTierNavFooter
-                        accentColor={GOLD_ACCENT}
-                        left={{
-                            label: 'Previous Scene',
-                            onClick: () => handleNavigation('prev'),
-                            disabled: !hasPrevious,
-                            loading: isLoadingNav,
-                        }}
-                        center={{
-                            label: '→ Professional Conversations',
-                            onClick: onNavigateToProfessional,
-                        }}
-                        right={{
-                            label: 'Next Scene',
-                            onClick: () => handleNavigation('next'),
-                            disabled: !canGoNext,
-                            loading: isLoadingNav,
-                        }}
-                    />
+                    {tierNavFooter}
                 </CardContent>
             </Card>
         </Box>

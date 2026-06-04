@@ -11,7 +11,14 @@ import {
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { keyframes } from '@emotion/react';
-import { isParticipant2Speaker, type DialogueLine } from '../../utils/conversationDialogueUtils';
+import { alpha } from '@mui/material/styles';
+import {
+    getLineSpeakerLabel,
+    isRightSideSpeaker,
+    resolveConversationParticipants,
+    type DialogueLine,
+} from '../../utils/conversationDialogueUtils';
+import { conversationGoldChatCardSx } from './conversationExperienceStyles';
 import ActivityContentHeader from './ActivityContentHeader';
 import { practicalConversationTheme as theme } from './practicalConversationTheme';
 import { TIER_COLORS } from '../dashboard/DashboardActivitiesPanel';
@@ -30,6 +37,8 @@ export interface ConversationChatProps {
     displayNumber?: string | null;
     labelOverride?: string;
     accentTier?: 'silver' | 'gold';
+    /** `transcript`: script-style, each line labeled with its speaker (professional library). */
+    layout?: 'chat' | 'transcript';
 }
 
 const ConversationChat: React.FC<ConversationChatProps> = ({
@@ -41,13 +50,20 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
     displayNumber,
     labelOverride,
     accentTier = 'silver',
+    layout = 'chat',
 }) => {
+    const { participant1: p1, participant2: p2, speakers } = resolveConversationParticipants(
+        { participant1, participant2, participants: [participant1, participant2] },
+        dialogue
+    );
+    const headerSpeakerLine =
+        speakers.length > 0 ? speakers.join(' · ') : `${p1} · ${p2}`;
     const [showHindi, setShowHindi] = useState<Record<number, boolean>>({});
     const [playingAudio, setPlayingAudio] = useState<number | null>(null);
     const [audioLoading, setAudioLoading] = useState<Record<number, boolean>>({});
     const audioRefs = useRef<Record<number, HTMLAudioElement | null>>({});
     const synthRef = useRef<SpeechSynthesis | null>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatScrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         synthRef.current = window.speechSynthesis;
@@ -62,9 +78,12 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
         };
     }, []);
 
+    /** Scroll only the chat panel (not the page) when dialogue loads. */
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [dialogue, showHindi]);
+        const container = chatScrollRef.current;
+        if (!container || dialogue.length === 0) return;
+        container.scrollTop = container.scrollHeight;
+    }, [dialogue]);
 
     const toggleHindi = (index: number) => {
         setShowHindi((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -137,6 +156,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                 overflow: 'hidden',
                 border: `2px solid ${ringColor}`,
                 boxShadow: theme.cardShadow,
+                ...(accentTier === 'gold' ? conversationGoldChatCardSx : {}),
             }}
         >
             <Box sx={{ bgcolor: theme.headerBg, color: theme.headerText, px: 2, py: 1.75 }}>
@@ -156,14 +176,17 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                     </Typography>
                 )}
                 <Typography variant="caption" sx={{ color: theme.headerMuted, display: 'block', mt: 0.75 }}>
-                    {participant1} · {participant2}
+                    {headerSpeakerLine}
                 </Typography>
             </Box>
 
             <Box
+                ref={chatScrollRef}
                 sx={{
                     flex: 1,
                     overflowY: 'auto',
+                    overflowX: 'hidden',
+                    WebkitOverflowScrolling: 'touch',
                     bgcolor: theme.chatBg,
                     p: 2,
                     display: 'flex',
@@ -178,34 +201,38 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                 )}
 
                 {dialogue.map((item, index) => {
-                    const isUser = isParticipant2Speaker(item.speaker, participant1, participant2);
+                    const isTranscript = layout === 'transcript';
+                    const isUser =
+                        !isTranscript &&
+                        isRightSideSpeaker(item.speaker, p1, p2, speakers);
                     const isPlaying = playingAudio === index;
                     const hindiVisible = showHindi[index];
+                    const speakerLabel = getLineSpeakerLabel(item, p1, p2, isUser);
 
                     return (
                         <Box
                             key={index}
                             sx={{
                                 display: 'flex',
-                                justifyContent: isUser ? 'flex-end' : 'flex-start',
+                                justifyContent: isTranscript || !isUser ? 'flex-start' : 'flex-end',
                                 animation: isPlaying ? `${pulse} 1.2s infinite` : 'none',
                             }}
                         >
                             <Box sx={{ maxWidth: '88%', minWidth: 0 }}>
-                                {!isUser && (
-                                    <Typography
-                                        variant="caption"
-                                        sx={{
-                                            ml: 0.5,
-                                            mb: 0.25,
-                                            display: 'block',
-                                            color: theme.bubbleLabel,
-                                            fontWeight: 700,
-                                        }}
-                                    >
-                                        {participant1}
-                                    </Typography>
-                                )}
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        ml: isUser && !isTranscript ? 0 : 0.5,
+                                        mr: isUser && !isTranscript ? 0.5 : 0,
+                                        mb: 0.25,
+                                        display: 'block',
+                                        textAlign: isUser && !isTranscript ? 'right' : 'left',
+                                        color: theme.bubbleLabel,
+                                        fontWeight: 700,
+                                    }}
+                                >
+                                    {speakerLabel}
+                                </Typography>
                                 <Paper
                                     elevation={0}
                                     sx={{
@@ -214,8 +241,16 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                                         px: 2,
                                         pt: 1.25,
                                         pb: 1,
-                                        borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                                        bgcolor: isUser ? theme.bubbleUser : theme.bubbleOther,
+                                        borderRadius:
+                                            isTranscript || !isUser
+                                                ? '12px 12px 12px 2px'
+                                                : '12px 12px 2px 12px',
+                                        bgcolor:
+                                            isTranscript || !isUser
+                                                ? theme.bubbleOther
+                                                : accentTier === 'gold'
+                                                  ? alpha(ringColor, 0.22)
+                                                  : theme.bubbleUser,
                                         boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
                                     }}
                                 >
@@ -234,8 +269,13 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                                         {item.text_hi && (
                                             <Tooltip title={hindiVisible ? 'Hide Hindi' : 'Show Hindi'}>
                                                 <IconButton
+                                                    type="button"
                                                     size="small"
-                                                    onClick={() => toggleHindi(index)}
+                                                    aria-label={hindiVisible ? 'Hide Hindi' : 'Show Hindi'}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        toggleHindi(index);
+                                                    }}
                                                     sx={{ color: theme.iconColor }}
                                                 >
                                                     <TranslateIcon sx={{ fontSize: 16 }} />
@@ -261,7 +301,6 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
                         </Box>
                     );
                 })}
-                <div ref={messagesEndRef} />
             </Box>
         </Paper>
     );

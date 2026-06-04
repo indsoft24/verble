@@ -1,4 +1,4 @@
-import { format, parseISO } from 'date-fns';
+import { toScheduleDateKey } from './scheduleDateUtils';
 import type { DailyContent } from '../services/dailyContentService';
 import { buildAutoDisplayTitle } from './dailyContentDisplayNumber';
 
@@ -276,7 +276,7 @@ export function findContentForSlot(
     slot: DailyContentCatalogEntry
 ): DailyContent | undefined {
     return items.find(
-        (c) => format(parseISO(c.date), 'yyyy-MM-dd') === dateKey && contentMatchesCatalogSlot(c, slot)
+        (c) => toScheduleDateKey(c.date) === dateKey && contentMatchesCatalogSlot(c, slot)
     );
 }
 

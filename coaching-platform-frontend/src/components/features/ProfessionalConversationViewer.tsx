@@ -4,6 +4,11 @@ import { alpha } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ConversationChat from './ConversationChat';
 import type { DailyContent } from '../../services/dailyContentService';
+import {
+    normalizeDialogue,
+    resolveConversationParticipants,
+    type DialogueLine,
+} from '../../utils/conversationDialogueUtils';
 import { getContentDisplayNumber } from '../../utils/dailyActivityUi';
 import { getAdjacentConversation } from '../../utils/professionalConversationLibraryUtils';
 import { professionalConversationTheme as theme } from './professionalConversationTheme';
@@ -29,13 +34,10 @@ const ProfessionalConversationViewer: React.FC<ProfessionalConversationViewerPro
     onBack,
     onSelectConversation,
 }) => {
-    const dialogue = conversation.metadata?.dialogue || [];
-    const participant1 = String(
-        conversation.metadata?.participant1 || conversation.metadata?.participants?.[0] || 'Speaker 1'
-    );
-    const participant2 = String(
-        conversation.metadata?.participant2 || conversation.metadata?.participants?.[1] || 'Speaker 2'
-    );
+    const rawDialogue = (conversation.metadata?.dialogue || []) as DialogueLine[];
+    const meta = (conversation.metadata || {}) as Record<string, unknown>;
+    const { participant1, participant2 } = resolveConversationParticipants(meta, rawDialogue);
+    const dialogue = normalizeDialogue(rawDialogue, participant1, participant2);
     const scenarioTitle =
         (conversation.metadata?.topicName as string) || conversation.title;
     const scenarioTitleHi = conversation.metadata?.topicNameHi as string | undefined;
@@ -99,6 +101,7 @@ const ProfessionalConversationViewer: React.FC<ProfessionalConversationViewerPro
                     displayNumber={getContentDisplayNumber(conversation.sequenceNumber)}
                     labelOverride="Professional Conversations"
                     accentTier="gold"
+                    layout="chat"
                 />
             ) : (
                 <Paper

@@ -25,7 +25,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import ActivityContentHeader from './ActivityContentHeader';
 import {
+    activityAlertOnDarkSx,
     activityCardProps,
+    activityContainedButtonSx,
     getContentDisplayNumber,
     isContentScheduledToday,
     refreshAdjacentFlags,
@@ -396,6 +398,28 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
     const isToday = isContentScheduledToday(currentContent.date);
     const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
 
+    const tierNavFooter = (
+        <ActivityTierNavFooter
+            accentColor={GOLD_ACCENT}
+            left={{
+                label: 'Previous Set',
+                onClick: () => handleNavigation('prev'),
+                disabled: !hasPrevious,
+                loading: isLoadingNav,
+            }}
+            center={{
+                label: '← One Minute Read',
+                onClick: onNavigateToStory,
+            }}
+            right={{
+                label: 'Next Set',
+                onClick: () => handleNavigation('next'),
+                disabled: !canGoNext,
+                loading: isLoadingNav,
+            }}
+        />
+    );
+
     const theme = currentContent.metadata?.theme || currentContent.title;
     const vocabItems: VocabItem[] = currentContent.metadata?.vocabItems || [];
     const themeImageUrl =
@@ -531,6 +555,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                         ))}
                     </Box>
 
+                    {tierNavFooter}
                 </CardContent>
             </Card>
 
@@ -547,7 +572,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                         {minWordsRequired === 1 ? '' : 's'}. +10 participation on submit; 10 points per correct sentence after review.
                     </Typography>
                     {!isToday && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
+                        <Alert severity="info" sx={activityAlertOnDarkSx('info')}>
                             Past vocabulary set — browse only. Submit on today&apos;s set.
                         </Alert>
                     )}
@@ -558,10 +583,11 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                     )}
                     {existingSubmission && isToday && (
                         <>
-                            <Alert severity="success" sx={{ mb: 2 }}>
+                            <Alert severity="success" sx={activityAlertOnDarkSx('success')}>
                                 You already submitted sentences for this vocabulary set.
                             </Alert>
                             <EvaluationStatusBanner
+                                variant="onDark"
                                 isCorrect={existingSubmission.isCorrect}
                                 evaluationPoints={existingSubmission.evaluationPoints}
                                 pointsEarned={existingSubmission.pointsEarned}
@@ -624,7 +650,10 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                         </Typography>
                     )}
                     {submitStatus && (
-                        <Alert severity={submitStatus.type} sx={{ mb: 2 }}>
+                        <Alert
+                            severity={submitStatus.type}
+                            sx={activityAlertOnDarkSx(submitStatus.type === 'error' ? 'error' : 'success')}
+                        >
                             {submitStatus.message}
                         </Alert>
                     )}
@@ -726,7 +755,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                                         isSubmitting ||
                                         !user
                                     }
-                                    sx={{ bgcolor: GOLD_ACCENT, color: '#0f172a', fontWeight: 800, minWidth: 160 }}
+                                    sx={{ ...activityContainedButtonSx(GOLD_ACCENT), minWidth: 160 }}
                                 >
                                     {isSubmitting ? 'Submitting…' : 'Submit'}
                                 </Button>
@@ -741,25 +770,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                             )}
                         </Box>
                     )}
-                    <ActivityTierNavFooter
-                        accentColor={GOLD_ACCENT}
-                        left={{
-                            label: 'Previous Set',
-                            onClick: () => handleNavigation('prev'),
-                            disabled: !hasPrevious,
-                            loading: isLoadingNav,
-                        }}
-                        center={{
-                            label: '← One Minute Read',
-                            onClick: onNavigateToStory,
-                        }}
-                        right={{
-                            label: 'Next Set',
-                            onClick: () => handleNavigation('next'),
-                            disabled: !canGoNext,
-                            loading: isLoadingNav,
-                        }}
-                    />
+                    {tierNavFooter}
                 </CardContent>
             </Card>
         </Box>

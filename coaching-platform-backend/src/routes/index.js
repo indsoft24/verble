@@ -39,6 +39,7 @@ import conversationSubmissionRoutes from './conversationSubmissionRoutes.js';
 import puzzleSubmissionRoutes from './puzzleSubmissionRoutes.js';
 import sceneSubmissionRoutes from './sceneSubmissionRoutes.js';
 import speechSubmissionRoutes from './speechSubmissionRoutes.js';
+import lyricsSubmissionRoutes from './lyricsSubmissionRoutes.js';
 import aiPromptRoutes from './aiPromptRoutes.js';
 import moduleQuizRoutes from './moduleQuizRoutes.js';
 import certificateAssessmentRoutes from './certificateAssessmentRoutes.js';
@@ -104,6 +105,7 @@ router.use('/submit-conversation-practice', conversationSubmissionRoutes); // Ha
 router.use('/submit-puzzle', puzzleSubmissionRoutes); // Handles /api/submit-puzzle/*
 router.use('/submit-scene-description', sceneSubmissionRoutes); // Handles /api/submit-scene-description/*
 router.use('/submit-speech-description', speechSubmissionRoutes); // Handles /api/submit-speech-description/*
+router.use('/submit-lyrics-sentences', lyricsSubmissionRoutes); // Handles /api/submit-lyrics-sentences/*
 router.use('/ai-prompts', aiPromptRoutes); // Handles /api/ai-prompts/*
 router.use('/module-quizzes', moduleQuizRoutes); // Handles /api/module-quizzes/*
 router.use('/certificate-assessment', certificateAssessmentRoutes); // Handles /api/certificate-assessment/*

@@ -22,7 +22,12 @@ export interface DailyContentPagination {
 
 export interface DailyContentAdminListParams {
     date?: string;
+    /** Filter by scheduled publish date (DailyContent.date), not createdAt */
+    scheduleStartDate?: string;
+    scheduleEndDate?: string;
+    /** @deprecated Use scheduleStartDate — kept for backward compatibility */
     startDate?: string;
+    /** @deprecated Use scheduleEndDate */
     endDate?: string;
     level?: string;
     type?: string;

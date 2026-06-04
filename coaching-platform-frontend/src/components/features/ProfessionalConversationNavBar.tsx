@@ -1,8 +1,14 @@
 import React from 'react';
-import { Box, Button, alpha, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, alpha } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { professionalConversationTheme as theme } from './professionalConversationTheme';
+import { courseLearningTheme } from '../course/courseLearningTheme';
+import { TIER_COLORS } from '../dashboard/DashboardActivitiesPanel';
+
+/** Bright gold for nav CTAs — high contrast on dark page background */
+const NAV_GOLD = courseLearningTheme.highlight;
+const NAV_GOLD_DARK = TIER_COLORS.GOLD;
+const NAV_TEXT_ON_GOLD = '#141a18';
 
 export interface ProfessionalConversationNavBarProps {
     leftLabel?: string;
@@ -13,23 +19,45 @@ export interface ProfessionalConversationNavBarProps {
     rightDisabled?: boolean;
 }
 
-const pillSx = {
-    borderRadius: 999,
-    borderColor: alpha(theme.accent, 0.5),
-    color: theme.headerText,
-    fontWeight: 600,
-    textTransform: 'none' as const,
-    px: { xs: 1.5, sm: 2 },
-    py: 0.75,
-    '&:hover': {
-        borderColor: theme.accent,
-        bgcolor: alpha(theme.accent, 0.12),
-    },
-    '&.Mui-disabled': {
-        borderColor: alpha(theme.accent, 0.2),
-        color: alpha(theme.headerText, 0.35),
-    },
-};
+function navButtonSx(enabled: boolean) {
+    return {
+        flex: { xs: '1 1 0', sm: '0 1 auto' },
+        minWidth: 0,
+        maxWidth: { xs: 'none', sm: 300 },
+        minHeight: 48,
+        borderRadius: 2,
+        fontWeight: 800,
+        fontSize: { xs: '0.8125rem', sm: '0.9rem' },
+        textTransform: 'none' as const,
+        px: { xs: 1.5, sm: 2.75 },
+        py: 1.25,
+        border: '2px solid',
+        borderColor: enabled ? alpha('#fffef5', 0.45) : alpha(NAV_GOLD, 0.28),
+        bgcolor: enabled ? NAV_GOLD : alpha(NAV_GOLD_DARK, 0.18),
+        color: enabled ? NAV_TEXT_ON_GOLD : alpha('#f8fafc', 0.45),
+        boxShadow: enabled
+            ? `0 6px 22px ${alpha(NAV_GOLD, 0.55)}, inset 0 1px 0 ${alpha('#fff', 0.4)}`
+            : 'none',
+        '&:hover': enabled
+            ? {
+                  bgcolor: '#f0d04a',
+                  borderColor: alpha('#fff', 0.55),
+                  color: NAV_TEXT_ON_GOLD,
+                  boxShadow: `0 8px 28px ${alpha(NAV_GOLD, 0.65)}`,
+              }
+            : {},
+        '&.Mui-disabled': {
+            bgcolor: alpha(NAV_GOLD_DARK, 0.14),
+            borderColor: alpha(NAV_GOLD, 0.22),
+            color: alpha('#f8fafc', 0.38),
+            boxShadow: 'none',
+        },
+        '& .MuiButton-startIcon, & .MuiButton-endIcon': {
+            color: 'inherit',
+            marginInline: { xs: 0.25, sm: 0.5 },
+        },
+    };
+}
 
 const ProfessionalConversationNavBar: React.FC<ProfessionalConversationNavBarProps> = ({
     leftLabel,
@@ -39,72 +67,72 @@ const ProfessionalConversationNavBar: React.FC<ProfessionalConversationNavBarPro
     leftDisabled = false,
     rightDisabled = false,
 }) => {
-    const muiTheme = useTheme();
-    const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
     const showLeft = Boolean(leftLabel);
     const showRight = Boolean(rightLabel);
     if (!showLeft && !showRight) return null;
 
-    const usePills = !isMobile;
+    const leftEnabled = Boolean(onLeft) && !leftDisabled;
+    const rightEnabled = Boolean(onRight) && !rightDisabled;
 
     return (
         <Box
+            component="nav"
+            aria-label="Conversation navigation"
             sx={{
                 display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
                 justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 1,
-                mt: 2,
+                alignItems: 'stretch',
+                gap: { xs: 1.25, sm: 2 },
+                mt: 2.5,
                 pt: 2,
-                borderTop: `1px solid ${alpha(theme.accent, 0.25)}`,
-                position: { xs: 'sticky', sm: 'static' },
-                bottom: 0,
-                bgcolor: { xs: theme.headerBg, sm: 'transparent' },
-                py: { xs: 1.5, sm: 0 },
-                zIndex: 2,
+                pb: { xs: 1.5, sm: 1 },
+                px: { xs: 1, sm: 1.5 },
+                borderRadius: 2,
+                border: `1px solid ${alpha(NAV_GOLD, 0.45)}`,
+                bgcolor: alpha('#0f1619', 0.85),
+                backgroundImage: `linear-gradient(180deg, ${alpha(NAV_GOLD, 0.12)} 0%, transparent 100%)`,
+                boxShadow: `0 0 24px ${alpha(NAV_GOLD, 0.12)}`,
             }}
         >
             {showLeft ? (
                 <Button
-                    variant={usePills ? 'outlined' : 'text'}
-                    size="small"
-                    startIcon={<ArrowBackIcon />}
+                    variant="contained"
+                    disableElevation
+                    size="medium"
+                    startIcon={<ArrowBackIcon fontSize="small" />}
                     onClick={onLeft}
-                    disabled={leftDisabled || !onLeft}
+                    disabled={!leftEnabled}
                     aria-label={leftLabel}
                     sx={{
-                        ...(usePills ? pillSx : {}),
-                        flex: '1 1 0',
-                        minWidth: 0,
-                        justifyContent: 'flex-start',
-                        ...(!usePills && { color: theme.headerText, fontWeight: 600 }),
+                        ...navButtonSx(leftEnabled),
+                        justifyContent: 'center',
                     }}
                 >
                     {leftLabel}
                 </Button>
             ) : (
-                <Box sx={{ flex: '1 1 0' }} />
+                <Box sx={{ flex: { xs: 0, sm: '1 1 0' } }} />
             )}
             {showRight ? (
                 <Button
-                    variant={usePills ? 'outlined' : 'text'}
-                    size="small"
-                    endIcon={<ArrowForwardIcon />}
+                    variant="contained"
+                    disableElevation
+                    size="medium"
+                    endIcon={<ArrowForwardIcon fontSize="small" />}
                     onClick={onRight}
-                    disabled={rightDisabled || !onRight}
+                    disabled={!rightEnabled}
                     aria-label={rightLabel}
                     sx={{
-                        ...(usePills ? pillSx : {}),
-                        flex: '1 1 0',
-                        minWidth: 0,
-                        justifyContent: 'flex-end',
-                        ...(!usePills && { color: theme.headerText, fontWeight: 600 }),
+                        ...navButtonSx(rightEnabled),
+                        justifyContent: 'center',
+                        ml: { sm: 'auto' },
                     }}
                 >
                     {rightLabel}
                 </Button>
             ) : (
-                <Box sx={{ flex: '1 1 0' }} />
+                <Box sx={{ flex: { xs: 0, sm: '1 1 0' } }} />
             )}
         </Box>
     );

@@ -87,6 +87,159 @@ export const activitySubmittedTextSx: SxProps<Theme> = {
 };
 
 /** Editable summary fields on dark activity cards */
+export type ActivityAlertSeverity = 'info' | 'success' | 'warning' | 'error';
+
+/** Readable MUI Alert on dark gold activity cards */
+export function activityAlertOnDarkSx(severity: ActivityAlertSeverity): SxProps<Theme> {
+    const messageSx = {
+        '& .MuiAlert-message': { width: '100%' },
+        '& .MuiAlert-icon': { color: 'inherit' },
+    };
+    switch (severity) {
+        case 'info':
+            return {
+                mb: 2,
+                bgcolor: alpha('#38bdf8', 0.15),
+                border: `1px solid ${alpha('#38bdf8', 0.35)}`,
+                color: '#e0f2fe',
+                ...messageSx,
+                '& .MuiAlert-message': { ...messageSx['& .MuiAlert-message'], color: '#e0f2fe' },
+            };
+        case 'success':
+            return {
+                mb: 2,
+                bgcolor: alpha('#22c55e', 0.14),
+                border: `1px solid ${alpha('#22c55e', 0.4)}`,
+                color: '#bbf7d0',
+                ...messageSx,
+                '& .MuiAlert-message': { ...messageSx['& .MuiAlert-message'], color: '#bbf7d0' },
+            };
+        case 'warning':
+            return {
+                mb: 2,
+                bgcolor: alpha('#f59e0b', 0.18),
+                border: `1px solid ${alpha('#f59e0b', 0.45)}`,
+                color: '#fef3c7',
+                ...messageSx,
+                '& .MuiAlert-message': { ...messageSx['& .MuiAlert-message'], color: '#fef3c7' },
+                '& .MuiTypography-root': { color: '#fef3c7' },
+            };
+        case 'error':
+            return {
+                mb: 2,
+                bgcolor: alpha('#ef4444', 0.14),
+                border: `1px solid ${alpha('#ef4444', 0.4)}`,
+                color: '#fecaca',
+                ...messageSx,
+                '& .MuiAlert-message': { ...messageSx['& .MuiAlert-message'], color: '#fecaca' },
+            };
+        default:
+            return { mb: 2 };
+    }
+}
+
+export function activityNavSideButtonSx(options: {
+    disabled: boolean;
+    accentColor: string;
+    side: 'left' | 'right';
+    inStackedRow?: boolean;
+    isDark?: boolean;
+}): SxProps<Theme> {
+    const { disabled, accentColor, side, inStackedRow = false, isDark = true } = options;
+    const activeColor = isDark ? alpha('#e2e8f0', 0.9) : 'text.primary';
+    const idleColor = isDark ? alpha('#e2e8f0', 0.55) : alpha('#000', 0.45);
+
+    return {
+        color: disabled ? idleColor : activeColor,
+        fontWeight: 600,
+        fontSize: { xs: '0.75rem', sm: '0.875rem' },
+        minWidth: 0,
+        minHeight: 44,
+        maxWidth: '100%',
+        opacity: 1,
+        justifyContent: side === 'left' ? 'flex-start' : 'flex-end',
+        textAlign: side,
+        px: { xs: 0.5, sm: 1 },
+        lineHeight: 1.3,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        pointerEvents: disabled ? 'none' : 'auto',
+        ...(inStackedRow
+            ? { flex: '1 1 0', width: '100%' }
+            : { width: '100%', justifySelf: side === 'left' ? 'start' : 'end' }),
+        '&:hover': disabled
+            ? { bgcolor: 'transparent' }
+            : { bgcolor: alpha(accentColor, isDark ? 0.1 : 0.06) },
+        '&.Mui-disabled': {
+            opacity: 1,
+            color: idleColor,
+        },
+        '& .MuiButton-startIcon, & .MuiButton-endIcon': {
+            flexShrink: 0,
+            marginInline: { xs: 0.25, sm: 0.5 },
+            color: 'inherit',
+        },
+    };
+}
+
+export function activityNavCenterButtonSx(options: {
+    disabled: boolean;
+    accentColor: string;
+    isDark?: boolean;
+    fullWidth?: boolean;
+}): SxProps<Theme> {
+    const { disabled, accentColor, isDark = true, fullWidth = false } = options;
+    return {
+        borderColor: disabled ? alpha(accentColor, 0.35) : accentColor,
+        color: disabled ? alpha(accentColor, 0.55) : accentColor,
+        fontWeight: 700,
+        fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+        textTransform: 'none',
+        py: 1.1,
+        px: 2,
+        minHeight: 48,
+        maxWidth: '100%',
+        width: fullWidth ? '100%' : 'auto',
+        justifySelf: 'center',
+        flexShrink: 0,
+        opacity: 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        pointerEvents: disabled ? 'none' : 'auto',
+        '&:hover': disabled
+            ? { bgcolor: 'transparent', borderColor: alpha(accentColor, 0.35) }
+            : {
+                  borderColor: accentColor,
+                  bgcolor: alpha(accentColor, isDark ? 0.14 : 0.08),
+              },
+        '&.Mui-disabled': {
+            opacity: 1,
+            borderColor: alpha(accentColor, 0.35),
+            color: alpha(accentColor, 0.55),
+        },
+    };
+}
+
+/** Gold (or tier) contained submit buttons on dark cards — stay visible when disabled */
+export function activityContainedButtonSx(accentColor: string = GOLD_ACCENT): SxProps<Theme> {
+    return {
+        bgcolor: accentColor,
+        color: '#0f172a',
+        fontWeight: 800,
+        opacity: 1,
+        '&:hover': {
+            bgcolor: alpha(accentColor, 0.88),
+        },
+        '&.Mui-disabled': {
+            opacity: 1,
+            cursor: 'not-allowed',
+            bgcolor: alpha(accentColor, 0.35),
+            color: alpha('#f8fafc', 0.75),
+        },
+    };
+}
+
 export const activitySummaryTextFieldSx = (accent: string = GOLD_ACCENT): SxProps<Theme> => ({
     '& .MuiOutlinedInput-root': {
         bgcolor: alpha('#0f172a', 0.55),

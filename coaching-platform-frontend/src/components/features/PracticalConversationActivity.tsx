@@ -273,6 +273,7 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                             You already submitted practice for this conversation.
                         </Alert>
                         <EvaluationStatusBanner
+                            variant="onDark"
                             isCorrect={existingSubmission.isCorrect}
                             evaluationPoints={existingSubmission.evaluationPoints}
                             pointsEarned={existingSubmission.pointsEarned}

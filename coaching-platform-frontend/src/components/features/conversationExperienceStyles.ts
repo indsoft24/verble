@@ -32,4 +32,13 @@ export const conversationMetaTagsRowSx: SxProps<Theme> = {
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: '8px',
+    marginTop: '5px',
+};
+
+/** Gold-tier main conversation card (professional library detail). */
+export const conversationGoldChatCardSx: SxProps<Theme> = {
+    maxWidth: '100%',
+    minWidth: 0,
+    minHeight: { xs: 420, md: 480 },
+    mt: '12px',
 };

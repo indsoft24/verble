@@ -33,6 +33,7 @@ const SUBMISSION_TYPE_DEFAULT_LEVEL: Record<SubmissionType, ContentPlanLevel> = 
     conversation: 'SILVER',
     scene: 'GOLD',
     speech: 'GOLD',
+    lyrics: 'GOLD',
 };
 
 export function getLinkedContentRef(submission: SentenceSubmission) {
@@ -42,6 +43,7 @@ export function getLinkedContentRef(submission: SentenceSubmission) {
         submission.vocabSetId ||
         submission.sceneId ||
         submission.speechId ||
+        submission.lyricsId ||
         submission.conversationId
     );
 }
@@ -101,6 +103,8 @@ function contentLabel(submission: SentenceSubmission): string {
             return 'Explain the Scene';
         case 'speech':
             return 'Famous Speeches';
+        case 'lyrics':
+            return 'Song Lyrics';
         case 'conversation':
             return 'Practical Conversations';
         default:
@@ -243,6 +247,14 @@ export function getValidationContentDetails(
         return lines;
     }
 
+    if (submission.submissionType === 'lyrics') {
+        const artist = String(meta.artist ?? '').trim();
+        const lyricsExcerpt = String(meta.lyrics ?? '').trim();
+        if (artist) lines.push({ label: 'Artist', value: artist });
+        if (lyricsExcerpt) lines.push({ label: 'Lyrics excerpt', value: lyricsExcerpt });
+        return lines;
+    }
+
     return lines;
 }
 
@@ -281,6 +293,15 @@ export function getOriginalReferenceText(submission: SentenceSubmission): string
             .slice(0, 100);
         if (speaker && transcript) return `${speaker}: ${transcript}…`;
         return speaker || transcript || '—';
+    }
+
+    if (submission.submissionType === 'lyrics') {
+        const artist = String(meta.artist ?? '').trim();
+        const excerpt = String(meta.lyrics ?? '')
+            .trim()
+            .slice(0, 100);
+        if (artist && excerpt) return `${artist}: ${excerpt}…`;
+        return artist || excerpt || '—';
     }
 
     return '—';

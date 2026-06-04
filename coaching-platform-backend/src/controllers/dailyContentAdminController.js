@@ -11,6 +11,10 @@ import {
     getNextSequenceNumber,
     assignSequenceNumberIfMissing,
 } from '../utils/contentSequenceUtils.js';
+import {
+    buildScheduledDateRangeQuery,
+    parseScheduleDateInput,
+} from '../utils/dailyContentLocalDay.js';
 
 const PUZZLE_TYPES = ['SPOT_CORRECT_SENTENCE', 'GRAMMAR_FILL_BLANK'];
 
@@ -57,6 +61,14 @@ const validateMetadataForType = (type, metadata = {}) => {
             throw new Error('SCENE requires metadata.explanation.');
         }
     }
+    if (type === 'LYRICS') {
+        if (metadata.words != null && !Array.isArray(metadata.words)) {
+            throw new Error('LYRICS metadata.words must be an array.');
+        }
+        if (metadata.phrases != null && !Array.isArray(metadata.phrases)) {
+            throw new Error('LYRICS metadata.phrases must be an array.');
+        }
+    }
     return metadata;
 };
 
@@ -83,24 +95,11 @@ const prepareBody = async (body, isUpdate = false) => {
         payload.title = buildAutoTitle(type, payload.sequenceNumber, payload.metadata);
     }
 
-    return payload;
-};
-
-const startOfLocalDay = (dateStr) => {
-    const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) {
-        throw new Error('Invalid date.');
+    if (payload.date != null) {
+        payload.date = parseScheduleDateInput(payload.date);
     }
-    const start = new Date(d);
-    start.setHours(0, 0, 0, 0);
-    return start;
-};
 
-const endOfLocalDayExclusive = (dateStr) => {
-    const start = startOfLocalDay(dateStr);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
-    return end;
+    return payload;
 };
 
 /** One slot per calendar day (type + level + puzzle variant for PUZZLE). */
@@ -108,10 +107,14 @@ const findExistingForDaySlot = async (payload, excludeId = null) => {
     const dateValue = payload.date;
     if (!dateValue) return null;
 
+    const dayStart = parseScheduleDateInput(dateValue);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
     const query = {
         date: {
-            $gte: startOfLocalDay(dateValue),
-            $lt: endOfLocalDayExclusive(dateValue),
+            $gte: dayStart,
+            $lt: dayEnd,
         },
         type: payload.type,
         level: payload.level,
@@ -164,6 +167,8 @@ export const getAllDailyContentAdmin = asyncHandler(async (req, res) => {
         date,
         startDate,
         endDate,
+        scheduleStartDate,
+        scheduleEndDate,
         level,
         type,
         search,
@@ -175,22 +180,19 @@ export const getAllDailyContentAdmin = asyncHandler(async (req, res) => {
 
     const query = {};
 
-    if (startDate || endDate) {
-        query.date = {};
-        if (startDate) {
-            query.date.$gte = startOfLocalDay(startDate);
-        }
-        if (endDate) {
-            query.date.$lt = endOfLocalDayExclusive(endDate);
-        }
-        if (Object.keys(query.date).length === 0) {
-            delete query.date;
-        }
+    const rangeStart = scheduleStartDate || startDate;
+    const rangeEnd = scheduleEndDate || endDate;
+    const scheduledRange = buildScheduledDateRangeQuery(
+        rangeStart ? String(rangeStart) : null,
+        rangeEnd ? String(rangeEnd) : null
+    );
+    if (scheduledRange) {
+        query.date = scheduledRange;
     } else if (date) {
-        query.date = {
-            $gte: startOfLocalDay(date),
-            $lt: endOfLocalDayExclusive(date),
-        };
+        const dayStart = parseScheduleDateInput(String(date));
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+        query.date = { $gte: dayStart, $lt: dayEnd };
     }
 
     if (level) {

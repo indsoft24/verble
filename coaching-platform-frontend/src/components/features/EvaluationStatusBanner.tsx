@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert, Box, Typography } from '@mui/material';
+import { activityAlertOnDarkSx } from '../../utils/dailyActivityUi';
 
 export interface EvaluationStatusProps {
     isCorrect?: boolean | null;
@@ -11,11 +12,6 @@ export interface EvaluationStatusProps {
     variant?: 'default' | 'onDark';
 }
 
-const onDarkAlertSx = {
-    '& .MuiAlert-message': { color: '#f8fafc', width: '100%' },
-    '& .MuiAlert-icon': { color: 'inherit' },
-};
-
 const EvaluationStatusBanner: React.FC<EvaluationStatusProps> = ({
     isCorrect,
     evaluationPoints,
@@ -24,26 +20,13 @@ const EvaluationStatusBanner: React.FC<EvaluationStatusProps> = ({
     reviewedAt,
     variant = 'default',
 }) => {
-    const darkSx = variant === 'onDark' ? onDarkAlertSx : {};
     const pts = evaluationPoints ?? pointsEarned ?? 0;
-    const reviewed = reviewedAt != null || isCorrect !== null && isCorrect !== undefined;
+    const reviewed = reviewedAt != null || (isCorrect !== null && isCorrect !== undefined);
+    const onDark = variant === 'onDark';
 
     if (!reviewed && (isCorrect === null || isCorrect === undefined)) {
         return (
-            <Alert
-                severity="info"
-                sx={{
-                    mb: 2,
-                    ...(variant === 'onDark'
-                        ? {
-                              bgcolor: 'rgba(56, 189, 248, 0.15)',
-                              border: '1px solid rgba(56, 189, 248, 0.35)',
-                              color: '#e0f2fe',
-                              ...onDarkAlertSx,
-                          }
-                        : {}),
-                }}
-            >
+            <Alert severity="info" sx={onDark ? activityAlertOnDarkSx('info') : { mb: 2 }}>
                 Awaiting review — evaluation score not final.
             </Alert>
         );
@@ -51,7 +34,7 @@ const EvaluationStatusBanner: React.FC<EvaluationStatusProps> = ({
 
     if (isCorrect === true) {
         return (
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <Alert severity="success" sx={onDark ? activityAlertOnDarkSx('success') : { mb: 2 }}>
                 Reviewed: correct — evaluation score {pts} point{pts === 1 ? '' : 's'}.
             </Alert>
         );
@@ -59,13 +42,13 @@ const EvaluationStatusBanner: React.FC<EvaluationStatusProps> = ({
 
     if (isCorrect === false) {
         return (
-            <Alert severity="warning" sx={{ mb: 2 }}>
+            <Alert severity="warning" sx={onDark ? activityAlertOnDarkSx('warning') : { mb: 2 }}>
                 <Box>
-                    <Typography variant="body2" fontWeight={700}>
+                    <Typography variant="body2" fontWeight={700} component="div">
                         Reviewed: incorrect — no evaluation points deducted from your leaderboard standing.
                     </Typography>
                     {feedback && (
-                        <Typography variant="body2" sx={{ mt: 1 }}>
+                        <Typography variant="body2" sx={{ mt: 1 }} component="div">
                             Feedback: {feedback}
                         </Typography>
                     )}

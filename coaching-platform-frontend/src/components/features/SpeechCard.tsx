@@ -36,7 +36,9 @@ import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
 import ActivitySourceCredit from './ActivitySourceCredit';
 import {
+    activityAlertOnDarkSx,
     activityCardProps,
+    activityContainedButtonSx,
     activitySubmittedTextSx,
     activitySummaryTextFieldSx,
     GOLD_ACCENT,
@@ -169,6 +171,29 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
     const canSubmitSummaries = isSummarySubmissionReady(summaryDrafts);
     const isToday = isContentScheduledToday(currentContent.date);
     const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
+
+    const tierNavFooter = (
+        <ActivityTierNavFooter
+            accentColor={GOLD_ACCENT}
+            left={{
+                label: 'Previous Speech',
+                onClick: () => handleNavigation('prev'),
+                disabled: !hasPrevious,
+                loading: isLoadingNav,
+            }}
+            center={{
+                label: '→ Song Lyrics',
+                onClick: onNavigateToLyrics,
+            }}
+            right={{
+                label: 'Next Speech',
+                onClick: () => handleNavigation('next'),
+                disabled: !canGoNext,
+                loading: isLoadingNav,
+            }}
+        />
+    );
+
     const locked = !!existingSubmission;
     const displaySummaries = locked ? getSubmissionSummaries(existingSubmission) : summaryDrafts;
 
@@ -407,6 +432,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                             </AccordionDetails>
                         </Accordion>
                     )}
+                    {tierNavFooter}
                 </CardContent>
             </Card>
 
@@ -425,14 +451,14 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                     </Typography>
 
                     {!isToday && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
+                        <Alert severity="info" sx={activityAlertOnDarkSx('info')}>
                             Past speech — browse only. Submit summaries on today&apos;s speech.
                         </Alert>
                     )}
 
                     {existingSubmission && (
                         <>
-                            <Alert severity="success" sx={{ mb: 2 }}>
+                            <Alert severity="success" sx={activityAlertOnDarkSx('success')}>
                                 You submitted {getSubmissionSummaries(existingSubmission).length} summar
                                 {getSubmissionSummaries(existingSubmission).length === 1 ? 'y' : 'ies'}
                                 {existingSubmission.createdAt
@@ -441,7 +467,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                                 .
                             </Alert>
                             {hasReviewScore || existingSubmission.sentenceValidations?.length ? (
-                                <Alert severity="success" sx={{ mb: 2 }}>
+                                <Alert severity="success" sx={activityAlertOnDarkSx('success')}>
                                     <Typography variant="body2" fontWeight={700}>
                                         Evaluation score: {reviewedScore} / {MAX_EVALUATION_SCORE}
                                     </Typography>
@@ -458,6 +484,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                                 </Alert>
                             ) : (
                                 <EvaluationStatusBanner
+                                    variant="onDark"
                                     isCorrect={existingSubmission.isCorrect}
                                     evaluationPoints={existingSubmission.evaluationPoints}
                                     pointsEarned={existingSubmission.pointsEarned}
@@ -469,7 +496,10 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                     )}
 
                     {submitStatus && (
-                        <Alert severity={submitStatus.type} sx={{ mb: 2 }}>
+                        <Alert
+                            severity={submitStatus.type}
+                            sx={activityAlertOnDarkSx(submitStatus.type === 'error' ? 'error' : 'success')}
+                        >
                             {submitStatus.message}
                         </Alert>
                     )}
@@ -586,9 +616,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                                         }
                                         disabled={!canSubmitSummaries || isSubmitting}
                                         sx={{
-                                            bgcolor: GOLD_ACCENT,
-                                            color: '#0f172a',
-                                            fontWeight: 800,
+                                            ...activityContainedButtonSx(GOLD_ACCENT),
                                             minWidth: 200,
                                         }}
                                     >
@@ -604,25 +632,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                         )}
                     </Box>
 
-                    <ActivityTierNavFooter
-                        accentColor={GOLD_ACCENT}
-                        left={{
-                            label: 'Previous Speech',
-                            onClick: () => handleNavigation('prev'),
-                            disabled: !hasPrevious,
-                            loading: isLoadingNav,
-                        }}
-                        center={{
-                            label: '→ Song Lyrics',
-                            onClick: onNavigateToLyrics,
-                        }}
-                        right={{
-                            label: 'Next Speech',
-                            onClick: () => handleNavigation('next'),
-                            disabled: !canGoNext,
-                            loading: isLoadingNav,
-                        }}
-                    />
+                    {tierNavFooter}
                 </CardContent>
             </Card>
         </Box>

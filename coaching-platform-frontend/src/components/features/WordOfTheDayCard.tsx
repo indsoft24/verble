@@ -32,7 +32,7 @@ import { getAdjacentContent, getWordDisplayNumber } from '../../services/dailyCo
 import { getUserWordSubmissions, type UserWordSubmission } from '../../services/sentenceSubmissionService';
 import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
 import ActivityContentHeader from './ActivityContentHeader';
-import { activityCardProps, GOLD_ACCENT, GREEN_ACCENT } from '../../utils/dailyActivityUi';
+import { activityCardProps, activityNavSideButtonSx, GOLD_ACCENT, GREEN_ACCENT } from '../../utils/dailyActivityUi';
 
 interface DailyContent {
     _id: string;
@@ -798,9 +798,14 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
                         <Button
                             variant="text"
                             startIcon={<ArrowBackIcon />}
-                            onClick={() => handleNavigation('prev')}
+                            onClick={() => hasPrevious && !isLoadingNav && handleNavigation('prev')}
                             disabled={!hasPrevious || isLoadingNav}
-                            sx={{ color: alpha('#e2e8f0', 0.85), fontWeight: 600 }}
+                            aria-disabled={!hasPrevious || isLoadingNav}
+                            sx={activityNavSideButtonSx({
+                                disabled: !hasPrevious || isLoadingNav,
+                                accentColor: GOLD_ACCENT,
+                                side: 'left',
+                            })}
                         >
                             {isLoadingNav ? 'Loading…' : 'Previous Word'}
                         </Button>
@@ -831,9 +836,14 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
                         <Button
                             variant="text"
                             endIcon={<ArrowForwardIcon />}
-                            onClick={() => handleNavigation('next')}
+                            onClick={() => hasNext && !isLoadingNav && handleNavigation('next')}
                             disabled={!hasNext || isLoadingNav}
-                            sx={{ color: alpha('#e2e8f0', 0.85), fontWeight: 600 }}
+                            aria-disabled={!hasNext || isLoadingNav}
+                            sx={activityNavSideButtonSx({
+                                disabled: !hasNext || isLoadingNav,
+                                accentColor: GOLD_ACCENT,
+                                side: 'right',
+                            })}
                         >
                             {isLoadingNav ? 'Loading…' : 'Next Word'}
                         </Button>

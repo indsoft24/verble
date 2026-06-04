@@ -50,6 +50,7 @@ import {
     validateVocabSentences,
     validateConversationPractice,
     validateSpeechSummaries,
+    validateLyricsSummaries,
     validateSceneSummaries,
     type SentenceSubmission,
 } from '../services/sentenceValidationService';
@@ -224,6 +225,7 @@ const AdminSentenceValidationPage: React.FC = () => {
                 return formatConversationSubmissionFromRecord(submission);
             case 'scene':
             case 'speech':
+            case 'lyrics':
                 return formatSummariesForAdmin(getSubmissionSummaries(submission));
             default:
                 return '';
@@ -274,7 +276,8 @@ const AdminSentenceValidationPage: React.FC = () => {
             setSummaryValidations([]);
         } else if (
             submission.submissionType === 'scene' ||
-            submission.submissionType === 'speech'
+            submission.submissionType === 'speech' ||
+            submission.submissionType === 'lyrics'
         ) {
             const summaries = getSubmissionSummaries(submission);
             const existing = submission.sentenceValidations || [];
@@ -312,7 +315,8 @@ const AdminSentenceValidationPage: React.FC = () => {
             submission.submissionType === 'vocab' ||
             submission.submissionType === 'conversation' ||
             submission.submissionType === 'scene' ||
-            submission.submissionType === 'speech'
+            submission.submissionType === 'speech' ||
+            submission.submissionType === 'lyrics'
         ) {
             handleOpenValidationDialog(submission);
             return;
@@ -363,7 +367,8 @@ const AdminSentenceValidationPage: React.FC = () => {
                 });
             } else if (
                 selectedSubmission.submissionType === 'scene' ||
-                selectedSubmission.submissionType === 'speech'
+                selectedSubmission.submissionType === 'speech' ||
+                selectedSubmission.submissionType === 'lyrics'
             ) {
                 const sentenceValidations = summaryValidations.map((ok, index) => ({
                     sentenceIndex: index,
@@ -371,6 +376,11 @@ const AdminSentenceValidationPage: React.FC = () => {
                 }));
                 if (selectedSubmission.submissionType === 'scene') {
                     await validateSceneSummaries(selectedSubmission._id, {
+                        sentenceValidations,
+                        feedback: validationFeedback || undefined,
+                    });
+                } else if (selectedSubmission.submissionType === 'lyrics') {
+                    await validateLyricsSummaries(selectedSubmission._id, {
                         sentenceValidations,
                         feedback: validationFeedback || undefined,
                     });
@@ -707,7 +717,8 @@ const AdminSentenceValidationPage: React.FC = () => {
                                                         <Tooltip
                                                             title={
                                                                 submission.submissionType === 'scene' ||
-                                                                submission.submissionType === 'speech'
+                                                                submission.submissionType === 'speech' ||
+                                                                submission.submissionType === 'lyrics'
                                                                     ? 'Review summaries'
                                                                     : 'Edit / story detail'
                                                             }
@@ -945,7 +956,8 @@ const AdminSentenceValidationPage: React.FC = () => {
                                         ))}
                                     </List>
                                 ) : selectedSubmission.submissionType === 'scene' ||
-                                  selectedSubmission.submissionType === 'speech' ? (
+                                  selectedSubmission.submissionType === 'speech' ||
+                                  selectedSubmission.submissionType === 'lyrics' ? (
                                     <Box>
                                         <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
                                             Mark each summary (+{POINTS_PER_CORRECT_SUMMARY} pts each, max{' '}
