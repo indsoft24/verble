@@ -1,25 +1,40 @@
-import { format, parse, parseISO, isValid } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 
-const SCHEDULE_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})/;
+const SCHEDULE_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const SCHEDULE_TZ = 'Asia/Kolkata';
 
-/** Calendar day key (yyyy-MM-dd) from stored schedule date — avoids UTC display drift. */
+const istDateKeyFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: SCHEDULE_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+});
+
+/** Calendar day key (yyyy-MM-dd) in Asia/Kolkata for stored schedule instants. */
 export function toScheduleDateKey(value: string | Date): string {
     if (typeof value === 'string') {
-        const match = SCHEDULE_DATE_RE.exec(value.trim());
-        if (match) {
-            return `${match[1]}-${match[2]}-${match[3]}`;
+        const trimmed = value.trim();
+        if (SCHEDULE_DATE_RE.test(trimmed)) {
+            return trimmed;
         }
     }
-    const d = typeof value === 'string' ? parseISO(value) : value;
+    const d = typeof value === 'string' ? new Date(value) : value;
     if (!isValid(d)) return '';
-    return format(d, 'yyyy-MM-dd');
+    return istDateKeyFormatter.format(d);
+}
+
+/** Parse a schedule day key for date pickers (local browser calendar). */
+export function parseScheduleDateLocal(value: string | Date | null | undefined): Date | null {
+    const key = value == null ? '' : toScheduleDateKey(value);
+    if (!key) return null;
+    const d = parse(key, 'yyyy-MM-dd', new Date());
+    return isValid(d) ? d : null;
 }
 
 /** Human-readable scheduled date for admin tables. */
 export function formatScheduledDateDisplay(value: string): string {
-    const key = toScheduleDateKey(value);
-    if (!key) return '—';
-    const local = parse(key, 'yyyy-MM-dd', new Date());
+    const local = parseScheduleDateLocal(value);
+    if (!local) return '—';
     return format(local, 'EEE, MMM d, yyyy');
 }
 

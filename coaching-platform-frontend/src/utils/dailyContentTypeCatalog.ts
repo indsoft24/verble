@@ -290,6 +290,6 @@ export function findSlotConflictOnDate(
     const slot = getCatalogEntry(adminKey);
     const existing = findContentForSlot(items, dateKey, slot);
     if (!existing) return undefined;
-    if (excludeId && existing._id === excludeId) return undefined;
+    if (excludeId && String(existing._id) === String(excludeId)) return undefined;
     return existing;
 }

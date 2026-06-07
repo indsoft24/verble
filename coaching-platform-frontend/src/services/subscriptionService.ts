@@ -80,7 +80,14 @@ export const getSubscriptionPlansForCourse = async (courseId: string): Promise<S
 export const getMySubscriptionDetailsUser = async (): Promise<UserSubscriptionInstance[]> => {
     try {
         const response = await apiClient.get('/subscriptions/my-subscription');
-        return response.data.data.activeSubscriptions;
+        const data = response.data?.data;
+        if (data?.activeSubscriptions) {
+            return data.activeSubscriptions;
+        }
+        if (data?.subscriptions) {
+            return data.subscriptions;
+        }
+        return [];
     } catch (error: any) {
         throw new Error(error.response?.data?.message || "Failed to fetch user's subscriptions.");
     }

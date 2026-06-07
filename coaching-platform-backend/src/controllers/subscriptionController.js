@@ -12,7 +12,7 @@ export const getActiveSubscriptionPlans = asyncHandler(async (req, res) => {
 });
 
 export const getSubscriptionPlanDetails = asyncHandler(async (req, res) => {
-    const plan = await SubscriptionPlan.findById(req.params.planId);
+    const plan = await SubscriptionPlan.findById(req.params.planId).populate('course', 'title description');
     if (!plan) {
         return res.status(404).json({ status: 'fail', message: 'Plan not found.' });
     }
@@ -29,11 +29,21 @@ export const getFilterOptions = asyncHandler(async (req, res) => {
     res.status(200).json({ status: 'success', data: { topics: topics.filter(Boolean) } });
 });
 
+const OWNED_SUBSCRIPTION_STATUSES = ['active', 'trial', 'future_active', 'pending_cancellation'];
+
 export const getMySubscription = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id).populate('subscriptions.planId');
+    const subscriptions = user?.subscriptions || [];
+    const now = new Date();
+    const activeSubscriptions = subscriptions.filter((sub) => {
+        if (!OWNED_SUBSCRIPTION_STATUSES.includes(sub.status)) return false;
+        if (sub.endDate && new Date(sub.endDate) < now) return false;
+        return true;
+    });
+
     res.status(200).json({
         status: 'success',
-        data: { subscriptions: user?.subscriptions || [] },
+        data: { subscriptions, activeSubscriptions },
     });
 });
 

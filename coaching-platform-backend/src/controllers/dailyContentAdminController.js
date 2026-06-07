@@ -14,6 +14,7 @@ import {
 import {
     buildScheduledDateRangeQuery,
     parseScheduleDateInput,
+    endOfScheduleDayExclusive,
 } from '../utils/dailyContentLocalDay.js';
 
 const PUZZLE_TYPES = ['SPOT_CORRECT_SENTENCE', 'GRAMMAR_FILL_BLANK'];
@@ -108,8 +109,7 @@ const findExistingForDaySlot = async (payload, excludeId = null) => {
     if (!dateValue) return null;
 
     const dayStart = parseScheduleDateInput(dateValue);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayEnd.getDate() + 1);
+    const dayEnd = endOfScheduleDayExclusive(dateValue);
 
     const query = {
         date: {
@@ -190,8 +190,7 @@ export const getAllDailyContentAdmin = asyncHandler(async (req, res) => {
         query.date = scheduledRange;
     } else if (date) {
         const dayStart = parseScheduleDateInput(String(date));
-        const dayEnd = new Date(dayStart);
-        dayEnd.setDate(dayEnd.getDate() + 1);
+        const dayEnd = endOfScheduleDayExclusive(String(date));
         query.date = { $gte: dayStart, $lt: dayEnd };
     }
 
@@ -310,7 +309,10 @@ export const updateDailyContentAdmin = asyncHandler(async (req, res) => {
         type: req.body.type ?? existing.type,
         level: req.body.level ?? existing.level,
         metadata: req.body.metadata ?? existing.metadata,
-        date: req.body.date ?? existing.date,
+        date:
+            req.body.date != null && String(req.body.date).trim() !== ''
+                ? req.body.date
+                : existing.date,
         sequenceNumber: req.body.sequenceNumber ?? existing.sequenceNumber,
         title: req.body.title,
         isActive: req.body.isActive ?? existing.isActive,

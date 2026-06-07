@@ -28,7 +28,11 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, parseISO, isValid } from 'date-fns';
-import { toScheduleDateKey, toScheduleDateParam } from '../utils/scheduleDateUtils';
+import {
+    toScheduleDateKey,
+    toScheduleDateParam,
+    parseScheduleDateLocal,
+} from '../utils/scheduleDateUtils';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -314,7 +318,10 @@ const AdminDailyContentPage: React.FC = () => {
 
     const formatSlotConflictMessage = useCallback((adminKey: AdminContentTypeKey, dateStr: string) => {
         const label = getCatalogEntry(adminKey).label;
-        const displayDate = format(parseISO(dateStr), 'MMMM d, yyyy');
+        const displayDate = format(
+            parseScheduleDateLocal(dateStr) ?? new Date(),
+            'MMMM d, yyyy'
+        );
         return `${label} is already scheduled on ${displayDate}. Choose a different date.`;
     }, []);
 
@@ -354,7 +361,12 @@ const AdminDailyContentPage: React.FC = () => {
             if (!newValue || !isValid(newValue) || !currentContent?.adminKey) return;
 
             const dateStr = format(newValue, 'yyyy-MM-dd');
-            if (currentContent.date === dateStr) return;
+            const previousDate = currentContent.date;
+            if (previousDate === dateStr) return;
+
+            setCurrentContent((prev) => (prev ? { ...prev, date: dateStr } : null));
+            setFormError(null);
+            setSlotDuplicateMessage(null);
 
             try {
                 const conflict = await checkSlotAssignable(
@@ -363,19 +375,25 @@ const AdminDailyContentPage: React.FC = () => {
                     currentContent._id
                 );
                 if (conflict) {
+                    setCurrentContent((prev) =>
+                        prev ? { ...prev, date: previousDate } : null
+                    );
                     setFormError(formatSlotConflictMessage(currentContent.adminKey, dateStr));
-                    setSlotDuplicateMessage(null);
-                    return;
                 }
-
-                setFormError(null);
-                setSlotDuplicateMessage(null);
-                setCurrentContent((prev) => (prev ? { ...prev, date: dateStr } : null));
             } catch {
+                setCurrentContent((prev) =>
+                    prev ? { ...prev, date: previousDate } : null
+                );
                 setFormError('Could not verify date availability. Please try again.');
             }
         },
-        [currentContent, checkSlotAssignable, formatSlotConflictMessage]
+        [
+            currentContent?.adminKey,
+            currentContent?._id,
+            currentContent?.date,
+            checkSlotAssignable,
+            formatSlotConflictMessage,
+        ]
     );
 
     const handleOpenDialog = (contentItem?: DailyContent, initialAdminKey?: AdminContentTypeKey) => {
@@ -502,7 +520,18 @@ const AdminDailyContentPage: React.FC = () => {
             }
         }
 
-        const payload = { ...currentContent };
+        const catalogEntry = getCatalogEntry(currentContent.adminKey);
+        const payload: CreateDailyContentPayload & { sequenceNumber?: number } = {
+            type: currentContent.type || catalogEntry.apiType,
+            date: toScheduleDateKey(currentContent.date),
+            level: currentContent.level || catalogEntry.level,
+            title: currentContent.title || '',
+            metadata: currentContent.metadata || {},
+            isActive: currentContent.isActive ?? true,
+            ...(currentContent.sequenceNumber != null
+                ? { sequenceNumber: currentContent.sequenceNumber }
+                : {}),
+        };
         if (payload.type === 'PUZZLE' && payload.metadata?.questions) {
             payload.metadata = {
                 ...payload.metadata,
@@ -554,7 +583,7 @@ const AdminDailyContentPage: React.FC = () => {
                     })),
                 participants: [p1, p2].filter(Boolean),
             };
-            if (payload.adminKey !== 'PROFESSIONAL_CONVERSATION') {
+            if (currentContent.adminKey !== 'PROFESSIONAL_CONVERSATION') {
                 const scenario = String(payload.metadata.scenarioTitle || payload.title || '').trim();
                 if (scenario) {
                     payload.title = scenario;
@@ -847,7 +876,10 @@ const AdminDailyContentPage: React.FC = () => {
                             Object.entries(contentByDate).map(([date, items]) => (
                                 <Box key={date} sx={{ mb: 4 }}>
                                     <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                                        {format(parseISO(date), 'EEEE, MMMM d, yyyy')}
+                                        {format(
+                                            parseScheduleDateLocal(date) ?? new Date(),
+                                            'EEEE, MMMM d, yyyy'
+                                        )}
                                     </Typography>
                                     <Grid container spacing={2}>
                                         {items.map((item) => {
@@ -1001,9 +1033,12 @@ const AdminDailyContentPage: React.FC = () => {
                                     <LocalizationProvider dateAdapter={AdapterDateFns}>
                                         <DatePicker
                                             label="Date"
-                                            value={currentContent.date ? parseISO(currentContent.date) : null}
+                                            value={parseScheduleDateLocal(currentContent.date)}
                                             onChange={(newValue) => {
                                                 void handleDatePickerChange(newValue);
+                                            }}
+                                            slotProps={{
+                                                textField: { required: true },
                                             }}
                                             sx={{ width: '100%' }}
                                         />

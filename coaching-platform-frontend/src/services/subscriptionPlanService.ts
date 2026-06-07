@@ -154,17 +154,36 @@ export const subscribeToPlanUser = async (planId: string): Promise<SubscribeToPl
 /**
  * Fetches the current logged-in user's active subscription details.
  */
-export const getMySubscriptionDetailsUser = async (): Promise<UserSubscriptionInstance[] | null> => {
+export const getMySubscriptionDetailsUser = async (): Promise<UserSubscriptionInstance[]> => {
     try {
         const response = await apiClient.get<GetMySubscriptionResponse>('/subscriptions/my-subscription');
-        if (response.data?.status === 'success' && response.data?.data?.activeSubscriptions) {
-            return response.data.data.activeSubscriptions;
+        if (response.data?.status === 'success' && response.data?.data) {
+            const { activeSubscriptions, subscriptions } = response.data.data as {
+                activeSubscriptions?: UserSubscriptionInstance[];
+                subscriptions?: UserSubscriptionInstance[];
+            };
+            if (activeSubscriptions?.length) return activeSubscriptions;
+            if (subscriptions?.length) return subscriptions;
+            return [];
         }
-        // Response not successful, return null
-        return null;
+        return [];
     } catch (error) {
         throw error;
     }
+};
+
+export const getSubscriptionPlanById = async (planId: string): Promise<SubscriptionPlanPublic & {
+    image?: string;
+    course?: { _id: string; title: string; description?: string };
+}> => {
+    const response = await apiClient.get<{
+        status: string;
+        data: { plan: SubscriptionPlanPublic & { image?: string; course?: { _id: string; title: string; description?: string } } };
+    }>(`/subscription-plans/${planId}`);
+    if (response.data?.status === 'success' && response.data.data?.plan) {
+        return response.data.data.plan;
+    }
+    throw new Error('Failed to fetch plan details.');
 };
 
 /**

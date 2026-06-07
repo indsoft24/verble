@@ -1,7 +1,12 @@
 import asyncHandler from 'express-async-handler';
 import mongoose from 'mongoose';
 import DailyContent from '../models/DailyContent.js';
-import { getLocalTodayBounds, isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
+import {
+    getLocalTodayBounds,
+    isDailyContentScheduledForLocalToday,
+    parseScheduleDateInput,
+    endOfScheduleDayExclusive,
+} from '../utils/dailyContentLocalDay.js';
 import { attachSequenceNumbers } from '../utils/contentSequenceUtils.js';
 
 const getUnlockedLevelsForUser = (user) => {
@@ -21,11 +26,8 @@ export const getDailyContent = asyncHandler(async (req, res) => {
     let end;
 
     if (date) {
-        const d = new Date(date);
-        start = new Date(d);
-        start.setHours(0, 0, 0, 0);
-        end = new Date(start);
-        end.setDate(end.getDate() + 1);
+        start = parseScheduleDateInput(String(date));
+        end = endOfScheduleDayExclusive(String(date));
     } else {
         ({ start, end } = getLocalTodayBounds());
     }
