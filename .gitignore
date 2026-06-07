@@ -17,3 +17,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# VPS migration backups (contain DB dumps, media, secrets)
+backups/

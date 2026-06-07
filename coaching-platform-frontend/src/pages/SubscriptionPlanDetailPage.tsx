@@ -49,17 +49,141 @@ type PlanDetail = SubscriptionPlanPublic & {
 };
 
 /** Consistent spacing scale for this page */
-const PAGE_GAP = 3;
-const CARD_PAD = { xs: 2.5, sm: 3, md: 3.5 } as const;
+const PAGE_GAP = { xs: 2, sm: 2.5, md: 3 } as const;
+const CARD_PAD = { xs: 2.25, sm: 3, md: 3.5 } as const;
+/** Extra inset on top of UserLayout mobile padding (layout xs:2 + this ≈ 28px total) */
+const MOBILE_GUTTER = { xs: 1.5, sm: 0 } as const;
+const MOBILE_FOOTER_PX = { xs: 3.5, sm: 2 } as const;
 
 const sectionCardSx = (tierAccent: string, tinted = false) => ({
     p: CARD_PAD,
-    borderRadius: 3,
+    borderRadius: { xs: 2.5, sm: 3 },
     border: '1px solid',
     borderColor: tinted ? alpha(tierAccent, 0.22) : 'divider',
     bgcolor: tinted ? alpha(tierAccent, 0.04) : 'background.paper',
     boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
 });
+
+type StatItem = {
+    icon: React.ComponentType<{ sx?: object }>;
+    label: string;
+    value: string;
+    shortValue?: string;
+};
+
+function PlanStatsGrid({ items, tierAccent, variant }: { items: StatItem[]; tierAccent: string; variant: 'desktop' | 'mobile' }) {
+    if (variant === 'mobile') {
+        return (
+            <Paper elevation={0} sx={sectionCardSx(tierAccent)}>
+                <Grid container alignItems="stretch">
+                    {items.map((stat, index) => (
+                        <Grid
+                            key={stat.label}
+                            size={4}
+                            sx={{
+                                px: 1,
+                                py: 0.5,
+                                textAlign: 'center',
+                                borderRight: index < items.length - 1 ? '1px solid' : 'none',
+                                borderColor: 'divider',
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 1.5,
+                                    mx: 'auto',
+                                    mb: 0.75,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    bgcolor: alpha(tierAccent, 0.1),
+                                }}
+                            >
+                                <stat.icon sx={{ color: tierAccent, fontSize: 20 }} />
+                            </Box>
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ fontWeight: 700, letterSpacing: 0.4, display: 'block', lineHeight: 1.2 }}
+                            >
+                                {stat.label}
+                            </Typography>
+                            <Typography
+                                variant="caption"
+                                fontWeight={700}
+                                sx={{
+                                    display: 'block',
+                                    mt: 0.35,
+                                    lineHeight: 1.35,
+                                    fontSize: '0.7rem',
+                                }}
+                            >
+                                {stat.shortValue ?? stat.value}
+                            </Typography>
+                        </Grid>
+                    ))}
+                </Grid>
+            </Paper>
+        );
+    }
+
+    return (
+        <Grid container spacing={2}>
+            {items.map((stat) => (
+                <Grid key={stat.label} size={{ xs: 12, sm: 4 }}>
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            ...sectionCardSx(tierAccent),
+                            height: '100%',
+                            minHeight: 108,
+                            display: 'flex',
+                            flexDirection: 'column',
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                bgcolor: alpha(tierAccent, 0.1),
+                                mb: 1.5,
+                            }}
+                        >
+                            <stat.icon sx={{ color: tierAccent, fontSize: 22 }} />
+                        </Box>
+                        <Typography
+                            variant="overline"
+                            color="text.secondary"
+                            sx={{ fontWeight: 700, letterSpacing: 0.6, lineHeight: 1.4 }}
+                        >
+                            {stat.label}
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            sx={{
+                                mt: 0.5,
+                                lineHeight: 1.45,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                            }}
+                        >
+                            {stat.value}
+                        </Typography>
+                    </Paper>
+                </Grid>
+            ))}
+        </Grid>
+    );
+}
 
 const SubscriptionPlanDetailPage: React.FC = () => {
     const { planId } = useParams<{ planId: string }>();
@@ -208,18 +332,26 @@ const SubscriptionPlanDetailPage: React.FC = () => {
         }
     };
 
-    const statItems = plan
+    const accessTitle = plan?.course?.title || 'Platform content';
+    const statItems: StatItem[] = plan
         ? [
-              { icon: AccessTimeRoundedIcon, label: 'Duration', value: durationLabel },
+              {
+                  icon: AccessTimeRoundedIcon,
+                  label: 'Duration',
+                  value: durationLabel,
+                  shortValue: durationLabel,
+              },
               {
                   icon: SchoolRoundedIcon,
                   label: 'Access',
-                  value: plan.course?.title || 'Platform content',
+                  value: accessTitle,
+                  shortValue: plan.course ? 'Full course' : 'Platform',
               },
               {
                   icon: CheckCircleRoundedIcon,
                   label: 'Features',
                   value: `${plan.features?.length ?? 0} included`,
+                  shortValue: `${plan.features?.length ?? 0}`,
               },
           ]
         : [];
@@ -255,7 +387,13 @@ const SubscriptionPlanDetailPage: React.FC = () => {
     }
 
     return (
-        <Box sx={{ pb: { xs: 12, md: 4 }, width: '100%' }}>
+        <Box
+            sx={{
+                pb: { xs: 'calc(88px + env(safe-area-inset-bottom))', md: 4 },
+                width: '100%',
+                px: MOBILE_GUTTER,
+            }}
+        >
             <Stack spacing={PAGE_GAP}>
                 {/* Nav */}
                 <Button
@@ -294,23 +432,23 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                 <Paper
                     elevation={0}
                     sx={{
-                        borderRadius: 4,
+                        borderRadius: { xs: 2.5, sm: 4 },
                         overflow: 'hidden',
                         background: tier.gradient,
                         border: '2px solid',
                         borderColor: alpha(tier.accent, 0.35),
-                        boxShadow: `0 12px 40px ${alpha(tier.accent, 0.12)}`,
+                        boxShadow: { xs: `0 4px 20px ${alpha(tier.accent, 0.1)}`, md: `0 12px 40px ${alpha(tier.accent, 0.12)}` },
                     }}
                 >
                     <Box sx={{ p: CARD_PAD }}>
                         <Stack
                             direction={{ xs: 'column', md: 'row' }}
-                            spacing={3}
+                            spacing={{ xs: 2, md: 3 }}
                             alignItems={{ xs: 'stretch', md: 'center' }}
                             justifyContent="space-between"
                         >
                             <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2, gap: 1 }}>
+                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: { xs: 1.5, sm: 2 }, gap: 1 }}>
                                     <Chip
                                         icon={<AutoAwesomeRoundedIcon sx={{ fontSize: '16px !important' }} />}
                                         label={durationLabel}
@@ -334,7 +472,7 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                         fontWeight: 800,
                                         color: '#0f172a',
                                         lineHeight: 1.15,
-                                        fontSize: { xs: '1.65rem', sm: '1.85rem', md: '2.15rem' },
+                                        fontSize: { xs: '1.5rem', sm: '1.85rem', md: '2.15rem' },
                                     }}
                                 >
                                     {plan.name}
@@ -382,64 +520,14 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                     </Box>
                 </Paper>
 
-                {/* Quick stats — full width row */}
-                <Grid container spacing={2}>
-                    {statItems.map((stat) => (
-                        <Grid key={stat.label} size={{ xs: 12, sm: 4 }}>
-                            <Paper
-                                elevation={0}
-                                sx={{
-                                    ...sectionCardSx(tier.accent),
-                                    height: '100%',
-                                    minHeight: { xs: 'auto', sm: 108 },
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'flex-start',
-                                }}
-                            >
-                                <Box
-                                    sx={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 2,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        bgcolor: alpha(tier.accent, 0.1),
-                                        mb: 1.5,
-                                    }}
-                                >
-                                    <stat.icon sx={{ color: tier.accent, fontSize: 22 }} />
-                                </Box>
-                                <Typography
-                                    variant="overline"
-                                    color="text.secondary"
-                                    sx={{ fontWeight: 700, letterSpacing: 0.6, lineHeight: 1.4 }}
-                                >
-                                    {stat.label}
-                                </Typography>
-                                <Typography
-                                    variant="body2"
-                                    fontWeight={700}
-                                    sx={{
-                                        mt: 0.5,
-                                        lineHeight: 1.45,
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
-                                        overflow: 'hidden',
-                                    }}
-                                >
-                                    {stat.value}
-                                </Typography>
-                            </Paper>
-                        </Grid>
-                    ))}
-                </Grid>
+                {/* Desktop stats */}
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                    <PlanStatsGrid items={statItems} tierAccent={tier.accent} variant="desktop" />
+                </Box>
 
-                {/* Main body */}
-                <Grid container spacing={3} alignItems="flex-start">
-                    <Grid size={{ xs: 12, lg: 5 }}>
+                {/* Main body — image before details on mobile */}
+                <Grid container spacing={{ xs: 2, md: 3 }} alignItems="flex-start">
+                    <Grid size={{ xs: 12, lg: 5 }} sx={{ order: { xs: 1, lg: 1 } }}>
                         <Paper
                             elevation={0}
                             sx={{
@@ -450,7 +538,7 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                 top: { lg: 24 },
                             }}
                         >
-                            <Box sx={{ position: 'relative', aspectRatio: { xs: '16/10', sm: '5/4', lg: '4/5' } }}>
+                            <Box sx={{ position: 'relative', aspectRatio: { xs: '4/3', sm: '5/4', lg: '4/5' } }}>
                                 <LazyImage
                                     src={getImageForPlan(plan)}
                                     alt={plan.name}
@@ -479,8 +567,12 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                         </Paper>
                     </Grid>
 
-                    <Grid size={{ xs: 12, lg: 7 }}>
+                    <Grid size={{ xs: 12, lg: 7 }} sx={{ order: { xs: 2, lg: 2 } }}>
                         <Stack spacing={PAGE_GAP}>
+                            <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+                                <PlanStatsGrid items={statItems} tierAccent={tier.accent} variant="mobile" />
+                            </Box>
+
                             {plan.course && (
                                 <Paper elevation={0} sx={sectionCardSx(tier.accent, true)}>
                                     <Typography
@@ -523,10 +615,36 @@ const SubscriptionPlanDetailPage: React.FC = () => {
 
                             {plan.features && plan.features.length > 0 && (
                                 <Paper elevation={0} sx={sectionCardSx(tier.accent)}>
-                                    <Typography variant="h6" sx={{ fontWeight: 800, mb: 2.5 }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>
                                         What&apos;s included
                                     </Typography>
-                                    <Grid container spacing={2}>
+
+                                    {/* Mobile: clean vertical list */}
+                                    <Stack
+                                        spacing={0}
+                                        divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+                                        sx={{ display: { xs: 'flex', sm: 'none' } }}
+                                    >
+                                        {plan.features.map((feature, index) => (
+                                            <Stack
+                                                key={index}
+                                                direction="row"
+                                                spacing={1.5}
+                                                alignItems="flex-start"
+                                                sx={{ py: 1.75 }}
+                                            >
+                                                <CheckCircleRoundedIcon
+                                                    sx={{ fontSize: 20, color: tier.accent, mt: 0.15, flexShrink: 0 }}
+                                                />
+                                                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.55 }}>
+                                                    {feature}
+                                                </Typography>
+                                            </Stack>
+                                        ))}
+                                    </Stack>
+
+                                    {/* Tablet+ : two-column grid */}
+                                    <Grid container spacing={2} sx={{ display: { xs: 'none', sm: 'flex' } }}>
                                         {plan.features.map((feature, index) => (
                                             <Grid key={index} size={{ xs: 12, sm: 6 }}>
                                                 <Stack
@@ -541,18 +659,9 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                                     }}
                                                 >
                                                     <CheckCircleRoundedIcon
-                                                        sx={{
-                                                            fontSize: 22,
-                                                            color: tier.accent,
-                                                            mt: 0.1,
-                                                            flexShrink: 0,
-                                                        }}
+                                                        sx={{ fontSize: 22, color: tier.accent, mt: 0.1, flexShrink: 0 }}
                                                     />
-                                                    <Typography
-                                                        variant="body2"
-                                                        color="text.secondary"
-                                                        sx={{ lineHeight: 1.55 }}
-                                                    >
+                                                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.55 }}>
                                                         {feature}
                                                     </Typography>
                                                 </Stack>
@@ -647,15 +756,21 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                     </Grid>
                 </Grid>
 
-                <Alert severity="info" icon={<LockRoundedIcon />} sx={{ borderRadius: 2 }}>
-                    Payments are processed securely via Razorpay. If checkout fails, your admin may need to
-                    update live API keys in server settings.
+                <Alert
+                    severity="info"
+                    icon={<LockRoundedIcon />}
+                    sx={{
+                        borderRadius: 2,
+                        '& .MuiAlert-message': { fontSize: { xs: '0.8rem', sm: '0.875rem' }, lineHeight: 1.5 },
+                    }}
+                >
+                    Payments are processed securely via Razorpay.
                 </Alert>
             </Stack>
 
-            {/* Mobile sticky CTA */}
+            {/* Mobile sticky CTA — inset matches page gutters */}
             <Paper
-                elevation={12}
+                elevation={16}
                 sx={{
                     display: { xs: 'block', md: 'none' },
                     position: 'fixed',
@@ -663,50 +778,61 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                     left: 0,
                     right: 0,
                     zIndex: 1100,
-                    px: 2,
-                    py: 1.75,
-                    pb: 'max(14px, env(safe-area-inset-bottom))',
                     borderTop: '1px solid',
                     borderColor: 'divider',
                     bgcolor: 'background.paper',
+                    boxShadow: '0 -8px 24px rgba(15, 23, 42, 0.08)',
                 }}
             >
-                <Stack direction="row" spacing={2} alignItems="center">
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="subtitle1" fontWeight={800} color={tier.accent} noWrap>
-                            {formatPrice(plan.price, plan.currency)}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                            {durationLabel}
-                        </Typography>
-                    </Box>
-                    <Button
-                        variant="contained"
-                        size="medium"
-                        onClick={
-                            isAuthenticated
-                                ? handleSubscribe
-                                : () => navigate(`/login?redirectTo=/subscription-plans/${planId}`)
-                        }
-                        disabled={
-                            subscribeLoading || isOwned || ((!plan.price || plan.price <= 0) && isAuthenticated)
-                        }
-                        startIcon={isOwned ? <VerifiedRoundedIcon /> : <ShoppingCartRoundedIcon />}
-                        sx={{
-                            fontWeight: 700,
-                            borderRadius: 2,
-                            bgcolor: isOwned ? 'success.main' : tier.accent,
-                            whiteSpace: 'nowrap',
-                            px: 2.5,
-                        }}
-                    >
-                        {isOwned
-                            ? 'Subscribed'
-                            : subscribeLoading
-                              ? <CircularProgress size={20} color="inherit" />
-                              : 'Subscribe'}
-                    </Button>
-                </Stack>
+                <Box
+                    sx={{
+                        px: MOBILE_FOOTER_PX,
+                        pt: 1.75,
+                        pb: 'max(16px, env(safe-area-inset-bottom))',
+                        maxWidth: 1600,
+                        mx: 'auto',
+                    }}
+                >
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        <Box sx={{ flex: 1, minWidth: 0, pl: 0.5 }}>
+                            <Typography variant="h6" fontWeight={800} color={tier.accent} lineHeight={1.1}>
+                                {formatPrice(plan.price, plan.currency)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
+                                {durationLabel} · one-time
+                            </Typography>
+                        </Box>
+                        <Button
+                            variant="contained"
+                            size="large"
+                            onClick={
+                                isAuthenticated
+                                    ? handleSubscribe
+                                    : () => navigate(`/login?redirectTo=/subscription-plans/${planId}`)
+                            }
+                            disabled={
+                                subscribeLoading || isOwned || ((!plan.price || plan.price <= 0) && isAuthenticated)
+                            }
+                            startIcon={isOwned ? <VerifiedRoundedIcon /> : <ShoppingCartRoundedIcon />}
+                            sx={{
+                                fontWeight: 700,
+                                borderRadius: 2,
+                                bgcolor: isOwned ? 'success.main' : tier.accent,
+                                whiteSpace: 'nowrap',
+                                px: 3,
+                                py: 1.25,
+                                minHeight: 48,
+                                boxShadow: `0 4px 14px ${alpha(tier.accent, 0.35)}`,
+                            }}
+                        >
+                            {isOwned
+                                ? 'Subscribed'
+                                : subscribeLoading
+                                  ? <CircularProgress size={20} color="inherit" />
+                                  : 'Subscribe'}
+                        </Button>
+                    </Stack>
+                </Box>
             </Paper>
         </Box>
     );
