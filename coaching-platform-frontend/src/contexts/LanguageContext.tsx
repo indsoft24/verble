@@ -1,5 +1,5 @@
 // src/contexts/LanguageContext.tsx
-import { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { setStoredLanguage, type SupportedLanguage } from '../i18n/config';
 
@@ -39,19 +39,18 @@ export function LanguageProvider({
         setLanguageModalOpen(true);
     }, [setLanguageModalOpen]);
 
-    const value: LanguageContextType = {
-        language,
-        setLanguage,
-        openLanguageModal,
-        setLanguageModalOpen,
-        isLanguageModalOpen,
-    };
-
-    return (
-        <LanguageContext.Provider value={value}>
-            {children}
-        </LanguageContext.Provider>
+    const value = useMemo<LanguageContextType>(
+        () => ({
+            language,
+            setLanguage,
+            openLanguageModal,
+            setLanguageModalOpen,
+            isLanguageModalOpen,
+        }),
+        [language, setLanguage, openLanguageModal, setLanguageModalOpen, isLanguageModalOpen]
     );
+
+    return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {

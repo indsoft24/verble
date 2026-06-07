@@ -139,12 +139,25 @@ export const getDisplayMembershipLevel = (user: User): MembershipTier => {
     return 'FREE';
 };
 
-export const getStreakForDisplayLevel = (user: User): number => {
-    const level = getDisplayMembershipLevel(user);
-    if (level === 'FULL_COURSE' || level === 'GOLD') {
-        return user.streaks?.silver?.current ?? user.streaks?.bronze?.current ?? user.streaks?.free?.current ?? 0;
+/** Active challenge streak bucket (matches backend GamificationService._resolveActiveStreakKey). */
+export const getActiveChallengeStreakKey = (user: User): 'free' | 'bronze' | 'silver' => {
+    const fromMembership = STREAK_KEYS[user.membershipLevel as 'FREE' | 'BRONZE' | 'SILVER'];
+    if (fromMembership) {
+        return fromMembership;
     }
-    const key = STREAK_KEYS[level as 'FREE' | 'BRONZE' | 'SILVER'];
+    const freeCurrent = user.streaks?.free?.current ?? 0;
+    if (freeCurrent < CHALLENGE_TARGETS.FREE) {
+        return 'free';
+    }
+    const bronzeCurrent = user.streaks?.bronze?.current ?? 0;
+    if (bronzeCurrent < CHALLENGE_TARGETS.BRONZE) {
+        return 'bronze';
+    }
+    return 'silver';
+};
+
+export const getStreakForDisplayLevel = (user: User): number => {
+    const key = getActiveChallengeStreakKey(user);
     return user.streaks?.[key]?.current ?? 0;
 };
 

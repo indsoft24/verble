@@ -56,7 +56,7 @@ function normalizeStoryWords(metadata: Record<string, unknown> | undefined) {
 interface StoryCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
-    onSubmissionSuccess?: () => void;
+    onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
     onNavigateToVocab?: () => void;
 }
 
@@ -333,7 +333,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
                 void getUserStorySubmission(currentContent._id).then(setExistingSubmission);
-                onSubmissionSuccess?.();
+                onSubmissionSuccess?.(response.data.data.progress);
             } else {
                 setSubmitStatus({
                     type: 'error',

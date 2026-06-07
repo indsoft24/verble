@@ -1,4 +1,4 @@
-import  { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning';
 
@@ -33,11 +33,12 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         }, duration); 
     }, [removeNotification]);
 
-    return (
-        <NotificationContext.Provider value={{ notifications, addNotification, removeNotification }}>
-            {children}
-        </NotificationContext.Provider>
+    const value = useMemo(
+        () => ({ notifications, addNotification, removeNotification }),
+        [notifications, addNotification, removeNotification]
     );
+
+    return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 };
 
 export const useNotification = () => {

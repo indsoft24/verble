@@ -10,6 +10,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import slugify from 'slugify';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 import TiptapEditor from '../components/features/blog/LazyTiptapEditor';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,10 +30,11 @@ interface AttachmentToInsert {
 
 const AdminCreateEditBlogPostPage: React.FC = () => {
     const { postId } = useParams<{ postId?: string }>();
+    const isEditMode = Boolean(postId);
+    useAdminLayoutPage({ title: isEditMode ? 'Edit Blog Post' : 'Create Blog Post' });
     const navigate = useNavigate();
     const { user: adminUser } = useAuth();
     const editorRef = useRef<any>(null);
-    const isEditMode = Boolean(postId);
 
     const [title, setTitle] = useState('');
     const [slug, setSlug] = useState('');

@@ -178,66 +178,29 @@ export const submitSceneDescription = asyncHandler(async (req, res) => {
 
 
 
-    let participationPointsAwarded = 0;
-
-    let levelUpResult;
-
-
-
-    try {
-
-        const gamificationResult = await GamificationService.recordActivity(
-
+    const { participationPointsAwarded, progress, levelUp: levelUpResult } =
+        await GamificationService.runParticipationGamification(
             req.user._id.toString(),
-
             sceneId,
-
             PARTICIPATION_POINTS
-
         );
 
-        participationPointsAwarded = gamificationResult?.success ? PARTICIPATION_POINTS : 0;
-
-        levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
-
-    } catch {
-
-        // submission saved even if gamification fails
-
-    }
-
-
-
     res.status(201).json({
-
         status: 'success',
-
         message: 'Scene summaries submitted successfully!',
-
         data: {
-
             submission: {
-
                 _id: submission._id,
-
                 summaries: submission.summaries,
-
                 evaluationPoints: 0,
-
                 submittedAt: submission.createdAt,
-
                 isCorrect: submission.isCorrect,
-
             },
-
             participationPointsAwarded,
-
             evaluationPoints: 0,
-
+            progress,
             levelUp: levelUpResult,
-
         },
-
     });
 
 });

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 import { stripHtmlTags } from '../utils/htmlUtils';
 import {
     Container, Typography, Button, CircularProgress, Alert, Box, Paper, Tooltip,
@@ -62,6 +62,7 @@ const gridDateFormatter = (value: string | undefined | null): string => {
 };
 
 const AdminCoursesListPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Courses' });
     const [coursesForGrid, setCoursesForGrid] = useState<CourseDataGridRow[]>([]);
     const [allExamCategories, setAllExamCategories] = useState<ExamCategory[]>([]);
 
@@ -370,17 +371,12 @@ const AdminCoursesListPage: React.FC = () => {
     ], [navigate]); 
     
 
-    if (isLoading) return (
-        <AdminLayout title="Courses">
-            <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
+    if (isLoading) return (            <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
                 <CircularProgress />
             </Container>
-        </AdminLayout>
     );
 
-    return (
-        <AdminLayout title="Courses">
-            <Container maxWidth="xl">
+    return (            <Container maxWidth="xl">
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Typography variant="h5" component="h1" fontWeight={600}>
                         Manage Courses
@@ -633,7 +629,6 @@ const AdminCoursesListPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 

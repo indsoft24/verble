@@ -3,6 +3,9 @@ import User from '../models/User.js';
 import DailyContent from '../models/DailyContent.js';
 import mongoose from 'mongoose';
 import { appendLedgerEntry } from './scoreLedgerService.js';
+import { getLocalTodayBounds } from '../utils/dailyContentLocalDay.js';
+
+const CHALLENGE_TARGETS = { free: 30, bronze: 60, silver: 90 };
 
 class GamificationService {
     /**
@@ -29,15 +32,12 @@ class GamificationService {
                 throw new Error('Content not found');
             }
 
-            // Get today's date (normalized to start of day)
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const { start: todayStart, end: todayEnd } = getLocalTodayBounds();
 
-            // Check if already completed today
-            const todayProgress = user.dailyProgress.find(progress => {
-                const progressDate = new Date(progress.date);
-                progressDate.setHours(0, 0, 0, 0);
-                return progressDate.getTime() === today.getTime();
+            // Check if already completed today (server local calendar day)
+            const todayProgress = user.dailyProgress.find((progress) => {
+                const t = new Date(progress.date).getTime();
+                return t >= todayStart.getTime() && t < todayEnd.getTime();
             });
 
             if (todayProgress) {
@@ -50,7 +50,8 @@ class GamificationService {
                     return {
                         success: false,
                         message: 'Activity already completed today',
-                        user
+                        user,
+                        progress: this.buildUserProgressSnapshot(user),
                     };
                 }
 
@@ -60,22 +61,22 @@ class GamificationService {
             } else {
                 // Create new daily progress entry
                 user.dailyProgress.push({
-                    date: today,
+                    date: todayStart,
                     activitiesCompleted: [contentId],
-                    score: points
+                    score: points,
                 });
             }
 
             // Award points
             user.points = (user.points || 0) + (points || 0);
 
-            // Update streaks based on user's membership level
-            const levelKey = this._getLevelKey(user.membershipLevel);
+            const levelKey = this._resolveActiveStreakKey(user);
             if (levelKey) {
-                await this._updateStreak(user, levelKey);
+                this._updateStreak(user, levelKey, todayStart);
             }
 
-            // Save user
+            user.markModified('streaks');
+            user.markModified('dailyProgress');
             await user.save();
 
             const activityTitle = content.title || content.contentType || 'Daily activity';
@@ -96,11 +97,60 @@ class GamificationService {
             return {
                 success: true,
                 message: 'Activity recorded successfully',
-                user
+                user,
+                progress: this.buildUserProgressSnapshot(user),
             };
         } catch (error) {
             throw new Error(`Failed to record activity: ${error.message}`);
         }
+    }
+
+    /**
+     * Run participation gamification after a submission (streak, points, level-up).
+     * @returns {{ participationPointsAwarded: number, progress: object|null, levelUp: object|null }}
+     */
+    static async runParticipationGamification(userId, contentId, points = 10) {
+        let participationPointsAwarded = 0;
+        let levelUp = null;
+        let progress = null;
+
+        try {
+            const gamificationResult = await this.recordActivity(userId, contentId, points);
+            participationPointsAwarded = gamificationResult?.success ? points : 0;
+            progress = gamificationResult?.progress ?? null;
+            levelUp = await this.checkLevelUp(userId);
+            const fresh = await User.findById(userId);
+            if (fresh) {
+                progress = this.buildUserProgressSnapshot(fresh);
+            }
+        } catch (err) {
+            console.error('[Gamification] Participation failed:', {
+                userId,
+                contentId,
+                error: err?.message || err,
+            });
+            try {
+                const fresh = await User.findById(userId);
+                if (fresh) {
+                    progress = this.buildUserProgressSnapshot(fresh);
+                }
+            } catch {
+                /* ignore */
+            }
+        }
+
+        return { participationPointsAwarded, progress, levelUp };
+    }
+
+    /** Snapshot for dashboard / auth patch after activity. */
+    static buildUserProgressSnapshot(user) {
+        const u = user?.toObject ? user.toObject() : user;
+        return {
+            streaks: u.streaks || {},
+            membershipLevel: u.membershipLevel || 'FREE',
+            unlockedLevels: u.unlockedLevels || ['FREE'],
+            points: u.points ?? 0,
+        };
     }
 
     /**
@@ -311,11 +361,10 @@ class GamificationService {
      * @param {Object} user - User document
      * @param {string} levelKey - Level key ('free', 'bronze', 'silver')
      */
-    static async _updateStreak(user, levelKey) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+    static _updateStreak(user, levelKey, todayStart = getLocalTodayBounds().start) {
+        const today = new Date(todayStart);
 
-        const streak = user.streaks[levelKey] || { current: 0, max: 0, lastActive: null };
+        const streak = user.streaks?.[levelKey] || { current: 0, max: 0, lastActive: null };
 
         if (!streak.lastActive) {
             // First time activity
@@ -360,16 +409,36 @@ class GamificationService {
     }
 
     /**
-     * Get the streak key based on membership level
+     * Streak bucket for challenge progression (includes GOLD / FULL_COURSE subscribers).
      * @private
-     * @param {string} membershipLevel - User's membership level
-     * @returns {string|null} Streak key or null
+     */
+    static _resolveActiveStreakKey(user) {
+        const fromLevel = this._getLevelKey(user.membershipLevel);
+        if (fromLevel) {
+            return fromLevel;
+        }
+
+        const freeCurrent = user.streaks?.free?.current ?? 0;
+        if (freeCurrent < CHALLENGE_TARGETS.free) {
+            return 'free';
+        }
+        const bronzeCurrent = user.streaks?.bronze?.current ?? 0;
+        if (bronzeCurrent < CHALLENGE_TARGETS.bronze) {
+            return 'bronze';
+        }
+        return 'silver';
+    }
+
+    /**
+     * @private
+     * @param {string} membershipLevel
+     * @returns {string|null}
      */
     static _getLevelKey(membershipLevel) {
         const levelMap = {
-            'FREE': 'free',
-            'BRONZE': 'bronze',
-            'SILVER': 'silver'
+            FREE: 'free',
+            BRONZE: 'bronze',
+            SILVER: 'silver',
         };
         return levelMap[membershipLevel] || null;
     }

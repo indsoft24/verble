@@ -2,13 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { Box, useTheme, useMediaQuery, AppBar, Toolbar, Typography, IconButton, Breadcrumbs, Link } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import AdminSidebar from './AdminSidebar';
+import { useAdminLayoutConfig } from '../../contexts/AdminLayoutConfigContext';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
     title?: string;
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title: titleProp = 'Admin Panel' }) => {
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title: titleProp }) => {
+    const { title: contextTitle } = useAdminLayoutConfig();
+    const title = titleProp ?? contextTitle ?? 'Admin Panel';
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [sidebarOpen, setSidebarOpen] = useState(() => !isMobile);
@@ -18,8 +21,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title: titleProp = 
     }, [isMobile]);
 
     useEffect(() => {
-        document.title = titleProp ? `${titleProp} | Admin` : 'Admin Panel';
-    }, [titleProp]);
+        document.title = `${title} | Admin`;
+    }, [title]);
 
     const handleSidebarToggle = () => {
         setSidebarOpen(!sidebarOpen);
@@ -70,7 +73,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title: titleProp = 
                                         Admin
                                     </Link>
                                     <Typography color="text.primary" sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                                        {titleProp}
+                                        {title}
                                     </Typography>
                                 </Breadcrumbs>
                             </Box>

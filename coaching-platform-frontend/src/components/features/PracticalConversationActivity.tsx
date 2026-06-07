@@ -99,7 +99,7 @@ function ExchangePreview({
 
 export interface PracticalConversationActivityProps {
     data: DailyContent;
-    onSubmissionSuccess?: () => void;
+    onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
 }
 
 const PracticalConversationActivity: React.FC<PracticalConversationActivityProps> = ({
@@ -190,10 +190,10 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
         setIsSubmitting(true);
         setSubmitStatus(null);
         try {
-            await submitConversationPractice(data._id, normalized);
+            const { progress } = await submitConversationPractice(data._id, normalized);
             setSubmitStatus({ type: 'success', message: 'Practice saved! You earned participation points.' });
             await loadSubmission();
-            onSubmissionSuccess?.();
+            onSubmissionSuccess?.(progress);
         } catch (err: unknown) {
             const message =
                 (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||

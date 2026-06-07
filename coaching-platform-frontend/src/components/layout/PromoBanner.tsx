@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
     Alert,
     Box,
@@ -14,7 +15,7 @@ import {
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CloseIcon from '@mui/icons-material/Close';
-import { getPromoBanner, type PromoBanner as PromoBannerType } from '../../services/promoBannerService';
+import { getPromoBanner } from '../../services/promoBannerService';
 import { submitChatbotLead } from '../../services/leadService';
 
 const BANNER_HEIGHT_PX = 76;
@@ -27,7 +28,12 @@ function formatCountdown(secondsLeft: number): string {
 }
 
 const PromoBanner: React.FC = () => {
-    const [banner, setBanner] = useState<PromoBannerType | null>(null);
+    const { data: banner } = useQuery({
+        queryKey: ['promoBanner'],
+        queryFn: getPromoBanner,
+        staleTime: 1000 * 60 * 10,
+        gcTime: 1000 * 60 * 30,
+    });
     const [dismissed, setDismissed] = useState(false);
     const [countdownSeconds, setCountdownSeconds] = useState(0);
     const [endTime, setEndTime] = useState(0);
@@ -41,19 +47,12 @@ const PromoBanner: React.FC = () => {
     const [webinarLink, setWebinarLink] = useState('');
 
     useEffect(() => {
-        let mounted = true;
-        getPromoBanner().then((data) => {
-            if (!mounted || !data) return;
-            setBanner(data);
-            const minutes = Math.max(1, data.countdownMinutes || 5);
-            const end = Date.now() + minutes * 60 * 1000;
-            setEndTime(end);
-            setCountdownSeconds(minutes * 60);
-        });
-        return () => {
-            mounted = false;
-        };
-    }, []);
+        if (!banner) return;
+        const minutes = Math.max(1, banner.countdownMinutes || 5);
+        const end = Date.now() + minutes * 60 * 1000;
+        setEndTime(end);
+        setCountdownSeconds(minutes * 60);
+    }, [banner]);
 
     useEffect(() => {
         if (!banner || endTime <= 0) return;

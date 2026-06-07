@@ -47,6 +47,14 @@ export interface User {
     };
 }
 
+/** Gamification fields returned after activity submission (dashboard streak / path). */
+export interface UserProgressSnapshot {
+    streaks?: User['streaks'];
+    membershipLevel?: User['membershipLevel'];
+    unlockedLevels?: string[];
+    points?: number;
+}
+
 interface AuthResponseData {
     user: User;
 }

@@ -42,9 +42,10 @@ import {
 } from '../services/notificationService';
 import { useNotification } from '../contexts/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
-import UserLayout from '../components/layout/UserLayout';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const NotificationsPage: React.FC = () => {
+    useUserLayoutPage({ title: 'Notifications' });
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState<number>(0);
     const [filteredUnreadCount, setFilteredUnreadCount] = useState<number>(0);
@@ -216,16 +217,13 @@ const NotificationsPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <UserLayout title="Notifications">
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '40vh' }}>
                     <CircularProgress />
                 </Box>
-            </UserLayout>
         );
     }
 
     return (
-        <UserLayout title="Notifications">
         <Container maxWidth="md" disableGutters sx={{ px: { xs: 0, sm: 2 } }}>
             {/* Header with Actions */}
             <Box sx={{ mb: 3 }}>
@@ -458,7 +456,6 @@ const NotificationsPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
         </Container>
-        </UserLayout>
     );
 };
 

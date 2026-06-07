@@ -49,7 +49,7 @@ import {
 interface PuzzleCardProps {
     data: DailyContent;
     puzzleType: 'SPOT_CORRECT_SENTENCE' | 'GRAMMAR_FILL_BLANK';
-    onSubmissionSuccess?: () => void;
+    onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
     tierNav?: {
         accentColor: string;
         left?: NavFooterSlot;
@@ -201,7 +201,7 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
                 setHasSubmitted(true);
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
-                onSubmissionSuccess?.();
+                onSubmissionSuccess?.(response.data.data.progress);
             } else {
                 setSubmitStatus({
                     type: 'error',

@@ -55,6 +55,24 @@ export const areAllModuleVideosComplete = async (userId, moduleId) => {
     });
 };
 
+/** True when all published lessons were completed in completion cycle 0. */
+export const hasCompletedFirstModuleCycle = async (userId, moduleId) => {
+    const videos = await getModuleVideos(moduleId);
+    if (videos.length === 0) return true;
+
+    const progress = await VideoWatchProgress.find({
+        user: userId,
+        module: moduleId,
+        moduleCompletionCycle: 0,
+    }).lean();
+
+    const progressMap = new Map(progress.map((p) => [p.video.toString(), p]));
+    return videos.every((v) => {
+        const p = progressMap.get(v._id.toString());
+        return p && p.isCompleted;
+    });
+};
+
 export const countModuleVideoProgress = async (userId, moduleId) => {
     const videos = await getModuleVideos(moduleId);
     const totalVideos = videos.length;
@@ -81,8 +99,9 @@ export const countModuleVideoProgress = async (userId, moduleId) => {
 
 /**
  * Called when all lessons in a completion cycle are marked complete.
+ * @param {number} completedCycle - 0-based cycle that was just finished
  */
-export const onModuleCycleCompleted = async (userId, moduleId) => {
+export const onModuleCycleCompleted = async (userId, moduleId, completedCycle = 0) => {
     const activeQuiz = await getActiveQuizForModule(moduleId);
     if (!activeQuiz) return null;
 
@@ -90,7 +109,31 @@ export const onModuleCycleCompleted = async (userId, moduleId) => {
     if (!completion || completion.quizExhausted) return completion;
 
     completion.quizUnlocked = true;
+    if (completedCycle === 0) {
+        completion.firstCycleCompleted = true;
+    }
     await completion.save();
+    return completion;
+};
+
+const persistFirstCycleQuizUnlock = async (completion, userId, moduleId) => {
+    if (!completion || completion.quizExhausted) return completion;
+
+    const firstCycleDone =
+        Boolean(completion.firstCycleCompleted) || (await hasCompletedFirstModuleCycle(userId, moduleId));
+
+    if (!firstCycleDone) return completion;
+
+    let dirty = false;
+    if (!completion.firstCycleCompleted) {
+        completion.firstCycleCompleted = true;
+        dirty = true;
+    }
+    if (!completion.quizUnlocked) {
+        completion.quizUnlocked = true;
+        dirty = true;
+    }
+    if (dirty) await completion.save();
     return completion;
 };
 
@@ -105,10 +148,15 @@ export const resolveModuleQuizGate = async (userId, moduleId) => {
     const currentCycle = await getModuleCompletionCycle(userId, moduleId);
     const cyclesCompleted = currentCycle;
 
-    const completion = await ModuleCompletion.findOne({ user: userId, module: moduleId });
     const hasQuiz = Boolean(activeQuiz);
+
+    let completion = await ModuleCompletion.findOne({ user: userId, module: moduleId });
+    if (completion && hasQuiz) {
+        completion = await persistFirstCycleQuizUnlock(completion, userId, moduleId);
+    }
     const quizPassed = Boolean(completion?.quizPassed);
     const quizUnlocked = Boolean(completion?.quizUnlocked);
+    const firstCycleCompleted = Boolean(completion?.firstCycleCompleted);
     const quizExhausted = Boolean(completion?.quizExhausted);
     const quizFailedAttempts = completion?.quizFailedAttempts ?? 0;
     const maxQuizAttempts = maxCycles;
@@ -128,10 +176,12 @@ export const resolveModuleQuizGate = async (userId, moduleId) => {
         quizState = 'passed';
         canTakeQuiz = quizUnlocked && !quizExhausted;
         message = 'You passed the module quiz. You can review it or continue extra practice cycles.';
-    } else if (quizUnlocked) {
+    } else if (quizUnlocked || firstCycleCompleted) {
         quizState = 'ready';
         canTakeQuiz = true;
-        message = 'You have finished a learning cycle. Take the module quiz when you are ready.';
+        message = firstCycleCompleted
+            ? 'You completed the first lesson cycle. The module quiz stays available while you practice.'
+            : 'You have finished a learning cycle. Take the module quiz when you are ready.';
     } else {
         quizState = 'locked';
         const cycleLabel = currentCycle + 1;
@@ -158,6 +208,7 @@ export const resolveModuleQuizGate = async (userId, moduleId) => {
         needsAdminReset: quizExhausted && !quizPassed,
         quizUnlocked,
         quizPassed,
+        firstCycleCompleted,
         message,
     };
 };
@@ -192,8 +243,15 @@ export const handleQuizSubmissionFail = async (userId, moduleId) => {
     const completion = await ensureModuleCompletionRecord(userId, moduleId);
     if (!completion) return { exhausted: false };
 
+    const hadFirstCycle = await hasCompletedFirstModuleCycle(userId, moduleId);
+
     completion.quizFailedAttempts = (completion.quizFailedAttempts || 0) + 1;
-    completion.quizUnlocked = false;
+    if (hadFirstCycle || completion.firstCycleCompleted) {
+        completion.firstCycleCompleted = true;
+        completion.quizUnlocked = true;
+    } else {
+        completion.quizUnlocked = false;
+    }
     completion.quizPassed = false;
     completion.isCompleted = false;
     completion.completedAt = undefined;

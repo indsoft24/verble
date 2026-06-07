@@ -4,6 +4,7 @@ import * as authService from '../services/authService';
 import apiClient from '../services/apiClient';
 
 export type User = authService.User;
+export type UserProgressSnapshot = authService.UserProgressSnapshot;
 
 interface AuthContextType {
     user: User | null;
@@ -17,6 +18,7 @@ interface AuthContextType {
     resendOtp: (email: string) => Promise<string>;
     logout: () => Promise<void>;
     setUserContext: (userData: User | null, token?: string | null) => void;
+    patchUserProgress: (progress: UserProgressSnapshot) => void;
     refreshUser: (currentToken?: string | null) => Promise<void>;
     initiateGoogleLogin: () => Promise<void>;
     linkGoogleAccount: (code: string) => Promise<void>;
@@ -45,6 +47,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             localStorage.removeItem('authUser');
         }
     };
+
+    const patchUserProgress = useCallback((progress: UserProgressSnapshot) => {
+        setUserState((prev) => {
+            if (!prev) return prev;
+            const next: User = {
+                ...prev,
+                ...(progress.streaks !== undefined ? { streaks: progress.streaks } : {}),
+                ...(progress.membershipLevel !== undefined
+                    ? { membershipLevel: progress.membershipLevel }
+                    : {}),
+                ...(progress.unlockedLevels !== undefined
+                    ? { unlockedLevels: progress.unlockedLevels }
+                    : {}),
+                ...(progress.points !== undefined ? { points: progress.points } : {}),
+            };
+            if (token) {
+                localStorage.setItem('authUser', JSON.stringify(next));
+            }
+            return next;
+        });
+    }, [token]);
 
     const refreshUser = useCallback(async (currentToken?: string | null) => {
         const tokenToUse = currentToken !== undefined ? currentToken : token;
@@ -211,6 +234,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 resendOtp,
                 logout,
                 setUserContext: handleSetAuthData,
+                patchUserProgress,
                 refreshUser,
                 initiateGoogleLogin,
                 linkGoogleAccount,

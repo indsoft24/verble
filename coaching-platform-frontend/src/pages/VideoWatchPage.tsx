@@ -1,5 +1,5 @@
 // src/pages/VideoWatchPage.tsx
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -34,7 +34,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { saveAs } from 'file-saver';
 
 import { getVideoByIdForUser, getVideoPlayToken, getVideoNavigation, downloadMaterialForUser, markVideoCompleted } from '../services/videoService';
-import { getModuleQuizAvailability } from '../services/moduleQuizService';
+import { getModuleQuizAvailability, type ModuleQuizAvailability } from '../services/moduleQuizService';
 import type { VideoDetail, VideoPlayTokenData } from '../services/videoService';
 import LocalHlsPlayer from '../components/features/video/LocalHlsPlayer';
 import {
@@ -49,6 +49,7 @@ import {
     CourseLearningShell,
     CourseLearningBreadcrumbs,
     CourseBottomNav,
+    ModuleQuizCallout,
     courseLearningTheme,
     courseBottomNavZIndex,
     courseChipOutlinedSx,
@@ -221,6 +222,7 @@ const VideoWatchPage: React.FC = () => {
     const [isMarkingComplete, setIsMarkingComplete] = useState(false);
     const [completionMessage, setCompletionMessage] = useState<string | null>(null);
     const [quizPrompt, setQuizPrompt] = useState<{ moduleId: string; hasQuiz: boolean } | null>(null);
+    const [moduleQuizGate, setModuleQuizGate] = useState<ModuleQuizAvailability | null>(null);
     const hasMarkedCompleteRef = useRef(false);
 
     const [navRefreshKey, setNavRefreshKey] = useState(0);
@@ -372,6 +374,7 @@ const VideoWatchPage: React.FC = () => {
                 if (modId) {
                     try {
                         const availability = await getModuleQuizAvailability(modId);
+                        setModuleQuizGate(availability);
                         if (availability.hasQuiz && !availability.isModuleComplete) {
                             setQuizPrompt({ moduleId: modId, hasQuiz: true });
                             message += ' Take the module quiz to finish this module.';
@@ -425,12 +428,31 @@ const VideoWatchPage: React.FC = () => {
         });
     }, [video, isLoading, navigate, error, videoId]);
 
-    const contextModuleId =
-        videoId && navFlat.find((v) => v._id === videoId)?.moduleId
-            ? navFlat.find((v) => v._id === videoId)?.moduleId || null
-            : video
-              ? collectModuleIds(video).filter(isMongoObjectId)[0] ?? null
-              : null;
+    const contextModuleId = useMemo(() => {
+        if (videoId && navFlat.find((v) => v._id === videoId)?.moduleId) {
+            return navFlat.find((v) => v._id === videoId)?.moduleId || null;
+        }
+        return video ? collectModuleIds(video).filter(isMongoObjectId)[0] ?? null : null;
+    }, [videoId, navFlat, video]);
+
+    useEffect(() => {
+        if (!contextModuleId) {
+            setModuleQuizGate(null);
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const gate = await getModuleQuizAvailability(contextModuleId);
+                if (!cancelled) setModuleQuizGate(gate);
+            } catch {
+                if (!cancelled) setModuleQuizGate(null);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [contextModuleId, navRefreshKey]);
     const currentNavItem = videoId ? navFlat.find((v) => v._id === videoId) : undefined;
     const contextModuleTitle = currentNavItem?.moduleTitle || null;
 
@@ -439,18 +461,31 @@ const VideoWatchPage: React.FC = () => {
     const navIndex = videoId ? activeNavFlat.findIndex((v) => v._id === videoId) : -1;
     const navTotal = activeNavFlat.length;
 
-    const prevItem =
-        navTotal > 1 && navIndex >= 0
-            ? activeNavFlat[(navIndex - 1 + navTotal) % navTotal]
-            : null;
-    const nextItem =
-        navTotal > 1 && navIndex >= 0
-            ? activeNavFlat[(navIndex + 1) % navTotal]
-            : null;
+    const isLastInModule = navIndex >= 0 && navIndex === navTotal - 1;
+    const linearNext =
+        navIndex >= 0 && navIndex < navTotal - 1 ? activeNavFlat[navIndex + 1] : null;
 
-    const nextThree = navIndex >= 0 && navTotal > 1
-        ? Array.from({ length: Math.min(3, navTotal - 1) }, (_, i) => activeNavFlat[(navIndex + 1 + i) % navTotal])
-        : activeNavFlat.slice(0, 3);
+    const showQuizUpNext = Boolean(
+        contextModuleId &&
+            moduleQuizGate?.hasQuiz &&
+            isLastInModule &&
+            (moduleQuizGate.canTakeQuiz ||
+                moduleQuizGate.quizUnlocked ||
+                moduleQuizGate.quizState === 'ready' ||
+                (moduleQuizGate.quizState === 'passed' && moduleQuizGate.canTakeQuiz))
+    );
+
+    const quizNextTo = contextModuleId ? `/modules/${contextModuleId}/quiz` : null;
+
+    const prevItem = navIndex > 0 ? activeNavFlat[navIndex - 1] : null;
+    const nextItem = showQuizUpNext ? null : linearNext;
+
+    const nextThree =
+        showQuizUpNext || isLastInModule
+            ? []
+            : navIndex >= 0
+              ? activeNavFlat.slice(navIndex + 1, navIndex + 4)
+              : activeNavFlat.slice(0, 3);
 
     const fallbackCourseId = video ? extractCourseId(video) : null;
     const outlineCourseId = [navCourseId, fallbackCourseId].find((id) => isMongoObjectId(id)) ?? null;
@@ -468,7 +503,9 @@ const VideoWatchPage: React.FC = () => {
     } else {
         bottomSecondary.push({ label: 'Previous', to: '#', icon: 'prev', variant: 'outlined', disabled: true });
     }
-    if (nextItem) {
+    if (showQuizUpNext && quizNextTo) {
+        bottomSecondary.push({ label: 'Take quiz', to: quizNextTo, icon: 'next', variant: 'contained' });
+    } else if (nextItem) {
         bottomSecondary.push({ label: 'Next', to: `/videos/${nextItem._id}`, icon: 'next', variant: 'contained' });
     } else {
         bottomSecondary.push({ label: 'Next', to: '#', icon: 'next', variant: 'contained', disabled: true });
@@ -884,7 +921,25 @@ const VideoWatchPage: React.FC = () => {
                                                 Previous
                                             </Button>
                                         )}
-                                        {nextItem ? (
+                                        {showQuizUpNext && quizNextTo ? (
+                                            <Button
+                                                component={RouterLink}
+                                                to={quizNextTo}
+                                                variant="contained"
+                                                fullWidth
+                                                endIcon={<ChevronRightIcon />}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    fontWeight: 700,
+                                                    minHeight: 48,
+                                                    borderRadius: 1.5,
+                                                    bgcolor: courseLearningTheme.accent,
+                                                    boxShadow: 'none',
+                                                }}
+                                            >
+                                                Take quiz
+                                            </Button>
+                                        ) : nextItem ? (
                                             <Button
                                                 component={RouterLink}
                                                 to={`/videos/${nextItem._id}`}
@@ -912,10 +967,14 @@ const VideoWatchPage: React.FC = () => {
                                     <Divider sx={{ my: courseLearningTheme.space.blockMb }} />
 
                                     <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: courseLearningTheme.space.blockMb }}>
-                                        Up next in this module
+                                        {showQuizUpNext ? 'Module quiz' : 'Up next in this module'}
                                     </Typography>
 
-                                    {navIndex >= 0 && nextThree.length === 0 && navTotal > 0 && (
+                                    {isLastInModule && contextModuleId && moduleQuizGate?.hasQuiz && (
+                                        <ModuleQuizCallout moduleId={contextModuleId} gate={moduleQuizGate} />
+                                    )}
+
+                                    {isLastInModule && navTotal > 0 && moduleQuizGate && !moduleQuizGate.hasQuiz && (
                                         <Typography variant="body2" sx={{ mb: 1, color: courseLearningTheme.textBody }}>
                                             You are on the last lesson in this sequence.
                                         </Typography>

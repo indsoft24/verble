@@ -1,6 +1,6 @@
 // src/pages/AdminWebinarLeadsPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 import { getRecentLeadsAdmin, type AdminLead } from '../services/adminLeadService';
 import {
     Box,
@@ -18,6 +18,7 @@ import {
 import CampaignIcon from '@mui/icons-material/Campaign';
 
 const AdminWebinarLeadsPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Webinar Leads' });
     const [leads, setLeads] = useState<AdminLead[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -40,9 +41,7 @@ const AdminWebinarLeadsPage: React.FC = () => {
         fetchLeads();
     }, [fetchLeads]);
 
-    return (
-        <AdminLayout title="Webinar Leads">
-            <Paper elevation={0} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+    return (            <Paper elevation={0} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                     <Box sx={{ bgcolor: 'info.50', p: 1, borderRadius: 2, display: 'flex' }}>
                         <CampaignIcon color="info" />
@@ -98,7 +97,6 @@ const AdminWebinarLeadsPage: React.FC = () => {
                     </TableContainer>
                 )}
             </Paper>
-        </AdminLayout>
     );
 };
 

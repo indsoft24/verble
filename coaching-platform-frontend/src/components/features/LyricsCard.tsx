@@ -62,7 +62,7 @@ const LYRICS_ACCENT = '#e91e63';
 interface LyricsCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
-    onSubmissionSuccess?: () => void;
+    onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
     onNavigateToSpeech?: () => void;
     onNavigateToFeed?: () => void;
 }
@@ -201,14 +201,17 @@ const LyricsCard: React.FC<LyricsCardProps> = ({
         setIsSubmitting(true);
         setSubmitStatus(null);
         try {
-            const { participationPointsAwarded } = await submitLyricsSentences(currentContent._id, summaries);
+            const { participationPointsAwarded, progress } = await submitLyricsSentences(
+                currentContent._id,
+                summaries
+            );
             const participation = participationPointsAwarded ?? 10;
             setSubmitStatus({
                 type: 'success',
                 message: `Submitted ${summaries.length} sentence${summaries.length === 1 ? '' : 's'}! ${participation > 0 ? `+${participation} participation points. ` : ''}After review: up to ${MAX_EVALUATION_SCORE} points (10 per correct sentence).`,
             });
             await loadSubmission(currentContent._id);
-            onSubmissionSuccess?.();
+            onSubmissionSuccess?.(progress);
         } catch (err: unknown) {
             const message =
                 (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||

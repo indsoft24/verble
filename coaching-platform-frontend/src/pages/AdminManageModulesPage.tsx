@@ -19,6 +19,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 import TiptapEditor from '../components/features/blog/LazyTiptapEditor';
 
@@ -55,6 +56,7 @@ const gridDateFormatter = (value: string | undefined | null): string => {
 };
 
 const AdminManageModulesPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Manage Modules' });
     const { courseId } = useParams<{ courseId: string }>();
     const navigate = useNavigate();
 

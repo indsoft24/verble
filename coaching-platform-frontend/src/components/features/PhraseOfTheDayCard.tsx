@@ -44,7 +44,7 @@ interface PhraseOfTheDayCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
     onNavigateToWord?: () => void;
-    onSubmissionSuccess?: () => void;
+    onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
 }
 
 const confettiFall = keyframes`
@@ -235,7 +235,7 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
                 await loadSubmissions(currentContent._id);
-                onSubmissionSuccess?.();
+                onSubmissionSuccess?.(response.data.data.progress);
             } else {
                 setSubmitStatus({
                     type: 'error',

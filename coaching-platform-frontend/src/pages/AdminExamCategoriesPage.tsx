@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 import {
     Container, Typography, Button, CircularProgress, Alert, Box, Paper, Tooltip,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField,
@@ -48,6 +48,7 @@ const initialCategoryFormData: ExamCategoryInput = {
 };
 
 const AdminExamCategoriesPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Exam Categories' });
     const [categories, setCategories] = useState<ExamCategoryRow[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -271,17 +272,12 @@ const AdminExamCategoriesPage: React.FC = () => {
         },
     ], []);
     
-    if (isLoading) return (
-        <AdminLayout title="Exam Categories">
-            <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
+    if (isLoading) return (            <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
                 <CircularProgress />
             </Container>
-        </AdminLayout>
     );
 
-    return (
-        <AdminLayout title="Exam Categories">
-            <Container maxWidth="xl">
+    return (            <Container maxWidth="xl">
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Typography variant="h5" component="h1" fontWeight={600}>
                         Manage Exam Categories
@@ -448,7 +444,6 @@ const AdminExamCategoriesPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 

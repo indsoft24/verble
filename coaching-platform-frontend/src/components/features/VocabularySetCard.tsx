@@ -46,7 +46,7 @@ import ActivityTierNavFooter from './ActivityTierNavFooter';
 interface VocabularySetCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
-    onSubmissionSuccess?: () => void;
+    onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
     onNavigateToStory?: () => void;
 }
 
@@ -377,7 +377,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
                 void loadSubmission(currentContent._id);
-                onSubmissionSuccess?.();
+                onSubmissionSuccess?.(response.data.data.progress);
             } else {
                 setSubmitStatus({
                     type: 'error',

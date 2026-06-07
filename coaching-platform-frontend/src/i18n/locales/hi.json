@@ -144,6 +144,7 @@
     "masteryPath": {
       "title": "आपका मास्टरी मार्ग",
       "streakDays": "{{count}}-दिन की लकीर",
+      "streakStartHint": "0-दिन की लकीर — शुरू करने के लिए आज की गतिविधि पूरी करें",
       "youAreHere": "आप यहाँ हैं",
       "challengeComplete": "चुनौती पूर्ण!",
       "dayProgress": "दिन {{current}} / {{target}}",

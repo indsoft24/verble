@@ -56,7 +56,7 @@ import ActivityTierNavFooter from './ActivityTierNavFooter';
 interface SceneCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
-    onSubmissionSuccess?: () => void;
+    onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
     /** Optional override; otherwise derived from the logged-in user's subscription. */
     hasGoldAccess?: boolean;
     onNavigateToProfessional?: () => void;
@@ -275,7 +275,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
         setIsSubmitting(true);
         setSubmitStatus(null);
         try {
-            const { participationPointsAwarded } = await submitSceneSummaries(
+            const { participationPointsAwarded, progress } = await submitSceneSummaries(
                 currentContent._id,
                 summaries
             );
@@ -287,7 +287,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
             setShowConfetti(true);
             setTimeout(() => setShowConfetti(false), 3000);
             await loadSubmission(currentContent._id);
-            onSubmissionSuccess?.();
+            onSubmissionSuccess?.(progress);
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string } } };
             setSubmitStatus({

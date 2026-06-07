@@ -31,7 +31,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 import DatabaseDocumentFormEditor from '../components/admin/DatabaseDocumentFormEditor';
 import { getCollectionDisplayName } from '../utils/collectionDisplayNames';
 import {
@@ -50,6 +50,7 @@ const DEFAULT_PAGE_SIZE = 25;
 const prettyJson = (value: unknown) => JSON.stringify(value, null, 2);
 
 const AdminDatabaseManagerPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Database Manager' });
     const [collections, setCollections] = useState<DbCollectionItem[]>([]);
     const [collectionsSearch, setCollectionsSearch] = useState('');
     const [selectedCollection, setSelectedCollection] = useState<string>('');
@@ -222,7 +223,7 @@ const AdminDatabaseManagerPage: React.FC = () => {
     };
 
     return (
-        <AdminLayout title="Database Manager">
+        <>
             <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} sx={{ width: '100%' }}>
                 <Paper sx={{ p: 2, width: { xs: '100%', lg: 320 }, flexShrink: 0 }}>
                     <Typography variant="h6" sx={{ mb: 1 }}>Collections</Typography>
@@ -447,7 +448,7 @@ const AdminDatabaseManagerPage: React.FC = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </AdminLayout>
+        </>
     );
 };
 

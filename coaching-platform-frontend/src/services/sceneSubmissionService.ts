@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import type { UserProgressSnapshot } from './authService';
 
 export interface UserSceneSubmission {
     _id: string;
@@ -32,17 +33,20 @@ export const submitSceneSummaries = async (
     summaries: string[]
 ): Promise<{
     participationPointsAwarded?: number;
+    progress?: UserProgressSnapshot;
     submission: UserSceneSubmission;
 }> => {
     const response = await apiClient.post<{
         status: string;
         data: {
             participationPointsAwarded?: number;
+            progress?: UserProgressSnapshot;
             submission: UserSceneSubmission;
         };
     }>('/submit-scene-description', { sceneId, summaries });
     return {
         participationPointsAwarded: response.data.data.participationPointsAwarded,
+        progress: response.data.data.progress,
         submission: response.data.data.submission,
     };
 };

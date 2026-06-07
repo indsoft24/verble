@@ -354,18 +354,23 @@ const DashboardMasteryPath: React.FC<DashboardMasteryPathProps> = ({ user, onLoc
                 <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff' }}>
                     {t('dashboard.masteryPath.title')}
                 </Typography>
-                {streak > 0 && (
-                    <Chip
-                        icon={<LocalFireDepartmentIcon sx={{ color: '#fb923c !important' }} />}
-                        label={t('dashboard.masteryPath.streakDays', { count: streak })}
-                        sx={{
-                            bgcolor: alpha('#fb923c', 0.15),
-                            color: '#fdba74',
-                            fontWeight: 700,
-                            border: `1px solid ${alpha('#fb923c', 0.4)}`,
-                        }}
-                    />
-                )}
+                <Chip
+                    icon={<LocalFireDepartmentIcon sx={{ color: '#fb923c !important' }} />}
+                    label={
+                        streak > 0
+                            ? t('dashboard.masteryPath.streakDays', { count: streak })
+                            : t('dashboard.masteryPath.streakStartHint')
+                    }
+                    sx={{
+                        bgcolor: alpha('#fb923c', 0.15),
+                        color: '#fdba74',
+                        fontWeight: 700,
+                        border: `1px solid ${alpha('#fb923c', 0.4)}`,
+                        maxWidth: { xs: '100%', sm: 360 },
+                        height: 'auto',
+                        '& .MuiChip-label': { whiteSpace: 'normal', py: 0.75 },
+                    }}
+                />
             </Box>
 
             <Box

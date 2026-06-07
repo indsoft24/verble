@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import type { UserProgressSnapshot } from './authService';
 
 export interface ConversationExchange {
     participant1Line: string;
@@ -41,12 +42,14 @@ export const submitConversationPractice = async (
 ): Promise<{
     submission: UserConversationSubmission;
     participationPointsAwarded?: number;
+    progress?: UserProgressSnapshot;
 }> => {
     const response = await apiClient.post<{
         status: string;
         data: {
             submission: UserConversationSubmission;
             participationPointsAwarded?: number;
+            progress?: UserProgressSnapshot;
         };
     }>('/submit-conversation-practice', { conversationId, exchanges });
     return response.data.data;

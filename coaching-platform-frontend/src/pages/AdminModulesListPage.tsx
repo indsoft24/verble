@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 import { stripHtmlTags } from '../utils/htmlUtils';
 import {
     Container, Typography, Button, CircularProgress, Alert, Box, Paper, Tooltip,
@@ -68,6 +68,7 @@ const AdminModulesListPage: React.FC = () => {
     const [allCourses, setAllCourses] = useState<Course[]>([]);
     const [allSubscriptionPlans, setAllSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    useAdminLayoutPage({ title: isLoading ? 'Modules' : 'All Modules' });
     const [error, setError] = useState<string | null>(null);
 
     const [openFormDialog, setOpenFormDialog] = useState<boolean>(false);
@@ -432,17 +433,12 @@ const AdminModulesListPage: React.FC = () => {
     ], [navigate, handleOpenEditDialog]);
     
 
-    if (isLoading) return (
-        <AdminLayout title="Modules">
-            <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
+    if (isLoading) return (            <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
                 <CircularProgress />
             </Container>
-        </AdminLayout>
     );
 
-    return (
-        <AdminLayout title="All Modules">
-            <Container maxWidth="xl">
+    return (            <Container maxWidth="xl">
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box>
                         <Typography variant="h5" component="h1" fontWeight={600} gutterBottom sx={{ mb: 0 }}>
@@ -743,7 +739,6 @@ const AdminModulesListPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 

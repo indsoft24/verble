@@ -17,6 +17,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddLinkIcon from '@mui/icons-material/Link';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 import { 
     getVideosForModuleAdminService, 
@@ -33,6 +34,7 @@ interface VideoDataGridRow extends VideoMetadata {
 }
 
 const AdminModuleVideosPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Module Videos' });
     const { moduleId } = useParams<{ moduleId: string }>();
     const navigate = useNavigate();
 

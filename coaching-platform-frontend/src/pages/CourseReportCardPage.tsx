@@ -14,10 +14,11 @@ import {
     Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import UserLayout from '../components/layout/UserLayout';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 import { getCourseReportCard } from '../services/courseCertificateService';
 
 const CourseReportCardPage: React.FC = () => {
+    useUserLayoutPage({ title: 'Your report card' });
     const { courseId } = useParams<{ courseId: string }>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -37,25 +38,21 @@ const CourseReportCardPage: React.FC = () => {
 
     if (!courseId) {
         return (
-            <UserLayout title="Report card">
                 <Alert severity="error">Invalid course.</Alert>
-            </UserLayout>
         );
     }
 
     if (loading) {
         return (
-            <UserLayout title="Report card">
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                     <CircularProgress />
                 </Box>
-            </UserLayout>
         );
     }
 
     if (error || !data?.available) {
         return (
-            <UserLayout title="Report card">
+            <>
                 <Button startIcon={<ArrowBackIcon />} component={RouterLink} to="/my-courses" sx={{ mb: 2 }}>
                     Back to My Courses
                 </Button>
@@ -64,7 +61,7 @@ const CourseReportCardPage: React.FC = () => {
                         data?.reasons?.[0] ||
                         'Report card is only available after you meet all certification requirements. Review your lessons and daily practice, then try again.'}
                 </Alert>
-            </UserLayout>
+            </>
         );
     }
 
@@ -72,7 +69,7 @@ const CourseReportCardPage: React.FC = () => {
     const pillars = data.pillars;
 
     return (
-        <UserLayout title="Your report card">
+        <>
             <Button startIcon={<ArrowBackIcon />} component={RouterLink} to="/my-courses" sx={{ mb: 2 }}>
                 Back to My Courses
             </Button>
@@ -175,7 +172,7 @@ const CourseReportCardPage: React.FC = () => {
                     </Stack>
                 </Box>
             )}
-        </UserLayout>
+        </>
     );
 };
 

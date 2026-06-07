@@ -85,7 +85,7 @@ type DashboardOpenActivityState = {
 };
 
 const UserDashboardPage: React.FC = () => {
-    const { user, isLoading: authIsLoading, refreshUser } = useAuth();
+    const { user, isLoading: authIsLoading, refreshUser, patchUserProgress } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -158,9 +158,25 @@ const UserDashboardPage: React.FC = () => {
         }
     }, [location.state, location.pathname, navigate]);
 
-    const refreshDashboardAfterSubmission = useCallback(async () => {
-        await Promise.allSettled([refreshUser(), fetchAdditionalData()]);
-    }, [refreshUser, fetchAdditionalData]);
+    const refreshDashboardAfterSubmission = useCallback(
+        async (progress?: import('../services/authService').UserProgressSnapshot) => {
+            if (progress) {
+                patchUserProgress(progress);
+            }
+            await Promise.allSettled([refreshUser(), fetchAdditionalData()]);
+        },
+        [refreshUser, fetchAdditionalData, patchUserProgress]
+    );
+
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible' && user) {
+                void refreshUser();
+            }
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [refreshUser, user]);
 
     const findSlot = useCallback(
         (adminKey: (typeof DAILY_CONTENT_CATALOG)[number]['adminKey']) => {

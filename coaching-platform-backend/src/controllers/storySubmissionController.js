@@ -76,20 +76,12 @@ export const submitStorySummary = asyncHandler(async (req, res) => {
         sentencesCorrect: 0,
     });
 
-    let participationPointsAwarded = 0;
-    let levelUpResult;
-
-    try {
-        const gamificationResult = await GamificationService.recordActivity(
+    const { participationPointsAwarded, progress, levelUp: levelUpResult } =
+        await GamificationService.runParticipationGamification(
             req.user._id.toString(),
             storyId,
             PARTICIPATION_POINTS
         );
-        participationPointsAwarded = gamificationResult?.success ? PARTICIPATION_POINTS : 0;
-        levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
-    } catch {
-        // submission saved even if gamification fails
-    }
 
     res.status(201).json({
         status: 'success',
@@ -104,6 +96,7 @@ export const submitStorySummary = asyncHandler(async (req, res) => {
             },
             participationPointsAwarded,
             evaluationPoints: 0,
+            progress,
             levelUp: levelUpResult,
         },
     });

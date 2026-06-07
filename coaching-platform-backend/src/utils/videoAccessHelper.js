@@ -367,6 +367,7 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
             moduleId: modId,
             progress: progress,
             cycleWatchCount: cycleWatchCount + 1,
+            completionCycle,
         });
     }
 
@@ -377,7 +378,11 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
         throw new Error('No progress was saved for any module');
     }
 
-    const { progress, cycleWatchCount: finalCycleWatchCount } = requestedModuleResult;
+    const {
+        progress,
+        cycleWatchCount: finalCycleWatchCount,
+        completionCycle: savedModuleCycle,
+    } = requestedModuleResult;
     const remainingWatches = Math.max(0, maxPerCycle - finalCycleWatchCount);
 
     // Check if current set is complete for the requested module
@@ -388,8 +393,8 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
         throw new Error('Video not found in module');
     }
 
-    // Get completion cycle for the requested module
-    const requestedModuleCycle = await getModuleCompletionCycle(userId, moduleId);
+    // Use the cycle we just wrote to — getModuleCompletionCycle may already have advanced.
+    const requestedModuleCycle = savedModuleCycle;
 
     // Find minimum order value for normalization
     const minOrder = Math.min(...videos.map(v => v.order ?? 0));
@@ -445,7 +450,7 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
             '../services/moduleQuizAccessService.js'
         );
         await syncModuleProgressFromVideos(userId, moduleId);
-        await onModuleCycleCompleted(userId, moduleId);
+        await onModuleCycleCompleted(userId, moduleId, requestedModuleCycle);
     }
 
     return {

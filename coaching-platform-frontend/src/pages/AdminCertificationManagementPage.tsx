@@ -22,7 +22,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DownloadIcon from '@mui/icons-material/Download';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 import {
     getCertificateRulesAdmin,
     getIssuedCertificatesAdmin,
@@ -39,6 +39,7 @@ import {
 } from '../services/certificationAdminService';
 
 const AdminCertificationManagementPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Certification Management' });
     const [rules, setRules] = useState<CertificateRuleRow[]>([]);
     const [issued, setIssued] = useState<IssuedCertificateRow[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -246,9 +247,7 @@ const AdminCertificationManagementPage: React.FC = () => {
         }
     };
 
-    return (
-        <AdminLayout title="Certification Management">
-            <Stack spacing={2}>
+    return (            <Stack spacing={2}>
                 {error && <Alert severity="error">{error}</Alert>}
                 {brandingSuccess && <Alert severity="success" onClose={() => setBrandingSuccess(null)}>{brandingSuccess}</Alert>}
 
@@ -603,7 +602,6 @@ const AdminCertificationManagementPage: React.FC = () => {
                     </Box>
                 </Paper>
             </Stack>
-        </AdminLayout>
     );
 };
 

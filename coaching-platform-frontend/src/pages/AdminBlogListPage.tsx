@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 import {
     Container, Typography, Button, CircularProgress, Alert, Box, Paper, Chip,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle as MuiDialogTitle
@@ -34,6 +34,7 @@ const gridDateFormatter = (value: string | Date | undefined | null): string => {
 };
 
 const AdminBlogListPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Blog Posts' });
     const [postsForGrid, setPostsForGrid] = useState<BlogPostDataGridRow[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -166,9 +167,7 @@ const AdminBlogListPage: React.FC = () => {
 
     if (isLoading && postsForGrid.length === 0) return <Container sx={{mt:5, textAlign:'center'}}><CircularProgress /></Container>;
 
-    return (
-        <AdminLayout title="Blog Posts">
-            <Container maxWidth="xl">
+    return (            <Container maxWidth="xl">
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Typography variant="h5" component="h1" fontWeight={600}>Manage Blog Posts</Typography>
                     <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleAddPost}>
@@ -203,7 +202,6 @@ const AdminBlogListPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 

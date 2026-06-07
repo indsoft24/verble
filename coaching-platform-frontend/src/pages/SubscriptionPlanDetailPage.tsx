@@ -19,7 +19,7 @@ import {
 } from '../services/subscriptionService';
 import apiClient from '../services/apiClient';
 import { getImageUrl, getSplashImageUrl } from '../utils/imageUtils';
-import UserLayout from '../components/layout/UserLayout';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -56,6 +56,8 @@ const SubscriptionPlanDetailPage: React.FC = () => {
     const [subscribeError, setSubscribeError] = useState<string | null>(null);
     const [subscribeSuccess, setSubscribeSuccess] = useState<string | null>(null);
     const [currentUserSubscriptions, setCurrentUserSubscriptions] = useState<UserSubscriptionInstance[]>([]);
+
+    useUserLayoutPage({ title: plan?.name || 'Plan Details' });
 
     const fetchPlanDetails = useCallback(async () => {
         if (!planId) {
@@ -187,17 +189,14 @@ const SubscriptionPlanDetailPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <UserLayout title="Plan Details">
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '40vh' }}>
                     <CircularProgress />
                 </Box>
-            </UserLayout>
         );
     }
 
     if (error && !plan) {
         return (
-            <UserLayout title="Plan Details">
                 <Container maxWidth="lg">
                     <Alert severity="error">{error}</Alert>
                     <Button
@@ -208,13 +207,11 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                         Back to Plans
                     </Button>
                 </Container>
-            </UserLayout>
         );
     }
 
     if (!plan) {
         return (
-            <UserLayout title="Plan Details">
                 <Container maxWidth="lg">
                     <Alert severity="warning">Plan not found.</Alert>
                     <Button
@@ -225,12 +222,10 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                         Back to Plans
                     </Button>
                 </Container>
-            </UserLayout>
         );
     }
 
     return (
-        <UserLayout title={plan.name}>
         <Container maxWidth="lg">
             <Button
                 startIcon={<ArrowBackIcon />}
@@ -406,7 +401,6 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                 </Grid>
             </Grid>
         </Container>
-        </UserLayout>
     );
 };
 

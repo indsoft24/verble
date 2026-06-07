@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import type { UserProgressSnapshot } from './authService';
 
 export interface UserSpeechSubmission {
     _id: string;
@@ -32,17 +33,20 @@ export const submitSpeechSummaries = async (
     summaries: string[]
 ): Promise<{
     participationPointsAwarded?: number;
+    progress?: UserProgressSnapshot;
     submission: UserSpeechSubmission;
 }> => {
     const response = await apiClient.post<{
         status: string;
         data: {
             participationPointsAwarded?: number;
+            progress?: UserProgressSnapshot;
             submission: UserSpeechSubmission;
         };
     }>('/submit-speech-description', { speechId, summaries });
     return {
         participationPointsAwarded: response.data.data.participationPointsAwarded,
+        progress: response.data.data.progress,
         submission: response.data.data.submission,
     };
 };

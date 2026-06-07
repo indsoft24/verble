@@ -62,7 +62,7 @@ interface DailyContent {
 interface WordOfTheDayCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
-    onSubmissionSuccess?: () => void;
+    onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
     onNavigateToPhrase?: () => void;
 }
 
@@ -282,7 +282,7 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 3000);
                 await loadSubmissions(currentData._id);
-                onSubmissionSuccess?.();
+                onSubmissionSuccess?.(response.data.data.progress);
             } else {
                 setSubmitStatus({
                     type: 'error',

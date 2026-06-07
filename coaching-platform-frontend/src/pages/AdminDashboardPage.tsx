@@ -9,7 +9,7 @@ import { DAILY_CONTENT_CATALOG, contentMatchesCatalogSlot } from '../utils/daily
 import { format } from 'date-fns';
 import { getActiveOffers, type Offer } from '../services/offerService';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 // MUI Imports
 import {
@@ -49,6 +49,7 @@ const initialStats: PlatformStats = {
 };
 
 const AdminDashboardPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Dashboard' });
     const { user } = useAuth();
 
     const [stats, setStats] = useState<PlatformStats>(initialStats);
@@ -299,9 +300,7 @@ const AdminDashboardPage: React.FC = () => {
         </Card>
     );
 
-    return (
-        <AdminLayout title="Dashboard">
-            <Box sx={{ pb: 6 }}>
+    return (            <Box sx={{ pb: 6 }}>
                 {/* Modern Header Section */}
                 <Box sx={{
                     mb: 4,
@@ -746,7 +745,6 @@ const AdminDashboardPage: React.FC = () => {
                     </Grid>
                 </Grid>
             </Box>
-        </AdminLayout>
     );
 };
 

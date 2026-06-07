@@ -144,6 +144,7 @@
     "masteryPath": {
       "title": "Your Path to Mastery",
       "streakDays": "{{count}}-day streak",
+      "streakStartHint": "0-day streak — complete today's activity to start",
       "youAreHere": "You are here",
       "challengeComplete": "Challenge complete!",
       "dayProgress": "Day {{current}} of {{target}}",

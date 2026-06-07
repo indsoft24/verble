@@ -58,7 +58,7 @@ import {
 interface SpeechCardProps {
     data: DailyContent;
     onContentChange?: (content: DailyContent) => void;
-    onSubmissionSuccess?: () => void;
+    onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
     onNavigateToLyrics?: () => void;
 }
 
@@ -232,7 +232,10 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
         setIsSubmitting(true);
         setSubmitStatus(null);
         try {
-            const { participationPointsAwarded } = await submitSpeechSummaries(currentContent._id, summaries);
+            const { participationPointsAwarded, progress } = await submitSpeechSummaries(
+                currentContent._id,
+                summaries
+            );
             const participation = participationPointsAwarded ?? 10;
             setSubmitStatus({
                 type: 'success',
@@ -241,7 +244,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
             setShowConfetti(true);
             setTimeout(() => setShowConfetti(false), 3000);
             await loadSubmission(currentContent._id);
-            onSubmissionSuccess?.();
+            onSubmissionSuccess?.(progress);
         } catch (err: unknown) {
             const message =
                 (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||

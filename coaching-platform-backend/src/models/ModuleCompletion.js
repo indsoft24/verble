@@ -40,6 +40,11 @@ const moduleCompletionSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    /** Set when cycle 0 (first learning cycle) is fully completed; quiz stays available across later practice cycles. */
+    firstCycleCompleted: {
+        type: Boolean,
+        default: false,
+    },
     quizFailedAttempts: {
         type: Number,
         default: 0,

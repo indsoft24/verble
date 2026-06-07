@@ -52,6 +52,7 @@ export interface ModuleQuizAvailability {
     needsAdminReset: boolean;
     quizUnlocked?: boolean;
     quizPassed?: boolean;
+    firstCycleCompleted?: boolean;
     message: string;
 }
 

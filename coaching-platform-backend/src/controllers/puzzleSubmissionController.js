@@ -114,43 +114,29 @@ export const submitPuzzle = asyncHandler(async (req, res) => {
         pointsEarned: totalPoints,
     });
 
-    // Record activity in gamification system (points for correct answers)
-    try {
-        await GamificationService.recordActivity(req.user._id.toString(), puzzleId, totalPoints);
-        
-        // Check for level up
-        const levelUpResult = await GamificationService.checkLevelUp(req.user._id.toString());
-        
-        res.status(201).json({
-            status: 'success',
-            message: `Puzzle submitted! You got ${correctCount} out of 5 correct and earned ${totalPoints} points.`,
-            data: {
-                submission: {
-                    _id: submission._id,
-                    correctCount: submission.correctCount,
-                    pointsEarned: submission.pointsEarned,
-                    answers: submission.answers,
-                    submittedAt: submission.createdAt
-                },
-                levelUp: levelUpResult
-            }
-        });
-    } catch (error) {
-        // Even if gamification fails, the submission is saved
-        res.status(201).json({
-            status: 'success',
-            message: `Puzzle submitted! You got ${correctCount} out of 5 correct and earned ${totalPoints} points.`,
-            data: {
-                submission: {
-                    _id: submission._id,
-                    correctCount: submission.correctCount,
-                    pointsEarned: submission.pointsEarned,
-                    answers: submission.answers,
-                    submittedAt: submission.createdAt
-                }
-            }
-        });
-    }
+    const { participationPointsAwarded, progress, levelUp: levelUpResult } =
+        await GamificationService.runParticipationGamification(
+            req.user._id.toString(),
+            puzzleId,
+            totalPoints
+        );
+
+    res.status(201).json({
+        status: 'success',
+        message: `Puzzle submitted! You got ${correctCount} out of 5 correct and earned ${totalPoints} points.`,
+        data: {
+            submission: {
+                _id: submission._id,
+                correctCount: submission.correctCount,
+                pointsEarned: submission.pointsEarned,
+                answers: submission.answers,
+                submittedAt: submission.createdAt,
+            },
+            participationPointsAwarded,
+            progress,
+            levelUp: levelUpResult,
+        },
+    });
 });
 
 /**

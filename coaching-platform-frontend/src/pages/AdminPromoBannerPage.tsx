@@ -1,6 +1,6 @@
 // src/pages/AdminPromoBannerPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 import {
     Box,
     Typography,
@@ -43,6 +43,7 @@ const DEFAULT_BANNER: PromoBanner = {
 };
 
 const AdminPromoBannerPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Promo Banner' });
     const [banner, setBanner] = useState<PromoBanner | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -119,30 +120,27 @@ const AdminPromoBannerPage: React.FC = () => {
     };
 
     if (isLoading) {
-        return (
-            <AdminLayout title="Promo Banner">
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        return (                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                     <CircularProgress />
                 </Box>
-            </AdminLayout>
         );
     }
 
     if (!banner) {
         return (
-            <AdminLayout title="Promo Banner">
+            <>
                 <Alert severity="error" sx={{ mb: 2 }}>
                     Could not load promo banner settings.
                 </Alert>
                 <Button variant="contained" startIcon={<RefreshIcon />} onClick={() => void fetchBanner()}>
                     Retry
                 </Button>
-            </AdminLayout>
+            </>
         );
     }
 
     return (
-        <AdminLayout title="Promo Banner">
+        <>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: 720 }}>
                 Schedule webinars or seminars as a sticky promo bar above the footer on public pages. The{' '}
                 <strong>5-minute countdown</strong> restarts when a visitor loads the page — use urgency copy like
@@ -342,7 +340,7 @@ const AdminPromoBannerPage: React.FC = () => {
                     </Box>
                 </form>
             </Paper>
-        </AdminLayout>
+        </>
     );
 };
 

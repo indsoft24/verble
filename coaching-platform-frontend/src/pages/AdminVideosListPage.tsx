@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from '../components/layout/AdminLayout';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 import {
     Container, Typography, Button, CircularProgress, Alert, Box, Paper, Tooltip, Chip,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
@@ -76,6 +76,7 @@ const gridDateFormatter = (value: string | undefined | null): string => {
 };
 
 const AdminVideosListPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Videos' });
     const navigate = useNavigate();
 
     // Data states
@@ -595,19 +596,14 @@ const AdminVideosListPage: React.FC = () => {
     ], [handleEditVideo]);
 
     if (isLoading && videosForGrid.length === 0) {
-        return (
-            <AdminLayout title="Videos">
-                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+        return (                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
                     <CircularProgress />
                     <Typography sx={{ ml: 2 }}>Loading videos...</Typography>
                 </Container>
-            </AdminLayout>
         );
     }
 
-    return (
-        <AdminLayout title="Videos">
-            <Container maxWidth="xl">
+    return (            <Container maxWidth="xl">
                 {/* Header */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Typography variant="h5" component="h1" fontWeight={600}>
@@ -1095,7 +1091,6 @@ const AdminVideosListPage: React.FC = () => {
                     </DialogActions>
                 </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 
