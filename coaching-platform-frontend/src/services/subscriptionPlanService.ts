@@ -52,7 +52,8 @@ export interface UserSubscriptionInstance {
 export interface GetMySubscriptionResponse {
     status: string;
     data: {
-        activeSubscriptions: UserSubscriptionInstance[];
+        activeSubscriptions?: UserSubscriptionInstance[];
+        subscriptions?: UserSubscriptionInstance[];
         allSubscriptions?: UserSubscriptionInstance[];
     };
     message?: string;

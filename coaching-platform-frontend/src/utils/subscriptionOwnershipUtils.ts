@@ -1,4 +1,11 @@
-import type { UserSubscriptionInstance } from '../services/subscriptionPlanService';
+export interface SubscriptionOwnershipRecord {
+    _id?: string;
+    planId?: string | { _id?: string } | null;
+    planName?: string;
+    status?: string;
+    startDate?: string | Date;
+    endDate?: string | Date;
+}
 
 export const OWNED_SUBSCRIPTION_STATUSES = [
     'active',
@@ -10,7 +17,7 @@ export const OWNED_SUBSCRIPTION_STATUSES = [
 type OwnedStatus = (typeof OWNED_SUBSCRIPTION_STATUSES)[number];
 
 export function resolveSubscriptionPlanId(
-    planId: UserSubscriptionInstance['planId'] | null | undefined
+    planId: SubscriptionOwnershipRecord['planId'] | null | undefined
 ): string | null {
     if (!planId) return null;
     if (typeof planId === 'string') return planId;
@@ -19,7 +26,7 @@ export function resolveSubscriptionPlanId(
 }
 
 export function isSubscriptionCurrentlyOwned(
-    sub: UserSubscriptionInstance,
+    sub: SubscriptionOwnershipRecord,
     now: Date = new Date()
 ): boolean {
     if (!OWNED_SUBSCRIPTION_STATUSES.includes(sub.status as OwnedStatus)) return false;
@@ -30,10 +37,10 @@ export function isSubscriptionCurrentlyOwned(
     return true;
 }
 
-export function findOwnedSubscription(
-    subscriptions: UserSubscriptionInstance[],
+export function findOwnedSubscription<T extends SubscriptionOwnershipRecord>(
+    subscriptions: T[],
     planId: string
-): UserSubscriptionInstance | undefined {
+): T | undefined {
     return subscriptions.find(
         (sub) =>
             isSubscriptionCurrentlyOwned(sub) &&
@@ -42,7 +49,7 @@ export function findOwnedSubscription(
 }
 
 export function userOwnsPlan(
-    subscriptions: UserSubscriptionInstance[],
+    subscriptions: SubscriptionOwnershipRecord[],
     planId: string
 ): boolean {
     return Boolean(findOwnedSubscription(subscriptions, planId));

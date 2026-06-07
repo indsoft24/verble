@@ -14,6 +14,7 @@ import {
     alpha,
 } from '@mui/material';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined';
@@ -33,6 +34,11 @@ import { brandAssets } from '../assets/brandAssets';
 import { getPlanTierStyle, formatDurationLabel } from '../utils/planTierStyles';
 import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
 import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
+import {
+    findOwnedSubscription,
+    userOwnsPlan,
+    formatSubscriptionEndDate,
+} from '../utils/subscriptionOwnershipUtils';
 
 const SubscriptionPlansPage: React.FC = () => {
     useUserLayoutPage({ title: 'Plans' });
@@ -233,11 +239,9 @@ const SubscriptionPlansPage: React.FC = () => {
                 <Grid container spacing={3}>
                     {paidPlans.map((plan) => {
                         const tier = getPlanTierStyle(plan.name);
-                        const isActive = currentUserSubscriptions.some(
-                            (sub) =>
-                                sub.status === 'active' &&
-                                (sub.planId as SubscriptionPlanPublic)?._id === plan._id
-                        );
+                        const ownedSub = findOwnedSubscription(currentUserSubscriptions, plan._id);
+                        const isActive = userOwnsPlan(currentUserSubscriptions, plan._id);
+                        const validUntil = formatSubscriptionEndDate(ownedSub?.endDate);
                         const durationLabel = formatDurationLabel(
                             plan.duration?.value ?? 1,
                             plan.duration?.unit ?? 'month'
@@ -290,7 +294,8 @@ const SubscriptionPlansPage: React.FC = () => {
                                     )}
                                     {isActive && (
                                         <Chip
-                                            label="Your plan"
+                                            icon={<VerifiedRoundedIcon sx={{ fontSize: '16px !important' }} />}
+                                            label="Already subscribed"
                                             size="small"
                                             color="success"
                                             sx={{
@@ -378,23 +383,47 @@ const SubscriptionPlansPage: React.FC = () => {
                                             </Stack>
                                         )}
 
+                                        {isActive && validUntil && (
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    display: 'block',
+                                                    mb: 1,
+                                                    color: 'success.dark',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                Valid until {validUntil}
+                                            </Typography>
+                                        )}
+
                                         <Stack spacing={1} sx={{ mt: 'auto' }}>
                                             <Button
                                                 variant="contained"
                                                 fullWidth
                                                 disabled={isActive || subscribeLoading === plan._id}
                                                 onClick={() => handleSubscribe(plan)}
+                                                startIcon={
+                                                    isActive ? (
+                                                        <CheckCircleRoundedIcon />
+                                                    ) : undefined
+                                                }
                                                 sx={{
                                                     py: 1.25,
                                                     fontWeight: 700,
                                                     borderRadius: 2,
-                                                    bgcolor: tier.accent,
-                                                    boxShadow: `0 4px 14px ${alpha(tier.accent, 0.4)}`,
-                                                    '&:hover': { bgcolor: tier.accent, filter: 'brightness(0.92)' },
+                                                    bgcolor: isActive ? 'success.main' : tier.accent,
+                                                    boxShadow: isActive
+                                                        ? 'none'
+                                                        : `0 4px 14px ${alpha(tier.accent, 0.4)}`,
+                                                    '&:hover': {
+                                                        bgcolor: isActive ? 'success.dark' : tier.accent,
+                                                        filter: isActive ? 'none' : 'brightness(0.92)',
+                                                    },
                                                 }}
                                             >
                                                 {isActive ? (
-                                                    'Active'
+                                                    'You already have this plan'
                                                 ) : subscribeLoading === plan._id ? (
                                                     <CircularProgress size={22} color="inherit" />
                                                 ) : (
