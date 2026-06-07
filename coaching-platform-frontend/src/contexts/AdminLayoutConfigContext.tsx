@@ -4,6 +4,7 @@ import {
     useState,
     useLayoutEffect,
     useMemo,
+    useCallback,
     type ReactNode,
 } from 'react';
 
@@ -25,11 +26,15 @@ const AdminLayoutConfigContext = createContext<AdminLayoutConfigContextValue | u
 export function AdminLayoutConfigProvider({ children }: { children: ReactNode }) {
     const [config, setConfigState] = useState<AdminLayoutPageConfig>(DEFAULT_CONFIG);
 
-    const setConfig = (next: AdminLayoutPageConfig) => {
-        setConfigState({ ...DEFAULT_CONFIG, ...next });
-    };
+    const setConfig = useCallback((next: AdminLayoutPageConfig) => {
+        setConfigState((prev) => {
+            const merged = { ...DEFAULT_CONFIG, ...next };
+            if (prev.title === merged.title) return prev;
+            return merged;
+        });
+    }, []);
 
-    const value = useMemo(() => ({ config, setConfig }), [config]);
+    const value = useMemo(() => ({ config, setConfig }), [config, setConfig]);
 
     return (
         <AdminLayoutConfigContext.Provider value={value}>{children}</AdminLayoutConfigContext.Provider>

@@ -29,12 +29,13 @@ import {
     type SubscriptionPlanPublic,
 } from '../services/subscriptionPlanService';
 import { useAuth } from '../contexts/AuthContext';
-import UserLayout from '../components/layout/UserLayout';
 import { brandAssets } from '../assets/brandAssets';
 import { getPlanTierStyle, formatDurationLabel } from '../utils/planTierStyles';
 import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const SubscriptionPlansPage: React.FC = () => {
+    useUserLayoutPage({ title: 'Plans' });
     const navigate = useNavigate();
     const [plans, setPlans] = useState<SubscriptionPlanPublic[]>([]);
     const [currentUserSubscriptions, setCurrentUserSubscriptions] = useState<UserSubscriptionInstance[]>([]);
@@ -150,17 +151,15 @@ const SubscriptionPlansPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <UserLayout title="Plans">
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
                     <CircularProgress />
                 </Box>
-            </UserLayout>
         );
     }
 
     return (
-        <UserLayout title="Plans">
-            <Box
+        <>
+        <Box
                 sx={{
                     borderRadius: 4,
                     overflow: 'hidden',
@@ -428,7 +427,7 @@ const SubscriptionPlansPage: React.FC = () => {
                 Payments are processed securely via Razorpay. If checkout fails, your admin may need to
                 update live API keys in server settings.
             </Alert>
-        </UserLayout>
+        </>
     );
 };
 

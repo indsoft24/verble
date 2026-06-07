@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import UserLayout from '../components/layout/UserLayout';
 import {
     Container,
     Typography,
@@ -24,8 +23,10 @@ import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const MySubscriptionPage: React.FC = () => {
+    useUserLayoutPage({ title: 'My Subscription' });
     const [activeSubscriptions, setActiveSubscriptions] = useState<UserSubscriptionInstance[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -63,29 +64,24 @@ const MySubscriptionPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <UserLayout title="My Subscription">
-                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', mt: 5 }}>
+            <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', mt: 5 }}>
                     <CircularProgress />
                     <Typography sx={{ ml: 2 }}>Loading your subscriptions...</Typography>
                 </Container>
-            </UserLayout>
         );
     }
 
     if (error) {
         return (
-            <UserLayout title="My Subscription">
-                <Container sx={{ mt: 4 }}>
+            <Container sx={{ mt: 4 }}>
                     <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
                     <Button variant="outlined" onClick={fetchSubscriptionData}>Try Again</Button>
                 </Container>
-            </UserLayout>
         );
     }
 
     return (
-        <UserLayout title="My Subscription">
-            <Container maxWidth="md">
+        <Container maxWidth="md">
                 <Typography
                     variant="h5"
                     component="h1"
@@ -167,7 +163,6 @@ const MySubscriptionPage: React.FC = () => {
                 </Grid>
             )}
             </Container>
-        </UserLayout>
     );
 };
 

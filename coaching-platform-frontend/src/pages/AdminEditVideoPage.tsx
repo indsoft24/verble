@@ -19,8 +19,10 @@ import {
     FALLBACK_VIDEO_COURSE_NAME,
     FALLBACK_VIDEO_REQUIRED_PLAN_NAME,
 } from '../config/adminDefaults';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 const AdminEditVideoPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Edit Video' });
     const { id: videoId } = useParams<{ id: string }>();
 
     const [initialFormData, setInitialFormData] = useState<Partial<VideoFormState> | null>(null);

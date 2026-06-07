@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link as RouterLink, useParams, useNavigate } from 'react-router-dom';
-import AdminLayout from '../components/layout/AdminLayout';
 import { Alert, Box, Breadcrumbs, Button, Link as MuiLink, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ScoringHistoryPanel from '../components/scoring/ScoringHistoryPanel';
@@ -10,6 +9,7 @@ import {
     type ScoringSummary,
     type ScoringHistoryEvent,
 } from '../services/scoringHistoryService';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 const AdminUserScoringDetailPage: React.FC = () => {
     const { userId } = useParams<{ userId: string }>();
@@ -23,6 +23,8 @@ const AdminUserScoringDetailPage: React.FC = () => {
     const [summaryLoading, setSummaryLoading] = useState(true);
     const [eventsLoading, setEventsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    useAdminLayoutPage({ title: summary?.name ? `Scoring — ${summary.name}` : 'Scoring' });
 
     const loadSummary = useCallback(async () => {
         if (!userId) return;
@@ -71,17 +73,14 @@ const AdminUserScoringDetailPage: React.FC = () => {
 
     if (!userId) {
         return (
-            <AdminLayout title="Scoring">
-                <Alert severity="error">Invalid user.</Alert>
-            </AdminLayout>
+            <Alert severity="error">Invalid user.</Alert>
         );
     }
 
     const displayName = summary?.name || 'User';
 
     return (
-        <AdminLayout title={`Scoring — ${displayName}`}>
-            <Box sx={{ maxWidth: 1100, mx: 'auto' }}>
+        <Box sx={{ maxWidth: 1100, mx: 'auto' }}>
                 <Breadcrumbs sx={{ mb: 2 }}>
                     <MuiLink component={RouterLink} to="/admin/rewards-scoring" underline="hover" color="inherit">
                         Rewards & Scoring
@@ -126,7 +125,6 @@ const AdminUserScoringDetailPage: React.FC = () => {
                     onRowsPerPageChange={setRowsPerPage}
                 />
             </Box>
-        </AdminLayout>
     );
 };
 

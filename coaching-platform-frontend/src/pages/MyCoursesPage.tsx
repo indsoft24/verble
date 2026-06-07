@@ -11,7 +11,6 @@ import {
     Typography,
     alpha,
 } from '@mui/material';
-import UserLayout from '../components/layout/UserLayout';
 import {
     CourseLearningShell,
     CourseLearningBand,
@@ -30,11 +29,13 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl, getSplashImageUrl } from '../utils/imageUtils';
 import { extractId } from '../utils/idUtils';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const stripHtml = (html: string, maxLen = 120): string =>
     html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, maxLen);
 
 const MyCoursesPage: React.FC = () => {
+    useUserLayoutPage({ title: 'My Courses', variant: 'learning' });
     const [courses, setCourses] = useState<CourseListItemUser[]>([]);
     const [pageContext, setPageContext] = useState<'subscribed' | 'all_courses'>('all_courses');
     const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -131,10 +132,10 @@ const MyCoursesPage: React.FC = () => {
             : 'No courses are available right now. Please check back soon.';
 
     const layout = (content: React.ReactNode) => (
-        <UserLayout title="My Courses" variant="learning">
+        <>
             {content}
             <CourseBottomNav backLabel="Back to Dashboard" backTo="/dashboard" />
-        </UserLayout>
+        </>
     );
 
     if (isLoading) {

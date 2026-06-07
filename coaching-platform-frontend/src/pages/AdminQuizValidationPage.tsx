@@ -19,7 +19,6 @@ import {
     Typography,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import AdminLayout from '../components/layout/AdminLayout';
 import {
     getModuleQuizSubmissionAdmin,
     listModuleQuizSubmissionsAdmin,
@@ -27,8 +26,10 @@ import {
     type ModuleQuizSubmissionRow,
 } from '../services/moduleQuizAdminService';
 import { getFilledOptionEntries, getOptionLabelAt } from '../utils/quizOptionUtils';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 const AdminQuizValidationPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Quiz Validation' });
     const [rows, setRows] = useState<ModuleQuizSubmissionRow[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(0);
@@ -83,8 +84,8 @@ const AdminQuizValidationPage: React.FC = () => {
     };
 
     return (
-        <AdminLayout title="Quiz Validation">
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Module quizzes are auto-graded. Use this view to audit attempts and add internal notes.
             </Typography>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -218,7 +219,7 @@ const AdminQuizValidationPage: React.FC = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </AdminLayout>
+        </Box>
     );
 };
 

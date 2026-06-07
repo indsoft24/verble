@@ -18,7 +18,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import UserLayout from '../components/layout/UserLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessGoldTierContent } from '../utils/userAccessState';
 import {
@@ -29,8 +28,10 @@ import {
 } from '../services/aiPromptService';
 import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
 import AIPromptGuideContent from '../components/common/AIPromptGuideContent';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const AIPromptsPage: React.FC = () => {
+    useUserLayoutPage({ title: 'AI Prompt Guides' });
     const { user } = useAuth();
     const [prompts, setPrompts] = useState<AIPrompt[]>([]);
     const [topics, setTopics] = useState<Array<{ value: string; count: number }>>([]);
@@ -116,8 +117,7 @@ const AIPromptsPage: React.FC = () => {
     }, [selectedPrompt]);
 
     return (
-        <UserLayout title="AI Prompt Guides">
-            <Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 3 }, maxWidth: 1440, mx: 'auto' }}>
+        <Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 3 }, maxWidth: 1440, mx: 'auto' }}>
                 <Paper
                     elevation={0}
                     sx={{
@@ -381,7 +381,6 @@ const AIPromptsPage: React.FC = () => {
                     </>
                 )}
             </Box>
-        </UserLayout>
     );
 };
 

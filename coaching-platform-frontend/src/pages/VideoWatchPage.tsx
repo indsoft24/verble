@@ -43,7 +43,6 @@ import {
     type VideoListItemForModulePage,
 } from '../services/courseUserService';
 import { extractId, getStringId } from '../utils/idUtils';
-import UserLayout from '../components/layout/UserLayout';
 import CourseNavRow, { type CourseNavItem } from '../components/course/CourseNavRow';
 import {
     CourseLearningShell,
@@ -59,6 +58,7 @@ import {
     type CourseBottomNavAction,
 } from '../components/course';
 import { alpha } from '@mui/material/styles';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 function formatDuration(totalSeconds: number): string {
     const s = Math.max(0, Math.floor(totalSeconds));
@@ -215,6 +215,13 @@ const VideoWatchPage: React.FC = () => {
     const navigate = useNavigate();
 
     const [video, setVideo] = useState<VideoDetail | null>(null);
+
+    useUserLayoutPage({
+        title: video?.title || 'Watch Video',
+        fullWidth: true,
+        variant: 'learning',
+    });
+
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<{ message: string; code?: string } | null>(null);
     const [playConfig, setPlayConfig] = useState<VideoPlayTokenData | null>(null);
@@ -521,41 +528,37 @@ const VideoWatchPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <UserLayout title="Watch Video" fullWidth variant="learning">
-                <CourseLearningShell maxWidth="xl">
+            <CourseLearningShell maxWidth="xl">
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', gap: 2 }}>
                         <CircularProgress size={28} sx={{ color: courseLearningTheme.accent }} />
                         <Typography sx={{ color: courseLearningTheme.textMuted }}>Loading video…</Typography>
                     </Box>
                 </CourseLearningShell>
-            </UserLayout>
         );
     }
 
     if (error && !video) {
         return (
-            <UserLayout title="Watch Video" variant="learning">
+            <>
                 <CourseLearningShell maxWidth="md">
                     <Alert severity="error">{error.message}</Alert>
                 </CourseLearningShell>
                 <CourseBottomNav backLabel="Back to lessons" backTo={moduleBackTo} />
-            </UserLayout>
+            </>
         );
     }
 
     if (!video) {
         return (
-            <UserLayout title="Watch Video" variant="learning">
-                <CourseLearningShell>
+            <CourseLearningShell>
                     <Alert severity="warning">Could not find video data.</Alert>
                 </CourseLearningShell>
-            </UserLayout>
         );
     }
 
     return (
-        <UserLayout title={video.title || 'Watch Video'} fullWidth variant="learning">
-            <CourseLearningShell maxWidth="xl" disableGutters>
+        <>
+        <CourseLearningShell maxWidth="xl" disableGutters>
                 <CourseLearningBreadcrumbs
                     items={[
                         { label: 'My Courses', to: '/my-courses' },
@@ -1051,7 +1054,7 @@ const VideoWatchPage: React.FC = () => {
                     {completionMessage}
                 </Alert>
             </Snackbar>
-        </UserLayout>
+        </>
     );
 };
 

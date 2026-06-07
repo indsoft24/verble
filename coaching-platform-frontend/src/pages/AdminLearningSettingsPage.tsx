@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import AdminLayout from '../components/layout/AdminLayout';
 import {
     Alert,
     Box,
@@ -19,8 +18,10 @@ import {
     updateAdminLearningSettings,
     type LearningSettings,
 } from '../services/adminLearningSettingsService';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 const AdminLearningSettingsPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Learning settings' });
     const [settings, setSettings] = useState<LearningSettings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -63,8 +64,7 @@ const AdminLearningSettingsPage: React.FC = () => {
     };
 
     return (
-        <AdminLayout title="Learning settings">
-            <Box sx={{ maxWidth: 640 }}>
+        <Box sx={{ maxWidth: 640 }}>
                 <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
                     Global learning rules
                 </Typography>
@@ -151,7 +151,6 @@ const AdminLearningSettingsPage: React.FC = () => {
                     </Paper>
                 ) : null}
             </Box>
-        </AdminLayout>
     );
 };
 

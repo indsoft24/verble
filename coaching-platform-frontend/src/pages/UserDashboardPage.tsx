@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
-import UserLayout from '../components/layout/UserLayout';
 import {
     Container,
     Typography,
@@ -66,6 +65,7 @@ import { getFreeLeaderboard, getPaidLeaderboard, getMyRank, type LeaderboardEntr
 import LeaderboardPanel from '../components/dashboard/LeaderboardPanel';
 import DashboardSeminarPromoCard from '../components/dashboard/DashboardSeminarPromoCard';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 type ActivityKind =
     | 'word'
@@ -94,6 +94,16 @@ const UserDashboardPage: React.FC = () => {
     const [contentError, setContentError] = useState<string | null>(null);
     const [selectedActivity, setSelectedActivity] = useState<DailyContent | null>(null);
     const [activityKind, setActivityKind] = useState<ActivityKind | null>(null);
+
+    useUserLayoutPage({
+        title: selectedActivity && activityKind ? 'Activity' : 'Dashboard',
+        variant:
+            selectedActivity && activityKind
+                ? activityKind === 'conversation'
+                    ? 'conversations'
+                    : 'activity'
+                : 'default',
+    });
     const [levelDialogOpen, setLevelDialogOpen] = useState(false);
     const [selectedLevel, setSelectedLevel] = useState<'BRONZE' | 'SILVER' | 'GOLD' | 'FULL_COURSE' | null>(null);
     const [recentJoiners, setRecentJoiners] = useState<RecentJoiner[]>([]);
@@ -352,18 +362,15 @@ const UserDashboardPage: React.FC = () => {
 
     if (authIsLoading) {
         return (
-            <UserLayout title="Dashboard">
-                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+            <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
                     <CircularProgress />
                 </Container>
-            </UserLayout>
         );
     }
 
     if (!user) {
         return (
-            <UserLayout title="Dashboard">
-                <Container sx={{ mt: 4, textAlign: 'center' }}>
+            <Container sx={{ mt: 4, textAlign: 'center' }}>
                     <Typography variant="h6" color="error">
                         User data not available.
                     </Typography>
@@ -371,7 +378,6 @@ const UserDashboardPage: React.FC = () => {
                         Login
                     </Button>
                 </Container>
-            </UserLayout>
         );
     }
 
@@ -382,8 +388,8 @@ const UserDashboardPage: React.FC = () => {
         const isConversationActivity = activityKind === 'conversation';
 
         return (
-            <UserLayout title="Activity" variant={isConversationActivity ? 'conversations' : 'activity'}>
-                {isConversationActivity ? (
+            <>
+            {isConversationActivity ? (
                     <ConversationExperienceShell tier="silver" maxWidth="lg">
                         <Button
                             onClick={handleCloseActivity}
@@ -584,13 +590,12 @@ const UserDashboardPage: React.FC = () => {
                     )}
                 </Container>
                 )}
-            </UserLayout>
+            </>
         );
     }
 
     return (
-        <UserLayout title="Dashboard">
-            <Container maxWidth="xl" sx={{ px: { xs: 0, sm: 2 } }}>
+        <Container maxWidth="xl" sx={{ px: { xs: 0, sm: 2 } }}>
                 <Box
                     sx={{
                         display: 'flex',
@@ -790,7 +795,6 @@ const UserDashboardPage: React.FC = () => {
                     />
                 )}
             </Container>
-        </UserLayout>
     );
 };
 

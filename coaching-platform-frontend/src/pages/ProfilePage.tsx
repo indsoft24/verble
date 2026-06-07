@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import UserLayout from '../components/layout/UserLayout';
 import {
     Container,
     Typography,
@@ -34,12 +33,14 @@ import { getCurrentUserProfile, updateCurrentUserProfile, type UpdateProfileData
 import { changeLoginPin, regenerateLoginPinAfterVerification } from '../services/authService';
 import type { User as AuthUser } from '../services/authService';
 import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const PIN_LENGTH = 6;
 
 const digitsOnly = (value: string, max = PIN_LENGTH) => value.replace(/\D/g, '').slice(0, max);
 
 const ProfilePage: React.FC = () => {
+    useUserLayoutPage({ title: 'Profile Settings' });
     const { user: authUser, setUserContext, token, refreshUser } = useAuth();
 
     const [profileData, setProfileData] = useState<AuthUser | null>(null);
@@ -228,28 +229,23 @@ const ProfilePage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <UserLayout title="Profile">
-                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+            <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
                     <CircularProgress />
                     <Typography sx={{ ml: 2 }}>Loading profile…</Typography>
                 </Container>
-            </UserLayout>
         );
     }
 
     if (error || !profileData) {
         return (
-            <UserLayout title="Profile">
-                <Container sx={{ mt: 4 }}>
+            <Container sx={{ mt: 4 }}>
                     <Alert severity="error">{error || 'Could not load profile data.'}</Alert>
                 </Container>
-            </UserLayout>
         );
     }
 
     return (
-        <UserLayout title="Profile Settings">
-            <Container maxWidth="md">
+        <Container maxWidth="md">
                 <Typography
                     variant="h5"
                     component="h1"
@@ -603,7 +599,6 @@ const ProfilePage: React.FC = () => {
                     </DialogActions>
                 </Dialog>
             </Container>
-        </UserLayout>
     );
 };
 

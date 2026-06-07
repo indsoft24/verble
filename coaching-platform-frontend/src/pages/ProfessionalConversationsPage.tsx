@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { Breadcrumbs, Link, Typography } from '@mui/material';
-import UserLayout from '../components/layout/UserLayout';
 import ConversationExperienceShell from '../components/features/ConversationExperienceShell';
 import ProfessionalConversationsTagsView from '../components/features/ProfessionalConversationsTagsView';
 import ProfessionalConversationsTagListView from '../components/features/ProfessionalConversationsTagListView';
@@ -12,6 +11,7 @@ import { conversationBreadcrumbSx } from '../components/features/conversationExp
 import { getProfessionalLibrary, type DailyContent } from '../services/dailyContentService';
 import { buildTagIndex } from '../utils/professionalConversationLibraryUtils';
 import { TIER_COLORS } from '../components/dashboard/DashboardActivitiesPanel';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 type View = 'tags' | 'tagList' | 'detail';
 
@@ -20,6 +20,7 @@ type ProConversationsLocationState = {
 };
 
 const ProfessionalConversationsPage: React.FC = () => {
+    useUserLayoutPage({ title: 'Professional Conversations', variant: 'conversations' });
     const [view, setView] = useState<View>('tags');
     const [library, setLibrary] = useState<DailyContent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -110,8 +111,7 @@ const ProfessionalConversationsPage: React.FC = () => {
     const shellMaxWidth = view === 'detail' ? ('sm' as const) : ('lg' as const);
 
     return (
-        <UserLayout title="Professional Conversations" variant="conversations">
-            <ConversationExperienceShell tier="gold" maxWidth={shellMaxWidth}>
+        <ConversationExperienceShell tier="gold" maxWidth={shellMaxWidth}>
                 <Breadcrumbs sx={conversationBreadcrumbSx}>
                     <Link component={RouterLink} to="/dashboard" underline="hover" color="inherit">
                         Dashboard
@@ -180,7 +180,6 @@ const ProfessionalConversationsPage: React.FC = () => {
                     />
                 )}
             </ConversationExperienceShell>
-        </UserLayout>
     );
 };
 

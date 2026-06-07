@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
-import UserLayout from '../components/layout/UserLayout';
 import {
     Container, Typography, Grid, Card, CardActionArea, CardContent, CardMedia,
     CircularProgress, Alert, Box, Button, Paper, Pagination, Chip, TextField, Tooltip
@@ -14,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { extractId } from '../utils/idUtils';
 import { getSplashImageUrl, resolveBackendMediaUrl } from '../utils/imageUtils';
 import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const useDebounce = (value: string, delay: number) => {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -29,6 +29,7 @@ const useDebounce = (value: string, delay: number) => {
 };
 
 const VideosListPage: React.FC = () => {
+    useUserLayoutPage({ title: 'My Videos' });
     const [videos, setVideos] = useState<VideoListItem[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -110,29 +111,24 @@ const VideosListPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <UserLayout title="Videos">
-                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+            <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
                     <CircularProgress />
                     <Typography sx={{ml: 2}}>Loading videos...</Typography>
                 </Container>
-            </UserLayout>
         );
     }
 
     if (error) {
         return (
-            <UserLayout title="Videos">
-                <Container sx={{ mt: 4, textAlign: 'center' }}>
+            <Container sx={{ mt: 4, textAlign: 'center' }}>
                     <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
                     <Button variant="outlined" onClick={() => fetchVideos(1, searchTerm || null)}>Try Again</Button>
                 </Container>
-            </UserLayout>
         );
     }
 
     return (
-        <UserLayout title="My Videos">
-            <Container maxWidth="xl">
+        <Container maxWidth="xl">
                 <Typography
                     variant="h5"
                     component="h1"
@@ -268,7 +264,6 @@ const VideosListPage: React.FC = () => {
                 </Box>
             )}
             </Container>
-        </UserLayout>
     );
 };
 

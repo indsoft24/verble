@@ -14,17 +14,18 @@ import {
 import { getAllSubscriptionPlansAdmin, type SubscriptionPlan } from '../services/subscriptionPlanAdminService';
 import { getAllCoursesAdmin, type Course } from '../services/courseAdminService';
 import { getModulesForCourseAdmin, type Module } from '../services/moduleAdminService';
-import AdminLayout from '../components/layout/AdminLayout';
 import {
     DEFAULT_VIDEO_COURSE_ID,
     DEFAULT_VIDEO_REQUIRED_PLAN_ID,
     FALLBACK_VIDEO_COURSE_NAME,
     FALLBACK_VIDEO_REQUIRED_PLAN_NAME,
 } from '../config/adminDefaults';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 type UploadPhase = 'idle' | 'creating' | 'uploading' | 'done';
 
 const AdminCreateVideoPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Create Video' });
     const navigate = useNavigate();
 
     const [title, setTitle] = useState('');
@@ -177,16 +178,13 @@ const AdminCreateVideoPage: React.FC = () => {
 
     if (isLoadingOptions) {
         return (
-            <AdminLayout title="Create Video">
-                <Container sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
+            <Container sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
                     <CircularProgress />
                 </Container>
-            </AdminLayout>
         );
     }
 
     return (
-        <AdminLayout title="Create Video">
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
             <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
                 <MuiLink component={RouterLink} underline="hover" color="inherit" to="/admin/dashboard">Admin</MuiLink>
@@ -282,7 +280,6 @@ const AdminCreateVideoPage: React.FC = () => {
                 </Grid>
             </Paper>
         </Container>
-        </AdminLayout>
     );
 };
 

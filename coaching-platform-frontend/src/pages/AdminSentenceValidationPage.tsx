@@ -1,6 +1,5 @@
 // src/pages/AdminSentenceValidationPage.tsx
 import React, { useEffect, useState, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
-import AdminLayout from '../components/layout/AdminLayout';
 import {
     Container,
     Typography,
@@ -84,6 +83,7 @@ import {
     VALIDATION_COLUMN_ORDER,
     type ValidationColumnId,
 } from '../hooks/useResizableValidationColumns';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 type SubmissionStatus = 'all' | 'pending' | 'reviewed';
 
@@ -148,6 +148,7 @@ const ResizableHeaderCell: React.FC<{
 );
 
 const AdminSentenceValidationPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Sentence Validation' });
     const [submissions, setSubmissions] = useState<SentenceSubmission[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -423,8 +424,7 @@ const AdminSentenceValidationPage: React.FC = () => {
     };
 
     return (
-        <AdminLayout title="Sentence Validation">
-            <Container maxWidth="xl" sx={{ pb: 4 }}>
+        <Container maxWidth="xl" sx={{ pb: 4 }}>
                 <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
                     Sentence Validation Dashboard
                 </Typography>
@@ -1045,7 +1045,6 @@ const AdminSentenceValidationPage: React.FC = () => {
                     </DialogActions>
                 </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 

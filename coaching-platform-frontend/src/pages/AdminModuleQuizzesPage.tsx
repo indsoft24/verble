@@ -19,7 +19,6 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import AdminLayout from '../components/layout/AdminLayout';
 import AdminModuleQuizBulkDialog from '../components/admin/AdminModuleQuizBulkDialog';
 import { getAllCoursesAdmin, type Course } from '../services/courseAdminService';
 import { getModulesForCourseAdmin, type Module } from '../services/moduleAdminService';
@@ -36,6 +35,7 @@ import {
     FALLBACK_QUIZ_COURSE_NAME,
 } from '../config/adminDefaults';
 import { normalizeQuestionOptions } from '../utils/quizOptionUtils';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 const DEFAULT_OPTION_COUNT = 4;
 const MIN_OPTIONS = 2;
@@ -63,6 +63,7 @@ const emptyQuestion = (): QuizQuestionInput =>
     });
 
 const AdminModuleQuizzesPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Module Quizzes' });
     const [searchParams, setSearchParams] = useSearchParams();
     const [courses, setCourses] = useState<Course[]>([]);
     const [modules, setModules] = useState<Module[]>([]);
@@ -240,8 +241,8 @@ const AdminModuleQuizzesPage: React.FC = () => {
     };
 
     return (
-        <AdminLayout title="Module Quizzes">
-            <Stack spacing={2}>
+        <>
+        <Stack spacing={2}>
                 {error && <Alert severity="error">{error}</Alert>}
                 {success && <Alert severity="success" onClose={() => setSuccess(null)}>{success}</Alert>}
 
@@ -433,7 +434,7 @@ const AdminModuleQuizzesPage: React.FC = () => {
                     setBulkOpen(false);
                 }}
             />
-        </AdminLayout>
+        </>
     );
 };
 

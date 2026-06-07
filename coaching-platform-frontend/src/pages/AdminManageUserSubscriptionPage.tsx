@@ -21,7 +21,6 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 
-import AdminLayout from '../components/layout/AdminLayout';
 import { 
     getUserByIdAdmin, 
     adminAddSubscriptionToUserService,
@@ -35,6 +34,7 @@ import {
 } from '../services/adminService'; 
 import { getAllSubscriptionPlansAdmin, type SubscriptionPlan } from '../services/subscriptionPlanAdminService';
 import { formatPlanDurationLabel } from '../utils/adminUserDisplay';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 const subscriptionStatuses: AdminAddUserSubscriptionPayload['status'][] = ['active', 'pending_cancellation', 'cancelled', 'expired', 'trial', 'future_active', 'none'];
 const isStandaloneBonusPlanName = (name: string): boolean => name.trim().toLowerCase() === 'bonus';
@@ -56,7 +56,9 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
 
     const [user, setUser] = useState<AdminDetailedUser | null>(null);
     const [allPlans, setAllPlans] = useState<SubscriptionPlan[]>([]);
-    
+
+    useAdminLayoutPage({ title: user?.name ? `Manage User — ${user.name}` : 'Manage User' });
+
     const [newSubPlanId, setNewSubPlanId] = useState<string>(''); 
     const [newSubStatus, setNewSubStatus] = useState<AdminAddUserSubscriptionPayload['status']>('active');
     const [newSubStartDate, setNewSubStartDate] = useState<Date | null>(new Date());
@@ -276,19 +278,16 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
 
     if (isLoadingPage) {
         return (
-            <AdminLayout title="Manage User">
-                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+            <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={28} />
                     <Typography sx={{ ml: 1.5 }}>Loading user…</Typography>
                 </Container>
-            </AdminLayout>
         );
     }
 
     if (error && !user && !isSubmitting) {
         return (
-            <AdminLayout title="Manage User">
-                <Container sx={{ py: 3 }}>
+            <Container sx={{ py: 3 }}>
                     <Button
                         startIcon={<ArrowBackIcon />}
                         onClick={() => navigate('/admin/users')}
@@ -298,12 +297,10 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                     </Button>
                     <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
                 </Container>
-            </AdminLayout>
         );
     }
 
     return (
-        <AdminLayout title={`Manage User — ${user?.name || 'User'}`}>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
             <Container maxWidth="lg" sx={{ py: 3 }}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
@@ -640,7 +637,6 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                 </Dialog>
             </Container>
         </LocalizationProvider>
-        </AdminLayout>
     );
 };
 

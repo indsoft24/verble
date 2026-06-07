@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from '../components/layout/AdminLayout';
 import {
     Alert,
     Box,
@@ -27,10 +26,12 @@ import {
     type AdminScoringUserRow,
     type ScoringHistoryPagination,
 } from '../services/scoringHistoryService';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 const DEFAULT_ROWS = 25;
 
 const AdminRewardsScoringPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Rewards & Scoring' });
     const navigate = useNavigate();
     const [users, setUsers] = useState<AdminScoringUserRow[]>([]);
     const [pagination, setPagination] = useState<ScoringHistoryPagination>({
@@ -79,8 +80,7 @@ const AdminRewardsScoringPage: React.FC = () => {
     }, [fetchData]);
 
     return (
-        <AdminLayout title="Rewards & Scoring">
-            <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+        <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <EmojiEventsIcon color="primary" />
                     <Typography variant="h5" fontWeight={800}>
@@ -216,7 +216,6 @@ const AdminRewardsScoringPage: React.FC = () => {
                     />
                 </TableContainer>
             </Box>
-        </AdminLayout>
     );
 };
 

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Alert, Box, Button, Typography } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import UserLayout from '../components/layout/UserLayout';
 import ScoringHistoryPanel from '../components/scoring/ScoringHistoryPanel';
 import {
     getMyScoringSummary,
@@ -10,8 +9,10 @@ import {
     type ScoringSummary,
     type ScoringHistoryEvent,
 } from '../services/scoringHistoryService';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const MyRewardsPage: React.FC = () => {
+    useUserLayoutPage({ title: 'Rewards & Scoring' });
     const [summary, setSummary] = useState<ScoringSummary | null>(null);
     const [events, setEvents] = useState<ScoringHistoryEvent[]>([]);
     const [total, setTotal] = useState(0);
@@ -65,8 +66,7 @@ const MyRewardsPage: React.FC = () => {
     }, [category]);
 
     return (
-        <UserLayout title="My Rewards">
-            <Box sx={{ maxWidth: 900, mx: 'auto', px: { xs: 1, sm: 0 }, pb: 4 }}>
+        <Box sx={{ maxWidth: 900, mx: 'auto', px: { xs: 1, sm: 0 }, pb: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <EmojiEventsIcon color="primary" />
                     <Typography variant="h5" fontWeight={800}>
@@ -110,7 +110,6 @@ const MyRewardsPage: React.FC = () => {
                     Back to dashboard
                 </Button>
             </Box>
-        </UserLayout>
     );
 };
 

@@ -22,7 +22,6 @@ import {
 } from '../services/moduleQuizService';
 import { extractId } from '../utils/idUtils';
 import { getSplashImageUrl, resolveBackendMediaUrl, getImageUrl } from '../utils/imageUtils';
-import UserLayout from '../components/layout/UserLayout';
 import {
     CourseLearningShell,
     CourseLearningBand,
@@ -38,6 +37,7 @@ import {
     courseChipSuccessSx,
     courseChipWarningSx,
 } from '../components/course';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 function formatDuration(totalSeconds: number): string {
     const s = Math.max(0, Math.floor(totalSeconds));
@@ -63,6 +63,11 @@ const ModuleVideosPage: React.FC = () => {
     const location = useLocation();
 
     const [moduleDetails, setModuleDetails] = useState<ModuleDetailUser | null>(null);
+
+    useUserLayoutPage({
+        title: moduleDetails?.title || 'Module Videos',
+        variant: 'learning',
+    });
     const [videos, setVideos] = useState<VideoListItemForModulePage[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -177,36 +182,30 @@ const ModuleVideosPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <UserLayout title="Module Videos" variant="learning">
-                <CourseLearningShell>
+            <CourseLearningShell>
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 8, gap: 2 }}>
                         <CircularProgress size={28} sx={{ color: courseLearningTheme.accent }} />
                         <Typography sx={{ color: courseLearningTheme.textMuted }}>Loading lessons…</Typography>
                     </Box>
                 </CourseLearningShell>
-            </UserLayout>
         );
     }
 
     if (error) {
         return (
-            <UserLayout title="Module Videos" variant="learning">
-                <CourseLearningShell maxWidth="sm">
+            <CourseLearningShell maxWidth="sm">
                     <Alert severity="error" action={<Button onClick={fetchModuleData}>Retry</Button>}>
                         {error}
                     </Alert>
                 </CourseLearningShell>
-            </UserLayout>
         );
     }
 
     if (!moduleDetails) {
         return (
-            <UserLayout title="Module Videos" variant="learning">
-                <CourseLearningShell maxWidth="sm">
+            <CourseLearningShell maxWidth="sm">
                     <Alert severity="info">This module is not available.</Alert>
                 </CourseLearningShell>
-            </UserLayout>
         );
     }
 
@@ -219,8 +218,8 @@ const ModuleVideosPage: React.FC = () => {
     const backTo = courseId ? `/courses/${courseId}` : '/my-courses';
 
     return (
-        <UserLayout title={moduleDetails.title || 'Module Videos'} variant="learning">
-            <CourseLearningShell>
+        <>
+        <CourseLearningShell>
                 <CourseLearningBreadcrumbs
                     items={[
                         { label: 'My Courses', to: '/my-courses' },
@@ -432,7 +431,7 @@ const ModuleVideosPage: React.FC = () => {
                     </Alert>
                 ) : undefined}
             </Snackbar>
-        </UserLayout>
+        </>
     );
 };
 

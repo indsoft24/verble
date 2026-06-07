@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import AdminLayout from '../components/layout/AdminLayout';
 import {
     Container, Typography, Button, CircularProgress, Alert, Box, Paper,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField, Grid,
@@ -36,6 +35,7 @@ import {
 
 import { getAllCoursesAdmin, type Course } from '../services/courseAdminService';
 import { getImageUrl } from '../utils/imageUtils';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 interface SubscriptionPlanRow extends SubscriptionPlan {
     id: string;
@@ -75,6 +75,7 @@ const isStandaloneBonusPlanName = (name: string): boolean => name.trim().toLower
 
 
 const AdminSubscriptionPlansListPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Subscription Plans' });
     const [plansForGrid, setPlansForGrid] = useState<SubscriptionPlanRow[]>([]);
     const [allCourses, setAllCourses] = useState<Course[]>([]);
 
@@ -425,23 +426,18 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
     ], []);
 
     if (isLoading) return (
-        <AdminLayout title="Subscription Plans">
-            <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
+        <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
                 <CircularProgress />
             </Container>
-        </AdminLayout>
     );
     if (plansForGrid === null) return (
-        <AdminLayout title="Subscription Plans">
-            <Container sx={{ mt: 4 }}>
+        <Container sx={{ mt: 4 }}>
                 <Alert severity="error">Error: Plans data is null.</Alert>
             </Container>
-        </AdminLayout>
     );
 
     return (
-        <AdminLayout title="Subscription Plans">
-            <Container maxWidth="xl">
+        <Container maxWidth="xl">
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Typography variant="h5" component="h1" fontWeight={600}>
                         Manage Subscription Plans
@@ -709,7 +705,6 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 

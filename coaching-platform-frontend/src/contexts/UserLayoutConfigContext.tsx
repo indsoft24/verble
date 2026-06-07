@@ -4,6 +4,7 @@ import {
     useState,
     useLayoutEffect,
     useMemo,
+    useCallback,
     type ReactNode,
 } from 'react';
 
@@ -28,14 +29,22 @@ interface UserLayoutConfigContextValue {
 
 const UserLayoutConfigContext = createContext<UserLayoutConfigContextValue | undefined>(undefined);
 
+function userLayoutConfigsEqual(a: UserLayoutPageConfig, b: UserLayoutPageConfig): boolean {
+    return a.title === b.title && a.fullWidth === b.fullWidth && a.variant === b.variant;
+}
+
 export function UserLayoutConfigProvider({ children }: { children: ReactNode }) {
     const [config, setConfigState] = useState<UserLayoutPageConfig>(DEFAULT_CONFIG);
 
-    const setConfig = (next: UserLayoutPageConfig) => {
-        setConfigState({ ...DEFAULT_CONFIG, ...next });
-    };
+    const setConfig = useCallback((next: UserLayoutPageConfig) => {
+        setConfigState((prev) => {
+            const merged = { ...DEFAULT_CONFIG, ...next };
+            if (userLayoutConfigsEqual(prev, merged)) return prev;
+            return merged;
+        });
+    }, []);
 
-    const value = useMemo(() => ({ config, setConfig }), [config]);
+    const value = useMemo(() => ({ config, setConfig }), [config, setConfig]);
 
     return (
         <UserLayoutConfigContext.Provider value={value}>{children}</UserLayoutConfigContext.Provider>

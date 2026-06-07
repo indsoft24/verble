@@ -12,7 +12,6 @@ import {
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
-import UserLayout from '../components/layout/UserLayout';
 import {
     CourseLearningShell,
     CourseLearningBreadcrumbs,
@@ -28,6 +27,7 @@ import {
     type ModuleQuizAvailability,
 } from '../services/moduleQuizService';
 import { getFilledOptionEntries } from '../utils/quizOptionUtils';
+import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
 
 const optionRowSx = (selected: boolean) => ({
     display: 'flex',
@@ -55,6 +55,11 @@ const optionRowSx = (selected: boolean) => ({
 const ModuleQuizPage: React.FC = () => {
     const { moduleId } = useParams<{ moduleId: string }>();
     const [quiz, setQuiz] = useState<ModuleQuizForStudent | null>(null);
+
+    useUserLayoutPage({
+        title: quiz?.title || 'Module Quiz',
+        variant: 'learning',
+    });
     const [gate, setGate] = useState<ModuleQuizAvailability | null>(null);
     const [answers, setAnswers] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(true);
@@ -148,16 +153,14 @@ const ModuleQuizPage: React.FC = () => {
 
     if (!moduleId) {
         return (
-            <UserLayout title="Module Quiz" variant="learning">
-                <CourseLearningShell maxWidth="sm">
+            <CourseLearningShell maxWidth="sm">
                     <Alert severity="error">Invalid module.</Alert>
                 </CourseLearningShell>
-            </UserLayout>
         );
     }
 
     const layout = (content: React.ReactNode) => (
-        <UserLayout title={quiz?.title || 'Module Quiz'} variant="learning">
+        <>
             <CourseLearningShell>
                 <CourseLearningBreadcrumbs
                     items={[
@@ -169,7 +172,7 @@ const ModuleQuizPage: React.FC = () => {
                 {content}
             </CourseLearningShell>
             <CourseBottomNav backLabel="Back to lessons" backTo={lessonsPath} />
-        </UserLayout>
+        </>
     );
 
     if (loading) {

@@ -1,6 +1,5 @@
 // src/pages/AdminDailyContentPage.tsx
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import AdminLayout from '../components/layout/AdminLayout';
 import {
     Container,
     Typography,
@@ -73,6 +72,7 @@ import AdminDailyContentBulkDialog from '../components/admin/AdminDailyContentBu
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 type DailyContentFormState = Partial<CreateDailyContentPayload> & {
     _id?: string;
@@ -83,6 +83,7 @@ type DailyContentFormState = Partial<CreateDailyContentPayload> & {
 type ViewMode = 'daily' | 'browse';
 
 const AdminDailyContentPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'Daily Content Management' });
     const [viewMode, setViewMode] = useState<ViewMode>('daily');
     const [content, setContent] = useState<DailyContent[]>([]);
     const [browseContent, setBrowseContent] = useState<DailyContent[]>([]);
@@ -691,8 +692,7 @@ const AdminDailyContentPage: React.FC = () => {
 
 
     return (
-        <AdminLayout title="Daily Content Management">
-            <Container maxWidth="xl">
+        <Container maxWidth="xl">
                 <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
                         Daily Content Management
@@ -1108,7 +1108,6 @@ const AdminDailyContentPage: React.FC = () => {
                     </DialogActions>
                 </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 

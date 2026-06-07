@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from '../components/layout/AdminLayout';
 import {
     Container,
     Typography,
@@ -46,12 +45,14 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import CreateUserDialog from '../components/admin/CreateUserDialog';
 import { getUserPhone, getUserPlanDisplay } from '../utils/adminUserDisplay';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 type UserListTab = 'all' | 'free' | 'premium' | 'search';
 
 const DEFAULT_ROWS_PER_PAGE = 25;
 
 const AdminUsersListPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'User Management' });
     const [users, setUsers] = useState<AdminUserView[]>([]);
     const [pagination, setPagination] = useState<AdminUsersPagination>({
         page: 1,
@@ -416,18 +417,15 @@ const AdminUsersListPage: React.FC = () => {
 
     if (isLoading && users.length === 0) {
         return (
-            <AdminLayout title="Users">
-                <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+            <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
                     <CircularProgress />
                     <Typography sx={{ ml: 2 }}>Loading users...</Typography>
                 </Container>
-            </AdminLayout>
         );
     }
 
     return (
-        <AdminLayout title="User Management">
-            <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2 } }}>
+        <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2 } }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                     <Typography variant="h6" component="h1" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                         User Management
@@ -523,7 +521,6 @@ const AdminUsersListPage: React.FC = () => {
                     </DialogActions>
                 </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 

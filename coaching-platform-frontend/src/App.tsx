@@ -18,6 +18,8 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import PromoBanner from './components/layout/PromoBanner';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import AdminAppShell from './components/layout/AdminAppShell';
+import UserAppShell from './components/layout/UserAppShell';
 import { isUserAppRoute } from './constants/userAppRoutes';
 
 // --- Lazy Loaded Pages (Code Splitting) ---
@@ -173,54 +175,58 @@ function AppContent() {
                         <Route path="/webinar/:slug" element={<WebinarPage />} />
 
 
-                        {/* Protected User Routes */}
+                        {/* Protected User Routes (persistent sidebar via UserAppShell) */}
                         <Route element={<ProtectedRoute allowedRoles={['user', 'admin']} />}>
-                            <Route path="/dashboard" element={<UserDashboardPage />} />
-                            <Route path="/profile" element={<ProfilePage />} />
-                            <Route path="/my-courses" element={<MyCoursesPage />} />
-                            <Route path="/my-courses/:courseId/report-card" element={<CourseReportCardPage />} />
-                            <Route path="/videos" element={<VideosListPage />} />
-                            <Route path="/videos/:videoId" element={<VideoWatchPage />} />
-                            <Route path="/subscription-plans" element={<SubscriptionPlansPage />} />
-                            <Route path="/subscription-plans/:planId" element={<SubscriptionPlanDetailPage />} />
-                            <Route path="/my-subscription" element={<MySubscriptionPage />} />
-                            <Route path="/notifications" element={<NotificationsPage />} />
-                            <Route path="/my-rewards" element={<MyRewardsPage />} />
-                            <Route path="/professional-conversations" element={<ProfessionalConversationsPage />} />
-                            <Route path="/ai-prompts" element={<AIPromptsPage />} />
-                            <Route path="/modules/:moduleId/videos" element={<ModuleVideosPage />} />
-                            <Route path="/modules/:moduleId/quiz" element={<ModuleQuizPage />} />
+                            <Route element={<UserAppShell />}>
+                                <Route path="/dashboard" element={<UserDashboardPage />} />
+                                <Route path="/profile" element={<ProfilePage />} />
+                                <Route path="/my-courses" element={<MyCoursesPage />} />
+                                <Route path="/my-courses/:courseId/report-card" element={<CourseReportCardPage />} />
+                                <Route path="/videos" element={<VideosListPage />} />
+                                <Route path="/videos/:videoId" element={<VideoWatchPage />} />
+                                <Route path="/subscription-plans" element={<SubscriptionPlansPage />} />
+                                <Route path="/subscription-plans/:planId" element={<SubscriptionPlanDetailPage />} />
+                                <Route path="/my-subscription" element={<MySubscriptionPage />} />
+                                <Route path="/notifications" element={<NotificationsPage />} />
+                                <Route path="/my-rewards" element={<MyRewardsPage />} />
+                                <Route path="/professional-conversations" element={<ProfessionalConversationsPage />} />
+                                <Route path="/ai-prompts" element={<AIPromptsPage />} />
+                                <Route path="/modules/:moduleId/videos" element={<ModuleVideosPage />} />
+                                <Route path="/modules/:moduleId/quiz" element={<ModuleQuizPage />} />
+                            </Route>
                         </Route>
 
-                        {/* Protected Admin Routes */}
+                        {/* Protected Admin Routes (persistent sidebar via AdminAppShell) */}
                         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-                            <Route path="/admin/users" element={<AdminUsersListPage />} />
-                            <Route path="/admin/rewards-scoring" element={<AdminRewardsScoringPage />} />
-                            <Route path="/admin/users/:userId/scoring" element={<AdminUserScoringDetailPage />} />
-                            <Route path="/admin/users/:userId/manage-subscription" element={<AdminManageUserSubscriptionPage />} />
-                            <Route path="/admin/videos" element={<AdminVideosListPage />} />
-                            <Route path="/admin/videos/new" element={<AdminCreateVideoPage />} />
-                            <Route path="/admin/videos/edit/:id" element={<AdminEditVideoPage />} />
-                            <Route path="/admin/subscription-plans" element={<AdminSubscriptionPlansListPage />} />
-                            <Route path="/admin/courses" element={<AdminCoursesListPage />} />
-                            <Route path="/admin/courses/:courseId/modules" element={<AdminManageModulesPage />} />
-                            <Route path="/admin/modules" element={<AdminModulesListPage />} />
-                            <Route path="/admin/modules/:moduleId/videos" element={<AdminModuleVideosPage />} />
-                            <Route path="/admin/blog" element={<AdminBlogListPage />} />
-                            <Route path="/admin/blog/new" element={<AdminCreateEditBlogPostPage />} />
-                            <Route path="/admin/blog/edit/:postId" element={<AdminCreateEditBlogPostPage />} />
-                            <Route path="/admin/exam-categories" element={<AdminExamCategoriesPage />} />
-                            <Route path='/admin/sentence-validation' element={<AdminSentenceValidationPage />} />
-                            <Route path='/admin/daily-content' element={<AdminDailyContentPage />} />
-                            <Route path='/admin/database-manager' element={<AdminDatabaseManagerPage />} />
-                            <Route path='/admin/leads' element={<AdminWebinarLeadsPage />} />
-                            <Route path='/admin/promo-banner' element={<AdminPromoBannerPage />} />
-                            <Route path='/admin/certification-management' element={<AdminCertificationManagementPage />} />
-                            <Route path='/admin/module-quizzes' element={<AdminModuleQuizzesPage />} />
-                            <Route path='/admin/ai-prompts' element={<AdminAIPromptsPage />} />
-                            <Route path='/admin/learning-settings' element={<AdminLearningSettingsPage />} />
-                            <Route path='/admin/quiz-validation' element={<AdminQuizValidationPage />} />
+                            <Route element={<AdminAppShell />}>
+                                <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+                                <Route path="/admin/users" element={<AdminUsersListPage />} />
+                                <Route path="/admin/rewards-scoring" element={<AdminRewardsScoringPage />} />
+                                <Route path="/admin/users/:userId/scoring" element={<AdminUserScoringDetailPage />} />
+                                <Route path="/admin/users/:userId/manage-subscription" element={<AdminManageUserSubscriptionPage />} />
+                                <Route path="/admin/videos" element={<AdminVideosListPage />} />
+                                <Route path="/admin/videos/new" element={<AdminCreateVideoPage />} />
+                                <Route path="/admin/videos/edit/:id" element={<AdminEditVideoPage />} />
+                                <Route path="/admin/subscription-plans" element={<AdminSubscriptionPlansListPage />} />
+                                <Route path="/admin/courses" element={<AdminCoursesListPage />} />
+                                <Route path="/admin/courses/:courseId/modules" element={<AdminManageModulesPage />} />
+                                <Route path="/admin/modules" element={<AdminModulesListPage />} />
+                                <Route path="/admin/modules/:moduleId/videos" element={<AdminModuleVideosPage />} />
+                                <Route path="/admin/blog" element={<AdminBlogListPage />} />
+                                <Route path="/admin/blog/new" element={<AdminCreateEditBlogPostPage />} />
+                                <Route path="/admin/blog/edit/:postId" element={<AdminCreateEditBlogPostPage />} />
+                                <Route path="/admin/exam-categories" element={<AdminExamCategoriesPage />} />
+                                <Route path="/admin/sentence-validation" element={<AdminSentenceValidationPage />} />
+                                <Route path="/admin/daily-content" element={<AdminDailyContentPage />} />
+                                <Route path="/admin/database-manager" element={<AdminDatabaseManagerPage />} />
+                                <Route path="/admin/leads" element={<AdminWebinarLeadsPage />} />
+                                <Route path="/admin/promo-banner" element={<AdminPromoBannerPage />} />
+                                <Route path="/admin/certification-management" element={<AdminCertificationManagementPage />} />
+                                <Route path="/admin/module-quizzes" element={<AdminModuleQuizzesPage />} />
+                                <Route path="/admin/ai-prompts" element={<AdminAIPromptsPage />} />
+                                <Route path="/admin/learning-settings" element={<AdminLearningSettingsPage />} />
+                                <Route path="/admin/quiz-validation" element={<AdminQuizValidationPage />} />
+                            </Route>
                         </Route>
 
                         {/* Fallback Routes */}

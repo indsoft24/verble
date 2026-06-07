@@ -25,7 +25,6 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SearchIcon from '@mui/icons-material/Search';
-import AdminLayout from '../components/layout/AdminLayout';
 import {
     createAIPrompt,
     deleteAIPrompt,
@@ -36,6 +35,7 @@ import {
 } from '../services/aiPromptService';
 import CommaSeparatedTextField from '../components/common/CommaSeparatedTextField';
 import TiptapEditor from '../components/features/blog/TiptapEditor';
+import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 const EMPTY_FORM: AIPromptInput = {
     topic: '',
@@ -50,6 +50,7 @@ const EMPTY_FORM: AIPromptInput = {
 };
 
 const AdminAIPromptsPage: React.FC = () => {
+    useAdminLayoutPage({ title: 'AI Prompt Library' });
     const [prompts, setPrompts] = useState<AIPrompt[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
@@ -153,8 +154,7 @@ const AdminAIPromptsPage: React.FC = () => {
     };
 
     return (
-        <AdminLayout title="AI Prompt Library">
-            <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Container maxWidth="xl" sx={{ py: 3 }}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={2} sx={{ mb: 3 }}>
                     <Box>
                         <Typography variant="h5" fontWeight={700}>
@@ -333,7 +333,6 @@ const AdminAIPromptsPage: React.FC = () => {
                     </DialogActions>
                 </Dialog>
             </Container>
-        </AdminLayout>
     );
 };
 
