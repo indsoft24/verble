@@ -50,10 +50,9 @@ type PlanDetail = SubscriptionPlanPublic & {
 
 /** Consistent spacing scale for this page */
 const PAGE_GAP = { xs: 2, sm: 2.5, md: 3 } as const;
-const CARD_PAD = { xs: 2.25, sm: 3, md: 3.5 } as const;
-/** Extra inset on top of UserLayout mobile padding (layout xs:2 + this ≈ 28px total) */
-const MOBILE_GUTTER = { xs: 1.5, sm: 0 } as const;
-const MOBILE_FOOTER_PX = { xs: 3.5, sm: 2 } as const;
+const CARD_PAD = { xs: 2, sm: 2.75, md: 3.5 } as const;
+/** Align with UserLayout main padding (xs: 2 = 16px) */
+const PAGE_GUTTER_X = { xs: 0, sm: 0 } as const;
 
 const sectionCardSx = (tierAccent: string, tinted = false) => ({
     p: CARD_PAD,
@@ -74,58 +73,69 @@ type StatItem = {
 function PlanStatsGrid({ items, tierAccent, variant }: { items: StatItem[]; tierAccent: string; variant: 'desktop' | 'mobile' }) {
     if (variant === 'mobile') {
         return (
-            <Paper elevation={0} sx={sectionCardSx(tierAccent)}>
-                <Grid container alignItems="stretch">
-                    {items.map((stat, index) => (
-                        <Grid
-                            key={stat.label}
-                            size={4}
+            <Stack direction="row" spacing={1.25} sx={{ width: '100%' }}>
+                {items.map((stat) => (
+                    <Paper
+                        key={stat.label}
+                        elevation={0}
+                        sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            p: 1.25,
+                            borderRadius: 2,
+                            textAlign: 'center',
+                            border: '1px solid',
+                            borderColor: alpha(tierAccent, 0.14),
+                            bgcolor: alpha(tierAccent, 0.05),
+                        }}
+                    >
+                        <Box
                             sx={{
-                                px: 1,
-                                py: 0.5,
-                                textAlign: 'center',
-                                borderRight: index < items.length - 1 ? '1px solid' : 'none',
-                                borderColor: 'divider',
+                                width: 32,
+                                height: 32,
+                                borderRadius: 1.5,
+                                mx: 'auto',
+                                mb: 0.75,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                bgcolor: alpha(tierAccent, 0.12),
                             }}
                         >
-                            <Box
-                                sx={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 1.5,
-                                    mx: 'auto',
-                                    mb: 0.75,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    bgcolor: alpha(tierAccent, 0.1),
-                                }}
-                            >
-                                <stat.icon sx={{ color: tierAccent, fontSize: 20 }} />
-                            </Box>
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{ fontWeight: 700, letterSpacing: 0.4, display: 'block', lineHeight: 1.2 }}
-                            >
-                                {stat.label}
-                            </Typography>
-                            <Typography
-                                variant="caption"
-                                fontWeight={700}
-                                sx={{
-                                    display: 'block',
-                                    mt: 0.35,
-                                    lineHeight: 1.35,
-                                    fontSize: '0.7rem',
-                                }}
-                            >
-                                {stat.shortValue ?? stat.value}
-                            </Typography>
-                        </Grid>
-                    ))}
-                </Grid>
-            </Paper>
+                            <stat.icon sx={{ color: tierAccent, fontSize: 18 }} />
+                        </Box>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                                fontWeight: 700,
+                                letterSpacing: 0.3,
+                                display: 'block',
+                                lineHeight: 1.2,
+                                fontSize: '0.65rem',
+                                textTransform: 'uppercase',
+                            }}
+                        >
+                            {stat.label}
+                        </Typography>
+                        <Typography
+                            variant="caption"
+                            fontWeight={700}
+                            sx={{
+                                display: 'block',
+                                mt: 0.35,
+                                lineHeight: 1.35,
+                                fontSize: '0.72rem',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {stat.shortValue ?? stat.value}
+                        </Typography>
+                    </Paper>
+                ))}
+            </Stack>
         );
     }
 
@@ -351,7 +361,7 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                   icon: CheckCircleRoundedIcon,
                   label: 'Features',
                   value: `${plan.features?.length ?? 0} included`,
-                  shortValue: `${plan.features?.length ?? 0}`,
+                  shortValue: `${plan.features?.length ?? 0} items`,
               },
           ]
         : [];
@@ -389,9 +399,9 @@ const SubscriptionPlanDetailPage: React.FC = () => {
     return (
         <Box
             sx={{
-                pb: { xs: 'calc(88px + env(safe-area-inset-bottom))', md: 4 },
+                pb: { xs: 'calc(96px + env(safe-area-inset-bottom))', md: 4 },
                 width: '100%',
-                px: MOBILE_GUTTER,
+                px: PAGE_GUTTER_X,
             }}
         >
             <Stack spacing={PAGE_GAP}>
@@ -403,8 +413,12 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                         alignSelf: 'flex-start',
                         color: learnerBrandTheme.textSecondary,
                         fontWeight: 600,
-                        px: 0,
+                        px: 0.5,
+                        py: 0.75,
                         minWidth: 0,
+                        minHeight: 44,
+                        textTransform: 'none',
+                        fontSize: '0.875rem',
                     }}
                 >
                     Back to plans
@@ -441,11 +455,76 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                     }}
                 >
                     <Box sx={{ p: CARD_PAD }}>
+                        {/* Mobile: compact title + price row */}
+                        <Stack
+                            direction="row"
+                            spacing={2}
+                            alignItems="flex-start"
+                            justifyContent="space-between"
+                            sx={{ display: { xs: 'flex', md: 'none' }, mb: 1.5 }}
+                        >
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1, gap: 0.75 }}>
+                                    <Chip
+                                        icon={<AutoAwesomeRoundedIcon sx={{ fontSize: '14px !important' }} />}
+                                        label={durationLabel}
+                                        size="small"
+                                        sx={{ bgcolor: tier.chipBg, color: tier.accent, fontWeight: 700, height: 26 }}
+                                    />
+                                    {plan.badge && (
+                                        <Chip label={plan.badge} size="small" sx={{ fontWeight: 600, height: 26 }} />
+                                    )}
+                                </Stack>
+                                <Typography
+                                    variant="h5"
+                                    component="h1"
+                                    sx={{ fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}
+                                >
+                                    {plan.name}
+                                </Typography>
+                            </Box>
+                            <Box sx={{ textAlign: 'right', flexShrink: 0, pt: 0.25 }}>
+                                <Typography variant="h5" sx={{ fontWeight: 800, color: tier.accent, lineHeight: 1 }}>
+                                    {formatPrice(plan.price, plan.currency)}
+                                </Typography>
+                                {plan.marketValue != null && plan.marketValue > (plan.price ?? 0) && (
+                                    <Typography
+                                        variant="caption"
+                                        sx={{ color: 'text.secondary', textDecoration: 'line-through', display: 'block' }}
+                                    >
+                                        {formatPrice(plan.marketValue, plan.currency)}
+                                    </Typography>
+                                )}
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                                    one-time
+                                </Typography>
+                            </Box>
+                        </Stack>
+
+                        {plan.description && (
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    display: { xs: 'block', md: 'none' },
+                                    mb: 1.5,
+                                    color: '#475569',
+                                    lineHeight: 1.6,
+                                }}
+                            >
+                                {plan.description}
+                            </Typography>
+                        )}
+
+                        <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 0.5 }}>
+                            <PlanStatsGrid items={statItems} tierAccent={tier.accent} variant="mobile" />
+                        </Box>
+
                         <Stack
                             direction={{ xs: 'column', md: 'row' }}
                             spacing={{ xs: 2, md: 3 }}
                             alignItems={{ xs: 'stretch', md: 'center' }}
                             justifyContent="space-between"
+                            sx={{ display: { xs: 'none', md: 'flex' } }}
                         >
                             <Box sx={{ flex: 1, minWidth: 0 }}>
                                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: { xs: 1.5, sm: 2 }, gap: 1 }}>
@@ -517,6 +596,22 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                 )}
                             </Paper>
                         </Stack>
+
+                        {/* Mobile topic chips */}
+                        {(plan.topic || plan.subTopic) && (
+                            <Stack
+                                direction="row"
+                                spacing={0.75}
+                                flexWrap="wrap"
+                                useFlexGap
+                                sx={{ display: { xs: 'flex', md: 'none' }, mt: 1.5, gap: 0.75 }}
+                            >
+                                {plan.topic && <Chip label={plan.topic} size="small" variant="outlined" sx={{ height: 26 }} />}
+                                {plan.subTopic && (
+                                    <Chip label={plan.subTopic} size="small" variant="outlined" sx={{ height: 26 }} />
+                                )}
+                            </Stack>
+                        )}
                     </Box>
                 </Paper>
 
@@ -527,7 +622,7 @@ const SubscriptionPlanDetailPage: React.FC = () => {
 
                 {/* Main body — image before details on mobile */}
                 <Grid container spacing={{ xs: 2, md: 3 }} alignItems="flex-start">
-                    <Grid size={{ xs: 12, lg: 5 }} sx={{ order: { xs: 1, lg: 1 } }}>
+                    <Grid size={{ xs: 12, lg: 5 }} sx={{ order: { xs: 2, lg: 1 } }}>
                         <Paper
                             elevation={0}
                             sx={{
@@ -538,7 +633,13 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                 top: { lg: 24 },
                             }}
                         >
-                            <Box sx={{ position: 'relative', aspectRatio: { xs: '4/3', sm: '5/4', lg: '4/5' } }}>
+                            <Box
+                                sx={{
+                                    position: 'relative',
+                                    aspectRatio: { xs: '16/10', sm: '5/4', lg: '4/5' },
+                                    maxHeight: { xs: 220, sm: 360, lg: 'none' },
+                                }}
+                            >
                                 <LazyImage
                                     src={getImageForPlan(plan)}
                                     alt={plan.name}
@@ -555,23 +656,24 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                         pointerEvents: 'none',
                                     }}
                                 />
-                                <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 2.5 }}>
+                                <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: { xs: 1.5, sm: 2.5 } }}>
                                     <Chip
                                         icon={<AccessTimeRoundedIcon sx={{ fontSize: '16px !important' }} />}
                                         label={durationLabel}
                                         size="small"
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.94)', fontWeight: 600 }}
+                                        sx={{
+                                            bgcolor: 'rgba(255,255,255,0.94)',
+                                            fontWeight: 600,
+                                            display: { xs: 'none', sm: 'inline-flex' },
+                                        }}
                                     />
                                 </Box>
                             </Box>
                         </Paper>
                     </Grid>
 
-                    <Grid size={{ xs: 12, lg: 7 }} sx={{ order: { xs: 2, lg: 2 } }}>
+                    <Grid size={{ xs: 12, lg: 7 }} sx={{ order: { xs: 1, lg: 2 } }}>
                         <Stack spacing={PAGE_GAP}>
-                            <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
-                                <PlanStatsGrid items={statItems} tierAccent={tier.accent} variant="mobile" />
-                            </Box>
 
                             {plan.course && (
                                 <Paper elevation={0} sx={sectionCardSx(tier.accent, true)}>
@@ -622,16 +724,20 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                     {/* Mobile: clean vertical list */}
                                     <Stack
                                         spacing={0}
-                                        divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
                                         sx={{ display: { xs: 'flex', sm: 'none' } }}
                                     >
-                                        {plan.features.map((feature, index) => (
+                                        {plan.features.map((feature, index, features) => (
                                             <Stack
                                                 key={index}
                                                 direction="row"
                                                 spacing={1.5}
                                                 alignItems="flex-start"
-                                                sx={{ py: 1.75 }}
+                                                sx={{
+                                                    py: 1.5,
+                                                    borderBottom:
+                                                        index < features.length - 1 ? '1px solid' : 'none',
+                                                    borderColor: 'divider',
+                                                }}
                                             >
                                                 <CheckCircleRoundedIcon
                                                     sx={{ fontSize: 20, color: tier.accent, mt: 0.15, flexShrink: 0 }}
@@ -770,32 +876,30 @@ const SubscriptionPlanDetailPage: React.FC = () => {
 
             {/* Mobile sticky CTA — inset matches page gutters */}
             <Paper
-                elevation={16}
+                elevation={8}
                 sx={{
                     display: { xs: 'block', md: 'none' },
                     position: 'fixed',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
+                    bottom: 'max(12px, env(safe-area-inset-bottom))',
+                    left: { xs: 16, sm: 24 },
+                    right: { xs: 16, sm: 24 },
                     zIndex: 1100,
-                    borderTop: '1px solid',
+                    borderRadius: 3,
+                    border: '1px solid',
                     borderColor: 'divider',
                     bgcolor: 'background.paper',
-                    boxShadow: '0 -8px 24px rgba(15, 23, 42, 0.08)',
+                    boxShadow: '0 8px 32px rgba(15, 23, 42, 0.12)',
                 }}
             >
                 <Box
                     sx={{
-                        px: MOBILE_FOOTER_PX,
-                        pt: 1.75,
-                        pb: 'max(16px, env(safe-area-inset-bottom))',
-                        maxWidth: 1600,
-                        mx: 'auto',
+                        px: 2,
+                        py: 1.5,
                     }}
                 >
-                    <Stack direction="row" spacing={2} alignItems="center">
-                        <Box sx={{ flex: 1, minWidth: 0, pl: 0.5 }}>
-                            <Typography variant="h6" fontWeight={800} color={tier.accent} lineHeight={1.1}>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle1" fontWeight={800} color={tier.accent} lineHeight={1.1}>
                                 {formatPrice(plan.price, plan.currency)}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
@@ -804,7 +908,7 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                         </Box>
                         <Button
                             variant="contained"
-                            size="large"
+                            size="medium"
                             onClick={
                                 isAuthenticated
                                     ? handleSubscribe
@@ -819,10 +923,11 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                 borderRadius: 2,
                                 bgcolor: isOwned ? 'success.main' : tier.accent,
                                 whiteSpace: 'nowrap',
-                                px: 3,
-                                py: 1.25,
-                                minHeight: 48,
-                                boxShadow: `0 4px 14px ${alpha(tier.accent, 0.35)}`,
+                                px: 2.5,
+                                py: 1,
+                                minHeight: 44,
+                                boxShadow: 'none',
+                                flexShrink: 0,
                             }}
                         >
                             {isOwned

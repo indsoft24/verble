@@ -26,7 +26,7 @@ const EvaluationStatusBanner: React.FC<EvaluationStatusProps> = ({
 
     if (!reviewed && (isCorrect === null || isCorrect === undefined)) {
         return (
-            <Alert severity="info" sx={onDark ? activityAlertOnDarkSx('info') : { mb: 2 }}>
+            <Alert severity="info" sx={onDark ? { ...activityAlertOnDarkSx('info'), mb: 0 } : { mb: 2 }}>
                 Awaiting review — evaluation score not final.
             </Alert>
         );
@@ -34,7 +34,7 @@ const EvaluationStatusBanner: React.FC<EvaluationStatusProps> = ({
 
     if (isCorrect === true) {
         return (
-            <Alert severity="success" sx={onDark ? activityAlertOnDarkSx('success') : { mb: 2 }}>
+            <Alert severity="success" sx={onDark ? { ...activityAlertOnDarkSx('success'), mb: 0 } : { mb: 2 }}>
                 Reviewed: correct — evaluation score {pts} point{pts === 1 ? '' : 's'}.
             </Alert>
         );
@@ -42,13 +42,13 @@ const EvaluationStatusBanner: React.FC<EvaluationStatusProps> = ({
 
     if (isCorrect === false) {
         return (
-            <Alert severity="warning" sx={onDark ? activityAlertOnDarkSx('warning') : { mb: 2 }}>
+            <Alert severity="warning" sx={onDark ? { ...activityAlertOnDarkSx('warning'), mb: 0 } : { mb: 2 }}>
                 <Box>
-                    <Typography variant="body2" fontWeight={700} component="div">
+                    <Typography variant="body2" fontWeight={700} component="div" sx={{ lineHeight: 1.55 }}>
                         Reviewed: incorrect — no evaluation points deducted from your leaderboard standing.
                     </Typography>
                     {feedback && (
-                        <Typography variant="body2" sx={{ mt: 1 }} component="div">
+                        <Typography variant="body2" sx={{ mt: 1, lineHeight: 1.55 }} component="div">
                             Feedback: {feedback}
                         </Typography>
                     )}

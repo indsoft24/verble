@@ -91,51 +91,88 @@ export type ActivityAlertSeverity = 'info' | 'success' | 'warning' | 'error';
 
 /** Readable MUI Alert on dark gold activity cards */
 export function activityAlertOnDarkSx(severity: ActivityAlertSeverity): SxProps<Theme> {
-    const messageSx = {
-        '& .MuiAlert-message': { width: '100%' },
-        '& .MuiAlert-icon': { color: 'inherit' },
+    const base = {
+        mb: 2,
+        py: { xs: 1.35, sm: 1.5 },
+        px: { xs: 1.5, sm: 2 },
+        alignItems: 'flex-start',
+        borderRadius: 2,
+        '& .MuiAlert-icon': {
+            color: 'inherit',
+            mt: 0.1,
+            mr: 1.25,
+            p: 0,
+            opacity: 1,
+            alignItems: 'center',
+        },
+        '& .MuiAlert-message': {
+            width: '100%',
+            py: 0.25,
+            lineHeight: 1.55,
+            fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+        },
     };
     switch (severity) {
         case 'info':
             return {
-                mb: 2,
+                ...base,
                 bgcolor: alpha('#38bdf8', 0.15),
                 border: `1px solid ${alpha('#38bdf8', 0.35)}`,
                 color: '#e0f2fe',
-                ...messageSx,
-                '& .MuiAlert-message': { ...messageSx['& .MuiAlert-message'], color: '#e0f2fe' },
+                '& .MuiAlert-message': { ...base['& .MuiAlert-message'], color: '#e0f2fe' },
             };
         case 'success':
             return {
-                mb: 2,
+                ...base,
                 bgcolor: alpha('#22c55e', 0.14),
                 border: `1px solid ${alpha('#22c55e', 0.4)}`,
                 color: '#bbf7d0',
-                ...messageSx,
-                '& .MuiAlert-message': { ...messageSx['& .MuiAlert-message'], color: '#bbf7d0' },
+                '& .MuiAlert-message': { ...base['& .MuiAlert-message'], color: '#bbf7d0' },
             };
         case 'warning':
             return {
-                mb: 2,
+                ...base,
                 bgcolor: alpha('#f59e0b', 0.18),
                 border: `1px solid ${alpha('#f59e0b', 0.45)}`,
                 color: '#fef3c7',
-                ...messageSx,
-                '& .MuiAlert-message': { ...messageSx['& .MuiAlert-message'], color: '#fef3c7' },
-                '& .MuiTypography-root': { color: '#fef3c7' },
+                '& .MuiAlert-message': { ...base['& .MuiAlert-message'], color: '#fef3c7' },
+                '& .MuiTypography-root': { color: '#fef3c7', lineHeight: 1.55 },
             };
         case 'error':
             return {
-                mb: 2,
+                ...base,
                 bgcolor: alpha('#ef4444', 0.14),
                 border: `1px solid ${alpha('#ef4444', 0.4)}`,
                 color: '#fecaca',
-                ...messageSx,
-                '& .MuiAlert-message': { ...messageSx['& .MuiAlert-message'], color: '#fecaca' },
+                '& .MuiAlert-message': { ...base['& .MuiAlert-message'], color: '#fecaca' },
             };
         default:
-            return { mb: 2 };
+            return base;
     }
+}
+
+/** Submitted sentence row on dark activity cards (vocab practice, etc.) */
+export function activitySentenceReviewSx(
+    review: boolean | null | undefined,
+    accent: string = GOLD_ACCENT
+): SxProps<Theme> {
+    return {
+        p: { xs: 1.75, sm: 2 },
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor:
+            review === true
+                ? alpha('#22c55e', 0.65)
+                : review === false
+                  ? alpha('#ef4444', 0.65)
+                  : alpha(accent, 0.28),
+        bgcolor:
+            review === true
+                ? alpha('#22c55e', 0.12)
+                : review === false
+                  ? alpha('#ef4444', 0.12)
+                  : alpha('#1a1f2e', 0.6),
+    };
 }
 
 export function activityNavSideButtonSx(options: {

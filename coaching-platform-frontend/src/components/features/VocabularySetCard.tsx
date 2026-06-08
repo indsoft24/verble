@@ -15,6 +15,7 @@ import {
     FormControlLabel,
     Grid,
     alpha,
+    Stack,
 } from '@mui/material';
 import { keyframes } from '@emotion/react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
@@ -28,6 +29,7 @@ import {
     activityAlertOnDarkSx,
     activityCardProps,
     activityContainedButtonSx,
+    activitySentenceReviewSx,
     getContentDisplayNumber,
     isContentScheduledToday,
     refreshAdjacentFlags,
@@ -582,8 +584,8 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                         </Box>
                     )}
                     {existingSubmission && isToday && (
-                        <>
-                            <Alert severity="success" sx={activityAlertOnDarkSx('success')}>
+                        <Stack spacing={1.5} sx={{ mb: 2.5 }}>
+                            <Alert severity="success" sx={{ ...activityAlertOnDarkSx('success'), mb: 0 }}>
                                 You already submitted sentences for this vocabulary set.
                             </Alert>
                             <EvaluationStatusBanner
@@ -594,45 +596,29 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                                 feedback={existingSubmission.feedback}
                                 reviewedAt={existingSubmission.reviewedAt}
                             />
-                            <Box sx={{ mb: 2 }}>
+                            <Stack spacing={1.25}>
                                 {existingSubmission.sentences.map((entry, idx) => {
                                     const review = getSentenceReviewState(idx);
                                     return (
-                                        <Box
-                                            key={idx}
-                                            sx={{
-                                                p: 1.5,
-                                                mb: 1,
-                                                borderRadius: 1.5,
-                                                border: '1px solid',
-                                                borderColor:
-                                                    review === true
-                                                        ? alpha('#22c55e', 0.7)
-                                                        : review === false
-                                                          ? alpha('#ef4444', 0.7)
-                                                          : alpha(GOLD_ACCENT, 0.25),
-                                                bgcolor:
-                                                    review === true
-                                                        ? alpha('#22c55e', 0.12)
-                                                        : review === false
-                                                          ? alpha('#ef4444', 0.12)
-                                                          : alpha('#1a1f2e', 0.6),
-                                            }}
-                                        >
-                                            <Typography variant="body2" sx={{ color: '#f1f5f9', fontWeight: 600 }}>
+                                        <Box key={idx} sx={activitySentenceReviewSx(review, GOLD_ACCENT)}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{ color: '#f1f5f9', fontWeight: 600, lineHeight: 1.55 }}
+                                            >
                                                 {idx + 1}. {entry.sentence}
                                             </Typography>
                                             {entry.vocabWordsUsed?.length > 0 && (
-                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75 }}>
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.25 }}>
                                                     {entry.vocabWordsUsed.map((w) => (
                                                         <Chip
                                                             key={w}
                                                             label={w}
                                                             size="small"
                                                             sx={{
-                                                                height: 22,
+                                                                height: 24,
                                                                 bgcolor: alpha(GOLD_ACCENT, 0.15),
                                                                 color: GOLD_ACCENT,
+                                                                fontWeight: 600,
                                                             }}
                                                         />
                                                     ))}
@@ -641,8 +627,8 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                                         </Box>
                                     );
                                 })}
-                            </Box>
-                        </>
+                            </Stack>
+                        </Stack>
                     )}
                     {isToday && !existingSubmission && !submissionLoading && (
                         <Typography variant="body2" sx={{ color: GOLD_ACCENT, mb: 2, fontWeight: 700 }}>
