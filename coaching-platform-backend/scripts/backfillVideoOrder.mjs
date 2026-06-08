@@ -11,7 +11,17 @@ import Module from '../src/models/Module.js';
 
 dotenv.config();
 
-await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
+const isDocker = process.env.DOCKER_ENV === 'true';
+const mongoUri = isDocker
+    ? process.env.MONGODB_URI_DOCKER || process.env.MONGODB_URI || process.env.MONGO_URI
+    : process.env.MONGODB_URI || process.env.MONGODB_URI_DOCKER || process.env.MONGO_URI;
+
+if (!mongoUri) {
+    console.error('MongoDB URI not found. Set MONGODB_URI (local) or MONGODB_URI_DOCKER (Docker).');
+    process.exit(1);
+}
+
+await mongoose.connect(mongoUri);
 
 const modules = await Module.find().select('_id title').lean();
 let updatedVideos = 0;

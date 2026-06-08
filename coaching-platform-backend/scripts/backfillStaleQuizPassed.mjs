@@ -12,7 +12,17 @@ import ModuleQuizSubmission from '../src/models/ModuleQuizSubmission.js';
 
 dotenv.config();
 
-await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
+const isDocker = process.env.DOCKER_ENV === 'true';
+const mongoUri = isDocker
+    ? process.env.MONGODB_URI_DOCKER || process.env.MONGODB_URI || process.env.MONGO_URI
+    : process.env.MONGODB_URI || process.env.MONGODB_URI_DOCKER || process.env.MONGO_URI;
+
+if (!mongoUri) {
+    console.error('MongoDB URI not found. Set MONGODB_URI (local) or MONGODB_URI_DOCKER (Docker).');
+    process.exit(1);
+}
+
+await mongoose.connect(mongoUri);
 
 const activeQuizzes = await ModuleQuiz.find({ isActive: true }).select('module').lean();
 const moduleIds = [...new Set(activeQuizzes.map((q) => q.module.toString()))];
