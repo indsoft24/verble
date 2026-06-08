@@ -209,22 +209,6 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
             };
         }
 
-        // Skip security feature for free videos (no requiredPlans)
-        const isFreeVideo = !video.requiredPlans || video.requiredPlans.length === 0;
-        
-        if (isFreeVideo) {
-            return {
-                ...videoObject,
-                canAccess: !!hasSubscriptionAccess,
-                accessReason: 'Free video - unlimited access',
-                watchCount: 0,
-                remainingWatches: 0,
-                isLocked: false,
-                lockReason: null,
-                completionCycle: 0,
-            };
-        }
-
         const sequentialAccess = await checkSequentialVideoAccess(
             userId,
             video,

@@ -3,6 +3,7 @@ import ModuleQuiz from '../models/ModuleQuiz.js';
 import ModuleQuizSubmission from '../models/ModuleQuizSubmission.js';
 import Module from '../models/Module.js';
 import Course from '../models/Course.js';
+import { resetStaleQuizPassedForModule } from '../services/moduleQuizAccessService.js';
 
 const validateQuestions = (questions) => {
     if (!Array.isArray(questions) || questions.length === 0) {
@@ -73,6 +74,10 @@ export const createModuleQuizAdmin = asyncHandler(async (req, res) => {
         createdBy: req.user._id,
     });
 
+    if (quiz.isActive) {
+        await resetStaleQuizPassedForModule(moduleId);
+    }
+
     res.status(201).json({ status: 'success', data: { quiz } });
 });
 
@@ -83,6 +88,7 @@ export const updateModuleQuizAdmin = asyncHandler(async (req, res) => {
         throw new Error('Quiz not found.');
     }
     const { title, description, questions, passingScore, timeLimit, isActive } = req.body;
+    const wasActive = quiz.isActive;
     if (typeof title === 'string') quiz.title = title.trim();
     if (typeof description === 'string') quiz.description = description.trim();
     if (questions) {
@@ -93,6 +99,9 @@ export const updateModuleQuizAdmin = asyncHandler(async (req, res) => {
     if (typeof timeLimit === 'number') quiz.timeLimit = timeLimit;
     if (typeof isActive === 'boolean') quiz.isActive = isActive;
     await quiz.save();
+    if (!wasActive && quiz.isActive) {
+        await resetStaleQuizPassedForModule(quiz.module.toString());
+    }
     res.status(200).json({ status: 'success', data: { quiz } });
 });
 
@@ -119,14 +128,19 @@ export const importModuleQuizAdmin = asyncHandler(async (req, res) => {
     validateQuestions(questions);
 
     const existing = await ModuleQuiz.findOne({ module: moduleId });
+    let created = false;
     if (existing) {
         existing.title = title.trim();
         existing.description = description?.trim() || '';
         existing.questions = questions;
         existing.passingScore = passingScore ?? 70;
         existing.timeLimit = timeLimit ?? 0;
+        const wasActive = existing.isActive;
         existing.isActive = isActive !== false;
         await existing.save();
+        if (!wasActive && existing.isActive) {
+            await resetStaleQuizPassedForModule(moduleId);
+        }
         return res.status(200).json({ status: 'success', data: { quiz: existing, created: false } });
     }
 
@@ -140,8 +154,13 @@ export const importModuleQuizAdmin = asyncHandler(async (req, res) => {
         isActive: isActive !== false,
         createdBy: req.user._id,
     });
+    created = true;
 
-    res.status(201).json({ status: 'success', data: { quiz, created: true } });
+    if (quiz.isActive) {
+        await resetStaleQuizPassedForModule(moduleId);
+    }
+
+    res.status(201).json({ status: 'success', data: { quiz, created } });
 });
 
 export const deleteModuleQuizAdmin = asyncHandler(async (req, res) => {

@@ -13,7 +13,10 @@ import {
     countModuleVideoProgress,
     resolveModuleQuizGate,
     handleQuizSubmissionFail,
+    reconcileQuizPassedWithSubmissions,
+    hasPassingQuizSubmission,
 } from '../services/moduleQuizAccessService.js';
+import { assertModuleUnlockedForUser } from '../services/moduleUnlockService.js';
 import { isFilledOption, isValidFilledSelection } from '../utils/quizOptionUtils.js';
 
 /**
@@ -24,6 +27,12 @@ import { isFilledOption, isValidFilledSelection } from '../utils/quizOptionUtils
 export const getModuleQuiz = asyncHandler(async (req, res) => {
     const { moduleId } = req.params;
     const userId = req.user._id;
+
+    const moduleAccess = await assertModuleUnlockedForUser(userId, moduleId);
+    if (!moduleAccess.ok) {
+        res.status(moduleAccess.status);
+        throw new Error(moduleAccess.message);
+    }
 
     await assertQuizUnlockedForTake(userId, moduleId);
 
@@ -86,6 +95,12 @@ export const submitModuleQuiz = asyncHandler(async (req, res) => {
     const { moduleId } = req.params;
     const userId = req.user._id;
     const { answers, timeSpent } = req.body;
+
+    const moduleAccess = await assertModuleUnlockedForUser(userId, moduleId);
+    if (!moduleAccess.ok) {
+        res.status(moduleAccess.status);
+        throw new Error(moduleAccess.message);
+    }
 
     await assertQuizUnlockedForTake(userId, moduleId);
 
@@ -242,7 +257,14 @@ export const getModuleCompletion = asyncHandler(async (req, res) => {
     const { moduleId } = req.params;
     const userId = req.user._id;
 
+    const moduleAccess = await assertModuleUnlockedForUser(userId, moduleId);
+    if (!moduleAccess.ok) {
+        res.status(moduleAccess.status);
+        throw new Error(moduleAccess.message);
+    }
+
     await syncModuleProgressFromVideos(userId, moduleId);
+    await reconcileQuizPassedWithSubmissions(userId, moduleId);
 
     const completion = await ModuleCompletion.findOne({ user: userId, module: moduleId }).populate(
         'module',
@@ -251,6 +273,7 @@ export const getModuleCompletion = asyncHandler(async (req, res) => {
 
     const activeQuiz = await getActiveQuizForModule(moduleId);
     const videoProgress = await countModuleVideoProgress(userId, moduleId);
+    const quizPassedFromSubmission = activeQuiz ? await hasPassingQuizSubmission(userId, moduleId) : false;
 
     if (!completion) {
         res.status(200).json({
@@ -259,8 +282,8 @@ export const getModuleCompletion = asyncHandler(async (req, res) => {
                 completion: {
                     videosCompleted: videoProgress.videosCompleted,
                     totalVideos: videoProgress.totalVideos,
-                    quizPassed: !activeQuiz && videoProgress.allComplete,
-                    isCompleted: !activeQuiz && videoProgress.allComplete,
+                    quizPassed: !activeQuiz && videoProgress.allComplete && videoProgress.totalVideos > 0,
+                    isCompleted: !activeQuiz && videoProgress.allComplete && videoProgress.totalVideos > 0,
                     hasQuiz: Boolean(activeQuiz),
                     videosComplete: videoProgress.allComplete,
                 },
@@ -275,9 +298,9 @@ export const getModuleCompletion = asyncHandler(async (req, res) => {
             completion: {
                 videosCompleted: completion.videosCompleted,
                 totalVideos: completion.totalVideos,
-                quizPassed: completion.quizPassed,
+                quizPassed: activeQuiz ? quizPassedFromSubmission : completion.quizPassed,
                 quizScore: completion.quizScore,
-                isCompleted: completion.isCompleted,
+                isCompleted: activeQuiz ? quizPassedFromSubmission : completion.isCompleted,
                 completedAt: completion.completedAt,
                 hasQuiz: Boolean(activeQuiz),
                 videosComplete: videoProgress.allComplete,
@@ -294,6 +317,12 @@ export const getModuleCompletion = asyncHandler(async (req, res) => {
 export const getModuleQuizAvailability = asyncHandler(async (req, res) => {
     const { moduleId } = req.params;
     const userId = req.user._id;
+
+    const moduleAccess = await assertModuleUnlockedForUser(userId, moduleId);
+    if (!moduleAccess.ok) {
+        res.status(moduleAccess.status);
+        throw new Error(moduleAccess.message);
+    }
 
     const gate = await resolveModuleQuizGate(userId, moduleId);
 

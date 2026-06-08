@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "cleanup-images": "node cleanupOrphanedImages.js",
-    "import-verble-pdfs": "node scripts/importVerblePdfs.js"
+    "import-verble-pdfs": "node scripts/importVerblePdfs.js",
+    "backfill-stale-quiz-passed": "node scripts/backfillStaleQuizPassed.mjs",
+    "backfill-video-order": "node scripts/backfillVideoOrder.mjs"
   },
   "keywords": [],
   "author": "",

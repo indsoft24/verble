@@ -7,7 +7,7 @@ import Course from '../models/Course.js';
 import ExamCategory from '../models/ExamCategory.js';
 import asyncHandler from 'express-async-handler';
 import { checkSequentialVideoAccess, markVideoAsCompleted } from '../utils/videoAccessHelper.js';
-import { buildVideoLockFlags } from '../services/moduleUnlockService.js';
+import { buildVideoLockFlags, assertModuleUnlockedForUser } from '../services/moduleUnlockService.js';
 import { getCache, setCache, generateCacheKey, CACHE_TTL } from '../utils/cacheHelper.js';
 import { getStreamProvider } from '../utils/videoStreamProvider.js';
 import { getThumbnailPath, getMasterPlaylistPath } from '../config/videoStorageConfig.js';
@@ -208,19 +208,34 @@ export const getPublishedVideoById = async (req, res, next) => {
     }
 
     // Check sequential access if video belongs to a module
-    // Skip security feature for free videos (no requiredPlans)
     let canAccess = hasSubscriptionAccess;
     let sequentialAccessInfo = null;
     
-    if (userId && video.modules && video.modules.length > 0 && !isFreeVideo) {
-      // Only apply security feature to paid videos
-      // Get the first module (videos typically belong to one module)
+    if (userId && video.modules && video.modules.length > 0) {
       const moduleId = video.modules[0];
-      // Ensure moduleId is a string (handle ObjectId)
       const moduleIdString = typeof moduleId === 'object' && moduleId?._id ? moduleId._id.toString() : moduleId?.toString() || moduleId;
-      
-      // Checking sequential access
-      
+
+      const moduleAccess = await assertModuleUnlockedForUser(userId, moduleIdString);
+      if (!moduleAccess.ok) {
+        const lockFlags = buildVideoLockFlags(false, {
+          canAccess: false,
+          reason: moduleAccess.message,
+          watchCount: 0,
+          remainingWatches: 0,
+        });
+        return res.status(403).json({
+          status: "fail",
+          message: moduleAccess.message,
+          data: {
+            video: {
+              ...video,
+              thumbnailUrl: thumbDenied,
+              ...lockFlags,
+            },
+          },
+        });
+      }
+
       sequentialAccessInfo = await checkSequentialVideoAccess(userId, video, moduleIdString);
       canAccess = hasSubscriptionAccess && sequentialAccessInfo.canAccess;
       
@@ -547,38 +562,29 @@ export const markVideoCompleted = asyncHandler(async (req, res) => {
             });
         }
 
-        // Skip security feature for free videos (no requiredPlans)
-        const isFreeVideo = !video.requiredPlans || video.requiredPlans.length === 0;
-        
-        if (!isFreeVideo) {
-            // Only apply security feature to paid videos
-            // Get the first module (videos typically belong to one module)
-            const moduleId = video.modules[0];
+        const moduleId = video.modules[0];
 
-            // Check access before marking as complete
-            // Note: We allow marking as complete even if already watched, as long as total < 2
-            const sequentialAccess = await checkSequentialVideoAccess(userId, video, moduleId);
-            if (!sequentialAccess.canAccess) {
-                // If access denied due to watch limit, return specific error
-                if (sequentialAccess.reason && sequentialAccess.reason.includes('Maximum watch limit')) {
-                    return res.status(403).json({ 
-                        status: "fail", 
-                        message: sequentialAccess.reason,
-                        data: {
-                            watchCount: sequentialAccess.watchCount,
-                            remainingWatches: sequentialAccess.remainingWatches
-                        }
-                    });
-                }
-                // For other access issues (like sequential locking), still allow completion
-                // This ensures watch count can increment even if video is locked for sequential access
-                // Access check failed but allowing completion
-            }
+        const moduleAccess = await assertModuleUnlockedForUser(userId, moduleId.toString());
+        if (!moduleAccess.ok) {
+            return res.status(403).json({
+                status: "fail",
+                message: moduleAccess.message,
+            });
+        }
+
+        const sequentialAccess = await checkSequentialVideoAccess(userId, video, moduleId);
+        if (!sequentialAccess.canAccess) {
+            return res.status(403).json({
+                status: "fail",
+                message: sequentialAccess.reason,
+                data: {
+                    watchCount: sequentialAccess.watchCount,
+                    remainingWatches: sequentialAccess.remainingWatches,
+                },
+            });
         }
 
         // Mark video as completed
-        // For free videos, we still track completion but don't enforce limits
-        const moduleId = video.modules[0];
         const result = await markVideoAsCompleted(userId, videoId, moduleId);
 
         res.status(200).json({

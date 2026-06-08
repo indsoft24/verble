@@ -1,7 +1,7 @@
 import Module from '../models/Module.js';
 import ModuleCompletion from '../models/ModuleCompletion.js';
 import { getLearningConfig } from './courseLearningConfigService.js';
-import { getActiveQuizForModule } from './moduleQuizAccessService.js';
+import { getActiveQuizForModule, hasPassingQuizSubmission } from './moduleQuizAccessService.js';
 
 export async function getOrderedModulesForCourse(courseId) {
     return Module.find({ course: courseId }).sort({ order: 1, createdAt: 1 }).lean();
@@ -42,15 +42,26 @@ export async function isModuleUnlockedForUser(userId, moduleId) {
     }
 
     const prevQuiz = await getActiveQuizForModule(previousModule._id);
-    if (prevQuiz && !prevCompletion.quizPassed) {
-        return {
-            unlocked: false,
-            reason: `Pass the quiz for “${previousModule.title}” to unlock this module.`,
-            previousModuleId: previousModule._id.toString(),
-        };
+    if (prevQuiz) {
+        const quizPassed = await hasPassingQuizSubmission(userId, previousModule._id);
+        if (!quizPassed) {
+            return {
+                unlocked: false,
+                reason: `Pass the quiz for “${previousModule.title}” to unlock this module.`,
+                previousModuleId: previousModule._id.toString(),
+            };
+        }
     }
 
     return { unlocked: true, reason: null };
+}
+
+export async function assertModuleUnlockedForUser(userId, moduleId) {
+    const { unlocked, reason } = await isModuleUnlockedForUser(userId, moduleId);
+    if (!unlocked) {
+        return { ok: false, status: 403, message: reason || 'This module is locked.' };
+    }
+    return { ok: true };
 }
 
 export async function enrichModulesWithUnlockStatus(userId, courseId, modules) {

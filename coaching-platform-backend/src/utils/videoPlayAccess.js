@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import { checkSequentialVideoAccess } from './videoAccessHelper.js';
 import { getStreamProvider } from './videoStreamProvider.js';
 import { getActiveUserTierLevel, canAccessRequiredPlansByTier } from './subscriptionTierAccess.js';
+import { assertModuleUnlockedForUser } from '../services/moduleUnlockService.js';
 
 /**
  * Same subscription / sequential rules as get-play-token.
@@ -55,10 +56,16 @@ export async function assertUserCanPlayVideo(videoId, userId) {
     }
   }
 
-  if (userId && video.modules?.length > 0 && !isFreeVideo) {
+  if (userId && video.modules?.length > 0) {
     const moduleId = video.modules[0];
     const moduleIdString =
       typeof moduleId === 'object' && moduleId?._id ? moduleId._id.toString() : moduleId?.toString() || moduleId;
+
+    const moduleAccess = await assertModuleUnlockedForUser(userId, moduleIdString);
+    if (!moduleAccess.ok) {
+      return { ok: false, status: moduleAccess.status, message: moduleAccess.message };
+    }
+
     const sequentialAccess = await checkSequentialVideoAccess(userId, video, moduleIdString);
     if (!sequentialAccess.canAccess) {
       return { ok: false, status: 403, message: sequentialAccess.reason };

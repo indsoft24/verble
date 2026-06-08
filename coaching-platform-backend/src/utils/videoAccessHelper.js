@@ -48,6 +48,24 @@ export const getVideoSetIndex = (videoOrder, minOrder = 0) => {
     return normalizedOrder;
 };
 
+/** Sort module videos for sequential unlock (order, then createdAt, then _id). */
+export const sortModuleVideosForSequence = (videos) =>
+    [...videos].sort((a, b) => {
+        const oa = a.order ?? 0;
+        const ob = b.order ?? 0;
+        if (oa !== ob) return oa - ob;
+        const ca = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const cb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (ca !== cb) return ca - cb;
+        return String(a._id).localeCompare(String(b._id));
+    });
+
+/** One step per video; uses list position so duplicate order values still unlock sequentially. */
+export const getVideoStepIndex = (video, sortedVideos) => {
+    const idx = sortedVideos.findIndex((v) => v._id.toString() === video._id.toString());
+    return idx >= 0 ? idx : 0;
+};
+
 /**
  * Get all videos for a module sorted by order
  * @param {string} moduleId - The module ID
@@ -74,64 +92,35 @@ export const getModuleVideos = async (moduleId) => {
  * @returns {Promise<number>} - The unlocked set index (0-based)
  */
 export const getCurrentUnlockedSetIndex = async (userId, moduleId, moduleCompletionCycle) => {
-    // Get all videos for the module
-    const videos = await getModuleVideos(moduleId);
+    const videos = sortModuleVideosForSequence(await getModuleVideos(moduleId));
     
     if (videos.length === 0) {
         return -1; // No videos, nothing unlocked
     }
 
-    // Find minimum order value to normalize set calculation
-    const minOrder = Math.min(...videos.map(v => v.order ?? 0));
-
-    // Get all watch progress for this user, module, and cycle
     const watchProgress = await VideoWatchProgress.find({
         user: userId,
         module: moduleId,
         moduleCompletionCycle: moduleCompletionCycle,
     }).lean();
 
-    // Create a map of videoId -> progress
     const progressMap = new Map();
-    watchProgress.forEach(progress => {
+    watchProgress.forEach((progress) => {
         progressMap.set(progress.video.toString(), progress);
     });
 
-    // Group videos by set (using normalized order)
-    const sets = new Map();
-    videos.forEach(video => {
-        const setIndex = getVideoSetIndex(video.order ?? 0, minOrder);
-        if (!sets.has(setIndex)) {
-            sets.set(setIndex, []);
-        }
-        sets.get(setIndex).push(video);
-    });
-
-    // Find the highest set where all videos are completed
-    let highestCompletedSet = -1;
-    const sortedSetIndices = Array.from(sets.keys()).sort((a, b) => a - b);
-
-    for (const setIndex of sortedSetIndices) {
-        const setVideos = sets.get(setIndex);
-        
-        // Check if all videos in this set are completed
-        const allCompleted = setVideos.every(video => {
-            const progress = progressMap.get(video._id.toString());
-            return progress && progress.isCompleted;
-        });
-
-        if (allCompleted) {
-            highestCompletedSet = setIndex;
+    let highestCompletedStep = -1;
+    for (let step = 0; step < videos.length; step++) {
+        const video = videos[step];
+        const progress = progressMap.get(video._id.toString());
+        if (progress && progress.isCompleted) {
+            highestCompletedStep = step;
         } else {
-            break; // Stop at first incomplete set
+            break;
         }
     }
 
-    // The unlocked set is the highest completed set + 1
-    // Set 0 is always unlocked initially (if highestCompletedSet is -1, unlockedSetIndex = 0)
-    const unlockedSetIndex = Math.max(0, highestCompletedSet + 1);
-    
-    return unlockedSetIndex;
+    return Math.max(0, highestCompletedStep + 1);
 };
 
 /**
@@ -143,17 +132,9 @@ export const getCurrentUnlockedSetIndex = async (userId, moduleId, moduleComplet
  * 
  * Note: Only the current unlocked set is accessible. Previous sets lock when next set unlocks.
  */
-export const isVideoInUnlockedSet = (video, unlockedSetIndex, minOrder = 0) => {
-    // Handle missing order field
-    if (video.order === undefined || video.order === null) {
-        console.warn(`[isVideoInUnlockedSet] Video ${video._id} missing order field, allowing access as fallback`);
-        return true; // Allow access if order is missing (shouldn't happen, but be safe)
-    }
-    
-    const videoSetIndex = getVideoSetIndex(video.order, minOrder);
-    
-    // Only the exact unlocked set is accessible (previous sets are locked)
-    return videoSetIndex === unlockedSetIndex;
+export const isVideoInUnlockedSet = (video, unlockedSetIndex, sortedVideos) => {
+    const videoStepIndex = getVideoStepIndex(video, sortedVideos);
+    return videoStepIndex === unlockedSetIndex;
 };
 
 /**
@@ -212,15 +193,7 @@ export const checkSequentialVideoAccess = async (userId, video, moduleId, preCal
     }
 
     if (video.order === undefined || video.order === null) {
-        return {
-            canAccess: true,
-            reason: 'Access granted (order field missing)',
-            watchCount: 0,
-            remainingWatches: maxPerCycle,
-            completionCycle: 0,
-            maxWatchesPerCycle: maxPerCycle,
-            maxModuleCycles: config.maxModuleCompletionCycles,
-        };
+        console.warn(`[checkSequentialVideoAccess] Video ${video._id} missing order field; using list position for sequence.`);
     }
 
     const completionCycle =
@@ -228,7 +201,7 @@ export const checkSequentialVideoAccess = async (userId, video, moduleId, preCal
             ? preCalculatedCompletionCycle
             : await getModuleCompletionCycle(userId, moduleId);
 
-    const videos = await getModuleVideos(moduleId);
+    const videos = sortModuleVideosForSequence(await getModuleVideos(moduleId));
     if (videos.length === 0) {
         return {
             canAccess: false,
@@ -241,21 +214,20 @@ export const checkSequentialVideoAccess = async (userId, video, moduleId, preCal
         };
     }
 
-    const minOrder = Math.min(...videos.map((v) => v.order ?? 0));
     const cycleWatchCount = await getCycleWatchCount(userId, moduleId, video._id, completionCycle);
 
     const unlockedSetIndex =
         preCalculatedUnlockedSetIndex !== null
             ? preCalculatedUnlockedSetIndex
             : await getCurrentUnlockedSetIndex(userId, moduleId, completionCycle);
-    const isInUnlockedSet = isVideoInUnlockedSet(video, unlockedSetIndex, minOrder);
+    const isInUnlockedSet = isVideoInUnlockedSet(video, unlockedSetIndex, videos);
 
     if (!isInUnlockedSet) {
-        const targetSet = getVideoSetIndex(video.order, minOrder) + 1;
-        const currentSet = unlockedSetIndex + 1;
+        const targetStep = getVideoStepIndex(video, videos) + 1;
+        const currentStep = unlockedSetIndex + 1;
         return {
             canAccess: false,
-            reason: `This video is currently locked. Complete lesson ${currentSet} to unlock lesson ${targetSet}.`,
+            reason: `This video is currently locked. Complete lesson ${currentStep} to unlock lesson ${targetStep}.`,
             watchCount: cycleWatchCount,
             remainingWatches: Math.max(0, maxPerCycle - cycleWatchCount),
             completionCycle,
@@ -386,7 +358,7 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
     const remainingWatches = Math.max(0, maxPerCycle - finalCycleWatchCount);
 
     // Check if current set is complete for the requested module
-    const videos = await getModuleVideos(moduleId);
+    const videos = sortModuleVideosForSequence(await getModuleVideos(moduleId));
     const videoObj = videos.find(v => v._id.toString() === videoId);
     
     if (!videoObj) {
@@ -396,11 +368,8 @@ export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
     // Use the cycle we just wrote to — getModuleCompletionCycle may already have advanced.
     const requestedModuleCycle = savedModuleCycle;
 
-    // Find minimum order value for normalization
-    const minOrder = Math.min(...videos.map(v => v.order ?? 0));
-
-    const videoSetIndex = getVideoSetIndex(videoObj.order ?? 0, minOrder);
-    const setVideos = videos.filter(v => getVideoSetIndex(v.order ?? 0, minOrder) === videoSetIndex);
+    const videoStepIndex = getVideoStepIndex(videoObj, videos);
+    const setVideos = [videos[videoStepIndex] ?? videoObj];
 
     // Check if current set is complete
     const allSetProgress = await VideoWatchProgress.find({

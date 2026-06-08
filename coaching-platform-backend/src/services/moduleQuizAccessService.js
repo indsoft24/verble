@@ -1,6 +1,7 @@
 import Module from '../models/Module.js';
 import ModuleQuiz from '../models/ModuleQuiz.js';
 import ModuleCompletion from '../models/ModuleCompletion.js';
+import ModuleQuizSubmission from '../models/ModuleQuizSubmission.js';
 import Video from '../models/Video.js';
 import VideoWatchProgress from '../models/VideoWatchProgress.js';
 import { getLearningConfig } from './courseLearningConfigService.js';
@@ -11,6 +12,56 @@ import {
 
 export const getActiveQuizForModule = async (moduleId) =>
     ModuleQuiz.findOne({ module: moduleId, isActive: true });
+
+export const hasPassingQuizSubmission = async (userId, moduleId) => {
+    const count = await ModuleQuizSubmission.countDocuments({
+        user: userId,
+        module: moduleId,
+        passed: true,
+    });
+    return count > 0;
+};
+
+/** Clear quizPassed when an active quiz exists but the user has no passing submission. */
+export const reconcileQuizPassedWithSubmissions = async (userId, moduleId) => {
+    const activeQuiz = await getActiveQuizForModule(moduleId);
+    if (!activeQuiz) return null;
+
+    const completion = await ModuleCompletion.findOne({ user: userId, module: moduleId });
+    if (!completion || !completion.quizPassed) return completion;
+
+    const passedAttempt = await hasPassingQuizSubmission(userId, moduleId);
+    if (passedAttempt) return completion;
+
+    completion.quizPassed = false;
+    completion.isCompleted = false;
+    completion.completedAt = undefined;
+    await completion.save();
+    return completion;
+};
+
+/** Reset stale quizPassed for all users on a module when a quiz is created or reactivated. */
+export const resetStaleQuizPassedForModule = async (moduleId) => {
+    const completions = await ModuleCompletion.find({ module: moduleId, quizPassed: true }).lean();
+    if (completions.length === 0) return 0;
+
+    let resetCount = 0;
+    for (const completion of completions) {
+        const passedAttempt = await ModuleQuizSubmission.countDocuments({
+            user: completion.user,
+            module: moduleId,
+            passed: true,
+        });
+        if (passedAttempt === 0) {
+            await ModuleCompletion.updateOne(
+                { _id: completion._id },
+                { $set: { quizPassed: false, isCompleted: false }, $unset: { completedAt: 1 } }
+            );
+            resetCount += 1;
+        }
+    }
+    return resetCount;
+};
 
 const ensureModuleCompletionRecord = async (userId, moduleId) => {
     const module = await Module.findById(moduleId).select('course order');
@@ -153,8 +204,13 @@ export const resolveModuleQuizGate = async (userId, moduleId) => {
     let completion = await ModuleCompletion.findOne({ user: userId, module: moduleId });
     if (completion && hasQuiz) {
         completion = await persistFirstCycleQuizUnlock(completion, userId, moduleId);
+        completion = (await reconcileQuizPassedWithSubmissions(userId, moduleId)) || completion;
     }
-    const quizPassed = Boolean(completion?.quizPassed);
+
+    let quizPassed = Boolean(completion?.quizPassed);
+    if (hasQuiz && quizPassed) {
+        quizPassed = await hasPassingQuizSubmission(userId, moduleId);
+    }
     const quizUnlocked = Boolean(completion?.quizUnlocked);
     const firstCycleCompleted = Boolean(completion?.firstCycleCompleted);
     const quizExhausted = Boolean(completion?.quizExhausted);
@@ -306,16 +362,22 @@ export const syncModuleProgressFromVideos = async (userId, moduleId) => {
     completion.videosCompleted = videosCompleted;
     completion.totalVideos = totalVideos;
 
-    if (!activeQuiz && allComplete) {
+    if (!activeQuiz && allComplete && totalVideos > 0) {
         completion.quizPassed = true;
         completion.isCompleted = true;
         completion.completedAt = completion.completedAt || new Date();
-    } else if (activeQuiz && !completion.quizPassed) {
-        completion.isCompleted = false;
-        completion.completedAt = undefined;
-    } else if (activeQuiz && completion.quizPassed) {
-        completion.isCompleted = true;
-        completion.completedAt = completion.completedAt || new Date();
+    } else if (activeQuiz) {
+        const passedAttempt = completion.quizPassed
+            ? await hasPassingQuizSubmission(userId, moduleId)
+            : false;
+        if (passedAttempt) {
+            completion.isCompleted = true;
+            completion.completedAt = completion.completedAt || new Date();
+        } else {
+            completion.quizPassed = false;
+            completion.isCompleted = false;
+            completion.completedAt = undefined;
+        }
     }
 
     await completion.save();

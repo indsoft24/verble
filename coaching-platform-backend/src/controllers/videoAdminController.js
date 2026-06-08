@@ -28,6 +28,47 @@ const enforceDefaultVideoIds = (courseIds = [], requiredPlanIds = []) => {
     };
 };
 
+async function getNextVideoOrderForModules(moduleIds = []) {
+    if (!Array.isArray(moduleIds) || moduleIds.length === 0) {
+        return 0;
+    }
+    const objectIds = moduleIds
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+    if (objectIds.length === 0) {
+        return 0;
+    }
+    const maxOrderVideo = await Video.findOne({ modules: { $in: objectIds } })
+        .sort({ order: -1 })
+        .select('order')
+        .lean();
+    return (maxOrderVideo?.order ?? -1) + 1;
+}
+
+async function assertUniqueVideoOrderForModules(moduleIds, order, excludeVideoId = null) {
+    if (!Array.isArray(moduleIds) || moduleIds.length === 0 || order === undefined || order === null) {
+        return;
+    }
+    const objectIds = moduleIds
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+    if (objectIds.length === 0) {
+        return;
+    }
+    const filter = { modules: { $in: objectIds }, order };
+    if (excludeVideoId && mongoose.Types.ObjectId.isValid(excludeVideoId)) {
+        filter._id = { $ne: new mongoose.Types.ObjectId(excludeVideoId) };
+    }
+    const duplicate = await Video.findOne(filter).select('_id title').lean();
+    if (duplicate) {
+        const err = new Error(
+            `Another video in this module already uses order ${order}. Choose a different order value.`
+        );
+        err.statusCode = 400;
+        throw err;
+    }
+}
+
 /**
  * @desc    Securely initiates a direct video upload.
  * @route   POST /api/admin/videos/initiate-upload
@@ -58,12 +99,18 @@ export const initiateUpload = async (req, res) => {
             ? normalizedIds.requiredPlanIds.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id))
             : [];
 
+        const resolvedOrder =
+            order !== undefined && order !== null && order !== ''
+                ? Number(order)
+                : await getNextVideoOrderForModules(modulesToSave);
+        await assertUniqueVideoOrderForModules(modulesToSave, resolvedOrder);
+
         const newVideoData = {
             title,
             description,
             courses: coursesToSave,
             modules: modulesToSave,
-            order: order || 0,
+            order: resolvedOrder,
             requiredPlans: plansToSave,
             isPublished: isPublished || false,
             tags: Array.isArray(tags) ? tags.map((tag) => String(tag).trim()).filter(Boolean) : [],
@@ -97,8 +144,9 @@ export const initiateUpload = async (req, res) => {
         });
     } catch (error) {
         console.error("Error initiating video upload:", error);
-        res.status(500).json({
-            status: 'error',
+        const status = error.statusCode || 500;
+        res.status(status).json({
+            status: status >= 500 ? 'error' : 'fail',
             message: error?.message || 'Failed to initiate video upload.',
         });
     }
@@ -536,6 +584,13 @@ export const updateVideo = async (req, res, next) => {
         updateData.requiredPlans = normalizedIds.requiredPlanIds;
     }
 
+    const targetModules =
+        updateData.modules ??
+        (videoToUpdate.modules?.length ? videoToUpdate.modules.map((m) => m.toString()) : []);
+    if (updateData.order !== undefined && updateData.order !== null) {
+        await assertUniqueVideoOrderForModules(targetModules, Number(updateData.order), videoId);
+    }
+
     const updatedVideo = await Video.findByIdAndUpdate(
       videoId,
       { $set: updateData },
@@ -568,6 +623,9 @@ export const updateVideo = async (req, res, next) => {
 
   } catch (error) {
     console.error("ADMIN UPDATE VIDEO ERROR:", error.stack);
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ status: "fail", message: error.message });
+    }
     if (error.name === "ValidationError") {
       const messages = Object.values(error.errors).map((val) => val.message);
       return res.status(400).json({ status: "fail", message: messages.join(". ") });
