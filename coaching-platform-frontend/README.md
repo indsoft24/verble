@@ -1,6 +1,6 @@
 # Verble Frontend - Complete Documentation
 
-React-based English Learning Platform Frontend
+React-based English Learning Platform Frontends
 
 ---
 
