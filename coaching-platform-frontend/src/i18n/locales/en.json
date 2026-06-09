@@ -92,7 +92,7 @@
     "connect": "Connect",
     "legal": "Legal",
     "copyrightBefore": "©",
-    "copyrightAfter": "Verble {{year}}. All rights reserved."
+    "copyrightAfter": "{{year}}. All rights reserved."
   },
   "languageModal": {
     "title": "VERBLE",

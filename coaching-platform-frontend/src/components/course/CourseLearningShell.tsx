@@ -18,6 +18,9 @@ const CourseLearningShell: React.FC<CourseLearningShellProps> = ({
             minHeight: '100%',
             bgcolor: courseLearningTheme.pageBg,
             pb: `${courseLearningTheme.contentPaddingBottom}px`,
+            overflowX: 'hidden',
+            width: '100%',
+            maxWidth: '100%',
         }}
     >
         <Container

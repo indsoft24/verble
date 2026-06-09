@@ -15,7 +15,7 @@ const isStandaloneBonusPlanInput = (inputName = '') => {
 export const createSubscriptionPlan = async (req, res, next) => {
     try {
         // Handle FormData fields - when using multipart/form-data, nested objects come as separate fields
-        let { name, description, price, currency, duration, features, stripePriceId, isActive, course, topic, subTopic } = req.body;
+        let { name, description, price, currency, duration, features, stripePriceId, isActive, course, topic, subTopic, marketValue } = req.body;
 
         // If durationValue and durationUnit are present (from FormData), construct duration object
         // Priority: Use durationValue/durationUnit if present, otherwise use duration object if valid
@@ -41,6 +41,11 @@ export const createSubscriptionPlan = async (req, res, next) => {
         // Convert price to number if it's a string (from FormData)
         if (typeof price === 'string') {
             price = Number(price);
+        }
+        if (marketValue === '' || marketValue === null || marketValue === undefined) {
+            marketValue = undefined;
+        } else if (typeof marketValue === 'string') {
+            marketValue = Number(marketValue);
         }
 
         // Convert isActive to boolean if it's a string (from FormData)
@@ -92,6 +97,7 @@ export const createSubscriptionPlan = async (req, res, next) => {
             course,
             topic,
             subTopic,
+            ...(marketValue !== undefined ? { marketValue } : {}),
         });
 
         // Invalidate cache
@@ -200,7 +206,7 @@ export const updateSubscriptionPlanAdmin = async (req, res, next) => {
             return res.status(404).json({ status: 'fail', message: 'Subscription plan not found.' });
         }
 
-        let { name, description, price, currency, duration, features, isActive, course, topic, subTopic } = req.body;
+        let { name, description, price, currency, duration, features, isActive, course, topic, subTopic, marketValue } = req.body;
 
         // Handle FormData fields - when using multipart/form-data, nested objects come as separate fields
         // If durationValue and durationUnit are present (from FormData), construct duration object
@@ -231,6 +237,11 @@ export const updateSubscriptionPlanAdmin = async (req, res, next) => {
         if (typeof price === 'string') {
             price = Number(price);
         }
+        if (marketValue === '' || marketValue === null) {
+            marketValue = undefined;
+        } else if (typeof marketValue === 'string') {
+            marketValue = Number(marketValue);
+        }
 
         // Convert isActive to boolean if it's a string (from FormData)
         if (typeof isActive === 'string') {
@@ -247,6 +258,7 @@ export const updateSubscriptionPlanAdmin = async (req, res, next) => {
         if (name !== undefined) fieldsToUpdate.name = name;
         if (description !== undefined) fieldsToUpdate.description = description;
         if (price !== undefined) fieldsToUpdate.price = price;
+        if (marketValue !== undefined) fieldsToUpdate.marketValue = marketValue;
         if (currency !== undefined) fieldsToUpdate.currency = currency;
         if (duration !== undefined) fieldsToUpdate.duration = duration;
         if (features !== undefined) fieldsToUpdate.features = features;

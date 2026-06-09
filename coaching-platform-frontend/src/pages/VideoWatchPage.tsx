@@ -9,9 +9,6 @@ import {
     Paper,
     Button,
     Divider,
-    List,
-    ListItem,
-    ListItemText,
     IconButton,
     Snackbar,
     Grid,
@@ -723,32 +720,55 @@ const VideoWatchPage: React.FC = () => {
                                         Study materials
                                     </Typography>
                                     <Divider sx={{ my: courseLearningTheme.stackGap }} />
-                                    <List>
+                                    <Stack spacing={1}>
                                         {video.associatedMaterials.map((material) => (
-                                            <ListItem
+                                            <Box
                                                 key={material._id}
-                                                secondaryAction={
-                                                    <IconButton
-                                                        edge="end"
-                                                        aria-label="download"
-                                                        color="primary"
-                                                        onClick={() => handleDownload(material._id, material.fileName)}
-                                                        disabled={isDownloading === material._id}
-                                                        sx={{ color: courseLearningTheme.accent }}
-                                                    >
-                                                        {isDownloading === material._id ? <CircularProgress size={24} /> : <DownloadIcon />}
-                                                    </IconButton>
-                                                }
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'flex-start',
+                                                    gap: 1,
+                                                    py: 0.75,
+                                                    minWidth: 0,
+                                                }}
                                             >
-                                                <ListItemText
-                                                    primary={material.label}
-                                                    secondary={material.fileName}
-                                                    primaryTypographyProps={{ color: courseLearningTheme.textPrimary, fontWeight: 600 }}
-                                                    secondaryTypographyProps={{ color: courseLearningTheme.textMuted, fontSize: '0.8rem' }}
-                                                />
-                                            </ListItem>
+                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            fontWeight: 600,
+                                                            color: courseLearningTheme.textPrimary,
+                                                            wordBreak: 'break-word',
+                                                            lineHeight: 1.4,
+                                                        }}
+                                                    >
+                                                        {material.label}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            color: courseLearningTheme.textMuted,
+                                                            fontSize: '0.8rem',
+                                                            wordBreak: 'break-all',
+                                                            display: 'block',
+                                                            mt: 0.25,
+                                                        }}
+                                                    >
+                                                        {material.fileName}
+                                                    </Typography>
+                                                </Box>
+                                                <IconButton
+                                                    aria-label={`Download ${material.label}`}
+                                                    color="primary"
+                                                    onClick={() => handleDownload(material._id, material.fileName)}
+                                                    disabled={isDownloading === material._id}
+                                                    sx={{ color: courseLearningTheme.accent, flexShrink: 0, mt: -0.25 }}
+                                                >
+                                                    {isDownloading === material._id ? <CircularProgress size={24} /> : <DownloadIcon />}
+                                                </IconButton>
+                                            </Box>
                                         ))}
-                                    </List>
+                                    </Stack>
                                 </Box>
                             )}
                         </Paper>
@@ -761,27 +781,34 @@ const VideoWatchPage: React.FC = () => {
                                     Watch insights
                                 </Typography>
                                 <Stack
-                                    direction="row"
+                                    direction={{ xs: 'column', sm: 'row' }}
                                     flexWrap="wrap"
+                                    useFlexGap
                                     sx={{ gap: courseLearningTheme.space.gap, mt: courseLearningTheme.space.sectionMt }}
                                 >
-                                    <Chip size="small" icon={<PlayLessonOutlinedIcon sx={{ fontSize: '16px !important' }} />} label={`Watched this cycle: ${video.watchCount ?? 0}`} variant="outlined" sx={courseChipOutlinedSx} />
+                                    <Chip
+                                        size="small"
+                                        icon={<PlayLessonOutlinedIcon sx={{ fontSize: '16px !important' }} />}
+                                        label={`Watched: ${video.watchCount ?? 0}`}
+                                        variant="outlined"
+                                        sx={{ ...courseChipOutlinedSx, width: { xs: '100%', sm: 'auto' }, justifyContent: 'flex-start' }}
+                                    />
                                     <Chip
                                         size="small"
                                         label={
                                             video.maxWatchesPerCycle != null
-                                                ? `Left this cycle: ${video.remainingWatches ?? 0} / ${video.maxWatchesPerCycle}`
+                                                ? `Left: ${video.remainingWatches ?? 0} / ${video.maxWatchesPerCycle}`
                                                 : `Remaining: ${video.remainingWatches ?? 0}`
                                         }
                                         variant="outlined"
-                                        sx={courseChipInfoSx}
+                                        sx={{ ...courseChipInfoSx, width: { xs: '100%', sm: 'auto' }, justifyContent: 'flex-start' }}
                                     />
                                     {video.maxModuleCycles != null && (
                                         <Chip
                                             size="small"
                                             label={`Cycle ${(video.completionCycle ?? 0) + 1} of ${video.maxModuleCycles}`}
                                             variant="outlined"
-                                            sx={courseChipOutlinedSx}
+                                            sx={{ ...courseChipOutlinedSx, width: { xs: '100%', sm: 'auto' }, justifyContent: 'flex-start' }}
                                         />
                                     )}
                                 </Stack>

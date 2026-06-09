@@ -13,6 +13,7 @@ export interface SubscriptionPlan {
     description?: string;
     image?: string;
     price: number; // Store in cents
+    marketValue?: number; // Original / MRP in cents (shown struck-through on site)
     currency: string; // e.g., 'USD', 'INR'
     duration: SubscriptionPlanDuration;
     features?: string[];

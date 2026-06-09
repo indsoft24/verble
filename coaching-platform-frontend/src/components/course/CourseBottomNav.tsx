@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Stack } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -21,13 +21,14 @@ export interface CourseBottomNavProps {
     secondaryActions?: CourseBottomNavAction[];
 }
 
-const navButtonSx = {
+const navButtonBaseSx = {
     textTransform: 'none' as const,
     fontWeight: 700,
     minHeight: 44,
     borderRadius: 1.5,
-    flex: { xs: 1, sm: 'none' },
-    whiteSpace: 'nowrap' as const,
+    minWidth: 0,
+    px: { xs: 1, sm: 1.75 },
+    fontSize: { xs: '0.8rem', sm: '0.875rem' },
 };
 
 const CourseBottomNav: React.FC<CourseBottomNavProps> = ({
@@ -48,68 +49,112 @@ const CourseBottomNav: React.FC<CourseBottomNavProps> = ({
             borderTop: `1px solid ${alpha(courseLearningTheme.accent, 0.35)}`,
             boxShadow: `0 -4px 24px ${alpha('#000', 0.35)}`,
             pb: courseLearningTheme.bottomNavSafePadding,
-            px: { xs: 1.5, sm: 2 },
+            px: { xs: 1.25, sm: 2 },
             py: 1,
+            boxSizing: 'border-box',
+            maxWidth: '100vw',
+            overflow: 'hidden',
         }}
     >
-        <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            justifyContent="center"
-            sx={{ maxWidth: 960, mx: 'auto', width: '100%' }}
+        <Box
+            sx={{
+                display: 'grid',
+                gridTemplateColumns:
+                    secondaryActions.length > 0
+                        ? `minmax(0, 1.4fr) repeat(${secondaryActions.length}, minmax(0, 1fr))`
+                        : '1fr',
+                gap: { xs: 0.75, sm: 1 },
+                alignItems: 'stretch',
+                maxWidth: 960,
+                mx: 'auto',
+                width: '100%',
+            }}
         >
             <Button
                 component={RouterLink}
                 to={backTo}
                 variant="outlined"
-                startIcon={<ArrowBackIcon />}
+                aria-label={backLabel}
+                startIcon={<ArrowBackIcon sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />}
                 sx={{
-                    ...navButtonSx,
+                    ...navButtonBaseSx,
                     borderColor: alpha(courseLearningTheme.accent, 0.5),
                     color: courseLearningTheme.textPrimary,
-                    minWidth: { xs: 'auto', sm: 160 },
+                    overflow: 'hidden',
+                    '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
                     '&:hover': {
                         borderColor: courseLearningTheme.accent,
                         bgcolor: alpha(courseLearningTheme.accent, 0.12),
                     },
                 }}
             >
-                {backLabel}
-            </Button>
-            {secondaryActions.map((action) => (
-                <Button
-                    key={action.to + action.label}
-                    component={action.disabled ? 'button' : RouterLink}
-                    to={action.disabled ? undefined : action.to}
-                    variant={action.variant ?? (action.icon === 'next' ? 'contained' : 'outlined')}
-                    disabled={action.disabled}
-                    startIcon={action.icon === 'prev' ? <ChevronLeftIcon /> : undefined}
-                    endIcon={action.icon === 'next' ? <ChevronRightIcon /> : undefined}
+                <Box
+                    component="span"
                     sx={{
-                        ...navButtonSx,
-                        ...(action.variant === 'contained' || action.icon === 'next'
-                            ? {
-                                  bgcolor: courseLearningTheme.accent,
-                                  color: '#fff',
-                                  boxShadow: 'none',
-                                  '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88), boxShadow: 'none' },
-                                  '&.Mui-disabled': { bgcolor: alpha(courseLearningTheme.accent, 0.3), color: alpha('#fff', 0.5) },
-                              }
-                            : {
-                                  borderColor: alpha(courseLearningTheme.accent, 0.5),
-                                  color: courseLearningTheme.textPrimary,
-                                  '&:hover': {
-                                      borderColor: courseLearningTheme.accent,
-                                      bgcolor: alpha(courseLearningTheme.accent, 0.12),
-                                  },
-                              }),
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        display: { xs: 'none', sm: 'inline' },
                     }}
                 >
-                    {action.label}
-                </Button>
-            ))}
-        </Stack>
+                    {backLabel}
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                    Lessons
+                </Box>
+            </Button>
+            {secondaryActions.map((action) => {
+                const isNext = action.icon === 'next';
+                const isPrev = action.icon === 'prev';
+                const isContained = action.variant === 'contained' || isNext;
+
+                return (
+                    <Button
+                        key={action.to + action.label}
+                        component={action.disabled ? 'button' : RouterLink}
+                        to={action.disabled ? undefined : action.to}
+                        variant={action.variant ?? (isNext ? 'contained' : 'outlined')}
+                        disabled={action.disabled}
+                        aria-label={action.label}
+                        startIcon={isPrev ? <ChevronLeftIcon /> : undefined}
+                        endIcon={isNext ? <ChevronRightIcon /> : undefined}
+                        sx={{
+                            ...navButtonBaseSx,
+                            whiteSpace: 'nowrap',
+                            ...(isContained
+                                ? {
+                                      bgcolor: courseLearningTheme.accent,
+                                      color: '#fff',
+                                      boxShadow: 'none',
+                                      '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88), boxShadow: 'none' },
+                                      '&.Mui-disabled': {
+                                          bgcolor: alpha(courseLearningTheme.accent, 0.3),
+                                          color: alpha('#fff', 0.5),
+                                      },
+                                  }
+                                : {
+                                      borderColor: alpha(courseLearningTheme.accent, 0.5),
+                                      color: courseLearningTheme.textPrimary,
+                                      '&:hover': {
+                                          borderColor: courseLearningTheme.accent,
+                                          bgcolor: alpha(courseLearningTheme.accent, 0.12),
+                                      },
+                                  }),
+                            '& .MuiButton-startIcon, & .MuiButton-endIcon': {
+                                display: { xs: 'inline-flex', sm: 'inline-flex' },
+                                mx: { xs: 0, sm: undefined },
+                            },
+                            '& .MuiButton-startIcon': { mr: { xs: 0, sm: -0.5 } },
+                            '& .MuiButton-endIcon': { ml: { xs: 0, sm: -0.5 } },
+                        }}
+                    >
+                        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                            {action.label}
+                        </Box>
+                    </Button>
+                );
+            })}
+        </Box>
     </Box>
 );
 

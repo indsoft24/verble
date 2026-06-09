@@ -3,7 +3,7 @@ import {
     Container, Typography, Button, CircularProgress, Alert, Box, Paper,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField, Grid,
     Switch, FormControlLabel, Select, MenuItem, InputLabel, FormControl,
-    type SelectChangeEvent, FormHelperText, Chip, InputAdornment, OutlinedInput
+    type SelectChangeEvent, FormHelperText, Chip, InputAdornment, OutlinedInput, useMediaQuery, useTheme,
 } from '@mui/material';
 import {
     DataGrid,
@@ -45,6 +45,7 @@ const initialPlanFormData: SubscriptionPlanInput = {
     name: '',
     description: '',
     price: 0,
+    marketValue: undefined,
     currency: 'INR', // Default to INR as per backend changes
     duration: { value: 1, unit: 'month' },
     features: [],
@@ -100,6 +101,19 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
         page: 0,
         pageSize: 10,
     });
+
+    const theme = useTheme();
+    const isMobileGrid = useMediaQuery(theme.breakpoints.down('md'));
+    const columnVisibilityModel = useMemo(
+        () => ({
+            topic: !isMobileGrid,
+            subTopic: !isMobileGrid,
+            features: !isMobileGrid,
+            createdAt: !isMobileGrid,
+            duration: !isMobileGrid,
+        }),
+        [isMobileGrid]
+    );
 
     // TiptapEditor state
     const [isGatedFileDialogOpen, setIsGatedFileDialogOpen] = useState(false);
@@ -239,6 +253,16 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
             case 'price':
                 setCurrentPlan(prev => prev ? { ...prev, price: parseInt(value, 10) || 0 } : null);
                 break;
+            case 'marketValue':
+                setCurrentPlan(prev =>
+                    prev
+                        ? {
+                              ...prev,
+                              marketValue: value === '' ? undefined : parseInt(value, 10) || 0,
+                          }
+                        : null
+                );
+                break;
             case 'currency':
                 // Allow user to type, convert to uppercase, and limit to 3 chars
                 setCurrentPlan(prev => prev ? { ...prev, currency: value.toUpperCase().slice(0, 3) } : null);
@@ -290,6 +314,9 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
                 planPayload.append('name', currentPlan.name);
                 planPayload.append('description', currentPlan.description || '');
                 planPayload.append('price', currentPlan.price.toString());
+                if (currentPlan.marketValue != null && currentPlan.marketValue > 0) {
+                    planPayload.append('marketValue', currentPlan.marketValue.toString());
+                }
                 planPayload.append('currency', currentPlan.currency);
                 planPayload.append('durationValue', currentPlan.duration?.value.toString() || '1');
                 planPayload.append('durationUnit', currentPlan.duration?.unit || 'month');
@@ -306,6 +333,9 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
                     name: currentPlan.name,
                     description: currentPlan.description,
                     price: Number(currentPlan.price),
+                    ...(currentPlan.marketValue != null && currentPlan.marketValue > 0
+                        ? { marketValue: Number(currentPlan.marketValue) }
+                        : {}),
                     currency: currentPlan.currency,
                     duration: { value: Number(currentPlan.duration?.value || 1), unit: currentPlan.duration?.unit || 'month' },
                     features: featuresArray,
@@ -386,10 +416,18 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
             }
         },
         {
-            field: 'price', headerName: 'Price', width: 130, type: 'number',
+            field: 'price', headerName: 'Offer price', width: 120, type: 'number',
             renderCell: (params: GridRenderCellParams<SubscriptionPlanRow>) => {
                 if (!params.row || params.row.price == null || typeof params.row.currency !== 'string') return <span>N/A</span>;
                 return <span>{`${(params.row.price / 100).toFixed(2)} ${params.row.currency.toUpperCase()}`}</span>;
+            }
+        },
+        {
+            field: 'marketValue', headerName: 'Original price', width: 130, type: 'number',
+            renderCell: (params: GridRenderCellParams<SubscriptionPlanRow>) => {
+                const mv = params.row.marketValue;
+                if (mv == null || typeof params.row.currency !== 'string') return <span>—</span>;
+                return <span>{`${(mv / 100).toFixed(2)} ${params.row.currency.toUpperCase()}`}</span>;
             }
         },
         {
@@ -399,8 +437,8 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
                 return <span>{`${params.row.duration.value} ${params.row.duration.unit}(s)`}</span>;
             }
         },
-        { field: 'topic', headerName: 'Topic', width: 120, flex: 0.15 },
-        { field: 'subTopic', headerName: 'Sub Topic', width: 150, flex: 0.2 },
+        { field: 'topic', headerName: 'Topic', width: 110, flex: 0.12 },
+        { field: 'subTopic', headerName: 'Sub topic', width: 120, flex: 0.12 },
         {
             field: 'isActive', headerName: 'Active', width: 100, type: 'boolean',
             renderCell: (params: GridRenderCellParams<SubscriptionPlanRow, boolean>) => params.value ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />
@@ -556,14 +594,16 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
                 </Typography>
             </Box>
 
-            <Paper sx={{ height: 600, width: '100%' }}>
+            <Paper sx={{ height: { xs: 520, md: 600 }, width: '100%', overflow: 'hidden' }}>
                 <DataGrid
                     rows={filteredPlans}
                     columns={columns}
+                    columnVisibilityModel={columnVisibilityModel}
                     paginationModel={paginationModel}
                     onPaginationModelChange={setPaginationModel}
                     pageSizeOptions={[10, 25, 50]}
                     disableRowSelectionOnClick
+                    sx={{ border: 0, minWidth: isMobileGrid ? 720 : 'auto' }}
                 />
             </Paper>
 
@@ -635,7 +675,8 @@ const AdminSubscriptionPlansListPage: React.FC = () => {
                                     </Box>
                                 )}
                             </Grid>
-                            <Grid sx={{width:{xs :"100%", sm: "50%"}}}><TextField margin="dense" name="price" label="Price (in cents)" type="number" fullWidth value={currentPlan.price} onChange={handleFormChange} required InputProps={{ inputProps: { min: 0 } }} /></Grid>
+                            <Grid sx={{width:{xs :"100%", sm: "50%"}}}><TextField margin="dense" name="price" label="Offer price (in paise/cents)" type="number" fullWidth value={currentPlan.price} onChange={handleFormChange} required InputProps={{ inputProps: { min: 0 } }} helperText="Amount charged at checkout, e.g. 4999 = ₹49.99" /></Grid>
+                            <Grid sx={{width:{xs :"100%", sm: "50%"}}}><TextField margin="dense" name="marketValue" label="Original price (in paise/cents)" type="number" fullWidth value={currentPlan.marketValue ?? ''} onChange={handleFormChange} InputProps={{ inputProps: { min: 0 } }} helperText="Shown struck-through on the website (optional)" /></Grid>
                             
                             <Grid sx={{width:{xs :"100%", sm: "50%"}}}>
                                 <TextField margin="dense" name="currency" label="Currency (e.g., INR)" fullWidth value={currentPlan.currency || ''} onChange={handleFormChange} required inputProps={{ maxLength: 3, style: { textTransform: 'uppercase' } }} />

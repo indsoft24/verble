@@ -126,24 +126,31 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                             zIndex: theme.zIndex.drawer + 1,
                         }}
                     >
-                        <Toolbar sx={{ minHeight: 56, gap: 1, px: 1.5 }}>
+                        <Toolbar sx={{ minHeight: 56, gap: 1, px: 1.5, minWidth: 0 }}>
                             <IconButton
                                 onClick={handleSidebarToggle}
                                 edge="start"
                                 aria-label="Open menu"
-                                sx={
-                                    isDarkMain
+                                sx={{
+                                    flexShrink: 0,
+                                    ...(isDarkMain
                                         ? { color: isActivity ? '#f8fafc' : courseLearningTheme.textPrimary }
-                                        : { color: learnerBrandTheme.icon }
-                                }
+                                        : { color: learnerBrandTheme.icon }),
+                                }}
                             >
                                 <MenuIcon />
                             </IconButton>
                             <Typography
                                 variant="subtitle1"
                                 component="h1"
-                                sx={{ flexGrow: 1, fontWeight: 700, minWidth: 0 }}
-                                noWrap
+                                sx={{
+                                    flex: 1,
+                                    fontWeight: 700,
+                                    minWidth: 0,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}
                             >
                                 {titleProp}
                             </Typography>
@@ -151,7 +158,13 @@ const UserLayout: React.FC<UserLayoutProps> = ({
                                 component="img"
                                 src={brandAssets.primaryLogo}
                                 alt="Verble"
-                                sx={{ height: 32, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+                                sx={{
+                                    height: { xs: 26, sm: 32 },
+                                    width: 'auto',
+                                    maxWidth: { xs: 72, sm: 120 },
+                                    objectFit: 'contain',
+                                    flexShrink: 0,
+                                }}
                             />
                         </Toolbar>
                     </AppBar>

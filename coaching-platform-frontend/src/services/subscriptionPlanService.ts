@@ -82,12 +82,13 @@ interface VerifyPaymentData {
  * Fetches all active subscription plans across the entire platform.
  * @param filters Optional filters for topic and subTopic
  */
-export const getActiveSubscriptionPlans = async (filters?: { topic?: string; subTopic?: string; courseId?: string }): Promise<SubscriptionPlanPublic[]> => {
+export const getActiveSubscriptionPlans = async (filters?: { topic?: string; subTopic?: string; courseId?: string; includeAll?: boolean }): Promise<SubscriptionPlanPublic[]> => {
     try {
         const params = new URLSearchParams();
         if (filters?.topic) params.append('topic', filters.topic);
         if (filters?.subTopic) params.append('subTopic', filters.subTopic);
         if (filters?.courseId) params.append('courseId', filters.courseId);
+        if (filters?.includeAll) params.append('includeAll', 'true');
         
         const queryString = params.toString();
         const url = queryString ? `/subscription-plans?${queryString}` : '/subscription-plans';

@@ -9,7 +9,7 @@ export const COURSE_LEARNING_HIGHLIGHT = '#e8b923';
 export const courseLearningSpace = {
     gap: '5px',
     gapMd: '8px',
-    bandInset: { xs: '7px', sm: '8px' },
+    bandInset: { xs: '12px', sm: '16px' },
     bandMb: '24px',
     blockMt: '5px',
     blockMb: '16px',
@@ -62,7 +62,7 @@ export const courseLearningTheme = {
     accordionDetailsPy: courseLearningSpace.gapMd,
     lessonThumbWidth: { sm: courseLearningSpace.lessonThumbSm, md: 200 },
     shellPt: courseLearningSpace.gapMd,
-    shellPx: courseLearningSpace.bandInset,
+    shellPx: { xs: 1.5, sm: 2 },
     breadcrumbMb: courseLearningSpace.blockMb,
     learningRowStackSx: {
         display: 'flex',

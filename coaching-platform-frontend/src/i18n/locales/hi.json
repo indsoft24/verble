@@ -92,7 +92,7 @@
     "connect": "जुड़ें",
     "legal": "कानूनी",
     "copyrightBefore": "©",
-    "copyrightAfter": "Verble {{year}}. सर्वाधिकार सुरक्षित।"
+    "copyrightAfter": "{{year}}. सर्वाधिकार सुरक्षित।"
   },
   "languageModal": {
     "title": "VERBLE",

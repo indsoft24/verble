@@ -3,8 +3,13 @@ import SubscriptionPlan from '../models/SubscriptionPlan.js';
 import User from '../models/User.js';
 
 export const getActiveSubscriptionPlans = asyncHandler(async (req, res) => {
-    // Public catalog: paid plans only (Free Foundation is assigned on registration, not sold here)
-    const plans = await SubscriptionPlan.find({ isActive: true, price: { $gt: 0 } }).sort({
+    const includeAll = req.query.includeAll === 'true';
+    const filter = { isActive: true };
+    // Public catalog defaults to paid plans; marketing pages can request all active tiers.
+    if (!includeAll) {
+        filter.price = { $gt: 0 };
+    }
+    const plans = await SubscriptionPlan.find(filter).sort({
         displayOrder: 1,
         price: 1,
     });

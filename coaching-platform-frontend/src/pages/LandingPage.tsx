@@ -1,5 +1,5 @@
 // src/pages/LandingPage.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -11,12 +11,6 @@ import {
     Card,
     Paper,
     Chip,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
     Checkbox,
     Divider,
     Stack,
@@ -31,7 +25,6 @@ import SchoolIcon from '@mui/icons-material/School';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import SecurityIcon from '@mui/icons-material/Security';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import TranslateIcon from '@mui/icons-material/Translate';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import QuizIcon from '@mui/icons-material/Quiz';
@@ -49,6 +42,10 @@ import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import { brandAssets } from '../assets/brandAssets';
 import FullCourseSyllabusSection from '../components/marketing/FullCourseSyllabusSection';
+import LandingPricingSection from '../components/marketing/LandingPricingSection';
+import PlanPriceOffer from '../components/marketing/PlanPriceOffer';
+import { getActiveSubscriptionPlans } from '../services/subscriptionPlanService';
+import { findPlanByNameMatch, getPlanOfferLabels } from '../utils/planPriceFormat';
 
 const heroPatternIcons = [
     MenuBookOutlinedIcon,
@@ -99,7 +96,8 @@ type MasterTierCardProps = {
     subtitle: string;
     stats: MasterTierStat[];
     features: MasterTierFeature[];
-    strikethroughPrice: string;
+    offerPriceLabel: string;
+    originalPriceLabel?: string | null;
     ctaLabel: string;
     ctaTo: string;
     ctaTextColor: string;
@@ -114,7 +112,8 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
     subtitle,
     stats,
     features,
-    strikethroughPrice,
+    offerPriceLabel,
+    originalPriceLabel,
     ctaLabel,
     ctaTo,
     ctaTextColor,
@@ -189,6 +188,22 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
                     {headerIcon}
                 </Box>
             </Stack>
+
+            <Box
+                sx={{
+                    mb: { xs: 1.5, md: 2 },
+                    p: { xs: 1.25, md: 1.5 },
+                    borderRadius: '12px',
+                    bgcolor: 'rgba(255,255,255,0.14)',
+                }}
+            >
+                <PlanPriceOffer
+                    offerLabel={offerPriceLabel}
+                    originalLabel={originalPriceLabel}
+                    variant="onDark"
+                    size="lg"
+                />
+            </Box>
 
             <Typography
                 variant="h5"
@@ -288,24 +303,6 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
             </Stack>
 
             <Box sx={{ mt: { xs: 2.5, md: 3.5 }, pt: { xs: 2, md: 2.5 }, borderTop: '1px solid rgba(255,255,255,0.22)' }}>
-                <Typography
-                    variant="body2"
-                    sx={{
-                        opacity: 0.9,
-                        mb: 1.5,
-                        lineHeight: 1.55,
-                        fontSize: { xs: '0.72rem', sm: '0.8rem', md: '0.875rem' },
-                        wordBreak: 'break-word',
-                    }}
-                >
-                    <Box component="span" sx={{ textDecoration: 'line-through', mr: 0.75 }}>
-                        {strikethroughPrice}
-                    </Box>
-                    Included in all-access bundle from{' '}
-                    <Box component="span" sx={{ fontWeight: 800 }}>
-                        ₹3,999
-                    </Box>
-                </Typography>
                 <Button
                     component={RouterLink}
                     to={ctaTo}
@@ -332,8 +329,23 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
 
 const LandingPage: React.FC = () => {
     const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
+    const [catalogPlans, setCatalogPlans] = useState<Awaited<ReturnType<typeof getActiveSubscriptionPlans>>>([]);
     const { isAuthenticated, user } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        getActiveSubscriptionPlans({ includeAll: true })
+            .then(setCatalogPlans)
+            .catch(() => setCatalogPlans([]));
+    }, []);
+
+    const goldPlan = useMemo(() => findPlanByNameMatch(catalogPlans, /gold professional/i), [catalogPlans]);
+    const fullCoursePlan = useMemo(() => findPlanByNameMatch(catalogPlans, /^full course$/i), [catalogPlans]);
+    const goldPriceLabels = useMemo(() => (goldPlan ? getPlanOfferLabels(goldPlan) : null), [goldPlan]);
+    const fullCoursePriceLabels = useMemo(
+        () => (fullCoursePlan ? getPlanOfferLabels(fullCoursePlan) : null),
+        [fullCoursePlan]
+    );
 
     const handleCheckboxChange = (index: number) => {
         setCheckedItems(prev => ({ ...prev, [index]: !prev[index] }));
@@ -373,16 +385,6 @@ const LandingPage: React.FC = () => {
         { icon: <QuizIcon />, title: "Spot Correct Sentence", desc: "Grammar Mastery", color: "#9C27B0" },
         { icon: <AutoAwesomeIcon />, title: "Verb Fill Blanks", desc: "Tense Perfection", color: "#F44336" },
         { icon: <RecordVoiceOverIcon />, title: "Voice Practice", desc: "Speaking Confidence", color: "#00BCD4" }
-    ];
-
-    const courseValueBreakdown = [
-        { module: "FREE", features: "1000+ Daily Word and 500+ Phrase of Day", value: "₹1,999" },
-        { module: "Bronze", features: "Daily One Minute read with key words and Essential Vocabulary", value: "₹1,999" },
-        { module: "SILVER", features: "Practical life Conversations, Daily Grammar Puzzles", value: "₹4,999" },
-        { module: "GOLD", features: "Scene Explanations, Professional Dialogues, AI Prompts", value: "₹9,999" },
-        { module: "FULL COURSE", features: "Zero to Hero, 100 Videos, 08 Modules, 80 Quiz, 200 hours of video", value: "₹20,999" },
-        { module: "AI Learning", features: "Learn in English, Hindi, Hinglish. Speak or Type to learn.", value: "₹5,999" },
-        { module: "BONUS", features: "Famous Speeches, Song Lyrics, IG Learning Feeds", value: "FREE with bundle" }
     ];
 
     const testimonials = [
@@ -1055,9 +1057,10 @@ const LandingPage: React.FC = () => {
                                         detail: 'Learn in the language you are most comfortable with.',
                                     },
                                 ]}
-                                strikethroughPrice="₹9,999"
+                                offerPriceLabel={goldPriceLabels?.offer ?? '—'}
+                                originalPriceLabel={goldPriceLabels?.original}
                                 ctaLabel="Get Gold Access"
-                                ctaTo="/subscription-plans"
+                                ctaTo={goldPlan ? `/subscription-plans/${goldPlan._id}` : '/subscription-plans'}
                                 ctaTextColor="#1d4ed8"
                                 gradient="linear-gradient(160deg, #4f46e5 0%, #2563eb 55%, #1d4ed8 100%)"
                                 boxShadow="0 16px 32px -12px rgba(37, 99, 235, 0.4)"
@@ -1092,9 +1095,10 @@ const LandingPage: React.FC = () => {
                                         detail: 'Revise offline with curated study material.',
                                     },
                                 ]}
-                                strikethroughPrice="₹20,999"
+                                offerPriceLabel={fullCoursePriceLabels?.offer ?? '—'}
+                                originalPriceLabel={fullCoursePriceLabels?.original}
                                 ctaLabel="Explore Full Course"
-                                ctaTo="/courses"
+                                ctaTo={fullCoursePlan ? `/subscription-plans/${fullCoursePlan._id}` : '/courses'}
                                 ctaTextColor="#047857"
                                 gradient="linear-gradient(160deg, #059669 0%, #10b981 50%, #047857 100%)"
                                 boxShadow="0 16px 32px -12px rgba(5, 150, 105, 0.38)"
@@ -1115,43 +1119,7 @@ const LandingPage: React.FC = () => {
                             Invest in your future with our comprehensive learning modules.
                         </Typography>
                     </Box>
-                    <TableContainer component={Paper} elevation={0} sx={{ borderRadius: '24px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-                        <Table>
-                            <TableHead>
-                                <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                                    <TableCell sx={{ color: '#0f172a', fontWeight: 800, py: 3, fontSize: '1rem' }}>Learning Module</TableCell>
-                                    <TableCell sx={{ color: '#0f172a', fontWeight: 800, py: 3, fontSize: '1rem' }}>Key Features Included</TableCell>
-                                    <TableCell sx={{ color: '#0f172a', fontWeight: 800, py: 3, fontSize: '1rem' }} align="right">Market Value</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {courseValueBreakdown.map((row, index) => (
-                                    <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                                        <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#1e293b' }}>{row.module}</TableCell>
-                                        <TableCell sx={{ py: 2.5, color: '#64748b' }}>{row.features}</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 700, color: '#0f172a', py: 2.5 }}>{row.value}</TableCell>
-                                    </TableRow>
-                                ))}
-                                <TableRow sx={{ bgcolor: '#f1f5f9' }}>
-                                    <TableCell colSpan={2} sx={{ fontWeight: 800, py: 3, fontSize: '1.1rem', color: '#0f172a' }}>Total Combined Value</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 800, py: 3, fontSize: '1.1rem', color: '#0f172a' }}>₹45,994/-</TableCell>
-                                </TableRow>
-                                <TableRow sx={{ bgcolor: '#ecfdf5' }}>
-                                    <TableCell colSpan={2} sx={{ fontWeight: 800, py: 3, fontSize: '1.2rem', color: '#059669' }}>Standard Bundle Price (78% Off)</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 800, py: 3, fontSize: '1.2rem', color: '#059669' }}>₹9,999/-</TableCell>
-                                </TableRow>
-                                <TableRow sx={{ bgcolor: '#fef2f2' }}>
-                                    <TableCell colSpan={2}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <LocalFireDepartmentIcon sx={{ color: '#ef4444', mr: 1 }} />
-                                            <Typography variant="h6" sx={{ fontWeight: 900, color: '#ef4444' }}>Limited Time Special Offer</Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 900, py: 3, fontSize: '1.5rem', color: '#ef4444' }}>₹3,999/-</TableCell>
-                                </TableRow>
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                    <LandingPricingSection />
                     <Box sx={{ mt: 6, textAlign: 'center' }}>
                         <Grid container spacing={3} justifyContent="center" sx={{ mb: 4 }}>
                             {[
