@@ -52,7 +52,11 @@ const AdminLearningSettingsPage: React.FC = () => {
         setError(null);
         setSuccess(false);
         try {
-            const updated = await updateAdminLearningSettings(settings);
+            const updated = await updateAdminLearningSettings({
+                maxWatchesPerVideo: settings.maxWatchesPerVideo,
+                maxQuizAttempts: settings.maxQuizAttempts,
+                requireQuizToUnlockNextModule: settings.requireQuizToUnlockNextModule,
+            });
             setSettings(updated);
             setSuccess(true);
         } catch (err: unknown) {
@@ -69,8 +73,8 @@ const AdminLearningSettingsPage: React.FC = () => {
                     Global learning rules
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Module completion cycles, per-video watch limits per cycle, and whether passing a quiz unlocks the
-                    next module.
+                    Lessons unlock one at a time on the first pass, then stay unlocked. Watch limits apply per lesson
+                    for the lifetime of the course. The module quiz unlocks after all lessons are completed once.
                 </Typography>
 
                 {error && (
@@ -93,31 +97,31 @@ const AdminLearningSettingsPage: React.FC = () => {
                     <Paper sx={{ p: 3 }}>
                         <Stack spacing={2.5}>
                             <TextField
-                                label="Module completion cycles"
+                                label="Max watches per video"
                                 type="number"
-                                inputProps={{ min: 1, max: 10 }}
-                                value={settings.maxModuleCompletionCycles}
+                                inputProps={{ min: 1, max: 20 }}
+                                value={settings.maxWatchesPerVideo}
                                 onChange={(e) =>
                                     setSettings({
                                         ...settings,
-                                        maxModuleCompletionCycles: Number(e.target.value),
+                                        maxWatchesPerVideo: Number(e.target.value),
                                     })
                                 }
-                                helperText="How many full module watch-throughs before max limits apply (default 4)."
+                                helperText="Lifetime limit on how many times a learner can mark each lesson complete (default 4)."
                                 fullWidth
                             />
                             <TextField
-                                label="Max watches per video per cycle"
+                                label="Max quiz attempts"
                                 type="number"
                                 inputProps={{ min: 1, max: 20 }}
-                                value={settings.maxWatchesPerVideoPerCycle}
+                                value={settings.maxQuizAttempts}
                                 onChange={(e) =>
                                     setSettings({
                                         ...settings,
-                                        maxWatchesPerVideoPerCycle: Number(e.target.value),
+                                        maxQuizAttempts: Number(e.target.value),
                                     })
                                 }
-                                helperText="Times a learner can mark each video complete within one cycle (default 4)."
+                                helperText="Failed quiz attempts before the learner must contact support (default 3). Lesson progress is preserved on failure."
                                 fullWidth
                             />
                             <FormControlLabel

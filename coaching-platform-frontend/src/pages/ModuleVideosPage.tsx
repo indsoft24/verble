@@ -77,7 +77,7 @@ const ModuleVideosPage: React.FC = () => {
     const [isModuleLocked, setIsModuleLocked] = useState(false);
     const [moduleLockReason, setModuleLockReason] = useState<string | null>(null);
     const [previousModuleId, setPreviousModuleId] = useState<string | null>(null);
-    const [cycleMeta, setCycleMeta] = useState<{ completionCycle?: number; maxWatchesPerCycle?: number; maxModuleCycles?: number }>({});
+    const [watchLimitMeta, setWatchLimitMeta] = useState<{ maxWatchesPerVideo?: number }>({});
 
     const getVideoThumbUrl = (video: VideoListItemForModulePage): string => {
         if (video.thumbnailUrl) {
@@ -101,10 +101,8 @@ const ModuleVideosPage: React.FC = () => {
             setIsModuleLocked(Boolean(pageData.isModuleLocked));
             setModuleLockReason(pageData.moduleLockReason || null);
             setPreviousModuleId(pageData.previousModuleId || null);
-            setCycleMeta({
-                completionCycle: pageData.completionCycle,
-                maxWatchesPerCycle: pageData.maxWatchesPerCycle,
-                maxModuleCycles: pageData.maxModuleCycles,
+            setWatchLimitMeta({
+                maxWatchesPerVideo: pageData.maxWatchesPerVideo ?? pageData.maxWatchesPerCycle,
             });
             try {
                 const [completion, availability] = await Promise.all([
@@ -153,9 +151,7 @@ const ModuleVideosPage: React.FC = () => {
 
         if (video.lockReason === 'watch_limit') {
             setToast({
-                message:
-                    video.accessReason ||
-                    `You have used all watches for this lesson in cycle ${(video.completionCycle ?? 0) + 1}.`,
+                message: video.accessReason || 'You have used all watches for this lesson.',
                 severity: 'info',
             });
             return;
@@ -347,21 +343,18 @@ const ModuleVideosPage: React.FC = () => {
                     </Alert>
                 )}
 
-                {cycleMeta.maxModuleCycles != null && !isModuleLocked && (
+                {watchLimitMeta.maxWatchesPerVideo != null && !isModuleLocked && (
                     <Typography
                         variant="caption"
                         sx={{ display: 'block', mb: courseLearningTheme.sectionGap, color: courseLearningTheme.textSecondary }}
                     >
-                        Cycle {(cycleMeta.completionCycle ?? 0) + 1} of {cycleMeta.maxModuleCycles}
-                        {cycleMeta.maxWatchesPerCycle != null
-                            ? ` · Up to ${cycleMeta.maxWatchesPerCycle} watches per lesson this cycle`
-                            : ''}
+                        Up to {watchLimitMeta.maxWatchesPerVideo} watches per lesson. Completed lessons stay unlocked.
                     </Typography>
                 )}
 
                 <CourseLearningBand
                     headerLabel="LESSONS"
-                    subtitle="Work top to bottom — locked lessons unlock after the previous one."
+                    subtitle="Work top to bottom — each lesson unlocks the next and stays available once completed."
                 >
                     {videos.length === 0 ? (
                         <Typography sx={{ color: courseLearningTheme.textMuted, textAlign: 'center', py: 2 }}>

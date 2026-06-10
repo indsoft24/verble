@@ -1,24 +1,19 @@
 // src/utils/videoAccessHelper.js
 import VideoWatchProgress from '../models/VideoWatchProgress.js';
 import Video from '../models/Video.js';
-import User from '../models/User.js';
-import { getActiveUserTierLevel, TIER_LEVEL } from './subscriptionTierAccess.js';
 import { getLearningConfig } from '../services/courseLearningConfigService.js';
 
-async function isModuleCompleteInCycle(userId, moduleId, cycle, videos) {
-    const progress = await VideoWatchProgress.find({
-        user: userId,
-        module: moduleId,
-        moduleCompletionCycle: cycle,
-    }).lean();
-    const progressMap = new Map(progress.map((p) => [p.video.toString(), p]));
-    return videos.every((v) => {
-        const p = progressMap.get(v._id.toString());
-        return p && p.isCompleted;
-    });
+/** Single progress pass — cumulative unlock uses cycle 0 only. */
+export const PRIMARY_MODULE_CYCLE = 0;
+
+export function resolveMaxWatchesPerVideo(config) {
+    return config?.maxWatchesPerVideo ?? config?.maxWatchesPerVideoPerCycle ?? 4;
 }
 
-async function getCycleWatchCount(userId, moduleId, videoId, cycle) {
+/** @deprecated Cycles removed; always 0 for API compatibility. */
+export const getModuleCompletionCycle = async () => PRIMARY_MODULE_CYCLE;
+
+async function getCycleWatchCount(userId, moduleId, videoId, cycle = PRIMARY_MODULE_CYCLE) {
     const p = await VideoWatchProgress.findOne({
         user: userId,
         module: moduleId,
@@ -28,27 +23,18 @@ async function getCycleWatchCount(userId, moduleId, videoId, cycle) {
     return p?.watchCount || 0;
 }
 
-/**
- * Calculate which step a video belongs to (1 video per step)
- * @param {number} videoOrder - The order field of the video
- * @param {number} minOrder - The minimum order value in the module (for normalization)
- * @returns {number} - The set index (0-based)
- * 
- * Note: Videos can start at order 0, 1, or any number. We normalize by subtracting
- * the minimum order to ensure sets are calculated correctly regardless of starting order.
- * 
- * Example: If orders start at 1:
- * - Order 1 → Step 0
- * - Order 2 → Step 1
- * - Order 3 → Step 2
- */
-export const getVideoSetIndex = (videoOrder, minOrder = 0) => {
-    // Normalize order to 0-based by subtracting minimum order
-    const normalizedOrder = videoOrder - minOrder;
-    return normalizedOrder;
+/** Lifetime watch count for a lesson (sums all cycle rows for legacy data). */
+export const getTotalWatchCount = async (userId, moduleId, videoId) => {
+    const rows = await VideoWatchProgress.find({
+        user: userId,
+        module: moduleId,
+        video: videoId,
+    }).lean();
+    return rows.reduce((sum, row) => sum + (row.watchCount || 0), 0);
 };
 
-/** Sort module videos for sequential unlock (order, then createdAt, then _id). */
+export const getVideoSetIndex = (videoOrder, minOrder = 0) => videoOrder - minOrder;
+
 export const sortModuleVideosForSequence = (videos) =>
     [...videos].sort((a, b) => {
         const oa = a.order ?? 0;
@@ -60,43 +46,21 @@ export const sortModuleVideosForSequence = (videos) =>
         return String(a._id).localeCompare(String(b._id));
     });
 
-/** One step per video; uses list position so duplicate order values still unlock sequentially. */
 export const getVideoStepIndex = (video, sortedVideos) => {
     const idx = sortedVideos.findIndex((v) => v._id.toString() === video._id.toString());
     return idx >= 0 ? idx : 0;
 };
 
-/**
- * Get all videos for a module sorted by order
- * @param {string} moduleId - The module ID
- * @returns {Promise<Array>} - Array of videos sorted by order
- */
-export const getModuleVideos = async (moduleId) => {
-    return await Video.find({ 
-        modules: moduleId, 
-        isPublished: true 
-    }).sort({ order: 'asc' }).lean();
-};
+export const getModuleVideos = async (moduleId) =>
+    Video.find({ modules: moduleId, isPublished: true }).sort({ order: 'asc' }).lean();
 
 /**
- * Get the current unlocked set index for a user in a module
- * 
- * Logic:
- * - Set 0 is always unlocked initially (if no sets completed)
- * - After Set N completes, Set N+1 unlocks and Set N locks
- * - Only ONE set is unlocked at a time
- * 
- * @param {string} userId - The user ID
- * @param {string} moduleId - The module ID
- * @param {number} moduleCompletionCycle - Current completion cycle (0 or 1)
- * @returns {Promise<number>} - The unlocked set index (0-based)
+ * Highest step index the user may access (cumulative).
+ * Lesson 0 always unlocked; completing step N unlocks steps 0..N+1.
  */
-export const getCurrentUnlockedSetIndex = async (userId, moduleId, moduleCompletionCycle) => {
+export const getCurrentUnlockedSetIndex = async (userId, moduleId, moduleCompletionCycle = PRIMARY_MODULE_CYCLE) => {
     const videos = sortModuleVideosForSequence(await getModuleVideos(moduleId));
-    
-    if (videos.length === 0) {
-        return -1; // No videos, nothing unlocked
-    }
+    if (videos.length === 0) return -1;
 
     const watchProgress = await VideoWatchProgress.find({
         user: userId,
@@ -120,319 +84,212 @@ export const getCurrentUnlockedSetIndex = async (userId, moduleId, moduleComplet
         }
     }
 
-    return Math.max(0, highestCompletedStep + 1);
+    return Math.min(Math.max(0, highestCompletedStep + 1), videos.length - 1);
 };
 
-/**
- * Check if a video is in the unlocked set
- * @param {Object} video - The video object with order field
- * @param {number} unlockedSetIndex - The current unlocked set index
- * @param {number} minOrder - The minimum order value in the module (for normalization)
- * @returns {boolean} - True if video is unlocked
- * 
- * Note: Only the current unlocked set is accessible. Previous sets lock when next set unlocks.
- */
+/** Cumulative unlock: all steps up to unlockedSetIndex are accessible. */
 export const isVideoInUnlockedSet = (video, unlockedSetIndex, sortedVideos) => {
     const videoStepIndex = getVideoStepIndex(video, sortedVideos);
-    return videoStepIndex === unlockedSetIndex;
+    return videoStepIndex <= unlockedSetIndex;
 };
 
-/**
- * Current module completion cycle (0-based). Advances when all videos are completed in the prior cycle.
- */
-export const getModuleCompletionCycle = async (userId, moduleId) => {
+function buildAccessPayload(base, config) {
+    const maxWatches = resolveMaxWatchesPerVideo(config);
+    return {
+        ...base,
+        maxWatchesPerVideo: maxWatches,
+        maxWatchesPerCycle: maxWatches,
+        maxModuleCycles: 1,
+        completionCycle: PRIMARY_MODULE_CYCLE,
+    };
+}
+
+export const checkSequentialVideoAccess = async (
+    userId,
+    video,
+    moduleId,
+    preCalculatedUnlockedSetIndex = null,
+    _preCalculatedCompletionCycle = null
+) => {
     const config = await getLearningConfig(userId);
-    const maxCycles = config.maxModuleCompletionCycles;
-    const videos = await getModuleVideos(moduleId);
-
-    if (videos.length === 0) {
-        return 0;
-    }
-
-    for (let cycle = 0; cycle < maxCycles; cycle++) {
-        const complete = await isModuleCompleteInCycle(userId, moduleId, cycle, videos);
-        if (!complete) {
-            return cycle;
-        }
-    }
-
-    return maxCycles - 1;
-};
-
-/**
- * Check if a user can access a video based on sequential unlocking rules
- * 
- * Rules:
- * 1. Videos unlock one-by-one (strict order)
- * 2. Only ONE video step is unlocked at a time
- * 3. Previous steps lock when next step unlocks
- * 4. After completing all sets in cycle 0, cycle 1 starts
- * 5. Maximum 4 watches per video across all cycles
- * 
- * @param {string} userId - The user ID
- * @param {Object} video - The video object
- * @param {string} moduleId - The module ID
- * @param {number} [preCalculatedUnlockedSetIndex] - Optional pre-calculated unlocked set index (for performance and consistency)
- * @param {number} [preCalculatedCompletionCycle] - Optional pre-calculated completion cycle
- * @returns {Promise<Object>} - { canAccess: boolean, reason: string, watchCount: number, remainingWatches: number }
- */
-export const checkSequentialVideoAccess = async (userId, video, moduleId, preCalculatedUnlockedSetIndex = null, preCalculatedCompletionCycle = null) => {
-    const config = await getLearningConfig(userId);
-    const maxPerCycle = config.maxWatchesPerVideoPerCycle;
+    const maxWatches = resolveMaxWatchesPerVideo(config);
 
     if (!userId || !video || !moduleId) {
-        return {
-            canAccess: false,
-            reason: 'Invalid access check parameters.',
-            watchCount: 0,
-            remainingWatches: 0,
-            completionCycle: 0,
-            maxWatchesPerCycle: maxPerCycle,
-            maxModuleCycles: config.maxModuleCompletionCycles,
-        };
+        return buildAccessPayload(
+            {
+                canAccess: false,
+                reason: 'Invalid access check parameters.',
+                watchCount: 0,
+                remainingWatches: 0,
+            },
+            config
+        );
     }
 
     if (video.order === undefined || video.order === null) {
         console.warn(`[checkSequentialVideoAccess] Video ${video._id} missing order field; using list position for sequence.`);
     }
 
-    const completionCycle =
-        preCalculatedCompletionCycle !== null
-            ? preCalculatedCompletionCycle
-            : await getModuleCompletionCycle(userId, moduleId);
-
     const videos = sortModuleVideosForSequence(await getModuleVideos(moduleId));
     if (videos.length === 0) {
-        return {
-            canAccess: false,
-            reason: 'No videos are available in this module.',
-            watchCount: 0,
-            remainingWatches: 0,
-            completionCycle,
-            maxWatchesPerCycle: maxPerCycle,
-            maxModuleCycles: config.maxModuleCompletionCycles,
-        };
+        return buildAccessPayload(
+            {
+                canAccess: false,
+                reason: 'No videos are available in this module.',
+                watchCount: 0,
+                remainingWatches: 0,
+            },
+            config
+        );
     }
 
-    const cycleWatchCount = await getCycleWatchCount(userId, moduleId, video._id, completionCycle);
+    const totalWatchCount = await getTotalWatchCount(userId, moduleId, video._id);
 
     const unlockedSetIndex =
         preCalculatedUnlockedSetIndex !== null
             ? preCalculatedUnlockedSetIndex
-            : await getCurrentUnlockedSetIndex(userId, moduleId, completionCycle);
+            : await getCurrentUnlockedSetIndex(userId, moduleId, PRIMARY_MODULE_CYCLE);
+
     const isInUnlockedSet = isVideoInUnlockedSet(video, unlockedSetIndex, videos);
 
     if (!isInUnlockedSet) {
         const targetStep = getVideoStepIndex(video, videos) + 1;
-        const currentStep = unlockedSetIndex + 1;
-        return {
-            canAccess: false,
-            reason: `This video is currently locked. Complete lesson ${currentStep} to unlock lesson ${targetStep}.`,
-            watchCount: cycleWatchCount,
-            remainingWatches: Math.max(0, maxPerCycle - cycleWatchCount),
-            completionCycle,
-            maxWatchesPerCycle: maxPerCycle,
-            maxModuleCycles: config.maxModuleCompletionCycles,
-        };
+        const unlockAfterStep = Math.max(1, unlockedSetIndex);
+        return buildAccessPayload(
+            {
+                canAccess: false,
+                reason: `This lesson is locked. Complete lesson ${unlockAfterStep} to unlock lesson ${targetStep}.`,
+                watchCount: totalWatchCount,
+                remainingWatches: Math.max(0, maxWatches - totalWatchCount),
+            },
+            config
+        );
     }
 
-    if (cycleWatchCount >= maxPerCycle) {
-        return {
-            canAccess: false,
-            reason: `Maximum watch limit reached for this video in cycle ${completionCycle + 1} (${maxPerCycle} watches).`,
-            watchCount: cycleWatchCount,
-            remainingWatches: 0,
-            completionCycle,
-            maxWatchesPerCycle: maxPerCycle,
-            maxModuleCycles: config.maxModuleCompletionCycles,
-        };
+    if (totalWatchCount >= maxWatches) {
+        return buildAccessPayload(
+            {
+                canAccess: false,
+                reason: `Maximum watch limit reached for this lesson (${maxWatches} watches).`,
+                watchCount: totalWatchCount,
+                remainingWatches: 0,
+            },
+            config
+        );
     }
 
-    return {
-        canAccess: true,
-        reason: 'Access granted',
-        watchCount: cycleWatchCount,
-        remainingWatches: Math.max(0, maxPerCycle - cycleWatchCount),
-        completionCycle,
-        maxWatchesPerCycle: maxPerCycle,
-        maxModuleCycles: config.maxModuleCompletionCycles,
-    };
+    return buildAccessPayload(
+        {
+            canAccess: true,
+            reason: 'Access granted',
+            watchCount: totalWatchCount,
+            remainingWatches: Math.max(0, maxWatches - totalWatchCount),
+        },
+        config
+    );
 };
 
-/**
- * Mark a video as completed and update progress
- * 
- * This function:
- * 1. Saves progress for ALL modules the video belongs to
- * 2. Tracks progress per user-module-video-cycle combination
- * 3. Enforces watch count limits (max 4 per video across all cycles)
- * 4. Checks set and module completion
- * 
- * @param {string} userId - The user ID
- * @param {string} videoId - The video ID
- * @param {string} moduleId - The module ID (requested module, but progress saved for all modules)
- * @returns {Promise<Object>} - Updated progress and unlock status
- */
 export const markVideoAsCompleted = async (userId, videoId, moduleId) => {
     const config = await getLearningConfig(userId);
-    const maxPerCycle = config.maxWatchesPerVideoPerCycle;
-    const maxCycles = config.maxModuleCompletionCycles;
-    // Get the video to find all modules it belongs to
+    const maxWatches = resolveMaxWatchesPerVideo(config);
+
     const video = await Video.findById(videoId).select('modules').lean();
     if (!video) {
         throw new Error('Video not found');
     }
 
-    // Get all modules this video belongs to (normalize to strings)
-    const videoModules = Array.isArray(video.modules) 
-        ? video.modules.map(m => (m && typeof m.toString === 'function') ? m.toString() : String(m))
+    const videoModules = Array.isArray(video.modules)
+        ? video.modules.map((m) => (m && typeof m.toString === 'function' ? m.toString() : String(m)))
         : [moduleId.toString()];
-    
+
     const moduleIdStr = moduleId.toString();
-    
-    // If the provided moduleId is not in the video's modules, use it anyway (fallback)
     const modulesToUpdate = videoModules.includes(moduleIdStr) ? videoModules : [moduleIdStr];
 
-    // Save progress for ALL modules this video belongs to
     const progressResults = [];
-    
-    for (const modId of modulesToUpdate) {
-        // Get current completion cycle for this module
-        let completionCycle = await getModuleCompletionCycle(userId, modId);
 
-        // Get or create progress record for current cycle
+    for (const modId of modulesToUpdate) {
+        const totalBefore = await getTotalWatchCount(userId, modId, videoId);
+        if (totalBefore >= maxWatches) {
+            throw new Error(`Maximum watch limit reached for this lesson (${maxWatches} watches).`);
+        }
+
         let progress = await VideoWatchProgress.findOne({
             user: userId,
             video: videoId,
             module: modId,
-            moduleCompletionCycle: completionCycle,
+            moduleCompletionCycle: PRIMARY_MODULE_CYCLE,
         });
 
         if (!progress) {
-            // Create new progress record for current cycle
             progress = new VideoWatchProgress({
                 user: userId,
                 video: videoId,
                 module: modId,
-                moduleCompletionCycle: completionCycle,
+                moduleCompletionCycle: PRIMARY_MODULE_CYCLE,
                 watchCount: 0,
                 isCompleted: false,
             });
         }
 
-        const cycleWatchCount = progress.watchCount || 0;
-        if (cycleWatchCount >= maxPerCycle) {
-            throw new Error(
-                `Maximum watch limit reached for this video in cycle ${completionCycle + 1} (${maxPerCycle} watches).`
-            );
-        }
-
-        // Increment watch count for current cycle
         progress.watchCount += 1;
         progress.isCompleted = true;
         progress.lastWatchedAt = new Date();
         progress.completedAt = new Date();
-
         await progress.save();
-        
+
+        const totalAfter = await getTotalWatchCount(userId, modId, videoId);
         progressResults.push({
             moduleId: modId,
-            progress: progress,
-            cycleWatchCount: cycleWatchCount + 1,
-            completionCycle,
+            progress,
+            watchCount: totalAfter,
+            completionCycle: PRIMARY_MODULE_CYCLE,
         });
     }
 
-    // Return results for the requested moduleId (or first module if not found)
-    const requestedModuleResult = progressResults.find(r => r.moduleId === moduleIdStr) || progressResults[0];
-    
+    const requestedModuleResult = progressResults.find((r) => r.moduleId === moduleIdStr) || progressResults[0];
     if (!requestedModuleResult) {
         throw new Error('No progress was saved for any module');
     }
 
-    const {
-        progress,
-        cycleWatchCount: finalCycleWatchCount,
-        completionCycle: savedModuleCycle,
-    } = requestedModuleResult;
-    const remainingWatches = Math.max(0, maxPerCycle - finalCycleWatchCount);
+    const { progress, watchCount: finalWatchCount } = requestedModuleResult;
+    const remainingWatches = Math.max(0, maxWatches - finalWatchCount);
 
-    // Check if current set is complete for the requested module
     const videos = sortModuleVideosForSequence(await getModuleVideos(moduleId));
-    const videoObj = videos.find(v => v._id.toString() === videoId);
-    
+    const videoObj = videos.find((v) => v._id.toString() === videoId);
     if (!videoObj) {
         throw new Error('Video not found in module');
     }
 
-    // Use the cycle we just wrote to — getModuleCompletionCycle may already have advanced.
-    const requestedModuleCycle = savedModuleCycle;
-
-    const videoStepIndex = getVideoStepIndex(videoObj, videos);
-    const setVideos = [videos[videoStepIndex] ?? videoObj];
-
-    // Check if current set is complete
-    const allSetProgress = await VideoWatchProgress.find({
-        user: userId,
-        module: moduleId,
-        moduleCompletionCycle: requestedModuleCycle,
-        video: { $in: setVideos.map(v => v._id) },
-    }).lean();
-
-    const setProgressMap = new Map();
-    allSetProgress.forEach(p => {
-        setProgressMap.set(p.video.toString(), p);
-    });
-
-    const setComplete = setVideos.every(v => {
-        const p = setProgressMap.get(v._id.toString());
-        return p && p.isCompleted;
-    });
-
-    // Check if entire module is complete
     const allModuleProgress = await VideoWatchProgress.find({
         user: userId,
         module: moduleId,
-        moduleCompletionCycle: requestedModuleCycle,
+        moduleCompletionCycle: PRIMARY_MODULE_CYCLE,
+        isCompleted: true,
     }).lean();
 
-    const moduleProgressMap = new Map();
-    allModuleProgress.forEach(p => {
-        moduleProgressMap.set(p.video.toString(), p);
-    });
-
-    const moduleComplete = videos.every(v => {
-        const p = moduleProgressMap.get(v._id.toString());
-        return p && p.isCompleted;
-    });
-
-    let nextCycleStarted = false;
-    let newCompletionCycle = requestedModuleCycle;
-    
-    if (moduleComplete && requestedModuleCycle < maxCycles - 1) {
-        nextCycleStarted = true;
-        newCompletionCycle = requestedModuleCycle + 1;
-    }
+    const completedIds = new Set(allModuleProgress.map((p) => p.video.toString()));
+    const moduleComplete = videos.length > 0 && videos.every((v) => completedIds.has(v._id.toString()));
 
     if (moduleComplete) {
-        const { syncModuleProgressFromVideos, onModuleCycleCompleted } = await import(
+        const { syncModuleProgressFromVideos, onModuleFirstPassCompleted } = await import(
             '../services/moduleQuizAccessService.js'
         );
         await syncModuleProgressFromVideos(userId, moduleId);
-        await onModuleCycleCompleted(userId, moduleId, requestedModuleCycle);
+        await onModuleFirstPassCompleted(userId, moduleId);
     }
 
     return {
-        progress: progress,
-        setComplete: setComplete,
-        moduleComplete: moduleComplete,
-        nextCycleStarted: nextCycleStarted,
-        newCompletionCycle: newCompletionCycle,
-        watchCount: finalCycleWatchCount,
-        remainingWatches: remainingWatches,
+        progress,
+        setComplete: true,
+        moduleComplete,
+        nextCycleStarted: false,
+        newCompletionCycle: PRIMARY_MODULE_CYCLE,
+        watchCount: finalWatchCount,
+        remainingWatches,
         currentCycleWatchCount: progress.watchCount,
-        completionCycle: requestedModuleCycle,
-        maxWatchesPerCycle: maxPerCycle,
-        maxModuleCycles: maxCycles,
+        completionCycle: PRIMARY_MODULE_CYCLE,
+        maxWatchesPerVideo: maxWatches,
+        maxWatchesPerCycle: maxWatches,
+        maxModuleCycles: 1,
     };
 };

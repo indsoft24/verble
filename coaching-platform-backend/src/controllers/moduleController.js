@@ -4,7 +4,12 @@ import User from '../models/User.js';
 import VideoWatchProgress from '../models/VideoWatchProgress.js';
 import mongoose from 'mongoose';
 import asyncHandler from 'express-async-handler';
-import { checkSequentialVideoAccess, getModuleCompletionCycle, getCurrentUnlockedSetIndex } from '../utils/videoAccessHelper.js';
+import {
+    checkSequentialVideoAccess,
+    getCurrentUnlockedSetIndex,
+    PRIMARY_MODULE_CYCLE,
+    resolveMaxWatchesPerVideo,
+} from '../utils/videoAccessHelper.js';
 import { buildVideoLockFlags, isModuleUnlockedForUser } from '../services/moduleUnlockService.js';
 import { getLearningConfig } from '../services/courseLearningConfigService.js';
 import { getCache, setCache, generateCacheKey, CACHE_TTL } from '../utils/cacheHelper.js';
@@ -94,10 +99,9 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
                     isModuleLocked: true,
                     moduleLockReason: moduleUnlock.reason,
                     previousModuleId: moduleUnlock.previousModuleId || null,
-                    completionCycle: 0,
                     unlockedSetIndex: 0,
-                    maxWatchesPerCycle: learningConfig.maxWatchesPerVideoPerCycle,
-                    maxModuleCycles: learningConfig.maxModuleCompletionCycles,
+                    maxWatchesPerVideo: resolveMaxWatchesPerVideo(learningConfig),
+                    maxWatchesPerCycle: resolveMaxWatchesPerVideo(learningConfig),
                 },
             });
         }
@@ -105,15 +109,10 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
 
     // Get watch progress for all videos in this module
     let watchProgressMap = new Map();
-    let completionCycle = 0;
     let unlockedSetIndex = 0;
 
     if (userId) {
-        // Get completion cycle
-        completionCycle = await getModuleCompletionCycle(userId, moduleId);
-        
-        // Get unlocked set index
-        unlockedSetIndex = await getCurrentUnlockedSetIndex(userId, moduleId, completionCycle);
+        unlockedSetIndex = await getCurrentUnlockedSetIndex(userId, moduleId, PRIMARY_MODULE_CYCLE);
 
         // Get all watch progress for this module and user
         const allProgress = await VideoWatchProgress.find({
@@ -193,7 +192,6 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
                     watchCount: 0,
                     remainingWatches: 0,
                 }),
-                completionCycle: completionCycle,
             };
         }
 
@@ -209,21 +207,14 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
             };
         }
 
-        const sequentialAccess = await checkSequentialVideoAccess(
-            userId,
-            video,
-            moduleId,
-            unlockedSetIndex,
-            completionCycle
-        );
+        const sequentialAccess = await checkSequentialVideoAccess(userId, video, moduleId, unlockedSetIndex);
         const lockFlags = buildVideoLockFlags(true, sequentialAccess);
 
         return {
             ...videoObject,
             ...lockFlags,
-            completionCycle: sequentialAccess.completionCycle ?? completionCycle,
-            maxWatchesPerCycle: sequentialAccess.maxWatchesPerCycle,
-            maxModuleCycles: sequentialAccess.maxModuleCycles,
+            maxWatchesPerVideo: sequentialAccess.maxWatchesPerVideo,
+            maxWatchesPerCycle: sequentialAccess.maxWatchesPerVideo,
         };
     }));
 
@@ -298,10 +289,9 @@ export const getVideosForModule = asyncHandler(async (req, res) => {
                 moduleLockReason: null,
             },
             videos: validatedVideos,
-            completionCycle: completionCycle,
             unlockedSetIndex: unlockedSetIndex,
-            maxWatchesPerCycle: learningConfig?.maxWatchesPerVideoPerCycle ?? 4,
-            maxModuleCycles: learningConfig?.maxModuleCompletionCycles ?? 4,
+            maxWatchesPerVideo: resolveMaxWatchesPerVideo(learningConfig),
+            maxWatchesPerCycle: resolveMaxWatchesPerVideo(learningConfig),
         }
     };
 

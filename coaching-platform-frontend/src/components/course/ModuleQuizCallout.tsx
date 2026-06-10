@@ -151,10 +151,11 @@ const ModuleQuizCallout: React.FC<ModuleQuizCalloutProps> = ({ moduleId, gate })
                     <Typography variant="body2" sx={{ color: courseLearningTheme.textBody, lineHeight: 1.55, mb: 1.25 }}>
                         {gate.message}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: courseLearningTheme.textMuted, display: 'block', mb: 1 }}>
-                        Cycle {(gate.currentCycle ?? 0) + 1} of {gate.maxCycles ?? 4}
-                        {videosTotal > 0 ? ` · Lessons ${videosDone}/${videosTotal} this cycle` : ''}
-                    </Typography>
+                    {videosTotal > 0 && (
+                        <Typography variant="caption" sx={{ color: courseLearningTheme.textMuted, display: 'block', mb: 1 }}>
+                            Lessons completed: {videosDone}/{videosTotal}
+                        </Typography>
+                    )}
                     {videosTotal > 0 && (
                         <LinearProgress
                             variant="determinate"

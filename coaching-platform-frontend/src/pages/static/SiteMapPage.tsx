@@ -49,7 +49,7 @@ const SiteMapPage: React.FC = () => {
         { name: 'Register', path: '/register' },
         { name: 'My Dashboard', path: '/dashboard' },
         { name: 'All Courses', path: '/courses' },
-        { name: 'All Videos', path: '/videos' },
+        { name: 'My Courses', path: '/my-courses' },
         { name: 'Blog', path: '/blog' },
     ];
 

@@ -44,6 +44,7 @@ import CourseNavRow, { type CourseNavItem } from '../components/course/CourseNav
 import {
     CourseLearningShell,
     CourseLearningBreadcrumbs,
+    CourseLearningSubsectionTitle,
     CourseBottomNav,
     ModuleQuizCallout,
     courseLearningTheme,
@@ -52,6 +53,8 @@ import {
     courseChipSuccessSx,
     courseChipWarningSx,
     courseChipInfoSx,
+    courseLearningOutlinedNavButtonSx,
+    courseLearningContainedNavButtonSx,
     type CourseBottomNavAction,
 } from '../components/course';
 import { alpha } from '@mui/material/styles';
@@ -366,9 +369,6 @@ const VideoWatchPage: React.FC = () => {
             }
             if (result.moduleComplete) {
                 message += ' All videos watched!';
-            }
-            if (result.nextCycleStarted) {
-                message += ' New cycle started!';
             }
             setCompletionMessage(message);
             setNavRefreshKey((k) => k + 1);
@@ -705,9 +705,7 @@ const VideoWatchPage: React.FC = () => {
 
                             {video.description && (
                                 <Box sx={{ mt: courseLearningTheme.stackGapLoose }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: courseLearningTheme.textSecondary }}>
-                                        Description
-                                    </Typography>
+                                    <CourseLearningSubsectionTitle>Description</CourseLearningSubsectionTitle>
                                     <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: courseLearningTheme.textBody }}>
                                         {video.description}
                                     </Typography>
@@ -716,9 +714,7 @@ const VideoWatchPage: React.FC = () => {
 
                             {video.associatedMaterials && video.associatedMaterials.length > 0 && (
                                 <Box sx={{ mt: courseLearningTheme.stackGapLoose }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: courseLearningTheme.textSecondary }}>
-                                        Study materials
-                                    </Typography>
+                                    <CourseLearningSubsectionTitle>Study materials</CourseLearningSubsectionTitle>
                                     <Divider sx={{ my: courseLearningTheme.stackGap }} />
                                     <Stack spacing={1}>
                                         {video.associatedMaterials.map((material) => (
@@ -796,21 +792,13 @@ const VideoWatchPage: React.FC = () => {
                                     <Chip
                                         size="small"
                                         label={
-                                            video.maxWatchesPerCycle != null
-                                                ? `Left: ${video.remainingWatches ?? 0} / ${video.maxWatchesPerCycle}`
+                                            (video.maxWatchesPerVideo ?? video.maxWatchesPerCycle) != null
+                                                ? `Watches left: ${video.remainingWatches ?? 0} / ${video.maxWatchesPerVideo ?? video.maxWatchesPerCycle}`
                                                 : `Remaining: ${video.remainingWatches ?? 0}`
                                         }
                                         variant="outlined"
                                         sx={{ ...courseChipInfoSx, width: { xs: '100%', sm: 'auto' }, justifyContent: 'flex-start' }}
                                     />
-                                    {video.maxModuleCycles != null && (
-                                        <Chip
-                                            size="small"
-                                            label={`Cycle ${(video.completionCycle ?? 0) + 1} of ${video.maxModuleCycles}`}
-                                            variant="outlined"
-                                            sx={{ ...courseChipOutlinedSx, width: { xs: '100%', sm: 'auto' }, justifyContent: 'flex-start' }}
-                                        />
-                                    )}
                                 </Stack>
                             </Paper>
                             <Paper elevation={0} sx={learningPaperSx}>
@@ -935,19 +923,18 @@ const VideoWatchPage: React.FC = () => {
                                                 variant="outlined"
                                                 fullWidth
                                                 startIcon={<ChevronLeftIcon />}
-                                                sx={{
-                                                    textTransform: 'none',
-                                                    fontWeight: 700,
-                                                    minHeight: 48,
-                                                    borderRadius: 1.5,
-                                                    borderColor: alpha(courseLearningTheme.accent, 0.5),
-                                                    color: courseLearningTheme.textPrimary,
-                                                }}
+                                                sx={courseLearningOutlinedNavButtonSx}
                                             >
                                                 Previous
                                             </Button>
                                         ) : (
-                                            <Button variant="outlined" fullWidth disabled startIcon={<ChevronLeftIcon />} sx={{ minHeight: 48, borderRadius: 1.5 }}>
+                                            <Button
+                                                variant="outlined"
+                                                fullWidth
+                                                disabled
+                                                startIcon={<ChevronLeftIcon />}
+                                                sx={courseLearningOutlinedNavButtonSx}
+                                            >
                                                 Previous
                                             </Button>
                                         )}
@@ -958,14 +945,7 @@ const VideoWatchPage: React.FC = () => {
                                                 variant="contained"
                                                 fullWidth
                                                 endIcon={<ChevronRightIcon />}
-                                                sx={{
-                                                    textTransform: 'none',
-                                                    fontWeight: 700,
-                                                    minHeight: 48,
-                                                    borderRadius: 1.5,
-                                                    bgcolor: courseLearningTheme.accent,
-                                                    boxShadow: 'none',
-                                                }}
+                                                sx={courseLearningContainedNavButtonSx}
                                             >
                                                 Take quiz
                                             </Button>
@@ -976,19 +956,18 @@ const VideoWatchPage: React.FC = () => {
                                                 variant="contained"
                                                 fullWidth
                                                 endIcon={<ChevronRightIcon />}
-                                                sx={{
-                                                    textTransform: 'none',
-                                                    fontWeight: 700,
-                                                    minHeight: 48,
-                                                    borderRadius: 1.5,
-                                                    bgcolor: courseLearningTheme.accent,
-                                                    boxShadow: 'none',
-                                                }}
+                                                sx={courseLearningContainedNavButtonSx}
                                             >
                                                 Next
                                             </Button>
                                         ) : (
-                                            <Button variant="contained" fullWidth disabled endIcon={<ChevronRightIcon />} sx={{ minHeight: 48, borderRadius: 1.5 }}>
+                                            <Button
+                                                variant="contained"
+                                                fullWidth
+                                                disabled
+                                                endIcon={<ChevronRightIcon />}
+                                                sx={courseLearningContainedNavButtonSx}
+                                            >
                                                 Next
                                             </Button>
                                         )}
@@ -996,9 +975,9 @@ const VideoWatchPage: React.FC = () => {
 
                                     <Divider sx={{ my: courseLearningTheme.space.blockMb }} />
 
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: courseLearningTheme.space.blockMb }}>
+                                    <CourseLearningSubsectionTitle>
                                         {showQuizUpNext ? 'Module quiz' : 'Up next in this module'}
-                                    </Typography>
+                                    </CourseLearningSubsectionTitle>
 
                                     {isLastInModule && contextModuleId && moduleQuizGate?.hasQuiz && (
                                         <ModuleQuizCallout moduleId={contextModuleId} gate={moduleQuizGate} />

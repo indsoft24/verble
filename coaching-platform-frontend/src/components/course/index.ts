@@ -7,7 +7,13 @@ export {
     courseChipSuccessSx,
     courseChipWarningSx,
     courseChipInfoSx,
+    courseLearningSubsectionTitleSx,
+    courseLearningOutlinedNavButtonSx,
+    courseLearningContainedNavButtonSx,
+    courseNavRowGridSx,
 } from './courseLearningTheme';
+export { default as CourseLearningSubsectionTitle } from './CourseLearningSubsectionTitle';
+export type { CourseLearningSubsectionTitleProps } from './CourseLearningSubsectionTitle';
 export { default as CourseLearningShell } from './CourseLearningShell';
 export { default as CourseLearningBand } from './CourseLearningBand';
 export { default as CourseLearningTile } from './CourseLearningTile';

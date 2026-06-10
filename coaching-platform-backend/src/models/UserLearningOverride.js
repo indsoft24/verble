@@ -11,6 +11,8 @@ const userLearningOverrideSchema = new mongoose.Schema(
         },
         maxModuleCompletionCycles: { type: Number, min: 1, max: 10 },
         maxWatchesPerVideoPerCycle: { type: Number, min: 1, max: 20 },
+        maxWatchesPerVideo: { type: Number, min: 1, max: 20 },
+        maxQuizAttempts: { type: Number, min: 1, max: 20 },
         resetProgressAt: { type: Date },
         notes: { type: String, trim: true },
         updatedBy: {

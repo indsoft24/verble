@@ -5,10 +5,7 @@ import ModuleQuizSubmission from '../models/ModuleQuizSubmission.js';
 import Video from '../models/Video.js';
 import VideoWatchProgress from '../models/VideoWatchProgress.js';
 import { getLearningConfig } from './courseLearningConfigService.js';
-import {
-    getModuleVideos,
-    getModuleCompletionCycle,
-} from '../utils/videoAccessHelper.js';
+import { getModuleVideos, PRIMARY_MODULE_CYCLE } from '../utils/videoAccessHelper.js';
 
 export const getActiveQuizForModule = async (moduleId) =>
     ModuleQuiz.findOne({ module: moduleId, isActive: true });
@@ -92,11 +89,11 @@ export const areAllModuleVideosComplete = async (userId, moduleId) => {
     const videos = await getModuleVideos(moduleId);
     if (videos.length === 0) return true;
 
-    const cycle = await getModuleCompletionCycle(userId, moduleId);
     const progress = await VideoWatchProgress.find({
         user: userId,
         module: moduleId,
-        moduleCompletionCycle: cycle,
+        moduleCompletionCycle: PRIMARY_MODULE_CYCLE,
+        isCompleted: true,
     }).lean();
 
     const progressMap = new Map(progress.map((p) => [p.video.toString(), p]));
@@ -131,11 +128,10 @@ export const countModuleVideoProgress = async (userId, moduleId) => {
         return { videosCompleted: 0, totalVideos: 0, allComplete: true };
     }
 
-    const cycle = await getModuleCompletionCycle(userId, moduleId);
     const progress = await VideoWatchProgress.find({
         user: userId,
         module: moduleId,
-        moduleCompletionCycle: cycle,
+        moduleCompletionCycle: PRIMARY_MODULE_CYCLE,
         isCompleted: true,
     }).lean();
 
@@ -148,11 +144,8 @@ export const countModuleVideoProgress = async (userId, moduleId) => {
     };
 };
 
-/**
- * Called when all lessons in a completion cycle are marked complete.
- * @param {number} completedCycle - 0-based cycle that was just finished
- */
-export const onModuleCycleCompleted = async (userId, moduleId, completedCycle = 0) => {
+/** Called when all lessons in the module are completed for the first time. */
+export const onModuleFirstPassCompleted = async (userId, moduleId) => {
     const activeQuiz = await getActiveQuizForModule(moduleId);
     if (!activeQuiz) return null;
 
@@ -160,12 +153,13 @@ export const onModuleCycleCompleted = async (userId, moduleId, completedCycle = 
     if (!completion || completion.quizExhausted) return completion;
 
     completion.quizUnlocked = true;
-    if (completedCycle === 0) {
-        completion.firstCycleCompleted = true;
-    }
+    completion.firstCycleCompleted = true;
     await completion.save();
     return completion;
 };
+
+/** @deprecated Use onModuleFirstPassCompleted */
+export const onModuleCycleCompleted = onModuleFirstPassCompleted;
 
 const persistFirstCycleQuizUnlock = async (completion, userId, moduleId) => {
     if (!completion || completion.quizExhausted) return completion;
@@ -195,9 +189,7 @@ export const resolveModuleQuizGate = async (userId, moduleId) => {
     const activeQuiz = await getActiveQuizForModule(moduleId);
     const videoProgress = await countModuleVideoProgress(userId, moduleId);
     const config = await getLearningConfig(userId);
-    const maxCycles = config.maxModuleCompletionCycles;
-    const currentCycle = await getModuleCompletionCycle(userId, moduleId);
-    const cyclesCompleted = currentCycle;
+    const maxQuizAttempts = config.maxQuizAttempts ?? 3;
 
     const hasQuiz = Boolean(activeQuiz);
 
@@ -215,7 +207,6 @@ export const resolveModuleQuizGate = async (userId, moduleId) => {
     const firstCycleCompleted = Boolean(completion?.firstCycleCompleted);
     const quizExhausted = Boolean(completion?.quizExhausted);
     const quizFailedAttempts = completion?.quizFailedAttempts ?? 0;
-    const maxQuizAttempts = maxCycles;
     const isModuleComplete = Boolean(completion?.isCompleted);
 
     let quizState = 'locked';
@@ -231,21 +222,18 @@ export const resolveModuleQuizGate = async (userId, moduleId) => {
     } else if (quizPassed) {
         quizState = 'passed';
         canTakeQuiz = quizUnlocked && !quizExhausted;
-        message = 'You passed the module quiz. You can review it or continue extra practice cycles.';
+        message = 'You passed the module quiz. You can review lessons or retake the quiz.';
     } else if (quizUnlocked || firstCycleCompleted) {
         quizState = 'ready';
         canTakeQuiz = true;
-        message = firstCycleCompleted
-            ? 'You completed the first lesson cycle. The module quiz stays available while you practice.'
-            : 'You have finished a learning cycle. Take the module quiz when you are ready.';
+        message = 'All lessons are complete. Take the module quiz when you are ready.';
     } else {
         quizState = 'locked';
-        const cycleLabel = currentCycle + 1;
-        if (videoProgress.allComplete) {
-            message = 'Complete this cycle to unlock the module quiz.';
-        } else {
-            message = `Finish all ${videoProgress.totalVideos} lessons in cycle ${cycleLabel} of ${maxCycles} to unlock the module quiz.`;
-        }
+        const remaining = videoProgress.totalVideos - videoProgress.videosCompleted;
+        message =
+            remaining > 0
+                ? `Complete all ${videoProgress.totalVideos} lessons to unlock the module quiz (${videoProgress.videosCompleted}/${videoProgress.totalVideos} done).`
+                : 'Complete all lessons to unlock the module quiz.';
     }
 
     return {
@@ -256,9 +244,9 @@ export const resolveModuleQuizGate = async (userId, moduleId) => {
         totalVideos: videoProgress.totalVideos,
         isModuleComplete,
         quizState,
-        currentCycle,
-        maxCycles,
-        cyclesCompleted,
+        currentCycle: 0,
+        maxCycles: 1,
+        cyclesCompleted: videoProgress.allComplete ? 1 : 0,
         quizFailedAttempts,
         maxQuizAttempts,
         needsAdminReset: quizExhausted && !quizPassed,
@@ -282,9 +270,7 @@ export const assertQuizUnlockedForTake = async (userId, moduleId) => {
         throw err;
     }
     if (!gate.canTakeQuiz) {
-        const err = new Error(
-            gate.message || 'Complete a full lesson cycle in this module before taking the quiz.'
-        );
+        const err = new Error(gate.message || 'Complete all lessons in this module before taking the quiz.');
         err.statusCode = 403;
         throw err;
     }
@@ -295,19 +281,13 @@ export const assertQuizUnlockedForTake = async (userId, moduleId) => {
  */
 export const handleQuizSubmissionFail = async (userId, moduleId) => {
     const config = await getLearningConfig(userId);
-    const maxAttempts = config.maxModuleCompletionCycles;
+    const maxAttempts = config.maxQuizAttempts ?? 3;
     const completion = await ensureModuleCompletionRecord(userId, moduleId);
     if (!completion) return { exhausted: false };
 
-    const hadFirstCycle = await hasCompletedFirstModuleCycle(userId, moduleId);
-
     completion.quizFailedAttempts = (completion.quizFailedAttempts || 0) + 1;
-    if (hadFirstCycle || completion.firstCycleCompleted) {
-        completion.firstCycleCompleted = true;
-        completion.quizUnlocked = true;
-    } else {
-        completion.quizUnlocked = false;
-    }
+    completion.firstCycleCompleted = true;
+    completion.quizUnlocked = true;
     completion.quizPassed = false;
     completion.isCompleted = false;
     completion.completedAt = undefined;
@@ -316,8 +296,6 @@ export const handleQuizSubmissionFail = async (userId, moduleId) => {
     if (completion.quizFailedAttempts >= maxAttempts) {
         completion.quizExhausted = true;
         exhausted = true;
-    } else {
-        await VideoWatchProgress.deleteMany({ user: userId, module: moduleId });
     }
 
     await completion.save();
@@ -328,7 +306,7 @@ export const handleQuizSubmissionFail = async (userId, moduleId) => {
         attemptsRemaining: Math.max(0, maxAttempts - completion.quizFailedAttempts),
         retakeMessage: exhausted
             ? 'Maximum quiz attempts reached. Contact support to reset your module progress.'
-            : 'Review the lessons from the beginning, complete a full cycle, then try the quiz again.',
+            : 'Review the lessons and try the quiz again. Your lesson unlock progress is preserved.',
     };
 };
 

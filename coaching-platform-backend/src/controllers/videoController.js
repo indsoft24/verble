@@ -261,9 +261,8 @@ export const getPublishedVideoById = async (req, res, next) => {
             ...video,
             thumbnailUrl: thumbDenied,
             ...lockFlags,
-            completionCycle: sequentialAccessInfo?.completionCycle ?? 0,
-            maxWatchesPerCycle: sequentialAccessInfo?.maxWatchesPerCycle,
-            maxModuleCycles: sequentialAccessInfo?.maxModuleCycles,
+            maxWatchesPerVideo: sequentialAccessInfo?.maxWatchesPerVideo,
+            maxWatchesPerCycle: sequentialAccessInfo?.maxWatchesPerVideo,
           },
         },
       });
@@ -288,9 +287,8 @@ export const getPublishedVideoById = async (req, res, next) => {
           ...video,
           thumbnailUrl: thumbOut,
           ...successLockFlags,
-          completionCycle: sequentialAccessInfo?.completionCycle ?? 0,
-          maxWatchesPerCycle: sequentialAccessInfo?.maxWatchesPerCycle,
-          maxModuleCycles: sequentialAccessInfo?.maxModuleCycles,
+          maxWatchesPerVideo: sequentialAccessInfo?.maxWatchesPerVideo,
+          maxWatchesPerCycle: sequentialAccessInfo?.maxWatchesPerVideo,
         },
       },
     });
@@ -595,8 +593,6 @@ export const markVideoCompleted = asyncHandler(async (req, res) => {
                 remainingWatches: result.remainingWatches,
                 setComplete: result.setComplete,
                 moduleComplete: result.moduleComplete,
-                nextCycleStarted: result.nextCycleStarted,
-                newCompletionCycle: result.newCompletionCycle,
             },
         });
     } catch (error) {

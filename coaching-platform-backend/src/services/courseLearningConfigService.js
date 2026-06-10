@@ -2,21 +2,30 @@ import AppLearningSettings from '../models/AppLearningSettings.js';
 import UserLearningOverride from '../models/UserLearningOverride.js';
 
 export const DEFAULT_LEARNING_CONFIG = {
-    maxModuleCompletionCycles: 4,
+    maxModuleCompletionCycles: 1,
     maxWatchesPerVideoPerCycle: 4,
+    maxWatchesPerVideo: 4,
+    maxQuizAttempts: 3,
     requireQuizToUnlockNextModule: true,
 };
+
+function normalizeSettings(doc) {
+    const maxWatchesPerVideo = doc.maxWatchesPerVideo ?? doc.maxWatchesPerVideoPerCycle ?? 4;
+    return {
+        maxModuleCompletionCycles: 1,
+        maxWatchesPerVideoPerCycle: maxWatchesPerVideo,
+        maxWatchesPerVideo,
+        maxQuizAttempts: doc.maxQuizAttempts ?? 3,
+        requireQuizToUnlockNextModule: doc.requireQuizToUnlockNextModule ?? true,
+    };
+}
 
 export async function getGlobalLearningSettings() {
     let doc = await AppLearningSettings.findOne();
     if (!doc) {
         doc = await AppLearningSettings.create(DEFAULT_LEARNING_CONFIG);
     }
-    return {
-        maxModuleCompletionCycles: doc.maxModuleCompletionCycles,
-        maxWatchesPerVideoPerCycle: doc.maxWatchesPerVideoPerCycle,
-        requireQuizToUnlockNextModule: doc.requireQuizToUnlockNextModule,
-    };
+    return normalizeSettings(doc);
 }
 
 export async function updateGlobalLearningSettings(updates, adminUserId) {
@@ -24,15 +33,20 @@ export async function updateGlobalLearningSettings(updates, adminUserId) {
     if (!doc) {
         doc = new AppLearningSettings(DEFAULT_LEARNING_CONFIG);
     }
-    if (typeof updates.maxModuleCompletionCycles === 'number') {
-        doc.maxModuleCompletionCycles = updates.maxModuleCompletionCycles;
-    }
-    if (typeof updates.maxWatchesPerVideoPerCycle === 'number') {
+    if (typeof updates.maxWatchesPerVideo === 'number') {
+        doc.maxWatchesPerVideo = updates.maxWatchesPerVideo;
+        doc.maxWatchesPerVideoPerCycle = updates.maxWatchesPerVideo;
+    } else if (typeof updates.maxWatchesPerVideoPerCycle === 'number') {
         doc.maxWatchesPerVideoPerCycle = updates.maxWatchesPerVideoPerCycle;
+        doc.maxWatchesPerVideo = updates.maxWatchesPerVideoPerCycle;
+    }
+    if (typeof updates.maxQuizAttempts === 'number') {
+        doc.maxQuizAttempts = updates.maxQuizAttempts;
     }
     if (typeof updates.requireQuizToUnlockNextModule === 'boolean') {
         doc.requireQuizToUnlockNextModule = updates.requireQuizToUnlockNextModule;
     }
+    doc.maxModuleCompletionCycles = 1;
     if (adminUserId) doc.updatedBy = adminUserId;
     await doc.save();
     return getGlobalLearningSettings();
@@ -48,12 +62,16 @@ export async function getLearningConfig(userId = null) {
     const override = await UserLearningOverride.findOne({ user: userId }).lean();
     if (!override) return global;
 
+    const maxWatches =
+        override.maxWatchesPerVideo ??
+        override.maxWatchesPerVideoPerCycle ??
+        global.maxWatchesPerVideo;
+
     return {
-        maxModuleCompletionCycles:
-            override.maxModuleCompletionCycles ?? global.maxModuleCompletionCycles,
-        maxWatchesPerVideoPerCycle:
-            override.maxWatchesPerVideoPerCycle ?? global.maxWatchesPerVideoPerCycle,
-        requireQuizToUnlockNextModule: global.requireQuizToUnlockNextModule,
+        ...global,
+        maxWatchesPerVideo: maxWatches,
+        maxWatchesPerVideoPerCycle: maxWatches,
+        maxQuizAttempts: override.maxQuizAttempts ?? global.maxQuizAttempts,
     };
 }
 
@@ -61,12 +79,13 @@ export async function upsertUserLearningOverride(userId, updates, adminUserId) {
     const doc = await UserLearningOverride.findOneAndUpdate(
         { user: userId },
         {
-            ...(typeof updates.maxModuleCompletionCycles === 'number'
-                ? { maxModuleCompletionCycles: updates.maxModuleCompletionCycles }
+            ...(typeof updates.maxWatchesPerVideo === 'number'
+                ? { maxWatchesPerVideo: updates.maxWatchesPerVideo, maxWatchesPerVideoPerCycle: updates.maxWatchesPerVideo }
                 : {}),
             ...(typeof updates.maxWatchesPerVideoPerCycle === 'number'
-                ? { maxWatchesPerVideoPerCycle: updates.maxWatchesPerVideoPerCycle }
+                ? { maxWatchesPerVideoPerCycle: updates.maxWatchesPerVideoPerCycle, maxWatchesPerVideo: updates.maxWatchesPerVideoPerCycle }
                 : {}),
+            ...(typeof updates.maxQuizAttempts === 'number' ? { maxQuizAttempts: updates.maxQuizAttempts } : {}),
             ...(updates.resetProgressAt ? { resetProgressAt: updates.resetProgressAt } : {}),
             ...(updates.notes !== undefined ? { notes: updates.notes } : {}),
             updatedBy: adminUserId,
@@ -90,6 +109,7 @@ export async function resetUserModuleVideoProgress(userId, moduleId) {
                 quizPassed: false,
                 isCompleted: false,
                 videosCompleted: 0,
+                firstCycleCompleted: false,
             },
             $unset: { completedAt: 1 },
         },
@@ -105,20 +125,12 @@ export async function resetUserCourseVideoProgress(userId, courseId) {
     await VideoWatchProgress.deleteMany({ user: userId, module: { $in: moduleIds } });
 }
 
-/**
- * After a failed quiz attempt: clear current-cycle video progress so the learner must rewatch before retaking.
- */
+/** Admin-only: clear module video progress for a retake reset. */
 export async function resetModuleVideosForQuizRetake(userId, moduleId) {
     const VideoWatchProgress = (await import('../models/VideoWatchProgress.js')).default;
     const ModuleCompletion = (await import('../models/ModuleCompletion.js')).default;
-    const { getModuleCompletionCycle } = await import('../utils/videoAccessHelper.js');
 
-    const currentCycle = await getModuleCompletionCycle(userId, moduleId);
-    await VideoWatchProgress.deleteMany({
-        user: userId,
-        module: moduleId,
-        moduleCompletionCycle: currentCycle,
-    });
+    await VideoWatchProgress.deleteMany({ user: userId, module: moduleId });
 
     await ModuleCompletion.findOneAndUpdate(
         { user: userId, module: moduleId },
@@ -126,10 +138,15 @@ export async function resetModuleVideosForQuizRetake(userId, moduleId) {
             $set: {
                 quizPassed: false,
                 isCompleted: false,
+                quizUnlocked: false,
+                firstCycleCompleted: false,
+                quizFailedAttempts: 0,
+                quizExhausted: false,
             },
+            $unset: { completedAt: 1 },
         },
         { upsert: false }
     );
 
-    return { currentCycle };
+    return { currentCycle: 0 };
 }

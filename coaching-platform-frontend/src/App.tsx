@@ -34,7 +34,6 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 // User Pages
 const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const VideosListPage = lazy(() => import('./pages/VideosListPage'));
 const VideoWatchPage = lazy(() => import('./pages/VideoWatchPage'));
 const SubscriptionPlansPage = lazy(() => import('./pages/SubscriptionPlansPage'));
 const SubscriptionPlanDetailPage = lazy(() => import('./pages/SubscriptionPlanDetailPage'));
@@ -182,7 +181,7 @@ function AppContent() {
                                 <Route path="/profile" element={<ProfilePage />} />
                                 <Route path="/my-courses" element={<MyCoursesPage />} />
                                 <Route path="/my-courses/:courseId/report-card" element={<CourseReportCardPage />} />
-                                <Route path="/videos" element={<VideosListPage />} />
+                                <Route path="/videos" element={<Navigate to="/my-courses" replace />} />
                                 <Route path="/videos/:videoId" element={<VideoWatchPage />} />
                                 <Route path="/subscription-plans" element={<SubscriptionPlansPage />} />
                                 <Route path="/subscription-plans/:planId" element={<SubscriptionPlanDetailPage />} />

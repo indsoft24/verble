@@ -1,16 +1,24 @@
 import apiClient from './apiClient';
 
 export interface LearningSettings {
-    maxModuleCompletionCycles: number;
-    maxWatchesPerVideoPerCycle: number;
+    maxWatchesPerVideo: number;
+    maxQuizAttempts: number;
     requireQuizToUnlockNextModule: boolean;
+    /** @deprecated Always 1; kept for API compatibility */
+    maxModuleCompletionCycles?: number;
+    /** @deprecated Alias of maxWatchesPerVideo */
+    maxWatchesPerVideoPerCycle?: number;
 }
 
 export interface UserLearningOverride {
     user: string;
-    maxModuleCompletionCycles?: number;
-    maxWatchesPerVideoPerCycle?: number;
+    maxWatchesPerVideo?: number;
+    maxQuizAttempts?: number;
     notes?: string;
+    /** @deprecated */
+    maxModuleCompletionCycles?: number;
+    /** @deprecated */
+    maxWatchesPerVideoPerCycle?: number;
 }
 
 export const getAdminLearningSettings = async (): Promise<LearningSettings> => {
@@ -18,7 +26,12 @@ export const getAdminLearningSettings = async (): Promise<LearningSettings> => {
         '/admin/learning-settings'
     );
     if (response.data?.status === 'success' && response.data.data?.settings) {
-        return response.data.data.settings;
+        const s = response.data.data.settings;
+        return {
+            ...s,
+            maxWatchesPerVideo: s.maxWatchesPerVideo ?? s.maxWatchesPerVideoPerCycle ?? 4,
+            maxQuizAttempts: s.maxQuizAttempts ?? 3,
+        };
     }
     throw new Error('Failed to load learning settings');
 };
@@ -29,7 +42,12 @@ export const updateAdminLearningSettings = async (updates: Partial<LearningSetti
         updates
     );
     if (response.data?.status === 'success' && response.data.data?.settings) {
-        return response.data.data.settings;
+        const s = response.data.data.settings;
+        return {
+            ...s,
+            maxWatchesPerVideo: s.maxWatchesPerVideo ?? s.maxWatchesPerVideoPerCycle ?? 4,
+            maxQuizAttempts: s.maxQuizAttempts ?? 3,
+        };
     }
     throw new Error('Failed to update learning settings');
 };

@@ -5,7 +5,12 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { Link as RouterLink } from 'react-router-dom';
 import { alpha } from '@mui/material/styles';
-import { courseLearningTheme, courseBottomNavZIndex } from './courseLearningTheme';
+import {
+    courseLearningTheme,
+    courseBottomNavZIndex,
+    courseLearningOutlinedNavButtonSx,
+    courseLearningContainedNavButtonSx,
+} from './courseLearningTheme';
 
 export interface CourseBottomNavAction {
     label: string;
@@ -121,25 +126,7 @@ const CourseBottomNav: React.FC<CourseBottomNavProps> = ({
                         sx={{
                             ...navButtonBaseSx,
                             whiteSpace: 'nowrap',
-                            ...(isContained
-                                ? {
-                                      bgcolor: courseLearningTheme.accent,
-                                      color: '#fff',
-                                      boxShadow: 'none',
-                                      '&:hover': { bgcolor: alpha(courseLearningTheme.accent, 0.88), boxShadow: 'none' },
-                                      '&.Mui-disabled': {
-                                          bgcolor: alpha(courseLearningTheme.accent, 0.3),
-                                          color: alpha('#fff', 0.5),
-                                      },
-                                  }
-                                : {
-                                      borderColor: alpha(courseLearningTheme.accent, 0.5),
-                                      color: courseLearningTheme.textPrimary,
-                                      '&:hover': {
-                                          borderColor: courseLearningTheme.accent,
-                                          bgcolor: alpha(courseLearningTheme.accent, 0.12),
-                                      },
-                                  }),
+                            ...(isContained ? courseLearningContainedNavButtonSx : courseLearningOutlinedNavButtonSx),
                             '& .MuiButton-startIcon, & .MuiButton-endIcon': {
                                 display: { xs: 'inline-flex', sm: 'inline-flex' },
                                 mx: { xs: 0, sm: undefined },

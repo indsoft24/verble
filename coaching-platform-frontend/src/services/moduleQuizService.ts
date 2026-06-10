@@ -44,9 +44,12 @@ export interface ModuleQuizAvailability {
     canTakeQuiz: boolean;
     isModuleComplete: boolean;
     quizState: ModuleQuizState;
-    currentCycle: number;
-    maxCycles: number;
-    cyclesCompleted: number;
+    /** @deprecated Always 0 — cycles removed */
+    currentCycle?: number;
+    /** @deprecated Always 1 — cycles removed */
+    maxCycles?: number;
+    /** @deprecated Use videosCompleted / totalVideos */
+    cyclesCompleted?: number;
     quizFailedAttempts: number;
     maxQuizAttempts: number;
     needsAdminReset: boolean;

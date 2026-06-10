@@ -68,9 +68,9 @@ export interface VideoListItemForModulePage {
     isLocked?: boolean;
     lockReason?: VideoLockReason;
     accessReason?: string;
-    completionCycle?: number;
+    maxWatchesPerVideo?: number;
+    /** @deprecated Use maxWatchesPerVideo */
     maxWatchesPerCycle?: number;
-    maxModuleCycles?: number;
 }
 
 interface GetModuleWithVideosUserResponse {
@@ -81,10 +81,9 @@ interface GetModuleWithVideosUserResponse {
             moduleLockReason?: string | null;
         };
         videos: VideoListItemForModulePage[];
-        completionCycle?: number;
         unlockedSetIndex?: number;
+        maxWatchesPerVideo?: number;
         maxWatchesPerCycle?: number;
-        maxModuleCycles?: number;
         isModuleLocked?: boolean;
         moduleLockReason?: string | null;
         previousModuleId?: string | null;
@@ -203,9 +202,8 @@ export const getPublishedCourseWithModulesForUser = async (courseId: string): Pr
 export interface ModuleVideosPageData {
     module: ModuleDetailUser;
     videos: VideoListItemForModulePage[];
-    completionCycle?: number;
+    maxWatchesPerVideo?: number;
     maxWatchesPerCycle?: number;
-    maxModuleCycles?: number;
     isModuleLocked?: boolean;
     moduleLockReason?: string | null;
     previousModuleId?: string | null;
@@ -219,9 +217,8 @@ export const getPublishedModuleWithVideosForUser = async (moduleId: string): Pro
             return {
                 module: d.module,
                 videos: Array.isArray(d.videos) ? d.videos : [],
-                completionCycle: d.completionCycle,
-                maxWatchesPerCycle: d.maxWatchesPerCycle,
-                maxModuleCycles: d.maxModuleCycles,
+                maxWatchesPerVideo: d.maxWatchesPerVideo ?? d.maxWatchesPerCycle,
+                maxWatchesPerCycle: d.maxWatchesPerVideo ?? d.maxWatchesPerCycle,
                 isModuleLocked: d.isModuleLocked ?? d.module?.isModuleLocked,
                 moduleLockReason: d.moduleLockReason ?? d.module?.moduleLockReason,
                 previousModuleId: d.previousModuleId ?? null,
@@ -238,8 +235,8 @@ export const getPublishedModuleWithVideosForUser = async (moduleId: string): Pro
                 isModuleLocked: true,
                 moduleLockReason: d.moduleLockReason || payload.message,
                 previousModuleId: d.previousModuleId || null,
-                maxWatchesPerCycle: d.maxWatchesPerCycle,
-                maxModuleCycles: d.maxModuleCycles,
+                maxWatchesPerVideo: d.maxWatchesPerVideo ?? d.maxWatchesPerCycle,
+                maxWatchesPerCycle: d.maxWatchesPerVideo ?? d.maxWatchesPerCycle,
             };
         }
         throw payload;

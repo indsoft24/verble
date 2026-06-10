@@ -173,6 +173,19 @@ const CourseLessonRow: React.FC<CourseLessonRowProps> = ({
                     {watchLimited && (
                         <Chip label={video.accessReason || 'Watch limit reached'} size="small" variant="outlined" sx={courseChipWarningSx} />
                     )}
+                    {!watchLimited &&
+                        !sequenceLocked &&
+                        !needsPlan &&
+                        video.remainingWatches != null &&
+                        (video.maxWatchesPerVideo ?? video.maxWatchesPerCycle) != null &&
+                        video.remainingWatches <= 1 && (
+                            <Chip
+                                label={`${video.remainingWatches} watch${video.remainingWatches === 1 ? '' : 'es'} left`}
+                                size="small"
+                                variant="outlined"
+                                sx={courseChipWarningSx}
+                            />
+                        )}
                     {needsPlan && (
                         <Chip label="Subscription required" size="small" variant="outlined" sx={courseChipWarningSx} />
                     )}

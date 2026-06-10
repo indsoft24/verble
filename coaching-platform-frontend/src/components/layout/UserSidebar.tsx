@@ -19,7 +19,6 @@ import {
 import {
     Dashboard as DashboardIcon,
     School as SchoolIcon,
-    VideoLibrary as VideoLibraryIcon,
     PlaylistPlay as PlaylistPlayIcon,
     Person as PersonIcon,
     ChevronLeft as ChevronLeftIcon,
@@ -67,11 +66,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
             title: 'My Courses',
             path: '/my-courses',
             icon: <SchoolIcon />,
-        },
-        {
-            title: 'My Videos',
-            path: '/videos',
-            icon: <VideoLibraryIcon />,
         },
         {
             title: 'My Subscription',

@@ -17,6 +17,8 @@ export const courseLearningSpace = {
     rowIndent: '16px',
     lessonThumbSm: 104,
     lessonRowMinHeight: 102,
+    /** Space between thumbnail and text in "Up next" lesson rows */
+    navRowGap: { xs: '14px', sm: '20px' },
 } as const;
 
 /** MUI Stack/Grid spacing multiplier for 5px (8px theme unit × 0.625) */
@@ -91,6 +93,63 @@ export const courseLearningTheme = {
     tileBorder: (locked = false) =>
         `1px solid ${alpha(COURSE_LEARNING_ACCENT, locked ? 0.2 : 0.32)}`,
     focusRing: `0 0 0 2px ${alpha(COURSE_LEARNING_ACCENT, 0.5)}`,
+} as const;
+
+/** Prev/Next and sidebar nav buttons on dark learning surfaces */
+export const courseLearningOutlinedNavButtonSx = {
+    textTransform: 'none' as const,
+    fontWeight: 700,
+    minHeight: 48,
+    borderRadius: 1.5,
+    borderColor: alpha(COURSE_LEARNING_ACCENT, 0.5),
+    color: courseLearningTheme.textPrimary,
+    '&:hover': {
+        borderColor: COURSE_LEARNING_ACCENT,
+        bgcolor: alpha(COURSE_LEARNING_ACCENT, 0.12),
+    },
+    '&.Mui-disabled': {
+        opacity: 1,
+        borderColor: alpha(COURSE_LEARNING_ACCENT, 0.38),
+        color: alpha(courseLearningTheme.textMuted, 0.9),
+        '& .MuiSvgIcon-root': { color: alpha(courseLearningTheme.textMuted, 0.9) },
+    },
+} as const;
+
+export const courseLearningContainedNavButtonSx = {
+    textTransform: 'none' as const,
+    fontWeight: 700,
+    minHeight: 48,
+    borderRadius: 1.5,
+    bgcolor: COURSE_LEARNING_ACCENT,
+    color: '#fff',
+    boxShadow: 'none',
+    '&:hover': { bgcolor: alpha(COURSE_LEARNING_ACCENT, 0.88), boxShadow: 'none' },
+    '&.Mui-disabled': {
+        opacity: 1,
+        bgcolor: alpha(COURSE_LEARNING_ACCENT, 0.28),
+        color: alpha('#fff', 0.58),
+        '& .MuiSvgIcon-root': { color: alpha('#fff', 0.58) },
+    },
+} as const;
+
+/** Thumbnail + text grid for "Up next" lesson rows */
+export const courseNavRowGridSx = {
+    display: 'grid',
+    gridTemplateColumns: { xs: '88px minmax(0, 1fr)', sm: '104px minmax(0, 1fr)' },
+    gap: courseLearningSpace.navRowGap,
+    alignItems: 'center',
+    minHeight: { xs: 88, sm: 102 },
+} as const;
+
+/** In-panel content headings — e.g. "Up next in this module", "Description" */
+export const courseLearningSubsectionTitleSx = {
+    m: 0,
+    mb: courseLearningSpace.blockMb,
+    fontWeight: 800,
+    fontSize: '0.875rem',
+    lineHeight: 1.57,
+    letterSpacing: '0.00714em',
+    color: courseLearningTheme.textPrimary,
 } as const;
 
 export const courseBottomNavZIndex = 1200;

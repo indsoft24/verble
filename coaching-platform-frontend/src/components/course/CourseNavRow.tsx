@@ -3,7 +3,7 @@ import { Box, Typography, Chip, Stack } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { alpha } from '@mui/material/styles';
-import { courseLearningTheme } from './courseLearningTheme';
+import { courseLearningTheme, courseNavRowGridSx } from './courseLearningTheme';
 import { getSplashImageUrl, resolveBackendMediaUrl } from '../../utils/imageUtils';
 
 export interface CourseNavItem {
@@ -50,19 +50,15 @@ const CourseNavRow: React.FC<CourseNavRowProps> = ({ item, currentId }) => {
             component={RouterLink}
             to={`/videos/${item._id}`}
             sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '88px minmax(0, 1fr)', sm: '104px minmax(0, 1fr)' },
-                columnGap: { xs: 1.25, sm: 1.75 },
-                alignItems: 'center',
-                py: { xs: 1.25, sm: 1.5 },
+                ...courseNavRowGridSx,
+                py: { xs: 1.25, sm: 1.75 },
                 textDecoration: 'none',
                 color: 'inherit',
                 borderRadius: 2.25,
-                px: { xs: 1.25, sm: 1.5 },
+                px: { xs: 1.5, sm: 2 },
                 border: '1px solid',
                 borderColor: isCurrent ? alpha(courseLearningTheme.accent, 0.65) : alpha(courseLearningTheme.accent, 0.2),
                 bgcolor: isCurrent ? alpha(courseLearningTheme.accent, 0.14) : courseLearningTheme.tileBg,
-                minHeight: { xs: 88, sm: 102 },
                 pointerEvents: isCurrent ? 'none' : 'auto',
                 transition: 'all 0.16s ease',
                 boxShadow: isCurrent ? courseLearningTheme.focusRing : 'none',
@@ -87,7 +83,7 @@ const CourseNavRow: React.FC<CourseNavRowProps> = ({ item, currentId }) => {
                     backgroundRepeat: 'no-repeat',
                 }}
             />
-            <Box sx={{ minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Box sx={{ minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 0.75, py: 0.25 }}>
                 <Typography
                     variant="subtitle2"
                     fontWeight={700}

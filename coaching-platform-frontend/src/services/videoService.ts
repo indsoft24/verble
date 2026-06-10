@@ -3,49 +3,6 @@
 import apiClient from './apiClient'; 
 import type { VideoMetadata } from './adminService'; 
 
-export interface BasicSubscriptionPlan {
-    _id: string;
-    name: string;
-}
-
-// Interface for a single video item in the list 
-export interface VideoListItem {
-    _id: string;
-    title: string;
-    description?: string;
-    thumbnailUrl?: string;
-    durationSeconds?: number;
-    tags?: string[];
-    createdAt: string;
-    requiredPlans?: Array<string | BasicSubscriptionPlan> | null;
-    canAccess?: boolean; 
-    videoStatus?: string;
-    courses?: Array<{ _id: string; title: string; }>; 
-    modules?: Array<{ _id: string; title: string; }>;
-}
-
-// Interface for the API response for fetching all videos
-export interface GetAllVideosResponse {
-    status: string;
-    results: number;
-    data: {
-        videos: VideoListItem[];
-    };
-     message?: string;
-}
-
-export interface GetAllVideosUserApiResponse {
-    status: string;
-    results?: number;
-    totalResults?: number;    
-    currentPage?: number;     
-    totalPages?: number;      
-    data: {
-        videos: VideoListItem[];
-    };
-    message?: string;
-}
-
 export interface GetSingleVideoUserApiResponse {
     status: string;
     data: {
@@ -65,9 +22,9 @@ export interface VideoDetail extends VideoMetadata {
     accessReason?: string;
     watchCount?: number;
     remainingWatches?: number;
-    completionCycle?: number;
+    maxWatchesPerVideo?: number;
+    /** @deprecated Use maxWatchesPerVideo */
     maxWatchesPerCycle?: number;
-    maxModuleCycles?: number;
 }
 
 interface GetVideoResponse {
@@ -165,40 +122,6 @@ export interface GetSingleVideoResponse {
 
 
 /**
- * Fetches all published videos for users.
- */
-export const getAllPublishedVideosUser = async (
-    page = 1, 
-    limit = 12, 
-    searchTerm?: string | null
-): Promise<{
-    videos: VideoListItem[],
-    totalResults: number,
-    totalPages: number,
-    currentPage: number
-}> => {
-    try {
-        const params: { page: number; limit: number; search?: string } = { page, limit };
-        if (searchTerm && searchTerm.trim() !== '') {
-            params.search = searchTerm.trim();
-        }
-        const response = await apiClient.get<GetAllVideosUserApiResponse>('/videos', { params });
-        
-        if (response.data && response.data.status === 'success' && response.data.data?.videos) {
-            return {
-                videos: response.data.data.videos,
-                totalResults: response.data.totalResults || 0,
-                totalPages: response.data.totalPages || 1,
-                currentPage: response.data.currentPage || 1,
-            };
-        }
-        throw new Error(response.data?.message || 'Failed to fetch published videos');
-    } catch (error: any) {
-        throw error.response?.data || { status: 'error', message: 'Could not load videos.' };
-    }
-};
-
-/**
  * Fetches a single published video by its ID for users.
  * Assumes the API endpoint is protected and requires authentication.
  */
@@ -247,7 +170,6 @@ interface MarkVideoCompletedResponse {
         remainingWatches: number;
         setComplete: boolean;
         moduleComplete: boolean;
-        nextCycleStarted: boolean;
     };
 }
 

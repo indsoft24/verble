@@ -10,7 +10,8 @@
     "cleanup-images": "node cleanupOrphanedImages.js",
     "import-verble-pdfs": "node scripts/importVerblePdfs.js",
     "backfill-stale-quiz-passed": "node scripts/backfillStaleQuizPassed.mjs",
-    "backfill-video-order": "node scripts/backfillVideoOrder.mjs"
+    "backfill-video-order": "node scripts/backfillVideoOrder.mjs",
+    "migrate-cumulative-unlock": "node scripts/migrateToCumulativeUnlock.mjs"
   },
   "keywords": [],
   "author": "",
