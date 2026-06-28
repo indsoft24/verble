@@ -12,6 +12,8 @@ import {
     siteContactPhoneDisplay,
     siteContactTel,
 } from '../../config/siteContact';
+import { siteOwnerDisplayLine } from '../../config/siteBusiness';
+import SiteLegalNotice from '../common/SiteLegalNotice';
 
 const FOOTER_BG = '#020617';
 
@@ -113,6 +115,17 @@ const Footer: React.FC = () => {
                                 color: 'rgba(226,232,240,0.82)',
                                 fontSize: { xs: '0.875rem', md: '0.9375rem' },
                                 lineHeight: 1.5,
+                                mb: 1,
+                            }}
+                        >
+                            {siteOwnerDisplayLine}
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: 'rgba(226,232,240,0.82)',
+                                fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                                lineHeight: 1.5,
                                 mb: 1.5,
                             }}
                         >
@@ -192,28 +205,31 @@ const Footer: React.FC = () => {
                         pt: { xs: 2, md: 2.5 },
                         borderTop: '1px solid rgba(148,163,184,0.12)',
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         justifyContent: 'space-between',
                         flexDirection: { xs: 'column', sm: 'row' },
-                        gap: 1,
+                        gap: 2,
                     }}
                 >
-                    <Typography variant="body2" sx={{ color: 'rgba(203,213,225,0.82)', textAlign: { xs: 'center', sm: 'left' } }}>
-                        {t('footer.copyrightBefore')}
-                        <MuiLink
-                            color="inherit"
-                            component={RouterLink}
-                            to="/"
-                            underline="hover"
-                            sx={{ mx: 0.35, fontWeight: 600 }}
-                        >
-                            Verble
-                        </MuiLink>
-                        {t('footer.copyrightAfter', { year: new Date().getFullYear() })}
-                    </Typography>
+                    <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(203,213,225,0.82)', textAlign: { xs: 'center', sm: 'left' }, mb: 1 }}>
+                            {t('footer.copyrightBefore')}
+                            <MuiLink
+                                color="inherit"
+                                component={RouterLink}
+                                to="/"
+                                underline="hover"
+                                sx={{ mx: 0.35, fontWeight: 600 }}
+                            >
+                                Verble
+                            </MuiLink>
+                            {t('footer.copyrightAfter', { year: new Date().getFullYear() })}
+                        </Typography>
+                        <SiteLegalNotice variant="footer" sx={{ textAlign: { xs: 'center', sm: 'left' } }} />
+                    </Box>
                     <Typography
                         variant="caption"
-                        sx={{ color: 'rgba(148,163,184,0.75)', textAlign: { xs: 'center', sm: 'right' } }}
+                        sx={{ color: 'rgba(148,163,184,0.75)', textAlign: { xs: 'center', sm: 'right' }, flexShrink: 0 }}
                     >
                         Built with care for modern learners
                     </Typography>

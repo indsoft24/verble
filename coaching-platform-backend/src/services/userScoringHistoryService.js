@@ -32,6 +32,126 @@ function eventKey(e) {
     return `${e.category}|${e.sourceType}|${e.sourceId}|${e.eventKind}|${d}`;
 }
 
+/** Keys used to suppress legacy synthesized rows when ledger already has the activity. */
+function buildLedgerCoverage(ledgerEvents) {
+    const participationContentIds = new Set();
+    const evaluationSubmissionIds = new Set();
+    const puzzleSubmissionIds = new Set();
+    const puzzleContentIds = new Set();
+    const quizSubmissionIds = new Set();
+
+    for (const e of ledgerEvents) {
+        if (e.category === 'participation' && e.sourceType === 'daily_content') {
+            participationContentIds.add(e.sourceId);
+            if (e.meta?.contentType === 'PUZZLE') {
+                puzzleContentIds.add(e.sourceId);
+            }
+        }
+        if (e.category === 'evaluation') {
+            evaluationSubmissionIds.add(e.sourceId);
+        }
+        if (e.category === 'puzzle') {
+            puzzleSubmissionIds.add(e.sourceId);
+            const pid = e.meta?.puzzleId || e.meta?.contentId;
+            if (pid) puzzleContentIds.add(String(pid));
+            if (e.sourceType === 'daily_content') puzzleContentIds.add(e.sourceId);
+        }
+        if (e.category === 'module_quiz') {
+            quizSubmissionIds.add(e.sourceId);
+        }
+    }
+
+    return {
+        participationContentIds,
+        evaluationSubmissionIds,
+        puzzleSubmissionIds,
+        puzzleContentIds,
+        quizSubmissionIds,
+    };
+}
+
+function isSynthesizedEventCovered(e, coverage) {
+    const contentId = e.meta?.contentId ? String(e.meta.contentId) : null;
+    const puzzleId = e.meta?.puzzleId ? String(e.meta.puzzleId) : contentId;
+
+    if (e.category === 'participation' && e.eventKind === 'participation') {
+        if (contentId && coverage.participationContentIds.has(contentId)) return true;
+    }
+
+    if (e.category === 'evaluation') {
+        if (coverage.evaluationSubmissionIds.has(e.sourceId)) return true;
+    }
+
+    if (e.category === 'puzzle') {
+        if (coverage.puzzleSubmissionIds.has(e.sourceId)) return true;
+        if (puzzleId && coverage.puzzleContentIds.has(puzzleId)) return true;
+        if (puzzleId && coverage.participationContentIds.has(puzzleId)) return true;
+    }
+
+    if (e.category === 'module_quiz') {
+        if (coverage.quizSubmissionIds.has(e.sourceId)) return true;
+    }
+
+    return false;
+}
+
+async function normalizeLedgerEvents(ledgerEvents, userId) {
+    const dailyContentLedgerIds = ledgerEvents
+        .filter((e) => e.category === 'participation' && e.sourceType === 'daily_content')
+        .map((e) => e.sourceId);
+
+    if (dailyContentLedgerIds.length === 0) return ledgerEvents;
+
+    const contentMap = await loadContentTitles(dailyContentLedgerIds);
+    const puzzleContentIds = dailyContentLedgerIds.filter(
+        (id) => contentMap.get(id)?.contentType === 'PUZZLE'
+    );
+
+    const uid = new mongoose.Types.ObjectId(userId);
+    const puzzleSubs =
+        puzzleContentIds.length > 0
+            ? await UserPuzzleSubmission.find({
+                  userId: uid,
+                  puzzleId: { $in: puzzleContentIds },
+              })
+                  .select('puzzleId correctCount puzzleType pointsEarned')
+                  .lean()
+            : [];
+    const subByPuzzleId = new Map(puzzleSubs.map((s) => [s.puzzleId?.toString(), s]));
+
+    return ledgerEvents.map((e) => {
+        if (e.category !== 'participation' || e.sourceType !== 'daily_content') {
+            return e;
+        }
+
+        const cid = e.sourceId;
+        const info = contentMap.get(cid);
+        if (info?.contentType !== 'PUZZLE') {
+            return e;
+        }
+
+        const sub = subByPuzzleId.get(cid);
+        const title = sub
+            ? `Puzzle: ${info.title} (${sub.correctCount ?? 0}/5 correct)`
+            : e.title.replace(/^Participation:\s*/i, 'Puzzle: ');
+
+        return {
+            ...e,
+            category: 'puzzle',
+            title,
+            eventKind: 'puzzle',
+            meta: {
+                ...e.meta,
+                contentType: 'PUZZLE',
+                contentId: cid,
+                correctCount: sub?.correctCount,
+                puzzleType: sub?.puzzleType,
+                puzzleId: cid,
+            },
+        };
+    });
+}
+
 function makeEvent({
     id,
     category,
@@ -64,12 +184,12 @@ function makeEvent({
 async function loadContentTitles(contentIds) {
     const ids = [...new Set(contentIds.filter((id) => mongoose.Types.ObjectId.isValid(id)))];
     if (ids.length === 0) return new Map();
-    const docs = await DailyContent.find({ _id: { $in: ids } }).select('title contentType').lean();
+    const docs = await DailyContent.find({ _id: { $in: ids } }).select('title type').lean();
     const map = new Map();
     docs.forEach((d) => {
         map.set(d._id.toString(), {
-            title: d.title || CONTENT_TYPE_LABELS[d.contentType] || 'Daily activity',
-            contentType: d.contentType,
+            title: d.title || CONTENT_TYPE_LABELS[d.type] || 'Daily activity',
+            contentType: d.type,
         });
     });
     return map;
@@ -156,6 +276,7 @@ async function synthesizeHistoryEvents(userId) {
                     sourceType: 'sentence_submission',
                     sourceId: s._id,
                     eventKind: 'participation',
+                    meta: { contentId: cid },
                 })
             );
         }
@@ -195,6 +316,7 @@ async function synthesizeHistoryEvents(userId) {
                     sourceType: 'story_submission',
                     sourceId: s._id,
                     eventKind: 'participation',
+                    meta: { contentId: cid },
                 })
             );
         }
@@ -234,6 +356,7 @@ async function synthesizeHistoryEvents(userId) {
                     sourceType: 'vocab_submission',
                     sourceId: s._id,
                     eventKind: 'participation',
+                    meta: { contentId: cid },
                 })
             );
         }
@@ -273,6 +396,7 @@ async function synthesizeHistoryEvents(userId) {
                     sourceType: 'scene_submission',
                     sourceId: s._id,
                     eventKind: 'participation',
+                    meta: { contentId: cid },
                 })
             );
         }
@@ -312,6 +436,7 @@ async function synthesizeHistoryEvents(userId) {
                     sourceType: 'speech_submission',
                     sourceId: s._id,
                     eventKind: 'participation',
+                    meta: { contentId: cid },
                 })
             );
         }
@@ -351,6 +476,7 @@ async function synthesizeHistoryEvents(userId) {
                     sourceType: 'lyrics_submission',
                     sourceId: s._id,
                     eventKind: 'participation',
+                    meta: { contentId: cid },
                 })
             );
         }
@@ -390,6 +516,7 @@ async function synthesizeHistoryEvents(userId) {
                     sourceType: 'conversation_submission',
                     sourceId: s._id,
                     eventKind: 'participation',
+                    meta: { contentId: cid },
                 })
             );
         }
@@ -429,8 +556,13 @@ async function synthesizeHistoryEvents(userId) {
                     occurredAt: s.submittedAt || s.createdAt,
                     sourceType: 'puzzle_submission',
                     sourceId: s._id,
-                    eventKind: 'participation',
-                    meta: { correctCount: s.correctCount, puzzleType: s.puzzleType },
+                    eventKind: 'puzzle',
+                    meta: {
+                        contentId: cid,
+                        puzzleId: cid,
+                        correctCount: s.correctCount,
+                        puzzleType: s.puzzleType,
+                    },
                 })
             );
         }
@@ -467,14 +599,15 @@ async function mergeHistoryEvents(userId, categoryFilter) {
         synthesizeHistoryEvents(userId),
     ]);
 
-    const ledgerEvents = ledgerRows.map(ledgerDocToEvent);
+    let ledgerEvents = await normalizeLedgerEvents(ledgerRows.map(ledgerDocToEvent), userId);
     const ledgerKeys = new Set(ledgerEvents.map(eventKey));
+    const coverage = buildLedgerCoverage(ledgerEvents);
 
     const merged = [...ledgerEvents];
     for (const e of synthesized) {
-        if (!ledgerKeys.has(eventKey(e))) {
-            merged.push(e);
-        }
+        if (ledgerKeys.has(eventKey(e))) continue;
+        if (isSynthesizedEventCovered(e, coverage)) continue;
+        merged.push(e);
     }
 
     merged.sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));

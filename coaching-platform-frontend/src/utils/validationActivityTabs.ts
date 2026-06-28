@@ -231,9 +231,20 @@ export function getValidationContentDetails(
         if (explanation) lines.push({ label: 'Scene / prompt', value: explanation });
         const prompt = String(meta.submissionPrompt ?? '').trim();
         if (prompt) lines.push({ label: 'Learner instructions', value: prompt });
-        const keywords = meta.keywords as { word?: string }[] | undefined;
+        const keywords = meta.keywords as { word?: string; meaning_en?: string; meaning_hi?: string }[] | undefined;
         if (Array.isArray(keywords) && keywords.length > 0) {
-            const kw = keywords.map((k) => String(k.word ?? '').trim()).filter(Boolean).join(', ');
+            const kw = keywords
+                .map((k) => {
+                    const word = String(k.word ?? '').trim();
+                    if (!word) return '';
+                    const en = String(k.meaning_en ?? '').trim();
+                    const hi = String(k.meaning_hi ?? '').trim();
+                    if (en && hi) return `${word} (${en} · ${hi})`;
+                    if (en || hi) return `${word} (${en || hi})`;
+                    return word;
+                })
+                .filter(Boolean)
+                .join('; ');
             if (kw) lines.push({ label: 'Keywords', value: kw });
         }
         return lines;

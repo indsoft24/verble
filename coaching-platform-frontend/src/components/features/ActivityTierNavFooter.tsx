@@ -26,6 +26,8 @@ export type ActivityTierNavFooterLayout = 'inline' | 'stacked' | 'auto';
 
 export interface ActivityTierNavFooterProps {
     accentColor: string;
+    /** Accent for the center peer link; defaults to accentColor */
+    centerAccentColor?: string;
     variant?: 'dark' | 'light';
     /**
      * `auto` (default): stacked on narrow screens when center + side nav exist;
@@ -44,11 +46,22 @@ const shellBorderSx = (borderColor: string) => ({
     borderTop: `1px solid ${borderColor}`,
 });
 
+const inlineGridSx = {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
+    alignItems: 'center',
+    columnGap: { xs: 1, sm: 1.5 },
+    rowGap: 1,
+    width: '100%',
+    minWidth: 0,
+} as const;
+
 /**
  * Bottom navigation: prev (left) · peer link (center, outlined) · next (right).
  */
 const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
     accentColor,
+    centerAccentColor,
     variant = 'dark',
     layout = 'auto',
     left,
@@ -58,18 +71,23 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
 }) => {
     const muiTheme = useTheme();
     const isNarrow = useMediaQuery(muiTheme.breakpoints.down('sm'));
+    const isTablet = useMediaQuery(muiTheme.breakpoints.down('md'));
 
     const showLeft = Boolean(left?.label);
-    const showCenter = Boolean(center?.onClick);
+    const showCenter = Boolean(center?.label);
     const showRight = Boolean(right?.label);
     if (!showLeft && !showCenter && !showRight) return null;
 
     const isDark = variant === 'dark';
     const borderColor = alpha(accentColor, isDark ? 0.25 : 0.35);
+    const centerColor = centerAccentColor ?? accentColor;
+
+    const hasThreeSlots = showLeft && showCenter && showRight;
 
     const useStacked =
         layout === 'stacked' ||
-        (layout === 'auto' && isNarrow && showCenter && (showLeft || showRight));
+        (layout === 'auto' &&
+            ((isNarrow && showCenter && (showLeft || showRight)) || (isTablet && hasThreeSlots)));
 
     const renderSide = (slot: NavFooterSlot | undefined, side: 'left' | 'right') => {
         if (!slot?.label) {
@@ -103,7 +121,10 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
     };
 
     const centerClickable =
-        showCenter && Boolean(center!.onClick) && !center!.disabled && !center!.loading;
+        showCenter &&
+        Boolean(center!.onClick) &&
+        !center!.disabled &&
+        !center!.loading;
 
     const centerButton = showCenter ? (
         <Button
@@ -115,12 +136,12 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
             tabIndex={centerClickable ? 0 : -1}
             sx={activityNavCenterButtonSx({
                 disabled: !centerClickable,
-                accentColor,
+                accentColor: centerColor,
                 isDark,
                 fullWidth: useStacked,
             })}
         >
-            {center!.label}
+            {center!.loading ? 'Loading…' : center!.label}
         </Button>
     ) : null;
 
@@ -159,21 +180,15 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
     }
 
     const hasThreeColumns = showLeft && showCenter && showRight;
+    const hasTwoSideColumns = (showLeft || showRight) && !showCenter;
+    const useInlineGrid = hasThreeColumns || (hasTwoSideColumns && showLeft && showRight);
 
-    if (hasThreeColumns) {
+    if (useInlineGrid) {
         return (
             <Box
                 sx={[
                     shellBorderSx(borderColor),
-                    {
-                        display: 'grid',
-                        gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
-                        alignItems: 'center',
-                        columnGap: { xs: 1, sm: 1.5 },
-                        rowGap: 1,
-                        width: '100%',
-                        minWidth: 0,
-                    },
+                    inlineGridSx,
                     ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
                 ]}
             >
@@ -192,21 +207,17 @@ const ActivityTierNavFooter: React.FC<ActivityTierNavFooterProps> = ({
         <Box
             sx={[
                 shellBorderSx(borderColor),
-                {
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 1.5,
-                    width: '100%',
-                    minWidth: 0,
-                },
+                inlineGridSx,
                 ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
             ]}
         >
-            {renderSide(left, 'left') ?? <Box sx={{ flex: '1 1 0', minWidth: 0 }} />}
-            {centerButton}
-            {renderSide(right, 'right') ?? <Box sx={{ flex: '1 1 0', minWidth: 0 }} />}
+            <Box sx={{ minWidth: 0, justifySelf: 'start', width: '100%' }}>
+                {renderSide(left, 'left')}
+            </Box>
+            <Box sx={{ justifySelf: 'center', maxWidth: '100%' }}>{centerButton}</Box>
+            <Box sx={{ minWidth: 0, justifySelf: 'end', width: '100%' }}>
+                {renderSide(right, 'right')}
+            </Box>
         </Box>
     );
 };

@@ -24,12 +24,12 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SchoolIcon from '@mui/icons-material/School';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import VideoLibraryOutlinedIcon from '@mui/icons-material/VideoLibraryOutlined';
-import parse from 'html-react-parser';
 
 import { getPublishedCourseWithModulesForUser, type CourseListItemUser, type ModuleListItemUser } from '../services/courseUserService';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl, getSplashImageUrl } from '../utils/imageUtils';
 import UserLayout from '../components/layout/UserLayout';
+import RichTextContent from '../components/common/RichTextContent';
 import {
     CourseLearningShell,
     CourseLearningBand,
@@ -37,20 +37,8 @@ import {
     CourseLearningHero,
     CourseBottomNav,
     courseLearningTheme,
-    courseTiptapSx,
     courseChipOutlinedSx,
 } from '../components/course';
-
-const publicContentSx = {
-    '& p': { typography: 'body1', lineHeight: 1.75, mb: 2, color: 'text.secondary' },
-    '& ul, & ol': { pl: 3, mb: 2 },
-    '& li': { mb: 0.5, typography: 'body1', lineHeight: 1.75 },
-    '& strong': { fontWeight: 700, color: 'text.primary' },
-    '& em': { fontStyle: 'italic' },
-    '& u': { textDecoration: 'underline' },
-    '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
-    '& h1, & h2, & h3, & h4, & h5, & h6': { mt: 2.5, mb: 1, fontWeight: 700, color: 'text.primary' },
-} as const;
 
 const CourseDetailPage: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
@@ -174,15 +162,16 @@ const CourseDetailPage: React.FC = () => {
                                     borderTop: `1px solid ${alpha(courseLearningTheme.accent, 0.2)}`,
                                 }}
                             >
-                                <Box className="tiptap-rendered-content" sx={{ ...courseTiptapSx, mb: 2 }}>
-                                    {module.description ? (
-                                        parse(module.description)
-                                    ) : (
+                                <RichTextContent
+                                    html={module.description}
+                                    variant="dark"
+                                    sx={{ mb: 2 }}
+                                    fallback={(
                                         <Typography variant="body2" sx={{ color: courseLearningTheme.textMuted }}>
                                             No outline has been added for this module yet.
                                         </Typography>
                                     )}
-                                </Box>
+                                />
                                 {module.isModuleLocked && module.moduleLockReason && (
                                     <Typography
                                         variant="body2"
@@ -368,15 +357,15 @@ const CourseDetailPage: React.FC = () => {
                         >
                             About this course
                         </Typography>
-                        <Box className="tiptap-rendered-content" sx={courseTiptapSx}>
-                            {course.description ? (
-                                parse(course.description)
-                            ) : (
+                        <RichTextContent
+                            html={course.description}
+                            variant="dark"
+                            fallback={(
                                 <Typography sx={{ color: courseLearningTheme.textBody, lineHeight: 1.6 }}>
                                     A full description will appear here when it is added for this program.
                                 </Typography>
                             )}
-                        </Box>
+                        />
                     </CourseLearningBand>
 
                     {renderAuthenticatedCurriculum()}
@@ -469,15 +458,15 @@ const CourseDetailPage: React.FC = () => {
                         <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
                             About this course
                         </Typography>
-                        <Box className="tiptap-rendered-content" sx={publicContentSx}>
-                            {course.description ? (
-                                parse(course.description)
-                            ) : (
+                        <RichTextContent
+                            html={course.description}
+                            variant="light"
+                            fallback={(
                                 <Typography variant="body1" color="text.secondary">
                                     A full description will appear here when it is added for this program.
                                 </Typography>
                             )}
-                        </Box>
+                        />
                     </Box>
                 </Paper>
 

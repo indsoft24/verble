@@ -19,6 +19,7 @@ import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined';
 import LockRoundedIcon from '@mui/icons-material/LockRounded';
+import RichTextContent from '../components/common/RichTextContent';
 import {
     createRazorpayOrder,
     verifyRazorpayPayment,
@@ -338,13 +339,16 @@ const SubscriptionPlansPage: React.FC = () => {
                                         </Typography>
 
                                         {plan.description && (
-                                            <Typography
-                                                variant="body2"
-                                                color="text.secondary"
-                                                sx={{ mb: 2, minHeight: 40 }}
-                                            >
-                                                {plan.description}
-                                            </Typography>
+                                            <RichTextContent
+                                                html={plan.description}
+                                                variant="light"
+                                                sx={{
+                                                    mb: 2,
+                                                    minHeight: 40,
+                                                    '& p': { typography: 'body2', lineHeight: 1.6, mb: 0.75, color: 'text.secondary' },
+                                                    '& p:last-child': { mb: 0 },
+                                                }}
+                                            />
                                         )}
 
                                         <Typography

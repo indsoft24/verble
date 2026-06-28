@@ -37,7 +37,9 @@ import {
 } from '../../utils/dailyContentBulkCsv';
 import { DAILY_CONTENT_CATALOG, levelForAdminKey } from '../../utils/dailyContentTypeCatalog';
 import {
-    bulkCreateDailyContentAdmin,
+    bulkCreateDailyContentAdminChunked,
+    BULK_IMPORT_BATCH_SIZE,
+    type BulkImportProgress,
     type CreateDailyContentPayload,
 } from '../../services/dailyContentAdminService';
 
@@ -67,6 +69,7 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
     const [parseError, setParseError] = useState<string | null>(null);
     const [importError, setImportError] = useState<string | null>(null);
     const [importSummary, setImportSummary] = useState<string | null>(null);
+    const [importProgress, setImportProgress] = useState<BulkImportProgress | null>(null);
     const [busy, setBusy] = useState(false);
 
     const schema = bulkType && bulkLevel ? getBulkSchema(bulkType) : null;
@@ -88,6 +91,7 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
         setParseError(null);
         setImportError(null);
         setImportSummary(null);
+        setImportProgress(null);
     };
 
     const handleClose = () => {
@@ -175,8 +179,12 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
         setBusy(true);
         setImportError(null);
         setImportSummary(null);
+        setImportProgress(null);
         try {
-            const out = await bulkCreateDailyContentAdmin(validatedPayloads);
+            const out = await bulkCreateDailyContentAdminChunked(validatedPayloads, {
+                batchSize: BULK_IMPORT_BATCH_SIZE,
+                onProgress: setImportProgress,
+            });
             if (out.failedCount > 0) {
                 const detail = out.failures
                     .slice(0, 5)
@@ -201,14 +209,37 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
             setImportError(msg || (err instanceof Error ? err.message : 'Import failed.'));
         } finally {
             setBusy(false);
+            setImportProgress(null);
         }
     };
+
+    const importBatchLabel =
+        importProgress && importProgress.totalBatches > 1
+            ? `Importing batch ${importProgress.batchIndex} of ${importProgress.totalBatches}…`
+            : null;
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth scroll="paper">
             <DialogTitle>Bulk import daily content (CSV)</DialogTitle>
             <DialogContent dividers>
-                {busy && <LinearProgress sx={{ mb: 2 }} />}
+                {busy && (
+                    <Box sx={{ mb: 2 }}>
+                        <LinearProgress
+                            variant={importProgress ? 'determinate' : 'indeterminate'}
+                            value={
+                                importProgress && importProgress.totalCount > 0
+                                    ? (importProgress.processedCount / importProgress.totalCount) * 100
+                                    : undefined
+                            }
+                        />
+                        {importProgress && (
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                {importBatchLabel} ({importProgress.processedCount} / {importProgress.totalCount}{' '}
+                                records)
+                            </Typography>
+                        )}
+                    </Box>
+                )}
 
                 <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>
                     {STEPS.map((label) => (
@@ -235,6 +266,11 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                                     Upload, validate, fix any errors, then import. Column headers are flexible:{' '}
                                     <code>hi</code> works for <code>meaning_hi</code>, <code>en</code> for{' '}
                                     <code>meaning_en</code> (Excel exports often use short names).
+                                </li>
+                                <li>
+                                    For Word / Phrase of the Day, add multiple examples using{' '}
+                                    <code>example_1_en</code>, <code>example_1_hi</code>, <code>example_2_en</code>,{' '}
+                                    <code>example_2_hi</code>, and so on — no JSON required.
                                 </li>
                             </Box>
                             {calendarDate && (
@@ -272,6 +308,13 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                     <>
                         <Alert severity="info" sx={{ mb: 2 }}>
                             {schema.description}
+                            {(bulkType === 'WORD' || bulkType === 'PHRASE') && (
+                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                    Multiple examples: use <code>example_1_en</code> / <code>example_1_hi</code>, then{' '}
+                                    <code>example_2_en</code> / <code>example_2_hi</code>, up to 5 pairs. Leave unused
+                                    columns empty. Only use <code>examples_json</code> if you prefer raw JSON.
+                                </Typography>
+                            )}
                             {schema.groupHint && (
                                 <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
                                     Grouped import: {schema.groupHint}
@@ -421,6 +464,11 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                 {validatedPayloads && validatedPayloads.length > 0 && validationErrors.length === 0 && (
                     <Alert severity="success" sx={{ mt: 2 }}>
                         Validation passed. {validatedPayloads.length} record(s) ready to import.
+                        {validatedPayloads.length > BULK_IMPORT_BATCH_SIZE && (
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                Large files import in batches of {BULK_IMPORT_BATCH_SIZE} records.
+                            </Typography>
+                        )}
                     </Alert>
                 )}
 
@@ -455,7 +503,10 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                 )}
                 {activeStep === STEPS.length - 1 && validatedPayloads && validatedPayloads.length > 0 && (
                     <Button variant="contained" onClick={() => void handleImport()} disabled={busy}>
-                        Import {validatedPayloads.length} record(s)
+                        {importBatchLabel ||
+                            `Import ${validatedPayloads.length} record(s)${
+                                validatedPayloads.length > BULK_IMPORT_BATCH_SIZE ? ' in batches' : ''
+                            }`}
                     </Button>
                 )}
             </DialogActions>

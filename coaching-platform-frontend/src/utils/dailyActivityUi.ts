@@ -53,16 +53,25 @@ export function canShowNextNavigation(
     return !isContentScheduledToday(currentDate) && hasNextFromApi;
 }
 
-export const activityCardShell = (borderColor: string): SxProps<Theme> => ({
+/** Outer wrapper for two-card activities (content + practice). */
+export const activityCardStackSx: SxProps<Theme> = {
     maxWidth: 800,
-    margin: '0 auto',
+    mx: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: { xs: 2.5, sm: 3 },
+    my: { xs: 1.25, sm: 1.5 },
+    width: '100%',
+};
+
+export const activityCardShell = (borderColor: string): SxProps<Theme> => ({
+    width: '100%',
     borderRadius: 3,
     overflow: 'hidden',
     position: 'relative',
     border: `2px solid ${borderColor}`,
     bgcolor: '#0f172a',
     boxShadow: `0 0 24px ${alpha(borderColor, 0.35)}`,
-    mb: 2.5,
 });
 
 /** Props for MUI Card shells used across daily content activities */

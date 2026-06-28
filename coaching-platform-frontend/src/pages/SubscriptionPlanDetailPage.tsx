@@ -22,6 +22,7 @@ import LockRoundedIcon from '@mui/icons-material/LockRounded';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import { useAuth } from '../contexts/AuthContext';
 import LazyImage from '../components/common/LazyImage';
+import RichTextContent from '../components/common/RichTextContent';
 import {
     createRazorpayOrder,
     verifyRazorpayPayment,
@@ -502,17 +503,16 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                         </Stack>
 
                         {plan.description && (
-                            <Typography
-                                variant="body2"
+                            <RichTextContent
+                                html={plan.description}
+                                variant="light"
                                 sx={{
                                     display: { xs: 'block', md: 'none' },
                                     mb: 1.5,
-                                    color: '#475569',
-                                    lineHeight: 1.6,
+                                    '& p': { typography: 'body2', lineHeight: 1.6, mb: 0.75, color: '#475569' },
+                                    '& p:last-child': { mb: 0 },
                                 }}
-                            >
-                                {plan.description}
-                            </Typography>
+                            />
                         )}
 
                         <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 0.5 }}>
@@ -557,12 +557,16 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                     {plan.name}
                                 </Typography>
                                 {plan.description && (
-                                    <Typography
-                                        variant="body1"
-                                        sx={{ mt: 1.5, color: '#475569', maxWidth: 720, lineHeight: 1.65 }}
-                                    >
-                                        {plan.description}
-                                    </Typography>
+                                    <RichTextContent
+                                        html={plan.description}
+                                        variant="light"
+                                        sx={{
+                                            mt: 1.5,
+                                            maxWidth: 720,
+                                            '& p': { typography: 'body1', lineHeight: 1.65, mb: 1, color: '#475569' },
+                                            '& p:last-child': { mb: 0 },
+                                        }}
+                                    />
                                 )}
                             </Box>
 
@@ -688,13 +692,15 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                         {plan.course.title}
                                     </Typography>
                                     {plan.course.description && (
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                            sx={{ mt: 1.5, lineHeight: 1.65 }}
-                                        >
-                                            {plan.course.description}
-                                        </Typography>
+                                        <RichTextContent
+                                            html={plan.course.description}
+                                            variant="light"
+                                            sx={{
+                                                mt: 1.5,
+                                                '& p': { typography: 'body2', lineHeight: 1.65, mb: 1, color: 'text.secondary' },
+                                                '& p:last-child': { mb: 0 },
+                                            }}
+                                        />
                                     )}
                                     <Button
                                         component={RouterLink}

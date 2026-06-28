@@ -23,6 +23,7 @@ const VerifyEmailPage: React.FC = () => {
     const { verifyAndLogin, resendOtp } = useAuth();
 
     const email = searchParams.get('email');
+    const phone = searchParams.get('phone');
 
     const [otp, setOtp] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -156,6 +157,7 @@ const VerifyEmailPage: React.FC = () => {
                     open={pinDialogOpen}
                     loginPin={revealedPin}
                     email={email ?? undefined}
+                    phoneNumber={phone ?? undefined}
                     onClose={handlePinDialogClose}
                 />
             )}

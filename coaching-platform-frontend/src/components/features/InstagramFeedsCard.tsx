@@ -9,6 +9,7 @@ import ActivityTierNavFooter from './ActivityTierNavFooter';
 import InstagramPostCard from './InstagramPostCard';
 import {
     activityCardProps,
+    activityCardStackSx,
     GOLD_ACCENT,
     refreshAdjacentFlags,
     canShowNextNavigation,
@@ -27,7 +28,7 @@ interface InstagramFeedsCardProps {
 const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({
     data,
     onContentChange,
-    onNavigateToLyrics,
+    onNavigateToSpeech,
 }) => {
     const [isLoadingNav, setIsLoadingNav] = useState(false);
     const [currentContent, setCurrentContent] = useState<DailyContent>(data);
@@ -68,7 +69,7 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({
     const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
 
     return (
-        <Box sx={{ maxWidth: { xs: '100%', sm: 800 }, mx: 'auto' }}>
+        <Box sx={activityCardStackSx}>
             <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
@@ -114,8 +115,8 @@ const InstagramFeedsCard: React.FC<InstagramFeedsCardProps> = ({
                             loading: isLoadingNav,
                         }}
                         center={{
-                            label: '← Song Lyrics',
-                            onClick: onNavigateToLyrics,
+                            label: '→ Famous Speeches',
+                            onClick: onNavigateToSpeech,
                         }}
                         right={{
                             label: 'Next Feed',

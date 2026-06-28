@@ -23,6 +23,7 @@
     "pinCopied": "Copied!",
     "pinAlsoEmailed": "The Verble team has also sent this PIN to your email for your records.",
     "pinAlsoEmailedTo": "The Verble team has also sent this PIN to {{email}} for your records.",
+    "pinSignInWithPhone": "Sign in with {{phone}} and this PIN.",
     "pinKeepSafeHint": "Keep your PIN private. You can change it anytime from your dashboard after signing in.",
     "createAccount": "Create your account",
     "registrationPinInfo": "After email verification you'll see your 6-digit login PIN on screen—we'll also email it to you. Sign in with phone + PIN only.",

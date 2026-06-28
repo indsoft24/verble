@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
+import { useAdminVideosListFilters } from '../hooks/useAdminVideosListFilters';
 import {
     Container, Typography, Button, CircularProgress, Alert, Box, Paper, Tooltip, Chip,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
@@ -15,7 +16,6 @@ import {
     GridActionsCellItem,
     type GridRowId,
     type GridRenderCellParams,
-    type GridPaginationModel,
 } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -50,22 +50,6 @@ interface VideoDataGridRow extends VideoMetadata {
     id: string;
 }
 
-type GroupingMode = 'flat' | 'course-module' | 'module';
-
-// Debounce hook for search
-const useDebounce = (value: string, delay: number) => {
-    const [debouncedValue, setDebouncedValue] = useState(value);
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [value, delay]);
-    return debouncedValue;
-};
-
 // Date formatter
 const gridDateFormatter = (value: string | undefined | null): string => {
     if (!value) return '';
@@ -89,21 +73,28 @@ const AdminVideosListPage: React.FC = () => {
     const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
     const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(true);
 
-    // Filter states
-    const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
-    const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([]);
-    const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
-    const [isPublishedFilter, setIsPublishedFilter] = useState<string>('all'); // 'all' | 'published' | 'unpublished'
-    const [videoStatusFilter, setVideoStatusFilter] = useState<string>('all');
-    const [searchTerm, setSearchTerm] = useState<string>('');
-    const debouncedSearchTerm = useDebounce(searchTerm, 500);
-    const [groupingMode, setGroupingMode] = useState<GroupingMode>('flat');
-
-    // Pagination
-    const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
-        page: 0,
-        pageSize: 10,
-    });
+    const {
+        selectedCourseIds,
+        selectedModuleIds,
+        selectedPlanIds,
+        isPublishedFilter,
+        videoStatusFilter,
+        searchTerm,
+        debouncedSearchTerm,
+        groupingMode,
+        paginationModel,
+        setSelectedCourseIds,
+        setSelectedModuleIds,
+        setSelectedPlanIds,
+        setIsPublishedFilter,
+        setVideoStatusFilter,
+        setSearchTerm,
+        setGroupingMode,
+        setPaginationModel,
+        clearFilters,
+        getListSearchString,
+        hasActiveFilters,
+    } = useAdminVideosListFilters();
 
     // Delete dialog
     const [deleteVideoId, setDeleteVideoId] = useState<GridRowId | null>(null);
@@ -202,33 +193,16 @@ const AdminVideosListPage: React.FC = () => {
         fetchVideos(filters);
     }, [buildFilters, fetchVideos]);
 
-    // Reset pagination when filters change
-    useEffect(() => {
-        if (paginationModel.page !== 0) {
-            setPaginationModel(prev => ({ ...prev, page: 0 }));
-        }
-    }, [selectedCourseIds, selectedModuleIds, selectedPlanIds, isPublishedFilter, videoStatusFilter, searchTerm]);
-
-    // Clear all filters
     const handleClearFilters = () => {
-        setSelectedCourseIds([]);
-        setSelectedModuleIds([]);
-        setSelectedPlanIds([]);
-        setIsPublishedFilter('all');
-        setVideoStatusFilter('all');
-        setSearchTerm('');
+        clearFilters();
         setSelectedVideoIds([]);
     };
 
-    // Check if any filters are active
-    const hasActiveFilters = useMemo(() => {
-        return selectedCourseIds.length > 0 ||
-            selectedModuleIds.length > 0 ||
-            selectedPlanIds.length > 0 ||
-            isPublishedFilter !== 'all' ||
-            videoStatusFilter !== 'all' ||
-            debouncedSearchTerm.trim().length > 0;
-    }, [selectedCourseIds, selectedModuleIds, selectedPlanIds, isPublishedFilter, videoStatusFilter, debouncedSearchTerm]);
+    const handleEditVideo = (id: GridRowId) => {
+        navigate(`/admin/videos/edit/${id}`, {
+            state: { videosListSearch: getListSearchString() },
+        });
+    };
 
     // Sort videos based on grouping mode (client-side sorting for current page only)
     // Note: Full grouping across all pages requires client-side pagination, which we don't use
@@ -284,10 +258,6 @@ const AdminVideosListPage: React.FC = () => {
 
     const handleAddVideo = () => {
         navigate('/admin/videos/new');
-    };
-
-    const handleEditVideo = (id: GridRowId) => {
-        navigate(`/admin/videos/edit/${id}`);
     };
 
     const handleDeleteVideo = async () => {
@@ -695,10 +665,6 @@ const AdminVideosListPage: React.FC = () => {
                                 value={courses.filter(c => selectedCourseIds.includes(c._id))}
                                 onChange={(_, newValue) => {
                                     setSelectedCourseIds(newValue.map(c => c._id));
-                                    // Clear module selection when courses change
-                                    if (newValue.length === 0) {
-                                        setSelectedModuleIds([]);
-                                    }
                                 }}
                                 renderInput={(params) => (
                                     <TextField {...params} label="Filter by Course" placeholder="Select courses" />
@@ -821,7 +787,7 @@ const AdminVideosListPage: React.FC = () => {
                                 <Select
                                     value={groupingMode}
                                     label="Group By"
-                                    onChange={(e) => setGroupingMode(e.target.value as GroupingMode)}
+                                    onChange={(e) => setGroupingMode(e.target.value as typeof groupingMode)}
                                 >
                                     <MenuItem value="flat">
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -849,33 +815,42 @@ const AdminVideosListPage: React.FC = () => {
                     {/* Active Filter Chips */}
                     {hasActiveFilters && (
                         <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {selectedCourseIds.length > 0 && (
-                                <Chip
-                                    label={`Courses: ${selectedCourseIds.length}`}
-                                    onDelete={() => setSelectedCourseIds([])}
-                                    size="small"
-                                    color="primary"
-                                    variant="outlined"
-                                />
-                            )}
-                            {selectedModuleIds.length > 0 && (
-                                <Chip
-                                    label={`Modules: ${selectedModuleIds.length}`}
-                                    onDelete={() => setSelectedModuleIds([])}
-                                    size="small"
-                                    color="secondary"
-                                    variant="outlined"
-                                />
-                            )}
-                            {selectedPlanIds.length > 0 && (
-                                <Chip
-                                    label={`Plans: ${selectedPlanIds.length}`}
-                                    onDelete={() => setSelectedPlanIds([])}
-                                    size="small"
-                                    color="info"
-                                    variant="outlined"
-                                />
-                            )}
+                            {courses
+                                .filter((course) => selectedCourseIds.includes(course._id))
+                                .map((course) => (
+                                    <Chip
+                                        key={course._id}
+                                        label={`Course: ${course.title}`}
+                                        onDelete={() => setSelectedCourseIds(selectedCourseIds.filter((id) => id !== course._id))}
+                                        size="small"
+                                        color="primary"
+                                        variant="outlined"
+                                    />
+                                ))}
+                            {modules
+                                .filter((module) => selectedModuleIds.includes(module._id))
+                                .map((module) => (
+                                    <Chip
+                                        key={module._id}
+                                        label={`Module: ${module.title}`}
+                                        onDelete={() => setSelectedModuleIds(selectedModuleIds.filter((id) => id !== module._id))}
+                                        size="small"
+                                        color="secondary"
+                                        variant="outlined"
+                                    />
+                                ))}
+                            {subscriptionPlans
+                                .filter((plan) => selectedPlanIds.includes(plan._id))
+                                .map((plan) => (
+                                    <Chip
+                                        key={plan._id}
+                                        label={`Plan: ${plan.name}`}
+                                        onDelete={() => setSelectedPlanIds(selectedPlanIds.filter((id) => id !== plan._id))}
+                                        size="small"
+                                        color="info"
+                                        variant="outlined"
+                                    />
+                                ))}
                             {isPublishedFilter !== 'all' && (
                                 <Chip
                                     label={`Published: ${isPublishedFilter === 'published' ? 'Yes' : 'No'}`}
@@ -907,10 +882,14 @@ const AdminVideosListPage: React.FC = () => {
                 {/* Results Count */}
                 <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="body2" color="text.secondary">
+                        {hasActiveFilters
+                            ? `${sortedVideos.length} video${sortedVideos.length === 1 ? '' : 's'} match your filters`
+                            : `${sortedVideos.length} video${sortedVideos.length === 1 ? '' : 's'} total`}
+                        {' · '}
                         Showing {Math.min(
                             sortedVideos.length - paginationModel.page * paginationModel.pageSize,
                             paginationModel.pageSize
-                        )} of {sortedVideos.length} videos
+                        )} on this page
                     </Typography>
                 </Box>
 

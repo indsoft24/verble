@@ -74,8 +74,8 @@ const MyRewardsPage: React.FC = () => {
                     </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Leaderboard points are earned when you complete daily activities. Evaluation scores are added
-                    after an admin reviews your submissions.
+                    Leaderboard points are earned when you complete daily activities. Evaluation score includes
+                    admin-reviewed work plus auto-graded puzzles and your best quiz score per module.
                 </Typography>
 
                 {error && (

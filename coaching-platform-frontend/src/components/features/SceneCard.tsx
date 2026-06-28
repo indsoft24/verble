@@ -41,6 +41,7 @@ import { canAccessGoldTierContent } from '../../utils/userAccessState';
 import {
     activityAlertOnDarkSx,
     activityCardProps,
+    activityCardStackSx,
     activityContainedButtonSx,
     activitySubmittedTextSx,
     activitySummaryTextFieldSx,
@@ -52,6 +53,31 @@ import {
 } from '../../utils/dailyActivityUi';
 import ActivityContentHeader from './ActivityContentHeader';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
+import { pairBilingualSegments } from '../../utils/textSegmentUtils';
+import BilingualSegmentList from './BilingualSegmentList';
+
+function normalizeSceneKeywords(metadata: Record<string, unknown> | undefined) {
+    const raw = metadata?.keywords;
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((w) => {
+            if (!w || typeof w !== 'object') return null;
+            const o = w as {
+                word?: string;
+                meaning_en?: string;
+                meaning_hi?: string;
+                translation_hi?: string;
+            };
+            const word = String(o.word ?? '').trim();
+            if (!word) return null;
+            return {
+                word,
+                meaning_en: String(o.meaning_en ?? '').trim(),
+                meaning_hi: String(o.meaning_hi ?? o.translation_hi ?? '').trim(),
+            };
+        })
+        .filter((w): w is { word: string; meaning_en: string; meaning_hi: string } => w !== null);
+}
 
 interface SceneCardProps {
     data: DailyContent;
@@ -328,12 +354,13 @@ const SceneCard: React.FC<SceneCardProps> = ({
     const sceneTitle = currentContent.title || '';
     const imageUrl = currentContent.metadata?.imageUrl || currentContent.metadata?.gifUrl || '';
     const explanation = currentContent.metadata?.explanation || '';
-    const hindiSummary = currentContent.metadata?.hindiSummary || '';
-    const keywords = (currentContent.metadata?.keywords || []) as Array<{
-        word?: string;
-        meaning_hi?: string;
-        translation_hi?: string;
-    }>;
+    const explanationSegments = pairBilingualSegments(
+        explanation,
+        currentContent.metadata?.hindiSummary ?? ''
+    );
+    const keywords = normalizeSceneKeywords(
+        (currentContent.metadata || {}) as Record<string, unknown>
+    );
     const narrationAudio = currentContent.metadata?.audio as string | undefined;
     const reviewedScore =
         existingSubmission?.evaluationPoints ?? existingSubmission?.pointsEarned ?? 0;
@@ -406,7 +433,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
     }
 
     return (
-        <Box sx={{ maxWidth: 900, mx: 'auto' }}>
+        <Box sx={activityCardStackSx}>
             {showConfetti && <ConfettiEffect />}
 
             <Card {...activityCardProps(GOLD_ACCENT)}>
@@ -453,7 +480,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
                         </Box>
                     )}
 
-                    {explanation && (
+                    {explanationSegments.length > 0 && (
                         <Box sx={{ mb: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', flex: 1 }}>
@@ -461,20 +488,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
                                 </Typography>
                                 <SpeakerButton text={explanation} playKey="explanation" audioUrl={narrationAudio} />
                             </Box>
-                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.9), whiteSpace: 'pre-line', lineHeight: 1.8 }}>
-                                {explanation}
-                            </Typography>
-                        </Box>
-                    )}
-
-                    {hindiSummary && (
-                        <Box sx={{ mb: 3 }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', mb: 1 }}>
-                                Hindi Summary
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.75), fontStyle: 'italic', lineHeight: 1.8 }}>
-                                {hindiSummary}
-                            </Typography>
+                            <BilingualSegmentList segments={explanationSegments} accentColor={GOLD_ACCENT} />
                         </Box>
                     )}
 
@@ -491,39 +505,44 @@ const SceneCard: React.FC<SceneCardProps> = ({
                             <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', mb: 1.5 }}>
                                 Keywords
                             </Typography>
-                            {keywords.map((keyword, index) => {
-                                const word = keyword.word || '';
-                                const meaning = keyword.meaning_hi || keyword.translation_hi || '';
-                                return (
-                                    <Box
-                                        key={index}
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'flex-start',
-                                            gap: 1,
-                                            mb: index < keywords.length - 1 ? 1.5 : 0,
-                                        }}
-                                    >
-                                        <Box sx={{ flex: 1 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography variant="body1" sx={{ fontWeight: 700, color: '#f8fafc' }}>
-                                                    {word}
-                                                </Typography>
-                                                {word && <SpeakerButton text={word} playKey={`kw-${index}`} />}
-                                            </Box>
-                                            {meaning && (
-                                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7), mt: 0.25 }}>
-                                                    {meaning}
-                                                </Typography>
-                                            )}
+                            {keywords.map((item, index) => (
+                                <Box
+                                    key={index}
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: 1,
+                                        mb: index < keywords.length - 1 ? 1.5 : 0,
+                                    }}
+                                >
+                                    <Box sx={{ flex: 1 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 700, color: '#f8fafc' }}>
+                                                {item.word}
+                                            </Typography>
+                                            <SpeakerButton text={item.word} playKey={`kw-${index}`} />
                                         </Box>
+                                        {item.meaning_en && (
+                                            <Typography
+                                                variant="caption"
+                                                sx={{ color: alpha('#e2e8f0', 0.75), display: 'block', mt: 0.25 }}
+                                            >
+                                                {item.meaning_en}
+                                            </Typography>
+                                        )}
+                                        {item.meaning_hi && (
+                                            <Typography
+                                                variant="caption"
+                                                sx={{ color: alpha('#e2e8f0', 0.65), display: 'block' }}
+                                            >
+                                                {item.meaning_hi}
+                                            </Typography>
+                                        )}
                                     </Box>
-                                );
-                            })}
+                                </Box>
+                            ))}
                         </Box>
                     )}
-
-                    {tierNavFooter}
                 </CardContent>
             </Card>
 

@@ -9,6 +9,11 @@ import {
 
 export type BulkDailyContentType = AdminContentTypeKey;
 
+/** Number of example_N_en / example_N_hi column pairs for WORD and PHRASE bulk CSV. */
+export const EXAMPLE_PAIR_COUNT = 5;
+
+export type ParsedExample = { en: string; hi: string; audio?: string };
+
 export interface BulkColumnSpec {
     key: string;
     label: string;
@@ -25,6 +30,26 @@ export interface BulkTypeSchema {
     groupHint?: string;
     columns: BulkColumnSpec[];
     exampleRows: string[][];
+}
+
+function exampleColumnSpecs(): BulkColumnSpec[] {
+    const cols: BulkColumnSpec[] = [];
+    for (let i = 1; i <= EXAMPLE_PAIR_COUNT; i++) {
+        cols.push({
+            key: `example_${i}_en`,
+            label: `example_${i}_en`,
+            required: false,
+            hint: i === 1 ? 'Use numbered columns instead of JSON' : undefined,
+            formField: `Example ${i} (English)`,
+        });
+        cols.push({
+            key: `example_${i}_hi`,
+            label: `example_${i}_hi`,
+            required: false,
+            formField: `Example ${i} (Hindi)`,
+        });
+    }
+    return cols;
 }
 
 export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema {
@@ -45,7 +70,14 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                     { key: 'pronunciation_devanagari', label: 'pronunciation_devanagari', required: false, formField: 'Devanagari pronunciation' },
                     { key: 'synonyms', label: 'synonyms', required: false, hint: 'comma-separated', formField: 'Synonyms' },
                     { key: 'antonyms', label: 'antonyms', required: false, hint: 'comma-separated', formField: 'Antonyms' },
-                    { key: 'examples_json', label: 'examples_json', required: false, hint: '[{"en":"","hi":""}]', formField: 'Example sentences (advanced)' },
+                    ...exampleColumnSpecs(),
+                    {
+                        key: 'examples_json',
+                        label: 'examples_json',
+                        required: false,
+                        hint: 'Advanced: [{"en":"","hi":""}] — use example_1_en/hi columns instead',
+                        formField: 'Example sentences (advanced JSON)',
+                    },
                 ],
                 exampleRows: [],
             };
@@ -60,7 +92,14 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                     { key: 'text', label: 'text', required: true, formField: 'Phrase' },
                     { key: 'meaning_en', label: 'meaning_en', required: true, hint: 'or en', formField: 'English meaning' },
                     { key: 'meaning_hi', label: 'meaning_hi', required: true, hint: 'or hi', formField: 'Hindi meaning' },
-                    { key: 'examples_json', label: 'examples_json', required: false, formField: 'Example sentences (advanced)' },
+                    ...exampleColumnSpecs(),
+                    {
+                        key: 'examples_json',
+                        label: 'examples_json',
+                        required: false,
+                        hint: 'Advanced JSON — prefer example_1_en, example_1_hi, example_2_en, …',
+                        formField: 'Example sentences (advanced JSON)',
+                    },
                 ],
                 exampleRows: [],
             };
@@ -182,7 +221,7 @@ export function getBulkSchema(contentType: BulkDailyContentType): BulkTypeSchema
                     { key: 'gif_url', label: 'gif_url', required: false, formField: 'Scene GIF URL' },
                     { key: 'explanation', label: 'explanation', required: false, formField: 'Explanation (English)' },
                     { key: 'hindi_summary', label: 'hindi_summary', required: false, formField: 'Hindi summary' },
-                    { key: 'keywords', label: 'keywords', required: false, hint: 'word:meaning_hi|word2:meaning_hi2', formField: 'Keywords' },
+                    { key: 'keywords', label: 'keywords', required: false, hint: 'word:en:hi|word2:en2:hi2', formField: 'Keywords' },
                     { key: 'metadata_json', label: 'metadata_json', required: false, hint: 'Optional override', formField: 'Advanced JSON override' },
                 ],
                 exampleRows: [],
@@ -418,7 +457,17 @@ const COLUMN_SAMPLE_VALUES: Record<string, string> = {
     pronunciation_devanagari: '',
     synonyms: 'inquisitive, eager',
     antonyms: 'indifferent',
-    examples_json: '[{"en":"She was curious.","hi":"वह जिज्ञासु थी।"}]',
+    example_1_en: 'She was curious about the result.',
+    example_1_hi: 'वह परिणाम के बारे में जिज्ञासु थी।',
+    example_2_en: 'A curious mind learns faster.',
+    example_2_hi: 'जिज्ञासु दिमाग तेजी से सीखता है।',
+    example_3_en: '',
+    example_3_hi: '',
+    example_4_en: '',
+    example_4_hi: '',
+    example_5_en: '',
+    example_5_hi: '',
+    examples_json: '',
     text_content: 'Once there was a boy.\\nHe returned a wallet.',
     story_title: 'The honest boy',
     moral_en: 'Honesty matters',
@@ -469,13 +518,16 @@ export function buildExampleCsvFromSchema(schema: BulkTypeSchema): string {
     return lines.join('\n');
 }
 
-function parseSceneKeywords(s: string): { word: string; meaning_hi: string }[] {
+function parseSceneKeywords(s: string): { word: string; meaning_en: string; meaning_hi: string }[] {
     if (!s.trim()) return [];
     return s
         .split('|')
         .map((part) => {
-            const [word, meaning_hi] = part.split(':').map((x) => x.trim());
-            return { word: word || '', meaning_hi: meaning_hi || '' };
+            const bits = part.split(':').map((x) => x.trim());
+            if (bits.length >= 3) {
+                return { word: bits[0] || '', meaning_en: bits[1] || '', meaning_hi: bits[2] || '' };
+            }
+            return { word: bits[0] || '', meaning_en: '', meaning_hi: bits[1] || '' };
         })
         .filter((k) => k.word);
 }
@@ -500,6 +552,109 @@ function parseSpeechPhrases(s: string): { phrase: string; meaning_en: string; me
             return { phrase: bits[0] || '', meaning_en: bits[1] || '', meaning_hi: bits[2] || '' };
         })
         .filter((p) => p.phrase);
+}
+
+function normalizeJsonLike(raw: string): string {
+    return raw
+        .replace(/^\uFEFF/, '')
+        .trim()
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'");
+}
+
+function tryParseJsonArray(raw: string): unknown[] | null {
+    const normalized = normalizeJsonLike(raw);
+    const attempts = [normalized];
+    if (normalized.includes("'") && !normalized.includes('"')) {
+        attempts.push(normalized.replace(/'/g, '"'));
+    }
+    for (const attempt of attempts) {
+        try {
+            const parsed = JSON.parse(attempt);
+            if (Array.isArray(parsed)) return parsed;
+        } catch {
+            /* try next */
+        }
+    }
+    return null;
+}
+
+function parseNumberedExamples(
+    row: Record<string, string>,
+    line: number,
+    errors: string[]
+): { examples: ParsedExample[]; invalid: boolean } {
+    const examples: ParsedExample[] = [];
+    let invalid = false;
+    for (let i = 1; i <= EXAMPLE_PAIR_COUNT; i++) {
+        const en = (row[`example_${i}_en`] ?? '').trim();
+        const hi = (row[`example_${i}_hi`] ?? '').trim();
+        if (!en && !hi) continue;
+        if (en && !hi) {
+            errors.push(`Row ${line}: example_${i}_hi is required when example_${i}_en is set`);
+            invalid = true;
+            continue;
+        }
+        if (hi && !en) {
+            errors.push(`Row ${line}: example_${i}_en is required when example_${i}_hi is set`);
+            invalid = true;
+            continue;
+        }
+        examples.push({ en, hi });
+    }
+    return { examples, invalid };
+}
+
+function parseExamplesFromJson(
+    raw: string,
+    line: number,
+    errors: string[]
+): { examples?: ParsedExample[]; invalid: boolean } {
+    const parsed = tryParseJsonArray(raw);
+    if (!parsed) {
+        errors.push(
+            `Row ${line}: examples_json is not valid JSON — use example_1_en / example_1_hi columns instead`
+        );
+        return { invalid: true };
+    }
+    const examples: ParsedExample[] = [];
+    let invalid = false;
+    for (let j = 0; j < parsed.length; j++) {
+        const item = parsed[j] as { en?: unknown; hi?: unknown; audio?: unknown } | null;
+        if (!item || typeof item.en !== 'string' || typeof item.hi !== 'string') {
+            errors.push(`Row ${line}: examples_json[${j}] needs en and hi strings`);
+            invalid = true;
+        } else {
+            examples.push({
+                en: item.en,
+                hi: item.hi,
+                audio: typeof item.audio === 'string' ? item.audio : undefined,
+            });
+        }
+    }
+    return { examples: examples.length ? examples : undefined, invalid };
+}
+
+/** Parse example sentences from numbered columns (preferred) or examples_json. */
+export function parseExamplesFromRow(
+    row: Record<string, string>,
+    line: number,
+    errors: string[]
+): { examples?: ParsedExample[]; invalid: boolean } {
+    const numbered = parseNumberedExamples(row, line, errors);
+    if (numbered.examples.length > 0) {
+        return { examples: numbered.examples, invalid: numbered.invalid };
+    }
+    if (numbered.invalid) {
+        return { invalid: true };
+    }
+
+    const exJson = (row.examples_json ?? '').trim();
+    if (!exJson) {
+        return { examples: undefined, invalid: false };
+    }
+
+    return parseExamplesFromJson(exJson, line, errors);
 }
 
 function parseMetadataJsonOptional(
@@ -578,36 +733,7 @@ export function validateAndBuildPayloads(
             if (!text) errors.push(`Row ${line}: text is required`);
             if (!meaning_en) errors.push(`Row ${line}: meaning_en is required`);
             if (!meaning_hi) errors.push(`Row ${line}: meaning_hi is required`);
-            let examples: { en: string; hi: string; audio?: string }[] | undefined;
-            let examplesInvalid = false;
-            const exJson = (row.examples_json ?? '').trim();
-            if (exJson) {
-                try {
-                    const parsed = JSON.parse(exJson);
-                    if (!Array.isArray(parsed)) {
-                        errors.push(`Row ${line}: examples_json must be a JSON array`);
-                        examplesInvalid = true;
-                    } else {
-                        examples = [];
-                        for (let j = 0; j < parsed.length; j++) {
-                            const item = parsed[j];
-                            if (!item || typeof item.en !== 'string' || typeof item.hi !== 'string') {
-                                errors.push(`Row ${line}: examples_json[${j}] needs en and hi strings`);
-                                examplesInvalid = true;
-                            } else {
-                                examples.push({
-                                    en: item.en,
-                                    hi: item.hi,
-                                    audio: typeof item.audio === 'string' ? item.audio : undefined,
-                                });
-                            }
-                        }
-                    }
-                } catch {
-                    errors.push(`Row ${line}: examples_json is not valid JSON`);
-                    examplesInvalid = true;
-                }
-            }
+            const { examples, invalid: examplesInvalid } = parseExamplesFromRow(row, line, errors);
             if (!date || !title || !text || !meaning_en || !meaning_hi || examplesInvalid) continue;
             const meta: Record<string, unknown> = {
                 text,

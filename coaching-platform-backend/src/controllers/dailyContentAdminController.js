@@ -344,6 +344,19 @@ export const deleteDailyContentAdmin = asyncHandler(async (req, res) => {
     res.status(200).json({ status: 'success', message: 'Deleted.' });
 });
 
+export const bulkDeleteDailyContentAdmin = asyncHandler(async (req, res) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ status: 'fail', message: 'ids array is required.' });
+    }
+
+    const result = await DailyContent.deleteMany({ _id: { $in: ids } });
+    res.status(200).json({
+        status: 'success',
+        data: { deletedCount: result.deletedCount },
+    });
+});
+
 /** POST /api/admin/daily-content/upload-image */
 export const uploadDailyContentImageAdmin = asyncHandler(async (req, res) => {
     if (!req.file) {

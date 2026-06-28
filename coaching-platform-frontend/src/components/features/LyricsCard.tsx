@@ -40,6 +40,7 @@ import DirectAudioPlayer from './DirectAudioPlayer';
 import {
     activityAlertOnDarkSx,
     activityCardProps,
+    activityCardStackSx,
     activityContainedButtonSx,
     activitySubmittedTextSx,
     activitySummaryTextFieldSx,
@@ -56,6 +57,8 @@ import {
     getSubmissionSummaries,
     isSummarySubmissionReady,
 } from '../../utils/goldSummaryActivityUtils';
+import { useActivitySpeaker } from '../../hooks/useActivitySpeaker';
+import ActivitySpeakerButton from './ActivitySpeakerButton';
 
 const LYRICS_ACCENT = '#e91e63';
 
@@ -89,6 +92,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({
     const [hasPrevious, setHasPrevious] = useState(false);
     const [hasNext, setHasNext] = useState(false);
     const [existingSubmission, setExistingSubmission] = useState<UserLyricsSubmission | null>(null);
+    const { playingKey, play: playLyricsText } = useActivitySpeaker();
 
     const loadSubmission = useCallback(async (lyricsId: string) => {
         if (!user) {
@@ -260,7 +264,7 @@ const LyricsCard: React.FC<LyricsCardProps> = ({
     };
 
     return (
-        <Box sx={{ maxWidth: { xs: '100%', sm: 800 }, mx: 'auto' }}>
+        <Box sx={activityCardStackSx}>
             <Card {...activityCardProps(GOLD_ACCENT)}>
                 <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                     <ActivityContentHeader
@@ -339,22 +343,43 @@ const LyricsCard: React.FC<LyricsCardProps> = ({
                                 </Typography>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <List dense>
-                                    {(words as Record<string, string>[]).map((word, index) => (
-                                        <ListItem
-                                            key={index}
-                                            sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1 }}
-                                        >
-                                            <Typography sx={{ fontWeight: 600, color: '#f8fafc' }}>
-                                                {word.word || word.text}
-                                            </Typography>
-                                            {renderWordMeaning(word) && (
-                                                <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>
-                                                    {renderWordMeaning(word)}
-                                                </Typography>
-                                            )}
-                                        </ListItem>
-                                    ))}
+                                <List dense disablePadding>
+                                    {(words as Record<string, string>[]).map((word, index) => {
+                                        const wordText = word.word || word.text || '';
+                                        return (
+                                            <ListItem
+                                                key={index}
+                                                disableGutters
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'flex-start',
+                                                    justifyContent: 'space-between',
+                                                    gap: 1,
+                                                    py: 1,
+                                                }}
+                                            >
+                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Typography sx={{ fontWeight: 600, color: '#f8fafc' }}>
+                                                        {wordText}
+                                                    </Typography>
+                                                    {renderWordMeaning(word) && (
+                                                        <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>
+                                                            {renderWordMeaning(word)}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                                <ActivitySpeakerButton
+                                                    text={wordText}
+                                                    playKey={`lyrics-word-${index}`}
+                                                    accentColor={LYRICS_ACCENT}
+                                                    playingKey={playingKey}
+                                                    onPlay={playLyricsText}
+                                                    audioUrl={word.audio}
+                                                    ariaLabel={`Play ${wordText}`}
+                                                />
+                                            </ListItem>
+                                        );
+                                    })}
                                 </List>
                             </AccordionDetails>
                         </Accordion>
@@ -388,7 +413,6 @@ const LyricsCard: React.FC<LyricsCardProps> = ({
                             </AccordionDetails>
                         </Accordion>
                     )}
-                    {tierNavFooter}
                 </CardContent>
             </Card>
 

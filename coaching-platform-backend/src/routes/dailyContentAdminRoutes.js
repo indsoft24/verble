@@ -8,6 +8,7 @@ import {
     bulkCreateDailyContentAdmin,
     updateDailyContentAdmin,
     deleteDailyContentAdmin,
+    bulkDeleteDailyContentAdmin,
     uploadDailyContentImageAdmin,
 } from '../controllers/dailyContentAdminController.js';
 import uploadBlogImage from '../middleware/uploadBlogImageMiddleware.js';
@@ -39,6 +40,9 @@ router.post('/', createDailyContentAdmin);
 
 // PATCH /api/admin/daily-content/:id - Update daily content
 router.patch('/:id', updateDailyContentAdmin);
+
+// DELETE /api/admin/daily-content/bulk - Bulk delete (must be before /:id)
+router.delete('/bulk', bulkDeleteDailyContentAdmin);
 
 // DELETE /api/admin/daily-content/:id - Delete daily content
 router.delete('/:id', deleteDailyContentAdmin);

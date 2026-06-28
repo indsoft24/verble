@@ -1,8 +1,9 @@
 // src/pages/static/TermsAndConditionsPage.tsx
 import React from 'react';
-import { Container, Box, Typography, Paper, Link as MuiLink, Divider, Alert } from '@mui/material';
+import { Container, Box, Typography, Paper, Link as MuiLink, Divider } from '@mui/material';
 import GavelIcon from '@mui/icons-material/Gavel';
 import { SITE_CONTACT, siteContactMailto, siteContactPhoneDisplay, siteContactTel } from '../../config/siteContact';
+import { SITE_REFUND_CREDIT_POLICY, siteOwnerDisplayLine } from '../../config/siteBusiness';
 
 const PolicySection = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <Box sx={{ mb: 4 }}>
@@ -90,16 +91,19 @@ const TermsAndConditionsPage: React.FC = () => {
                         </ul>
                     </PolicySection>
 
-                    <PolicySection title="7. Fees, Payments & Non-Refund Policy">
-                        <ul>
-                            <li>All course and webinar fees must be paid in full at the time of enrollment.</li>
-                            <li>
-                                <strong>Important:</strong> All payments are final and strictly non-refundable. By enrolling in a Verble program, you expressly agree to this policy regardless of personal scheduling changes or dissatisfaction.
-                            </li>
-                        </ul>
-                        <Alert severity="warning" icon={false} sx={{ mt: 2 }}>
-                            <strong>By enrolling in any Verble program, you expressly agree to this non-refundable fee policy.</strong>
-                        </Alert>
+                    <PolicySection title="7. Fees, Payments & Refund Policy">
+                        <Typography paragraph>
+                            All course and webinar fees must be paid in full at the time of enrollment. We aim to ensure total satisfaction with our educational tracks through the following structured refund guidelines:
+                        </Typography>
+                        <Typography paragraph>
+                            <strong>Standard Website Purchases (7-Day Satisfaction Guarantee):</strong> If you purchase any course directly through our website at the standard listed price and find that the content does not align with your learning goals, you are eligible for a full refund within 07 days from the date of purchase. No questions will be asked. To initiate a refund, please contact our support team within this 7-day window.
+                        </Typography>
+                        <Typography paragraph>
+                            <strong>Webinar and Campaign Promotional Purchases:</strong> To make high-impact learning accessible to a wider audience, we periodically offer heavily discounted pricing during special live webinars and marketing campaigns. Because these promotional rates are deeply optimized and incur significant real-time logistical expenses, setup costs, and administrative resources, all purchases made through webinar campaigns or promotional links are strictly final and non-refundable. By enrolling via a promotional campaign, you acknowledge and agree to these terms.
+                        </Typography>
+                        <Typography paragraph>
+                            <strong>Refund Processing Timeline:</strong> {SITE_REFUND_CREDIT_POLICY}
+                        </Typography>
                     </PolicySection>
 
                     <PolicySection title="8. Limitation of Liability">
@@ -164,6 +168,9 @@ const TermsAndConditionsPage: React.FC = () => {
                     <Box sx={{ mt: 4, p: 2, bgcolor: 'grey.200', borderRadius: '8px', textAlign: 'center' }}>
                         <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                             Verble – Empowering Communication, Ethically and Transparently.
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            {siteOwnerDisplayLine}
                         </Typography>
                     </Box>
                 </Paper>

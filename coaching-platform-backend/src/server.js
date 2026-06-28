@@ -49,9 +49,9 @@ app.use(
     })
 );
 
-// Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing — raised for bulk daily-content imports (chunked on client; safety net here)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Video security middleware - validate referrer, user agent, rate limiting
 app.use(validateReferrer);

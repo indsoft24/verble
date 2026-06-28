@@ -1,18 +1,18 @@
 // src/pages/static/WhyJoinUsPage.tsx
 import React from 'react';
 import { Container, Box, Typography, Grid, Paper, Button, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { useStartFreeNavigation } from '../../hooks/useStartFreeNavigation';
 
 // --- Icon Imports for a Professional Look ---
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
-import SchoolIcon from '@mui/icons-material/School';
+import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import PriceCheckIcon from '@mui/icons-material/PriceCheck';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
-import PersonSearchIcon from '@mui/icons-material/PersonSearch';
-import DevicesIcon from '@mui/icons-material/Devices';
-import ForumIcon from '@mui/icons-material/Forum';
-import PsychologyIcon from '@mui/icons-material/Psychology';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import WbSunnyIcon from '@mui/icons-material/WbSunny';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import FlagIcon from '@mui/icons-material/Flag';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -32,27 +32,68 @@ const FeaturePoint = ({ icon, title, text }: { icon: React.ReactNode, title: str
 );
 
 const WhyJoinUsPage: React.FC = () => {
+    const handleStartFree = useStartFreeNavigation();
 
     const whyJoinPoints = [
-        { icon: <SchoolIcon />, title: "1. Learn from India's Best Educators", text: "We bring together a nationwide pool of top-tier educators — from IITians, doctors, IAS mentors, subject toppers, and seasoned professionals. You learn directly from experienced mentors who've walked the path." },
-        { icon: <PriceCheckIcon />, title: "2. Affordable Learning Without Compromise", text: "Quality education shouldn't come at a high cost. We provide premium courses at the lowest possible fees, making learning accessible and inclusive, not commercialized and exclusive." },
-        { icon: <MenuBookIcon />, title: "3. Wide Course Catalogue for Every Stage", text: "Covering school academics, competitive exams (JEE, NEET, UPSC, etc.), skill-building, and new-age courses to keep you ahead." },
-        { icon: <OndemandVideoIcon />, title: "4. Live & Recorded Classes with Flexibility", text: "Join interactive live sessions or revisit lessons anytime with HD recorded lectures. Learn at your own pace, on your schedule." },
-        { icon: <PersonSearchIcon />, title: "5. Personalized Learning for Maximum Impact", text: "Use our smart analytics to track strengths and weaknesses, and get study plans tailored to your learning style. Our goal is to help you learn smarter, not harder." },
-        { icon: <DevicesIcon />, title: "6. Tech-Enabled, Student-Centric Platform", text: "Built on modern Ed-Tech infrastructure with AI tools, digital whiteboards, and smart assessment modules, ensuring zero distraction and maximum productivity." },
-        { icon: <ForumIcon />, title: "7. Community Support & Peer Learning", text: "Join a vibrant community of motivated learners, mentors, and achievers. Learning at Verble goes beyond textbooks—it builds confidence and collaboration." },
-        { icon: <PsychologyIcon />, title: "8. Mentorship That Goes Beyond the Classroom", text: "We don't just prepare you for exams—we prepare you for life. Get access to career counseling, mental wellness support, and life skills coaching." },
-        { icon: <EmojiEventsIcon />, title: "9. Real Success Stories, Real Impact", text: "Thousands of students have cracked exams and gained admission to top colleges through Verble. You're not just joining a platform—you're joining a movement." },
-        { icon: <FlagIcon />, title: "10. Driven by Purpose, Not Profit", text: "Our core purpose is nation-building through education, not just business growth. Every course you take contributes to a larger goal of societal upliftment." },
+        {
+            icon: <BusinessCenterIcon />,
+            title: '1. Learn from an Ex-Corporate Professional with 15 Years of Experience',
+            text: 'You learn directly from an industry veteran with over 15 years of corporate experience. Get insights from a professional who understands exactly what global employers look for, bringing real-world business communication, corporate etiquette, and practical workplace fluency directly into your lessons.',
+        },
+        {
+            icon: <PriceCheckIcon />,
+            title: '2. Affordable Learning Without Compromise',
+            text: "High-quality English education shouldn't carry a premium price tag. We provide impactful language training at the lowest possible fees, making structured fluency accessible and inclusive for everyone—not just a privileged few.",
+        },
+        {
+            icon: <MenuBookIcon />,
+            title: '3. Comprehensive English Tracks for Every Level',
+            text: 'From foundational grammar and daily conversational practice to advanced professional communication and public speaking, our structured tiers cater to all learning levels. Whether you are a student, a job seeker, or a working professional, we have a track for you.',
+        },
+        {
+            icon: <OndemandVideoIcon />,
+            title: '4. Live & Recorded Classes with Flexibility',
+            text: 'Join interactive live practice sessions or revisit foundational lessons anytime with HD recorded lectures. Master language concepts at your own pace and practice speaking on your own schedule.',
+        },
+        {
+            icon: <DashboardIcon />,
+            title: '5. Personalized Dashboard for Maximum Impact',
+            text: 'Track your vocabulary progress, monitor your lesson completion, and access your custom learning materials all in one clean, structured space. Your personalized dashboard removes the guesswork, showing you exactly what to review next to build confidence faster.',
+        },
+        {
+            icon: <WbSunnyIcon />,
+            title: '6. Daily Learning Dose and Participation',
+            text: 'Consistency is key to mastering a language. Receive daily curated bite-sized vocabulary activities, speaking challenges, or grammar tips, and build your confidence through active, daily micro-learning habits that easily fit into a busy routine.',
+        },
+        {
+            icon: <FactCheckIcon />,
+            title: '7. Real Evaluation',
+            text: 'Skip generic automated percentages and multiple-choice guesswork. Benefit from genuine assessment framework checkpoints that pinpoint exact pronunciation errors, grammar slips, and sentence formulation gaps, giving you clear milestones to target for authentic fluency.',
+        },
+        {
+            icon: <SmartToyIcon />,
+            title: '8. Learn Through AI for Maximum Benefit',
+            text: 'Accelerate your growth by interacting with advanced AI learning tools and smart interactive modules. Get instant vocabulary recommendations, tailored conversational simulations, and intuitive feedback designed to make language absorption seamless and fast.',
+        },
+        {
+            icon: <EmojiEventsIcon />,
+            title: '9. Real Success Stories, Real Impact',
+            text: "Thousands of learners have broken through their language barriers, cleared job interviews, and elevated their careers through Verble. You aren't just taking an English course; you are unlocking your full potential.",
+        },
+        {
+            icon: <FlagIcon />,
+            title: '10. Driven by Purpose, Not Profit',
+            text: "Our core mission is empowerment through communication. We believe mastering English is a vital tool for career growth and societal upliftment, ensuring that a language barrier never stands in the way of anyone's dreams.",
+        },
     ];
-    
+
     const summaryPoints = [
-        "Top educators, real results",
-        "Affordable pricing with no compromise on quality",
-        "Flexible, tech-savvy learning at your pace",
-        "Supportive, student-first environment",
-        "Holistic growth — academic, personal, and professional",
-        "Part of a larger vision to uplift India through education",
+        'Corporate-led mentorship with real workplace fluency',
+        'Affordable English training without compromising quality',
+        'Structured tracks from basics to professional communication',
+        'Flexible live and recorded learning on your schedule',
+        'Daily practice, real evaluation, and AI-powered support',
+        'A mission-driven platform built to unlock your potential',
     ];
 
     return (
@@ -110,7 +151,7 @@ const WhyJoinUsPage: React.FC = () => {
                     <Typography color="text.secondary" sx={{my:2, fontSize: '0.9rem'}}>
                         Empower yourself with the right knowledge, the right mentors, and the right mission. Join Verble — where education is not just a service, but a powerful tool for personal and national transformation.
                     </Typography>
-                     <Button component={RouterLink} to="/register" variant="contained" size="large" endIcon={<ArrowForwardIcon />}>
+                     <Button onClick={handleStartFree} variant="contained" size="large" endIcon={<ArrowForwardIcon />}>
                         Get Started Now
                     </Button>
                 </Container>

@@ -22,12 +22,14 @@ import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import SendIcon from '@mui/icons-material/Send';
 import apiClient from '../../services/apiClient';
+import { speakPreferredEnglish } from '../../utils/ttsVoice';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import ActivityContentHeader from './ActivityContentHeader';
 import {
     activityAlertOnDarkSx,
     activityCardProps,
+    activityCardStackSx,
     activityContainedButtonSx,
     activitySentenceReviewSx,
     getContentDisplayNumber,
@@ -301,15 +303,9 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
     };
 
     const playTTS = (word: string, key: string) => {
-        if (synthRef.current && word) {
-            const utterance = new SpeechSynthesisUtterance(word);
-            utterance.lang = 'en-US';
-            utterance.onend = () => setPlayingAudio({ ...playingAudio, [key]: false });
-            utterance.onerror = () => setPlayingAudio({ ...playingAudio, [key]: false });
-            synthRef.current.speak(utterance);
-        } else {
-            setPlayingAudio({ ...playingAudio, [key]: false });
-        }
+        speakPreferredEnglish(word, synthRef.current, () =>
+            setPlayingAudio((prev) => ({ ...prev, [key]: false }))
+        );
     };
 
     const handleSubmitSentences = async (e: React.FormEvent) => {
@@ -460,7 +456,7 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
     );
 
     return (
-        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+        <Box sx={activityCardStackSx}>
             {showConfetti && <ConfettiEffect />}
 
             <Card {...activityCardProps(GOLD_ACCENT)}>
@@ -556,8 +552,6 @@ const VocabularySetCard: React.FC<VocabularySetCardProps> = ({
                             </Box>
                         ))}
                     </Box>
-
-                    {tierNavFooter}
                 </CardContent>
             </Card>
 

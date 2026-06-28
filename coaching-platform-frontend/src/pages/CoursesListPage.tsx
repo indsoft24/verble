@@ -21,6 +21,7 @@ import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LockIcon from '@mui/icons-material/Lock';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import RichTextContent from '../components/common/RichTextContent';
 import {
     getAllLawCoursesForUser,
     getPublishedCourseWithModulesForUser,
@@ -31,6 +32,7 @@ import { getActiveSubscriptionPlans, type SubscriptionPlanPublic } from '../serv
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl, getSplashImageUrl } from '../utils/imageUtils';
 import { extractId } from '../utils/idUtils';
+import CourseValueBreakdownSection from '../components/marketing/CourseValueBreakdownSection';
 
 /** Pexels stock images — same CDN pattern as `LandingPage.tsx` */
 const COURSES_STOCK_IMAGES = {
@@ -278,7 +280,6 @@ const CoursesListPage: React.FC = () => {
     const handleCardClick = (event: React.MouseEvent, courseId: string) => {
         if (!isAuthenticated) {
             event.preventDefault();
-            alert('Please log in or register to view course details.');
             navigate('/login', { state: { from: `/courses/${courseId}` } });
         }
     };
@@ -544,13 +545,36 @@ const CoursesListPage: React.FC = () => {
                                                     </Stack>
                                                 </AccordionSummary>
                                                 <AccordionDetails sx={{ pt: 0 }}>
-                                                    <Stack component="ul" spacing={0.7} sx={{ m: 0, pl: 2.4 }}>
-                                                        {(module.chapters && module.chapters.length ? module.chapters : [module.description || 'Module details available in course']).map((chapter) => (
-                                                            <Typography key={chapter} component="li" sx={{ color: '#475569', lineHeight: 1.6 }}>
-                                                                {chapter}
-                                                            </Typography>
-                                                        ))}
-                                                    </Stack>
+                                                    {module.chapters && module.chapters.length > 0 ? (
+                                                        <Stack component="ul" spacing={0.7} sx={{ m: 0, pl: 2.4 }}>
+                                                            {module.chapters.map((chapter, chapterIndex) => (
+                                                                <Typography
+                                                                    key={`${module._id}-chapter-${chapterIndex}`}
+                                                                    component="li"
+                                                                    sx={{ color: '#475569', lineHeight: 1.6 }}
+                                                                >
+                                                                    {chapter}
+                                                                </Typography>
+                                                            ))}
+                                                        </Stack>
+                                                    ) : (
+                                                        <RichTextContent
+                                                            html={module.description}
+                                                            variant="light"
+                                                            sx={{
+                                                                '& p': { typography: 'body2', lineHeight: 1.6, mb: 0.75, color: '#475569' },
+                                                                '& p:last-child': { mb: 0 },
+                                                                '& ul, & ol': { pl: 2.5, mb: 1 },
+                                                                '& li': { color: '#475569', lineHeight: 1.6, mb: 0.35 },
+                                                                '& strong': { fontWeight: 700, color: '#0F172A' },
+                                                            }}
+                                                            fallback={(
+                                                                <Typography sx={{ color: '#475569', lineHeight: 1.6 }}>
+                                                                    Module details available in course
+                                                                </Typography>
+                                                            )}
+                                                        />
+                                                    )}
                                                 </AccordionDetails>
                                             </Accordion>
                                         </Grid>
@@ -562,31 +586,7 @@ const CoursesListPage: React.FC = () => {
 
                 {coursePlans.length > 0 && (
                     <SectionWrapper sx={{ pt: { xs: 2, md: 4 } }}>
-                        <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid #E5E7EB', bgcolor: '#FFFFFF' }}>
-                            <Typography component="h2" sx={{ fontSize: { xs: '1.4rem', md: '1.75rem' }, fontWeight: 800, mb: 2 }}>
-                                Course Value Breakdown
-                            </Typography>
-                            <Grid container spacing={2}>
-                                {coursePlans
-                                    .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999))
-                                    .map((plan) => (
-                                        <Grid key={plan._id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, height: '100%' }}>
-                                                <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{plan.name}</Typography>
-                                                <Typography sx={{ color: '#475569', fontSize: '0.9rem', mb: 1 }}>{plan.description}</Typography>
-                                                <Typography sx={{ fontWeight: 700, color: '#0F172A' }}>
-                                                    ₹{Number(plan.price || 0).toLocaleString('en-IN')}
-                                                </Typography>
-                                                {typeof plan.marketValue === 'number' && (
-                                                    <Typography sx={{ color: '#64748B', fontSize: '0.82rem' }}>
-                                                        Market value: ₹{Number(plan.marketValue).toLocaleString('en-IN')}
-                                                    </Typography>
-                                                )}
-                                            </Paper>
-                                        </Grid>
-                                    ))}
-                            </Grid>
-                        </Paper>
+                        <CourseValueBreakdownSection plans={coursePlans} />
                     </SectionWrapper>
                 )}
 

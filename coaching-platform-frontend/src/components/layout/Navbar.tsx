@@ -114,7 +114,7 @@ const Navbar: React.FC = () => {
                                     <MenuItem onClick={handleCloseNavMenu} component={RouterLink} to="/login">
                                         <Typography>{t('common.login')}</Typography>
                                     </MenuItem>
-                                    <MenuItem onClick={handleCloseNavMenu} component={RouterLink} to="/register">
+                                    <MenuItem onClick={handleCloseNavMenu} component={RouterLink} to="/dashboard">
                                         <Typography fontWeight={600}>{t('common.getStarted')}</Typography>
                                     </MenuItem>
                                 </>
@@ -215,7 +215,7 @@ const Navbar: React.FC = () => {
                                 <Button
                                     variant="contained"
                                     component={RouterLink}
-                                    to="/register"
+                                    to="/dashboard"
                                     size={isXs ? 'small' : 'medium'}
                                     sx={{
                                         minWidth: 0,

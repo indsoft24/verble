@@ -81,8 +81,31 @@ export function applyPreferredFemaleEnVoice(utterance: SpeechSynthesisUtterance)
 export function primeSpeechSynthesisVoices(): void {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
     try {
+        ensureVoicesChangedListener();
         window.speechSynthesis.getVoices();
     } catch {
         /* ignore */
     }
+}
+
+/**
+ * Speak English with the same preferred female voice used in Scene / Word activities.
+ * Cancels any in-progress speech on the given synthesizer before speaking.
+ */
+export function speakPreferredEnglish(
+    text: string,
+    synth: SpeechSynthesis | null | undefined,
+    onDone?: () => void
+): void {
+    if (!synth || !text.trim()) {
+        onDone?.();
+        return;
+    }
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    applyPreferredFemaleEnVoice(utterance);
+    const finish = () => onDone?.();
+    utterance.onend = finish;
+    utterance.onerror = finish;
+    synth.speak(utterance);
 }

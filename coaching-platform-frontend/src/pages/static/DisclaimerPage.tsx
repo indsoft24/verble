@@ -3,6 +3,7 @@ import React from 'react';
 import { Container, Box, Typography, Paper, List, ListItem, ListItemText, Link as MuiLink } from '@mui/material';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import GavelIcon from '@mui/icons-material/Gavel';
+import { SITE_REFUND_CREDIT_POLICY, siteOwnerDisplayLine } from '../../config/siteBusiness';
 
 const PolicySection = ({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) => (
     <Box sx={{ mb: 4 }}>
@@ -103,12 +104,19 @@ const DisclaimerPage: React.FC = () => {
                         </List>
                     </PolicySection>
 
-                    <PolicySection icon={<GavelIcon />} title="7. Refund Policy">
-                        <List dense>
-                            <ListItem>
-                                <ListItemText primary="As per our Terms & Conditions, all payments for courses, webinars, and digital materials are final and non-refundable. We do not entertain refund requests based on personal scheduling conflicts or individual dissatisfaction with the learning pace." />
-                            </ListItem>
-                        </List>
+                    <PolicySection icon={<GavelIcon />} title="7. Refund & Satisfaction Disclaimer">
+                        <Typography paragraph>
+                            We want your learning journey with Verble to be seamless and fulfilling. Our commitment to transparency guides our registration policy:
+                        </Typography>
+                        <Typography paragraph>
+                            <strong>Standard Enrollment Guarantee:</strong> Any course purchased directly through our website at the standard listed price includes a 07-day satisfaction window. If you find that the program does not meet your current learning needs, you are eligible for a hassle-free, full refund within 07 days of your purchase—no questions asked.
+                        </Typography>
+                        <Typography paragraph>
+                            <strong>Promotional & Webinar Campaign Sales:</strong> To support a broad learning community, we frequently offer specialized programs at exceptionally reduced rates during live webinars and promotional campaigns. Because of the substantial operational resources and real-time logistical infrastructure required to host these large-scale events, all purchases made through webinar campaigns, special discount links, or promotional offers are strictly final and non-refundable. Except as explicitly covered by our 7-day standard guarantee, Verble does not offer refunds or credits for personal scheduling conflicts, changes in individual availability, or personal learning pace preferences. We encourage all students to review course curriculum details prior to finalizing their enrollment.
+                        </Typography>
+                        <Typography paragraph>
+                            <strong>Refund Processing Timeline:</strong> {SITE_REFUND_CREDIT_POLICY}
+                        </Typography>
                     </PolicySection>
 
                     <PolicySection icon={<GavelIcon />} title="8. Learner Responsibility">
@@ -154,6 +162,9 @@ const DisclaimerPage: React.FC = () => {
                     <Box sx={{ mt: 4, textAlign: 'center' }}>
                         <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                             Verble – Empowering Communication, Ethically and Transparently.
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            {siteOwnerDisplayLine}
                         </Typography>
                     </Box>
                 </Paper>

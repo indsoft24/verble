@@ -131,6 +131,84 @@ export interface BulkCreateDailyContentResult {
     content?: DailyContent[];
 }
 
+export const BULK_IMPORT_BATCH_SIZE = 25;
+
+export function splitIntoBatches<T>(items: T[], batchSize = BULK_IMPORT_BATCH_SIZE): T[][] {
+    const batches: T[][] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+        batches.push(items.slice(i, i + batchSize));
+    }
+    return batches;
+}
+
+export interface BulkImportProgress {
+    batchIndex: number;
+    totalBatches: number;
+    processedCount: number;
+    totalCount: number;
+}
+
+/**
+ * Bulk create daily content in batches to avoid request body size limits.
+ */
+export const bulkCreateDailyContentAdminChunked = async (
+    items: CreateDailyContentPayload[],
+    options?: {
+        batchSize?: number;
+        onProgress?: (progress: BulkImportProgress) => void;
+    }
+): Promise<BulkCreateDailyContentResult> => {
+    const batchSize = options?.batchSize ?? BULK_IMPORT_BATCH_SIZE;
+    const batches = splitIntoBatches(items, batchSize);
+    let createdCount = 0;
+    let failedCount = 0;
+    const failures: { index: number; message: string }[] = [];
+    const content: DailyContent[] = [];
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        const baseIndex = batchIndex * batchSize;
+
+        options?.onProgress?.({
+            batchIndex: batchIndex + 1,
+            totalBatches: batches.length,
+            processedCount: baseIndex,
+            totalCount: items.length,
+        });
+
+        try {
+            const result = await bulkCreateDailyContentAdmin(batch);
+            createdCount += result.createdCount;
+            failedCount += result.failedCount;
+            for (const failure of result.failures) {
+                failures.push({ index: baseIndex + failure.index, message: failure.message });
+            }
+            if (result.content?.length) {
+                content.push(...result.content);
+            }
+        } catch (error: unknown) {
+            const msg =
+                error && typeof error === 'object' && 'response' in error
+                    ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+                    : null;
+            const batchMessage = msg || (error instanceof Error ? error.message : 'Batch import failed.');
+            for (let i = 0; i < batch.length; i++) {
+                failures.push({ index: baseIndex + i, message: batchMessage });
+            }
+            failedCount += batch.length;
+        }
+
+        options?.onProgress?.({
+            batchIndex: batchIndex + 1,
+            totalBatches: batches.length,
+            processedCount: Math.min(baseIndex + batch.length, items.length),
+            totalCount: items.length,
+        });
+    }
+
+    return { createdCount, failedCount, failures, content };
+};
+
 /**
  * Bulk create daily content (validated CSV on the client first).
  */
@@ -183,6 +261,19 @@ export const updateDailyContentAdmin = async (
  */
 export const deleteDailyContentAdmin = async (id: string): Promise<void> => {
     await apiClient.delete(`/admin/daily-content/${id}`);
+};
+
+/**
+ * Bulk delete daily content by id
+ */
+export const bulkDeleteDailyContentAdmin = async (
+    ids: string[]
+): Promise<{ deletedCount: number }> => {
+    const response = await apiClient.delete<{
+        status: string;
+        data: { deletedCount: number };
+    }>('/admin/daily-content/bulk', { data: { ids } });
+    return response.data.data;
 };
 
 /** Upload image for daily content (feed posts, scenes, etc.) */

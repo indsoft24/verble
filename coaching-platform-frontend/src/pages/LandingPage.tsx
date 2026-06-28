@@ -1,7 +1,7 @@
 // src/pages/LandingPage.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { Link as RouterLink } from 'react-router-dom';
+import { useStartFreeNavigation } from '../hooks/useStartFreeNavigation';
 import {
     Container,
     Box,
@@ -330,8 +330,7 @@ const MasterTierCard: React.FC<MasterTierCardProps> = ({
 const LandingPage: React.FC = () => {
     const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
     const [catalogPlans, setCatalogPlans] = useState<Awaited<ReturnType<typeof getActiveSubscriptionPlans>>>([]);
-    const { isAuthenticated, user } = useAuth();
-    const navigate = useNavigate();
+    const handleStartFreeModule = useStartFreeNavigation();
 
     useEffect(() => {
         getActiveSubscriptionPlans({ includeAll: true })
@@ -349,17 +348,6 @@ const LandingPage: React.FC = () => {
 
     const handleCheckboxChange = (index: number) => {
         setCheckedItems(prev => ({ ...prev, [index]: !prev[index] }));
-    };
-
-    const handleStartFreeModule = () => {
-        if (isAuthenticated && user) {
-            // User is logged in, redirect to dashboard
-            const dashboardPath = user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
-            navigate(dashboardPath);
-        } else {
-            // User is not logged in, redirect to registration
-            navigate('/register');
-        }
     };
 
     const whoIsThisFor = [

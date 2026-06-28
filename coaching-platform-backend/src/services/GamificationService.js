@@ -14,7 +14,7 @@ class GamificationService {
      * @param {string} contentId - DailyContent ID
      * @param {number} points - Participation points (defaults to 10)
      */
-    static async recordActivity(userId, contentId, points = 10) {
+    static async recordActivity(userId, contentId, points = 10, ledgerOptions = null) {
         try {
             // Validate inputs
             if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(contentId)) {
@@ -79,19 +79,29 @@ class GamificationService {
             user.markModified('dailyProgress');
             await user.save();
 
-            const activityTitle = content.title || content.contentType || 'Daily activity';
+            const activityTitle = content.title || content.type || 'Daily activity';
+            const ledgerCategory = ledgerOptions?.category || 'participation';
+            const ledgerTitle =
+                ledgerOptions?.title ||
+                (ledgerCategory === 'participation'
+                    ? `Participation: ${activityTitle}`
+                    : activityTitle);
             await appendLedgerEntry({
                 userId,
-                category: 'participation',
+                category: ledgerCategory,
                 points,
                 delta: points,
-                title: `Participation: ${activityTitle}`,
-                sourceType: 'daily_content',
-                sourceId: contentId.toString(),
-                eventKind: 'participation',
+                title: ledgerTitle,
+                sourceType: ledgerOptions?.sourceType || 'daily_content',
+                sourceId: ledgerOptions?.sourceId || contentId.toString(),
+                eventKind: ledgerOptions?.eventKind || 'participation',
                 status: 'approved',
-                occurredAt: new Date(),
-                meta: { contentType: content.contentType },
+                occurredAt: ledgerOptions?.occurredAt || new Date(),
+                meta: {
+                    contentType: content.type,
+                    contentId: contentId.toString(),
+                    ...(ledgerOptions?.meta || {}),
+                },
             });
 
             return {
@@ -109,13 +119,13 @@ class GamificationService {
      * Run participation gamification after a submission (streak, points, level-up).
      * @returns {{ participationPointsAwarded: number, progress: object|null, levelUp: object|null }}
      */
-    static async runParticipationGamification(userId, contentId, points = 10) {
+    static async runParticipationGamification(userId, contentId, points = 10, ledgerOptions = null) {
         let participationPointsAwarded = 0;
         let levelUp = null;
         let progress = null;
 
         try {
-            const gamificationResult = await this.recordActivity(userId, contentId, points);
+            const gamificationResult = await this.recordActivity(userId, contentId, points, ledgerOptions);
             participationPointsAwarded = gamificationResult?.success ? points : 0;
             progress = gamificationResult?.progress ?? null;
             levelUp = await this.checkLevelUp(userId);

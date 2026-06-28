@@ -25,7 +25,7 @@ export const practicalConversationTheme = {
     practicePanelBg: courseLearningTheme.bandBg,
     practiceBorder: `1px solid ${alpha(COURSE_LEARNING_ACCENT, 0.45)}`,
     cardShadow: `0 0 24px ${alpha(COURSE_LEARNING_ACCENT, 0.2)}`,
-    /** Unified pro-mobile column width (large-phone logical width, full width on xs) */
-    frameMaxWidth: { xs: '100%', sm: 520 },
+    /** Match daily activity card width (activityCardStackSx) */
+    frameMaxWidth: 800,
     frameWidth: '100%',
 } as const;

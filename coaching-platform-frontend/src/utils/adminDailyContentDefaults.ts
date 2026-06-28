@@ -10,6 +10,7 @@ export const emptyVocabItem = () => ({
 
 export const emptySceneKeyword = () => ({
     word: '',
+    meaning_en: '',
     meaning_hi: '',
 });
 
@@ -106,7 +107,13 @@ export function getDefaultMetadataForType(
                     description: '',
                     tags: [] as string[],
                     relatedContentIds: [] as string[],
-                    dialogue: Array.from({ length: 5 }, emptyDialogueLine),
+                    participant1: 'Interviewer',
+                    participant2: 'Candidate',
+                    participants: ['Interviewer', 'Candidate'],
+                    dialogue: Array.from({ length: 5 }, () => ({
+                        ...emptyDialogueLine(),
+                        speaker: 'Interviewer',
+                    })),
                 };
             }
             return {

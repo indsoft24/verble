@@ -17,6 +17,24 @@ export function getConversationTags(conv: DailyContent): string[] {
     return tags.filter((t): t is string => typeof t === 'string' && t.trim() !== '');
 }
 
+/** Unique sorted tag labels from professional conversation library entries. */
+export function collectProfessionalConversationTagOptions(conversations: DailyContent[]): string[] {
+    const seen = new Map<string, string>();
+    for (const conv of conversations) {
+        const isProfessional =
+            conv.metadata?.isProfessionalLibrary === true || conv.level === 'GOLD';
+        if (!isProfessional) continue;
+        for (const tag of getConversationTags(conv)) {
+            const trimmed = tag.trim();
+            const key = trimmed.toLowerCase();
+            if (trimmed && !seen.has(key)) {
+                seen.set(key, trimmed);
+            }
+        }
+    }
+    return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+}
+
 export interface ProfessionalTagIndex {
     sortedTags: string[];
     byTag: Map<string, DailyContent[]>;

@@ -1,4 +1,4 @@
-import React, { useState, type FormEvent } from 'react';
+import React, { useState, useEffect, type FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
@@ -30,8 +30,14 @@ const RegistrationPage: React.FC = () => {
     const [formError, setFormError] = useState<string | null>(null);
 
     const { addNotification } = useNotification();
-    const { register } = useAuth();
+    const { register, isAuthenticated, user } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            navigate(user.role === 'admin' ? '/admin/dashboard' : '/dashboard', { replace: true });
+        }
+    }, [isAuthenticated, user, navigate]);
 
     const handleRegistrationSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -61,7 +67,11 @@ const RegistrationPage: React.FC = () => {
                 agreedToTerms: true,
             });
             addNotification(t('auth.registrationOtpSent'), 'success');
-            navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+            const params = new URLSearchParams({
+                email: email.trim(),
+                phone: formatted,
+            });
+            navigate(`/verify-email?${params.toString()}`);
         } catch (err: unknown) {
             const error = err as { message?: string };
             const msg = error.message || t('auth.registrationFailed');

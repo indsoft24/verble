@@ -4,6 +4,7 @@ import { Container, Box, Typography, Paper, Link as MuiLink, List, ListItem, Lis
 import SecurityIcon from '@mui/icons-material/Security';
 import GavelIcon from '@mui/icons-material/Gavel';
 import { SITE_CONTACT, siteContactMailto } from '../../config/siteContact';
+import { siteOwnerDisplayLine } from '../../config/siteBusiness';
 
 const PolicySection = ({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) => (
     <Box sx={{ mb: 4 }}>
@@ -230,6 +231,9 @@ const PrivacyPolicyPage: React.FC = () => {
                     <Box sx={{ mt: 4, textAlign: 'center' }}>
                         <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                             Verble – Empowering Communication, Ethically and Transparently.
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            {siteOwnerDisplayLine}
                         </Typography>
                     </Box>
                 </Paper>

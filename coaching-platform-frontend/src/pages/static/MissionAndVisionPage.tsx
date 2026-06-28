@@ -1,7 +1,7 @@
 // src/pages/static/MissionAndVisionPage.tsx
 import React from 'react';
 import { Container, Box, Typography, Grid, Button, List, ListItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { useStartFreeNavigation } from '../../hooks/useStartFreeNavigation';
 
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
@@ -25,6 +25,7 @@ const PointList = ({ items }: { items: { primary: string, secondary: string }[] 
 );
 
 const MissionAndVisionPage: React.FC = () => {
+    const handleStartFree = useStartFreeNavigation();
 
     const missionGoals = [
         { primary: "Deliver Quality Education at Minimum Fees", secondary: "Make high-quality online education affordable and accessible to all sections of society, especially the underprivileged. Offer courses at minimal cost without compromising on teaching standards or content quality." },
@@ -105,13 +106,13 @@ const MissionAndVisionPage: React.FC = () => {
             <Box sx={{ py: { xs: 5, md: 7 }, bgcolor: 'grey.100', textAlign: 'center' }}>
                 <Container maxWidth="md">
                      <Typography variant="h5" sx={{fontWeight: 600}}>
-                        At Verble, education is not just a service — it's a social mission.
+                        🚀 Start Your Journey with Verble Today!
                     </Typography>
-                    <Typography color="text.secondary" sx={{my:2}}>
-                        Join us in our journey to educate, empower, and elevate the learners of India.
+                    <Typography color="text.secondary" sx={{my:2, fontSize: '0.9rem'}}>
+                        Empower yourself with the right knowledge, the right mentors, and the right mission. Join Verble — where education is not just a service, but a powerful tool for personal and national transformation.
                     </Typography>
-                     <Button component={RouterLink} to="/register" variant="contained" size="large">
-                        Join Us Today
+                     <Button onClick={handleStartFree} variant="contained" size="large" endIcon={<ArrowForwardIcon />}>
+                        Get Started Now
                     </Button>
                 </Container>
             </Box>

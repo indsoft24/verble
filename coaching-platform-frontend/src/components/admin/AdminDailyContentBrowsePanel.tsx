@@ -3,6 +3,7 @@ import {
     Alert,
     Box,
     Button,
+    Checkbox,
     Chip,
     CircularProgress,
     FormControl,
@@ -82,6 +83,9 @@ type Props = {
     onResetFilters: () => void;
     onEdit: (item: DailyContent) => void;
     onDelete: (id: string) => void;
+    selectedIds: string[];
+    onSelectedIdsChange: (ids: string[]) => void;
+    onBulkDeleteClick: () => void;
 };
 
 const AdminDailyContentBrowsePanel: React.FC<Props> = ({
@@ -99,7 +103,31 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
     onResetFilters,
     onEdit,
     onDelete,
+    selectedIds,
+    onSelectedIdsChange,
+    onBulkDeleteClick,
 }) => {
+    const pageIds = content.map((item) => item._id);
+    const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+    const somePageSelected = pageIds.some((id) => selectedIds.includes(id));
+
+    const toggleSelectAll = () => {
+        if (allPageSelected) {
+            onSelectedIdsChange(selectedIds.filter((id) => !pageIds.includes(id)));
+        } else {
+            const merged = new Set([...selectedIds, ...pageIds]);
+            onSelectedIdsChange([...merged]);
+        }
+    };
+
+    const toggleRow = (id: string) => {
+        if (selectedIds.includes(id)) {
+            onSelectedIdsChange(selectedIds.filter((itemId) => itemId !== id));
+        } else {
+            onSelectedIdsChange([...selectedIds, id]);
+        }
+    };
+
     const applyPreset = (preset: '7d' | '30d' | '90d' | 'all') => {
         const end = new Date();
         const patch: Partial<BrowseFilters> =
@@ -254,12 +282,26 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
             )}
 
             {pagination && !isLoading && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    Showing {content.length} of {pagination.total} items
-                    {filters.startDate && filters.endDate
-                        ? ` · scheduled ${format(filters.startDate, 'MMM d, yyyy')} – ${format(filters.endDate, 'MMM d, yyyy')}`
-                        : ''}
-                </Typography>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+                    <Typography variant="body2" color="text.secondary">
+                        Showing {content.length} of {pagination.total} items
+                        {filters.startDate && filters.endDate
+                            ? ` · scheduled ${format(filters.startDate, 'MMM d, yyyy')} – ${format(filters.endDate, 'MMM d, yyyy')}`
+                            : ''}
+                        {selectedIds.length > 0 ? ` · ${selectedIds.length} selected` : ''}
+                    </Typography>
+                    {selectedIds.length > 0 && (
+                        <Button
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                            startIcon={<DeleteIcon fontSize="small" />}
+                            onClick={onBulkDeleteClick}
+                        >
+                            Delete selected ({selectedIds.length})
+                        </Button>
+                    )}
+                </Stack>
             )}
 
             {isLoading ? (
@@ -276,6 +318,15 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                         <Table size="small">
                             <TableHead>
                                 <TableRow sx={{ bgcolor: 'grey.50' }}>
+                                    <TableCell padding="checkbox" sx={{ width: 48 }}>
+                                        <Checkbox
+                                            indeterminate={somePageSelected && !allPageSelected}
+                                            checked={allPageSelected}
+                                            onChange={toggleSelectAll}
+                                            size="small"
+                                            inputProps={{ 'aria-label': 'Select all on this page' }}
+                                        />
+                                    </TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Scheduled date</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Level</TableCell>
@@ -295,7 +346,19 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                                     const IconComponent = config.icon;
                                     const slotLabel = getCatalogEntry(resolveAdminKeyFromContent(item)).label;
                                     return (
-                                        <TableRow key={item._id} hover>
+                                        <TableRow
+                                            key={item._id}
+                                            hover
+                                            selected={selectedIds.includes(item._id)}
+                                        >
+                                            <TableCell padding="checkbox" sx={{ width: 48 }}>
+                                                <Checkbox
+                                                    checked={selectedIds.includes(item._id)}
+                                                    onChange={() => toggleRow(item._id)}
+                                                    size="small"
+                                                    inputProps={{ 'aria-label': `Select ${slotLabel}` }}
+                                                />
+                                            </TableCell>
                                             <TableCell>
                                                 {formatScheduledDateDisplay(item.date)}
                                             </TableCell>
@@ -367,7 +430,6 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                             rowsPerPage={rowsPerPage}
                             onRowsPerPageChange={(e) => {
                                 onRowsPerPageChange(parseInt(e.target.value, 10));
-                                onPageChange(0);
                             }}
                             rowsPerPageOptions={[10, 25, 50, 100]}
                         />

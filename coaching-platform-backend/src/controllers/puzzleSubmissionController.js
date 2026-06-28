@@ -3,6 +3,7 @@ import asyncHandler from 'express-async-handler';
 import UserPuzzleSubmission from '../models/UserPuzzleSubmission.js';
 import DailyContent from '../models/DailyContent.js';
 import GamificationService from '../services/GamificationService.js';
+import { applyPuzzleEvaluationOnSubmit } from '../services/evaluationScoreService.js';
 import mongoose from 'mongoose';
 import { isDailyContentScheduledForLocalToday } from '../utils/dailyContentLocalDay.js';
 import { isFilledOption, isValidFilledSelection } from '../utils/quizOptionUtils.js';
@@ -114,12 +115,24 @@ export const submitPuzzle = asyncHandler(async (req, res) => {
         pointsEarned: totalPoints,
     });
 
+    const puzzleTitle = puzzleContent.title || 'Puzzle';
+    const userId = req.user._id.toString();
     const { participationPointsAwarded, progress, levelUp: levelUpResult } =
         await GamificationService.runParticipationGamification(
-            req.user._id.toString(),
+            userId,
             puzzleId,
-            totalPoints
+            totalPoints,
+            {
+                category: 'puzzle',
+                title: `Puzzle: ${puzzleTitle} (${correctCount}/5 correct)`,
+                sourceType: 'puzzle_submission',
+                sourceId: submission._id.toString(),
+                eventKind: 'puzzle',
+                meta: { correctCount, puzzleType, puzzleId: puzzleId.toString() },
+            }
         );
+
+    const evalResult = await applyPuzzleEvaluationOnSubmit(userId, submission, puzzleTitle);
 
     res.status(201).json({
         status: 'success',
@@ -135,6 +148,7 @@ export const submitPuzzle = asyncHandler(async (req, res) => {
             participationPointsAwarded,
             progress,
             levelUp: levelUpResult,
+            evaluationScore: evalResult.evaluationScore ?? undefined,
         },
     });
 });

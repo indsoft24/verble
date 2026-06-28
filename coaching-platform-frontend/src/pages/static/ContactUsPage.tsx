@@ -10,12 +10,14 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import SendIcon from '@mui/icons-material/Send';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import {
     SITE_CONTACT,
     siteContactMailto,
     siteContactPhoneDisplay,
     siteContactTel,
 } from '../../config/siteContact';
+import { SITE_OWNER } from '../../config/siteBusiness';
 
 // A reusable component for contact information items
 const ContactInfoItem = ({ icon, title, text, href }: { icon: React.ReactNode, title: string, text: string, href?: string }) => (
@@ -136,6 +138,11 @@ const ContactUsPage: React.FC = () => {
                                 title="Call Us"
                                 text={siteContactPhoneDisplay}
                                 href={siteContactTel}
+                            />
+                            <ContactInfoItem
+                                icon={<PersonOutlineIcon />}
+                                title={SITE_OWNER.role}
+                                text={SITE_OWNER.name}
                             />
                             <ContactInfoItem
                                 icon={<AccessTimeIcon />}

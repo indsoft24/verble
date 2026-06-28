@@ -1,5 +1,5 @@
 // src/components/features/PuzzleCard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Card,
     CardContent,
@@ -22,10 +22,17 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
-import { type DailyContent } from '../../services/dailyContentService';
+import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
 import { getDisplayTag } from '../../utils/dailyContentDisplayNumber';
+import {
+    canShowNextNavigation,
+} from '../../utils/dailyActivityUi';
+import {
+    buildTierNavSlots,
+    type ActivityKind,
+} from '../../utils/activityTierPeerNav';
 import ActivityContentHeader from './ActivityContentHeader';
-import ActivityTierNavFooter, { type NavFooterSlot } from './ActivityTierNavFooter';
+import ActivityTierNavFooter from './ActivityTierNavFooter';
 import { getFilledOptionEntries } from '../../utils/quizOptionUtils';
 import { activityCardProps } from '../../utils/dailyActivityUi';
 import {
@@ -50,11 +57,12 @@ interface PuzzleCardProps {
     data: DailyContent;
     puzzleType: 'SPOT_CORRECT_SENTENCE' | 'GRAMMAR_FILL_BLANK';
     onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
-    tierNav?: {
+    onContentChange?: (content: DailyContent) => void;
+    peerNav?: {
         accentColor: string;
-        left?: NavFooterSlot;
-        center?: NavFooterSlot;
-        right?: NavFooterSlot;
+        kind: 'puzzle_spot' | 'puzzle_grammar';
+        contents: Partial<Record<ActivityKind, DailyContent | undefined>>;
+        openLinked: (content: DailyContent, kind: ActivityKind) => void;
     };
 }
 
@@ -123,7 +131,7 @@ const ConfettiEffect: React.FC = () => {
     );
 };
 
-const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionSuccess, tierNav }) => {
+const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionSuccess, peerNav, onContentChange }) => {
     const { user } = useAuth();
     const [answers, setAnswers] = useState<{ [key: number]: number }>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -131,31 +139,89 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
     const [showConfetti, setShowConfetti] = useState(false);
     const [submissionResult, setSubmissionResult] = useState<any>(null);
     const [hasSubmitted, setHasSubmitted] = useState(false);
+    const [currentContent, setCurrentContent] = useState<DailyContent>(data);
+    const [hasPrevious, setHasPrevious] = useState(false);
+    const [hasNext, setHasNext] = useState(false);
+    const [isLoadingNav, setIsLoadingNav] = useState(false);
+    const submissionRequestIdRef = useRef(0);
 
-    useEffect(() => {
-        // Check if user has already submitted
-        const checkSubmission = async () => {
+    const matchesPuzzleType = (item: DailyContent) =>
+        item.metadata?.puzzleType === puzzleType;
+
+    const findAdjacentPuzzle = async (contentId: string, direction: 'prev' | 'next') => {
+        let candidate = await getAdjacentContent(contentId, direction);
+        let hops = 0;
+        while (candidate && !matchesPuzzleType(candidate) && hops < 30) {
+            candidate = await getAdjacentContent(candidate._id, direction);
+            hops += 1;
+        }
+        return candidate && matchesPuzzleType(candidate) ? candidate : null;
+    };
+
+    const checkAdjacent = async (contentId: string) => {
+        const [prevContent, nextContent] = await Promise.all([
+            findAdjacentPuzzle(contentId, 'prev'),
+            findAdjacentPuzzle(contentId, 'next'),
+        ]);
+        setHasPrevious(!!prevContent);
+        setHasNext(!!nextContent);
+    };
+
+    const loadSubmission = useCallback(
+        async (puzzleId: string) => {
+            const requestId = ++submissionRequestIdRef.current;
+
+            setHasSubmitted(false);
+            setSubmissionResult(null);
+            setAnswers({});
+            setSubmitStatus(null);
+
             if (!user) return;
+
             try {
-                const response = await apiClient.get(`/submit-puzzle/${data._id}`);
-                if (response.data?.data?.submission) {
+                const response = await apiClient.get(`/submit-puzzle/${puzzleId}`);
+                if (requestId !== submissionRequestIdRef.current) return;
+
+                const submission = response.data?.data?.submission;
+                if (submission) {
                     setHasSubmitted(true);
-                    setSubmissionResult(response.data.data.submission);
-                    // Pre-populate answers from submission
+                    setSubmissionResult(submission);
                     const submittedAnswers: { [key: number]: number } = {};
-                    response.data.data.submission.answers.forEach((ans: any) => {
+                    submission.answers.forEach((ans: { questionIndex: number; selectedAnswer: number }) => {
                         submittedAnswers[ans.questionIndex] = ans.selectedAnswer;
                     });
                     setAnswers(submittedAnswers);
                 }
-            } catch (error) {
-                // No submission found, which is fine
+            } catch {
+                if (requestId !== submissionRequestIdRef.current) return;
             }
-        };
-        checkSubmission();
-    }, [data._id, user]);
+        },
+        [user]
+    );
 
-    const questions: Question[] = data.metadata?.questions || [];
+    useEffect(() => {
+        setCurrentContent(data);
+        setShowConfetti(false);
+        void checkAdjacent(data._id);
+        void loadSubmission(data._id);
+    }, [data._id, puzzleType, loadSubmission]);
+
+    const handleNavigation = async (direction: 'prev' | 'next') => {
+        setIsLoadingNav(true);
+        try {
+            const adjacent = await findAdjacentPuzzle(currentContent._id, direction);
+            if (adjacent) {
+                setCurrentContent(adjacent);
+                onContentChange?.(adjacent);
+                await checkAdjacent(adjacent._id);
+                void loadSubmission(adjacent._id);
+            }
+        } finally {
+            setIsLoadingNav(false);
+        }
+    };
+
+    const questions: Question[] = currentContent.metadata?.questions || [];
 
     const handleAnswerChange = (questionIndex: number, value: number) => {
         if (hasSubmitted) return; // Don't allow changes after submission
@@ -187,7 +253,7 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
             }));
 
             const response = await apiClient.post('/submit-puzzle', {
-                puzzleId: data._id,
+                puzzleId: currentContent._id,
                 puzzleType: puzzleType,
                 answers: answerArray
             });
@@ -225,7 +291,7 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
         puzzleType === 'SPOT_CORRECT_SENTENCE'
             ? 'Puzzle — Spot the Correct Sentence'
             : 'Puzzle — Correct Form of the Verb';
-    const displayNumber = getDisplayTag(data.sequenceNumber);
+    const displayNumber = getDisplayTag(currentContent.sequenceNumber);
 
     return (
         <Box sx={puzzleActivityShellSx}>
@@ -246,7 +312,7 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
                     <Typography component="h1" sx={puzzleTitleSx(PUZZLE_ACCENT)}>
                         {puzzleTitle}
                     </Typography>
-                    <Typography sx={puzzleSubtitleSx}>{data.title}</Typography>
+                    <Typography sx={puzzleSubtitleSx}>{currentContent.title}</Typography>
                 </Box>
 
                 <Divider sx={{ my: { xs: 2, sm: 2.5 }, borderColor: alpha(PUZZLE_ACCENT, 0.25) }} />
@@ -470,16 +536,31 @@ const PuzzleCard: React.FC<PuzzleCardProps> = ({ data, puzzleType, onSubmissionS
                         You earn 10 points for each correct answer.
                     </Typography>
 
-                    {tierNav && (
-                        <ActivityTierNavFooter
-                            variant="dark"
-                            layout="stacked"
-                            accentColor={tierNav.accentColor}
-                            left={tierNav.left}
-                            center={tierNav.center}
-                            right={tierNav.right}
-                        />
-                    )}
+                    {peerNav && (() => {
+                        const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
+                        const slots = buildTierNavSlots({
+                            kind: peerNav.kind,
+                            contents: peerNav.contents,
+                            openLinked: peerNav.openLinked,
+                            sequential: {
+                                kind: peerNav.kind,
+                                hasPrevious,
+                                hasNext: canGoNext,
+                                onPrev: () => void handleNavigation('prev'),
+                                onNext: () => void handleNavigation('next'),
+                                loading: isLoadingNav,
+                            },
+                        });
+                        return (
+                            <ActivityTierNavFooter
+                                variant="dark"
+                                accentColor={peerNav.accentColor}
+                                left={slots.left}
+                                center={slots.center}
+                                right={slots.right}
+                            />
+                        );
+                    })()}
                 </Box>
             </CardContent>
             </Card>

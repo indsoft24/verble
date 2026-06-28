@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams, Link as RouterLink, useLocation } from 'react-router-dom';
 import {
     Container, Typography, Alert, Box, Breadcrumbs, Link as MuiLink,
     CircularProgress, Paper,
@@ -20,10 +20,19 @@ import {
     FALLBACK_VIDEO_REQUIRED_PLAN_NAME,
 } from '../config/adminDefaults';
 import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
+import { getStoredVideosListSearch } from '../hooks/useAdminVideosListFilters';
 
 const AdminEditVideoPage: React.FC = () => {
     useAdminLayoutPage({ title: 'Edit Video' });
     const { id: videoId } = useParams<{ id: string }>();
+    const location = useLocation();
+
+    const videosListSearch = useMemo(() => {
+        const fromNavigation = (location.state as { videosListSearch?: string } | null)?.videosListSearch;
+        if (fromNavigation) return fromNavigation.startsWith('?') ? fromNavigation.slice(1) : fromNavigation;
+        const stored = getStoredVideosListSearch();
+        return stored.startsWith('?') ? stored.slice(1) : stored;
+    }, [location.state]);
 
     const [initialFormData, setInitialFormData] = useState<Partial<VideoFormState> | null>(null);
     const [allSubscriptionPlans, setAllSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
@@ -166,7 +175,7 @@ const AdminEditVideoPage: React.FC = () => {
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
             <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
                 <MuiLink component={RouterLink} underline="hover" color="inherit" to="/admin/dashboard">Admin</MuiLink>
-                <MuiLink component={RouterLink} underline="hover" color="inherit" to="/admin/videos">Manage Videos</MuiLink>
+                <MuiLink component={RouterLink} underline="hover" color="inherit" to={{ pathname: '/admin/videos', search: videosListSearch }}>Manage Videos</MuiLink>
                 <Typography color="text.primary">Edit: {fullVideoMetadata?.title || videoId}</Typography>
             </Breadcrumbs>
 

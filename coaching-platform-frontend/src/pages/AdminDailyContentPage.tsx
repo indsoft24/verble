@@ -1,5 +1,5 @@
 // src/pages/AdminDailyContentPage.tsx
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
     Container,
     Typography,
@@ -44,6 +44,7 @@ import {
     DailyContentDuplicateError,
     updateDailyContentAdmin,
     deleteDailyContentAdmin,
+    bulkDeleteDailyContentAdmin,
     type CreateDailyContentPayload,
     type DailyContentPagination,
     type DailyContentAdminListParams,
@@ -76,6 +77,13 @@ import AdminDailyContentBulkDialog from '../components/admin/AdminDailyContentBu
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
+import { useSearchParams } from 'react-router-dom';
+import {
+    buildDailyContentSearchParams,
+    parseDailyContentUrlState,
+    type DailyContentViewMode,
+} from '../utils/dailyContentAdminUrlState';
+
 import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
 
 type DailyContentFormState = Partial<CreateDailyContentPayload> & {
@@ -84,30 +92,56 @@ type DailyContentFormState = Partial<CreateDailyContentPayload> & {
     sequenceNumber?: number;
 };
 
-type ViewMode = 'daily' | 'browse';
+type ViewMode = DailyContentViewMode;
 
 const AdminDailyContentPage: React.FC = () => {
     useAdminLayoutPage({ title: 'Daily Content Management' });
-    const [viewMode, setViewMode] = useState<ViewMode>('daily');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const initialUrlState = useMemo(() => parseDailyContentUrlState(searchParams), []);
+    const urlHydratedRef = useRef(false);
+
+    const [viewMode, setViewMode] = useState<ViewMode>(initialUrlState.view);
     const [content, setContent] = useState<DailyContent[]>([]);
     const [browseContent, setBrowseContent] = useState<DailyContent[]>([]);
     const [browsePagination, setBrowsePagination] = useState<DailyContentPagination | null>(null);
-    const [browseFilters, setBrowseFilters] = useState<BrowseFilters>(defaultBrowseFilters);
-    const [browsePage, setBrowsePage] = useState(0);
-    const [browseRowsPerPage, setBrowseRowsPerPage] = useState(25);
+    const [browseFilters, setBrowseFilters] = useState<BrowseFilters>(initialUrlState.browseFilters);
+    const [browsePage, setBrowsePage] = useState(initialUrlState.browsePage);
+    const [browseRowsPerPage, setBrowseRowsPerPage] = useState(initialUrlState.browseRowsPerPage);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | null>(initialUrlState.selectedDate);
     const [openDialog, setOpenDialog] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentContent, setCurrentContent] = useState<DailyContentFormState | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [selectedBrowseIds, setSelectedBrowseIds] = useState<string[]>([]);
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
     const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
     const [sequenceInfo, setSequenceInfo] = useState<DailyContentSequencePreview | null>(null);
     const [sequenceLoading, setSequenceLoading] = useState(false);
     const [slotDuplicateMessage, setSlotDuplicateMessage] = useState<string | null>(null);
+
+    const syncUrlState = useCallback(
+        (patch?: Partial<{
+            view: ViewMode;
+            browseFilters: BrowseFilters;
+            browsePage: number;
+            browseRowsPerPage: number;
+            selectedDate: Date | null;
+        }>) => {
+            const nextParams = buildDailyContentSearchParams({
+                view: patch?.view ?? viewMode,
+                browseFilters: patch?.browseFilters ?? browseFilters,
+                browsePage: patch?.browsePage ?? browsePage,
+                browseRowsPerPage: patch?.browseRowsPerPage ?? browseRowsPerPage,
+                selectedDate: patch?.selectedDate ?? selectedDate,
+            });
+            setSearchParams(nextParams, { replace: true });
+        },
+        [viewMode, browseFilters, browsePage, browseRowsPerPage, selectedDate, setSearchParams]
+    );
 
     const buildBrowseParams = useCallback(
         (filters: BrowseFilters, pageIndex: number, rows: number): DailyContentAdminListParams => {
@@ -175,6 +209,8 @@ const AdminDailyContentPage: React.FC = () => {
             setBrowseFilters(merged);
         }
         setBrowsePage(0);
+        setSelectedBrowseIds([]);
+        syncUrlState({ browseFilters: merged, browsePage: 0 });
         fetchBrowseContent(merged, 0);
     };
 
@@ -182,6 +218,8 @@ const AdminDailyContentPage: React.FC = () => {
         const defaults = defaultBrowseFilters();
         setBrowseFilters(defaults);
         setBrowsePage(0);
+        setSelectedBrowseIds([]);
+        syncUrlState({ browseFilters: defaults, browsePage: 0 });
         fetchBrowseContent(defaults, 0);
     };
 
@@ -192,6 +230,18 @@ const AdminDailyContentPage: React.FC = () => {
             fetchBrowseContent();
         }
     }, [viewMode, fetchDailyContent, fetchBrowseContent]);
+
+    useEffect(() => {
+        if (urlHydratedRef.current) return;
+        urlHydratedRef.current = true;
+        syncUrlState({
+            view: initialUrlState.view,
+            browseFilters: initialUrlState.browseFilters,
+            browsePage: initialUrlState.browsePage,
+            browseRowsPerPage: initialUrlState.browseRowsPerPage,
+            selectedDate: initialUrlState.selectedDate,
+        });
+    }, [initialUrlState, syncUrlState]);
 
     useEffect(() => {
         if (viewMode === 'daily') {
@@ -492,12 +542,12 @@ const AdminDailyContentPage: React.FC = () => {
                 setFormError('Add at least one dialogue line with speaker and English text.');
                 return;
             }
+            if (!String(currentContent.metadata?.participant1 || '').trim() ||
+                !String(currentContent.metadata?.participant2 || '').trim()) {
+                setFormError('Person 1 and Person 2 are required.');
+                return;
+            }
             if (currentContent.adminKey !== 'PROFESSIONAL_CONVERSATION') {
-                if (!String(currentContent.metadata?.participant1 || '').trim() ||
-                    !String(currentContent.metadata?.participant2 || '').trim()) {
-                    setFormError('Person 1 and Person 2 are required.');
-                    return;
-                }
                 if (!String(currentContent.metadata?.scenarioTitle || currentContent.title || '').trim()) {
                     setFormError('Scenario title is required.');
                     return;
@@ -632,6 +682,21 @@ const AdminDailyContentPage: React.FC = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedBrowseIds.length === 0) return;
+        setIsSubmitting(true);
+        try {
+            await bulkDeleteDailyContentAdmin(selectedBrowseIds);
+            setSelectedBrowseIds([]);
+            setBulkDeleteOpen(false);
+            refreshCurrentView();
+        } catch (err: any) {
+            setError(err.message || 'Failed to delete selected content.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     // Group content by date
     const contentByDate = useMemo(() => {
         const grouped: { [key: string]: DailyContent[] } = {};
@@ -749,7 +814,10 @@ const AdminDailyContentPage: React.FC = () => {
                 <Paper elevation={0} sx={{ mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                     <Tabs
                         value={viewMode}
-                        onChange={(_, value: ViewMode) => setViewMode(value)}
+                        onChange={(_, value: ViewMode) => {
+                            setViewMode(value);
+                            syncUrlState({ view: value });
+                        }}
                         sx={{ px: 2, borderBottom: 1, borderColor: 'divider' }}
                     >
                         <Tab icon={<ViewDayIcon />} iconPosition="start" label="Daily schedule" value="daily" />
@@ -774,12 +842,24 @@ const AdminDailyContentPage: React.FC = () => {
                         page={browsePage}
                         rowsPerPage={browseRowsPerPage}
                         onFiltersChange={(patch) => setBrowseFilters((prev) => ({ ...prev, ...patch }))}
-                        onPageChange={setBrowsePage}
-                        onRowsPerPageChange={setBrowseRowsPerPage}
+                        onPageChange={(nextPage) => {
+                            setBrowsePage(nextPage);
+                            setSelectedBrowseIds([]);
+                            syncUrlState({ browsePage: nextPage });
+                        }}
+                        onRowsPerPageChange={(rows) => {
+                            setBrowseRowsPerPage(rows);
+                            setBrowsePage(0);
+                            setSelectedBrowseIds([]);
+                            syncUrlState({ browseRowsPerPage: rows, browsePage: 0 });
+                        }}
                         onApplyFilters={handleApplyBrowseFilters}
                         onResetFilters={handleResetBrowseFilters}
                         onEdit={handleOpenDialog}
                         onDelete={setDeleteId}
+                        selectedIds={selectedBrowseIds}
+                        onSelectedIdsChange={setSelectedBrowseIds}
+                        onBulkDeleteClick={() => setBulkDeleteOpen(true)}
                     />
                 ) : (
                     <>
@@ -793,7 +873,10 @@ const AdminDailyContentPage: React.FC = () => {
                         <DatePicker
                             label="View content for date"
                             value={selectedDate}
-                            onChange={(newValue) => setSelectedDate(newValue)}
+                            onChange={(newValue) => {
+                                setSelectedDate(newValue);
+                                syncUrlState({ selectedDate: newValue });
+                            }}
                             sx={{ mt: 2, width: 300 }}
                         />
                     </LocalizationProvider>
@@ -1139,6 +1222,22 @@ const AdminDailyContentPage: React.FC = () => {
                         <Button onClick={() => setDeleteId(null)}>Cancel</Button>
                         <Button onClick={handleDelete} color="error" variant="contained" disabled={isSubmitting}>
                             Delete
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog open={bulkDeleteOpen} onClose={() => setBulkDeleteOpen(false)}>
+                    <DialogTitle>Delete selected content</DialogTitle>
+                    <DialogContent>
+                        <Typography>
+                            Are you sure you want to delete {selectedBrowseIds.length} selected item
+                            {selectedBrowseIds.length === 1 ? '' : 's'}? This action cannot be undone.
+                        </Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setBulkDeleteOpen(false)}>Cancel</Button>
+                        <Button onClick={handleBulkDelete} color="error" variant="contained" disabled={isSubmitting}>
+                            Delete {selectedBrowseIds.length} item{selectedBrowseIds.length === 1 ? '' : 's'}
                         </Button>
                     </DialogActions>
                 </Dialog>

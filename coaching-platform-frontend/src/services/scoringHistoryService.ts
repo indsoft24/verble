@@ -120,3 +120,28 @@ export const categoryLabel = (c: ScoringCategory): string => {
             return c;
     }
 };
+
+/** Strip redundant category prefix; category chip already conveys the type. */
+export const formatActivityTitle = (title: string, category: ScoringCategory): string => {
+    const trimmed = title.trim();
+    const prefixes: Record<ScoringCategory, RegExp> = {
+        participation: /^Participation:\s*/i,
+        evaluation: /^Review:\s*/i,
+        puzzle: /^Puzzle:\s*/i,
+        module_quiz: /^Quiz:\s*/i,
+    };
+    return trimmed.replace(prefixes[category] || /^/, '').trim() || trimmed;
+};
+
+export const formatPointsDisplay = (points: number, delta: number): string => {
+    const value = delta !== 0 ? delta : points;
+    if (value > 0) return `+${value}`;
+    if (value < 0) return `${value}`;
+    return '0';
+};
+
+export const statusLabel = (status: ScoringEventStatus, category: ScoringCategory): string => {
+    if (status === 'info' && category === 'module_quiz') return 'Attempt';
+    if (status === 'approved' && category === 'module_quiz') return 'Passed';
+    return status;
+};

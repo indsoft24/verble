@@ -2,6 +2,7 @@ import React from 'react';
 import { Container, Typography, Box, Accordion, AccordionSummary, AccordionDetails, Paper, Link as MuiLink, Button } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ContactSupportIcon from '@mui/icons-material/ContactSupport';
+import { SITE_REFUND_CREDIT_POLICY } from '../../config/siteBusiness';
 
 // --- Mock Data for FAQs ---
 const faqData = [
@@ -48,7 +49,7 @@ const faqData = [
             },
             {
                 q: 'What is your refund policy?',
-                a: 'Due to the digital nature of our content, we generally do not offer refunds once a subscription is purchased. We encourage you to review all course details and free resources before making a purchase. Please see our Terms of Service for more details.'
+                a: `Eligible refunds follow our Terms & Conditions and satisfaction guarantee. ${SITE_REFUND_CREDIT_POLICY} Please see our Terms of Service or contact support for full details.`
             }
         ]
     }

@@ -19,8 +19,6 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import SendIcon from '@mui/icons-material/Send';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, type DailyContent } from '../../services/dailyContentService';
@@ -29,16 +27,17 @@ import type { UserWordSubmission } from '../../services/sentenceSubmissionServic
 import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
 import {
     activityCardProps,
+    activityCardStackSx,
     getContentDisplayNumber,
     isContentScheduledToday,
     refreshAdjacentFlags,
-    activityNavSideButtonSx,
     GREEN_ACCENT,
     GOLD_ACCENT,
     MAX_ACTIVITY_SENTENCES,
 } from '../../utils/dailyActivityUi';
 import { SubmissionHistoryItem } from './ActivitySubmissionHistory';
 import ActivityContentHeader from './ActivityContentHeader';
+import ActivityTierNavFooter from './ActivityTierNavFooter';
 
 interface PhraseOfTheDayCardProps {
     data: DailyContent;
@@ -277,7 +276,7 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
     );
 
     return (
-        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+        <Box sx={activityCardStackSx}>
             {showConfetti && <ConfettiEffect />}
 
             <Card {...activityCardProps(GREEN_ACCENT)}>
@@ -462,56 +461,27 @@ const PhraseOfTheDayCard: React.FC<PhraseOfTheDayCardProps> = ({
                         <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>Maximum of 5 sentences submitted for this phrase.</Typography>
                     ) : null}
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 3, pt: 2, borderTop: `1px solid ${alpha(GOLD_ACCENT, 0.25)}` }}>
-                        <Button
-                            startIcon={<ArrowBackIcon />}
-                            onClick={() => hasPrevious && !isLoadingNav && handleNavigation('prev')}
-                            disabled={!hasPrevious || isLoadingNav}
-                            aria-disabled={!hasPrevious || isLoadingNav}
-                            sx={activityNavSideButtonSx({
-                                disabled: !hasPrevious || isLoadingNav,
-                                accentColor: GOLD_ACCENT,
-                                side: 'left',
-                            })}
-                        >
-                            Previous Phrase
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => onNavigateToWord?.()}
-                            disabled={!onNavigateToWord}
-                            sx={{
-                                borderColor: '#14b8a6',
-                                color: '#14b8a6',
-                                fontWeight: 700,
-                                px: 2,
-                                '&:hover': {
-                                    borderColor: '#14b8a6',
-                                    bgcolor: 'rgba(20, 184, 166, 0.12)',
-                                },
-                                '&.Mui-disabled': {
-                                    borderColor: 'rgba(226, 232, 240, 0.2)',
-                                    color: 'rgba(226, 232, 240, 0.35)',
-                                },
-                            }}
-                        >
-                            ← Word of the Day
-                        </Button>
-                        <Button
-                            endIcon={<ArrowForwardIcon />}
-                            onClick={() => hasNext && !isLoadingNav && handleNavigation('next')}
-                            disabled={!hasNext || isLoadingNav}
-                            aria-disabled={!hasNext || isLoadingNav}
-                            sx={activityNavSideButtonSx({
-                                disabled: !hasNext || isLoadingNav,
-                                accentColor: GOLD_ACCENT,
-                                side: 'right',
-                            })}
-                        >
-                            Next Phrase
-                        </Button>
-                    </Box>
+                    <ActivityTierNavFooter
+                        accentColor={GOLD_ACCENT}
+                        centerAccentColor={GREEN_ACCENT}
+                        left={{
+                            label: 'Previous Phrase',
+                            onClick: () => handleNavigation('prev'),
+                            disabled: !hasPrevious,
+                            loading: isLoadingNav,
+                        }}
+                        center={{
+                            label: '← Word of the Day',
+                            onClick: onNavigateToWord,
+                            disabled: !onNavigateToWord,
+                        }}
+                        right={{
+                            label: 'Next Phrase',
+                            onClick: () => handleNavigation('next'),
+                            disabled: !hasNext,
+                            loading: isLoadingNav,
+                        }}
+                    />
                 </CardContent>
             </Card>
         </Box>

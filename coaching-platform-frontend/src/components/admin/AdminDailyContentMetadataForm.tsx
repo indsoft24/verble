@@ -274,18 +274,17 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                 <Grid size={{ xs: 12 }}>
                     <TextField
                         fullWidth
-                        label="Hindi sentence translations (one per line)"
+                        label="Hindi translations (full text)"
                         value={
                             Array.isArray(metadata.sentence_translations)
                                 ? (metadata.sentence_translations as string[]).join('\n')
                                 : ''
                         }
-                        onChange={(e) =>
-                            onChange(
-                                'sentence_translations',
-                                e.target.value.split('\n').map((s) => s.trim()).filter(Boolean)
-                            )
-                        }
+                        onChange={(e) => {
+                            const trimmed = e.target.value.trim();
+                            onChange('sentence_translations', trimmed ? [e.target.value] : []);
+                        }}
+                        helperText="Lines split automatically on the learner view at . , ? । — no need to press Enter per line."
                         multiline
                         rows={6}
                     />
@@ -519,6 +518,7 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                         label="Hindi summary"
                         value={(metadata.hindiSummary as string) || ''}
                         onChange={(e) => onChange('hindiSummary', e.target.value)}
+                        helperText="Lines split automatically on the learner view at . , ? । — pair with the English explanation segments."
                         multiline
                         rows={3}
                     />
@@ -535,13 +535,19 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                        Keywords
+                    </Typography>
                     <Button size="small" onClick={() => onChange('keywords', [...keywords, emptySceneKeyword()])}>
                         Add keyword
                     </Button>
                     {keywords.map((kw, idx) => (
                         <Box key={idx} sx={{ mt: 1, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                            <Grid container spacing={1}>
-                                <Grid size={{ xs: 12, md: 6 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                Keyword {idx + 1}
+                            </Typography>
+                            <Grid container spacing={1} sx={{ mt: 0.5 }}>
+                                <Grid size={{ xs: 12, md: 4 }}>
                                     <TextField
                                         fullWidth
                                         size="small"
@@ -554,11 +560,24 @@ const AdminDailyContentMetadataForm: React.FC<AdminDailyContentMetadataFormProps
                                         }}
                                     />
                                 </Grid>
-                                <Grid size={{ xs: 12, md: 6 }}>
+                                <Grid size={{ xs: 12, md: 4 }}>
                                     <TextField
                                         fullWidth
                                         size="small"
-                                        label="Meaning (Hindi)"
+                                        label="English"
+                                        value={kw.meaning_en || ''}
+                                        onChange={(e) => {
+                                            const next = [...keywords];
+                                            next[idx] = { ...next[idx], meaning_en: e.target.value };
+                                            onChange('keywords', next);
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 4 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Hindi"
                                         value={kw.meaning_hi || ''}
                                         onChange={(e) => {
                                             const next = [...keywords];

@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import CloseIcon from '@mui/icons-material/Close';
@@ -22,10 +23,17 @@ interface LoginPinRevealDialogProps {
     open: boolean;
     loginPin: string;
     email?: string;
+    phoneNumber?: string;
     onClose: () => void;
 }
 
-const LoginPinRevealDialog: React.FC<LoginPinRevealDialogProps> = ({ open, loginPin, email, onClose }) => {
+const LoginPinRevealDialog: React.FC<LoginPinRevealDialogProps> = ({
+    open,
+    loginPin,
+    email,
+    phoneNumber,
+    onClose,
+}) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -184,6 +192,27 @@ const LoginPinRevealDialog: React.FC<LoginPinRevealDialogProps> = ({ open, login
                         </Button>
                     </Box>
                 </Box>
+
+                {phoneNumber && (
+                    <Box
+                        sx={{
+                            mt: 2,
+                            p: 2,
+                            borderRadius: 2,
+                            display: 'flex',
+                            gap: 1.5,
+                            alignItems: 'flex-start',
+                            bgcolor: (t) => alpha(t.palette.success.main, t.palette.mode === 'dark' ? 0.12 : 0.08),
+                            border: '1px solid',
+                            borderColor: (t) => alpha(t.palette.success.main, 0.25),
+                        }}
+                    >
+                        <PhoneOutlinedIcon color="success" sx={{ mt: 0.25, flexShrink: 0 }} />
+                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.55 }}>
+                            {t('auth.pinSignInWithPhone', { phone: phoneNumber })}
+                        </Typography>
+                    </Box>
+                )}
 
                 <Box
                     sx={{

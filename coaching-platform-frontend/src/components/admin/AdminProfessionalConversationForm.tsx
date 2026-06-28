@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     Box,
     Button,
+    FormControl,
     Grid,
     IconButton,
+    InputLabel,
+    MenuItem,
     Paper,
+    Select,
     Table,
     TableBody,
     TableCell,
@@ -18,7 +22,15 @@ import {
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
 import CommaSeparatedTextField from '../common/CommaSeparatedTextField';
+import CreatableTagsField from '../common/CreatableTagsField';
 import { emptyDialogueLine } from '../../utils/adminDailyContentDefaults';
+import {
+    getConversationParticipants,
+    isParticipant2Speaker,
+    repairDialogueLine,
+} from '../../utils/conversationDialogueUtils';
+import { collectProfessionalConversationTagOptions } from '../../utils/professionalConversationLibraryUtils';
+import { getAllDailyContentAdmin } from '../../services/dailyContentAdminService';
 
 type Line = ReturnType<typeof emptyDialogueLine>;
 
@@ -31,10 +43,23 @@ export interface AdminProfessionalConversationFormProps {
     syncKey?: string;
 }
 
-function getDialogue(metadata: Record<string, unknown>): Line[] {
+function getDialogue(metadata: Record<string, unknown>, participant1: string): Line[] {
+    const p1 = participant1.trim() || 'Interviewer';
+    const { participant2 } = getConversationParticipants(metadata);
+    const p2 = participant2.trim() || 'Candidate';
     const raw = metadata.dialogue as Line[] | undefined;
-    if (Array.isArray(raw) && raw.length > 0) return raw;
-    return Array.from({ length: 5 }, emptyDialogueLine);
+    if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((line) => {
+            const repaired = repairDialogueLine(line, p1, p2);
+            return {
+                speaker: repaired.speaker,
+                text_en: repaired.text_en,
+                text_hi: repaired.text_hi,
+                audio: repaired.audio ?? '',
+            };
+        });
+    }
+    return Array.from({ length: 5 }, () => ({ ...emptyDialogueLine(), speaker: p1 }));
 }
 
 const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationFormProps> = ({
@@ -44,6 +69,7 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
     onDisplayTitleChange,
     syncKey,
 }) => {
+    const { participant1, participant2 } = getConversationParticipants(metadata);
     const topicName =
         (metadata.topicName as string) || displayTitle || (metadata.title as string) || '';
     const description = (metadata.description as string) || '';
@@ -51,12 +77,42 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
     const relatedContentIds = Array.isArray(metadata.relatedContentIds)
         ? (metadata.relatedContentIds as string[])
         : [];
-    const dialogue = getDialogue(metadata);
+    const dialogue = getDialogue(metadata, participant1);
+    const [tagOptions, setTagOptions] = useState<string[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const { content } = await getAllDailyContentAdmin({
+                    type: 'CONVERSATION',
+                    level: 'GOLD',
+                    limit: 500,
+                });
+                if (!cancelled) {
+                    setTagOptions(collectProfessionalConversationTagOptions(content));
+                }
+            } catch {
+                if (!cancelled) setTagOptions([]);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const updateParticipants = (p1: string, p2: string) => {
+        onChange('participant1', p1);
+        onChange('participant2', p2);
+        onChange('participants', [p1, p2]);
+    };
+
+    const updateDialogue = (next: Line[]) => onChange('dialogue', next);
 
     const updateLine = (idx: number, patch: Partial<Line>) => {
         const next = [...dialogue];
         next[idx] = { ...next[idx], ...patch };
-        onChange('dialogue', next);
+        updateDialogue(next);
     };
 
     return (
@@ -91,14 +147,34 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
                         />
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <CommaSeparatedTextField
+                        <CreatableTagsField
                             fullWidth
                             label="Tags"
-                            placeholder="interview, workplace, formal"
+                            placeholder="Select or type a tag"
                             value={tags}
-                            syncKey={syncKey}
+                            options={tagOptions}
                             onChange={(next) => onChange('tags', next)}
-                            helperText="Learners see related conversations with matching tags"
+                            helperText="Pick existing tags or type a new one and press Enter"
+                        />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                            fullWidth
+                            required
+                            label="Person 1 (left / other speaker)"
+                            value={participant1}
+                            onChange={(e) => updateParticipants(e.target.value, participant2)}
+                            placeholder="Interviewer"
+                        />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                            fullWidth
+                            required
+                            label="Person 2 (right / learner)"
+                            value={participant2}
+                            onChange={(e) => updateParticipants(participant1, e.target.value)}
+                            placeholder="Candidate"
                         />
                     </Grid>
                     <Grid size={{ xs: 12 }}>
@@ -126,14 +202,33 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
                 </Grid>
             </Paper>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 1.5,
+                    flexWrap: 'wrap',
+                    gap: 1,
+                }}
+            >
                 <Typography variant="subtitle1" fontWeight={700}>
-                    Dialogue script
+                    Dialogue script (in chat order)
                 </Typography>
                 <Button
                     size="small"
                     variant="outlined"
-                    onClick={() => onChange('dialogue', [...dialogue, emptyDialogueLine()])}
+                    onClick={() => {
+                        const last = dialogue[dialogue.length - 1];
+                        const nextSpeaker =
+                            last && isParticipant2Speaker(last.speaker, participant1, participant2)
+                                ? participant1
+                                : participant2;
+                        updateDialogue([
+                            ...dialogue,
+                            { ...emptyDialogueLine(), speaker: nextSpeaker },
+                        ]);
+                    }}
                 >
                     Add line
                 </Button>
@@ -144,7 +239,7 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
                     <TableHead>
                         <TableRow sx={{ bgcolor: 'action.hover' }}>
                             <TableCell width={44}>#</TableCell>
-                            <TableCell width="18%">Speaker</TableCell>
+                            <TableCell width="22%">Speaker</TableCell>
                             <TableCell>English</TableCell>
                             <TableCell>Hindi</TableCell>
                             <TableCell width={44} />
@@ -155,13 +250,36 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
                             <TableRow key={idx} hover>
                                 <TableCell>{idx + 1}</TableCell>
                                 <TableCell>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        placeholder="Interviewer"
-                                        value={line.speaker || ''}
-                                        onChange={(e) => updateLine(idx, { speaker: e.target.value })}
-                                    />
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Speaker</InputLabel>
+                                        <Select
+                                            label="Speaker"
+                                            value={
+                                                isParticipant2Speaker(
+                                                    line.speaker,
+                                                    participant1,
+                                                    participant2
+                                                )
+                                                    ? 'p2'
+                                                    : 'p1'
+                                            }
+                                            onChange={(e) =>
+                                                updateLine(idx, {
+                                                    speaker:
+                                                        e.target.value === 'p2'
+                                                            ? participant2
+                                                            : participant1,
+                                                })
+                                            }
+                                        >
+                                            <MenuItem value="p1">
+                                                {participant1 || 'Person 1'}
+                                            </MenuItem>
+                                            <MenuItem value="p2">
+                                                {participant2 || 'Person 2'}
+                                            </MenuItem>
+                                        </Select>
+                                    </FormControl>
                                 </TableCell>
                                 <TableCell>
                                     <TextField
@@ -188,10 +306,7 @@ const AdminProfessionalConversationForm: React.FC<AdminProfessionalConversationF
                                         size="small"
                                         disabled={dialogue.length <= 1}
                                         onClick={() =>
-                                            onChange(
-                                                'dialogue',
-                                                dialogue.filter((_, i) => i !== idx)
-                                            )
+                                            updateDialogue(dialogue.filter((_, i) => i !== idx))
                                         }
                                     >
                                         <DeleteOutlineIcon fontSize="small" />

@@ -23,10 +23,12 @@ import { getAdjacentContent, type DailyContent } from '../../services/dailyConte
 import { getUserStorySubmission, type UserStorySubmission } from '../../services/storySubmissionService';
 import EvaluationStatusBanner from './EvaluationStatusBanner';
 import ActivityContentHeader from './ActivityContentHeader';
+import { speakPreferredEnglish } from '../../utils/ttsVoice';
 import ActivityTierNavFooter from './ActivityTierNavFooter';
 import {
     activityAlertOnDarkSx,
     activityCardProps,
+    activityCardStackSx,
     activityContainedButtonSx,
     getContentDisplayNumber,
     isContentScheduledToday,
@@ -34,6 +36,8 @@ import {
     refreshAdjacentFlags,
     GOLD_ACCENT,
 } from '../../utils/dailyActivityUi';
+import { pairBilingualSegments } from '../../utils/textSegmentUtils';
+import BilingualSegmentList from './BilingualSegmentList';
 
 function normalizeStoryWords(metadata: Record<string, unknown> | undefined) {
     const raw = metadata?.important_words;
@@ -131,7 +135,6 @@ const StoryCard: React.FC<StoryCardProps> = ({
     const [currentContent, setCurrentContent] = useState<DailyContent>(data);
     const [hasPrevious, setHasPrevious] = useState(false);
     const [hasNext, setHasNext] = useState(false);
-    const [showHindiTranslation, setShowHindiTranslation] = useState<{ [key: number]: boolean }>({});
     const [existingSubmission, setExistingSubmission] = useState<UserStorySubmission | null>(null);
     const titleAudioRef = useRef<HTMLAudioElement | null>(null);
     const storyAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -184,7 +187,6 @@ const StoryCard: React.FC<StoryCardProps> = ({
                 setSentences(['', '']);
                 setSubmitStatus(null);
                 setExistingSubmission(null);
-                setShowHindiTranslation({});
                 if (onContentChange) {
                     onContentChange(adjacentContent);
                 }
@@ -264,15 +266,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
     };
 
     const playTTS = (text: string, setIsPlaying: (playing: boolean) => void) => {
-        if (synthRef.current && text) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US';
-            utterance.onend = () => setIsPlaying(false);
-            utterance.onerror = () => setIsPlaying(false);
-            synthRef.current.speak(utterance);
-        } else {
-            setIsPlaying(false);
-        }
+        speakPreferredEnglish(text, synthRef.current, () => setIsPlaying(false));
     };
 
     const handlePlayTitle = () => {
@@ -350,25 +344,6 @@ const StoryCard: React.FC<StoryCardProps> = ({
         }
     };
 
-    // Parse story content into sentences
-    const parseStorySentences = (text: string): string[] => {
-        if (!text) return [];
-        // Split by sentence-ending punctuation, but keep the punctuation
-        return text.match(/[^.!?]+[.!?]+/g) || [text];
-    };
-
-    // Get sentence-by-sentence Hindi translation
-    const getSentenceTranslations = () => {
-        const storyText = currentContent.metadata?.text_content || '';
-        const sentences = parseStorySentences(storyText);
-        const translations = currentContent.metadata?.sentence_translations || [];
-
-        return sentences.map((sentence, index) => ({
-            en: sentence.trim(),
-            hi: translations[index] || ''
-        }));
-    };
-
     const displayNumber = getContentDisplayNumber(currentContent.sequenceNumber);
     const storyTitle = currentContent.title || '';
     // const storyContent = currentContent.metadata?.text_content || '';
@@ -378,7 +353,10 @@ const StoryCard: React.FC<StoryCardProps> = ({
     const importantWords = normalizeStoryWords(
         (currentContent.metadata || {}) as Record<string, unknown>
     );
-    const sentenceTranslations = getSentenceTranslations();
+    const sentenceTranslations = pairBilingualSegments(
+        currentContent.metadata?.text_content ?? '',
+        currentContent.metadata?.sentence_translations
+    );
     const isToday = isContentScheduledToday(currentContent.date);
     const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
 
@@ -425,7 +403,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
     );
 
     return (
-        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+        <Box sx={activityCardStackSx}>
             {showConfetti && <ConfettiEffect />}
 
             <Card {...activityCardProps(GOLD_ACCENT)}>
@@ -462,48 +440,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
                         <AudioBtn playing={isPlayingStory} onClick={handlePlayStory} label="Play story" />
                     </Box>
                     <Box sx={{ mb: 2 }}>
-                        {sentenceTranslations.map((item, index) => (
-                            <Box key={index} sx={{ mb: 1.5 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                    <Typography variant="body2" sx={{ flex: 1, color: alpha('#e2e8f0', 0.92), lineHeight: 1.7 }}>
-                                        {item.en}
-                                    </Typography>
-                                    {item.hi && (
-                                        <Button
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={() =>
-                                                setShowHindiTranslation({
-                                                    ...showHindiTranslation,
-                                                    [index]: !showHindiTranslation[index],
-                                                })
-                                            }
-                                            sx={{
-                                                minWidth: 36,
-                                                borderColor: alpha(GOLD_ACCENT, 0.5),
-                                                color: GOLD_ACCENT,
-                                            }}
-                                        >
-                                            {showHindiTranslation[index] ? 'EN' : 'HI'}
-                                        </Button>
-                                    )}
-                                </Box>
-                                {item.hi && showHindiTranslation[index] && (
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            color: alpha('#e2e8f0', 0.65),
-                                            fontStyle: 'italic',
-                                            pl: 2,
-                                            mt: 0.5,
-                                            borderLeft: `2px solid ${alpha(GOLD_ACCENT, 0.5)}`,
-                                        }}
-                                    >
-                                        {item.hi}
-                                    </Typography>
-                                )}
-                            </Box>
-                        ))}
+                        <BilingualSegmentList segments={sentenceTranslations} accentColor={GOLD_ACCENT} />
                     </Box>
 
                     {importantWords.length > 0 && (
@@ -584,8 +521,6 @@ const StoryCard: React.FC<StoryCardProps> = ({
                             )}
                         </Box>
                     )}
-
-                    {tierNavFooter}
                 </CardContent>
             </Card>
 

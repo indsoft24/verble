@@ -26,6 +26,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import DocumentHead from '../components/seo/DocumentHead';
 import { learnerBrandTheme } from '../components/layout/learnerBrandTheme';
+import { SITE_REFUND_CREDIT_POLICY } from '../config/siteBusiness';
 
 const HELP_SECTIONS = [
     {
@@ -55,7 +56,7 @@ const HELP_SECTIONS = [
     {
         id: 'subscription-payment',
         title: 'Subscription and payment',
-        content: 'Subscriptions give you access to premium courses and features. We support secure payment methods including cards, UPI, and net banking. Check the subscription or pricing page for current plans. For refunds and billing questions, refer to our Terms of Service or contact support.',
+        content: `Subscriptions give you access to premium courses and features. We support secure payment methods including cards, UPI, and net banking. Check the subscription or pricing page for current plans. ${SITE_REFUND_CREDIT_POLICY} For refunds and billing questions, refer to our Terms of Service or contact support.`,
         keywords: ['subscription', 'payment', 'pricing', 'refund'],
     },
     {

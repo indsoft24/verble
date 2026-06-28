@@ -16,7 +16,6 @@ import {
     ListItemText,
     ListItemAvatar,
     Avatar,
-    alpha,
 } from '@mui/material';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
@@ -51,8 +50,8 @@ import SceneCard from '../components/features/SceneCard';
 import SpeechCard from '../components/features/SpeechCard';
 import LyricsCard from '../components/features/LyricsCard';
 import InstagramFeedsCard from '../components/features/InstagramFeedsCard';
-import ActivityTierNavFooter from '../components/features/ActivityTierNavFooter';
 import { getTodaysDailyContent, type DailyContent } from '../services/dailyContentService';
+import { type ActivityKind } from '../utils/activityTierPeerNav';
 import { contentMatchesCatalogSlot, DAILY_CONTENT_CATALOG } from '../utils/dailyContentTypeCatalog';
 import { findTodaysGoldMedia } from '../utils/goldDailyContent';
 import {
@@ -66,19 +65,6 @@ import LeaderboardPanel from '../components/dashboard/LeaderboardPanel';
 import DashboardSeminarPromoCard from '../components/dashboard/DashboardSeminarPromoCard';
 import { getRecentJoiners, type RecentJoiner } from '../services/recentJoinersService';
 import { useUserLayoutPage } from '../contexts/UserLayoutConfigContext';
-
-type ActivityKind =
-    | 'word'
-    | 'phrase'
-    | 'story'
-    | 'vocab'
-    | 'conversation'
-    | 'puzzle_spot'
-    | 'puzzle_grammar'
-    | 'scene'
-    | 'speech'
-    | 'lyrics'
-    | 'feed';
 
 type DashboardOpenActivityState = {
     openActivity?: { kind: ActivityKind; content: DailyContent };
@@ -400,36 +386,16 @@ const UserDashboardPage: React.FC = () => {
                         </Button>
                         <PracticalConversationActivity
                             data={selectedActivity}
+                            onContentChange={(content) => setSelectedActivity(content)}
                             onSubmissionSuccess={refreshDashboardAfterSubmission}
-                        />
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                mt: 2,
-                                px: { xs: 1.5, sm: 2.5 },
-                                py: 0.5,
-                                borderRadius: 2,
-                                bgcolor: '#0f172a',
-                                border: `1px solid ${alpha(TIER_COLORS.SILVER, 0.28)}`,
+                            accentColor={TIER_COLORS.SILVER}
+                            peerContents={{
+                                conversation: conversationContent,
+                                puzzle_spot: puzzleSpotContent,
+                                puzzle_grammar: puzzleGrammarContent,
                             }}
-                        >
-                            <ActivityTierNavFooter
-                                variant="dark"
-                                accentColor={TIER_COLORS.SILVER}
-                                left={{
-                                    label: 'Spot the Sentence',
-                                    onClick: puzzleSpotContent
-                                        ? () => openLinkedActivity(puzzleSpotContent, 'puzzle_spot')
-                                        : undefined,
-                                }}
-                                center={{
-                                    label: '→ Grammar Puzzle',
-                                    onClick: puzzleGrammarContent
-                                        ? () => openLinkedActivity(puzzleGrammarContent, 'puzzle_grammar')
-                                        : undefined,
-                                }}
-                            />
-                        </Paper>
+                            onOpenPeer={openLinkedActivity}
+                        />
                     </ConversationExperienceShell>
                 ) : (
                 <Container
@@ -489,47 +455,24 @@ const UserDashboardPage: React.FC = () => {
                     {(activityKind === 'puzzle_spot' || activityKind === 'puzzle_grammar') && (
                         <>
                             <PuzzleCard
+                                key={`${selectedActivity._id}-${activityKind}`}
                                 data={selectedActivity}
                                 puzzleType={
                                     activityKind === 'puzzle_grammar'
                                         ? 'GRAMMAR_FILL_BLANK'
                                         : 'SPOT_CORRECT_SENTENCE'
                                 }
+                                onContentChange={(content) => setSelectedActivity(content)}
                                 onSubmissionSuccess={refreshDashboardAfterSubmission}
-                                tierNav={{
+                                peerNav={{
                                     accentColor: TIER_COLORS.SILVER,
-                                    left: {
-                                        label: 'Practical Conversations',
-                                        onClick: conversationContent
-                                            ? () =>
-                                                  openLinkedActivity(
-                                                      conversationContent,
-                                                      'conversation'
-                                                  )
-                                            : undefined,
+                                    kind: activityKind,
+                                    contents: {
+                                        conversation: conversationContent,
+                                        puzzle_spot: puzzleSpotContent,
+                                        puzzle_grammar: puzzleGrammarContent,
                                     },
-                                    center: {
-                                        label:
-                                            activityKind === 'puzzle_spot'
-                                                ? '→ Grammar Puzzle'
-                                                : '← Spot the Sentence',
-                                        onClick:
-                                            activityKind === 'puzzle_spot'
-                                                ? puzzleGrammarContent
-                                                    ? () =>
-                                                          openLinkedActivity(
-                                                              puzzleGrammarContent,
-                                                              'puzzle_grammar'
-                                                          )
-                                                    : undefined
-                                                : puzzleSpotContent
-                                                  ? () =>
-                                                        openLinkedActivity(
-                                                            puzzleSpotContent,
-                                                            'puzzle_spot'
-                                                        )
-                                                  : undefined,
-                                    },
+                                    openLinked: openLinkedActivity,
                                 }}
                             />
                         </>
@@ -579,11 +522,6 @@ const UserDashboardPage: React.FC = () => {
                             onNavigateToSpeech={
                                 speechContent
                                     ? () => openLinkedActivity(speechContent, 'speech')
-                                    : undefined
-                            }
-                            onNavigateToLyrics={
-                                lyricsContent
-                                    ? () => openLinkedActivity(lyricsContent, 'lyrics')
                                     : undefined
                             }
                         />

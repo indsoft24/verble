@@ -5,7 +5,6 @@ import {
     Button,
     Chip,
     CircularProgress,
-    Grid,
     IconButton,
     Paper,
     TextField,
@@ -97,22 +96,43 @@ function ExchangePreview({
     );
 }
 
+import ActivityTierNavFooter from './ActivityTierNavFooter';
+import { getAdjacentContent } from '../../services/dailyContentService';
+import {
+    canShowNextNavigation,
+    refreshAdjacentFlags,
+} from '../../utils/dailyActivityUi';
+import {
+    buildTierNavSlots,
+    type ActivityKind,
+} from '../../utils/activityTierPeerNav';
+
 export interface PracticalConversationActivityProps {
     data: DailyContent;
+    onContentChange?: (content: DailyContent) => void;
     onSubmissionSuccess?: (progress?: import('../../services/authService').UserProgressSnapshot) => void;
+    peerContents?: Partial<Record<ActivityKind, DailyContent | undefined>>;
+    onOpenPeer?: (content: DailyContent, kind: ActivityKind) => void;
+    accentColor?: string;
 }
 
 const PracticalConversationActivity: React.FC<PracticalConversationActivityProps> = ({
     data,
+    onContentChange,
     onSubmissionSuccess,
+    peerContents,
+    onOpenPeer,
+    accentColor,
 }) => {
     const { user } = useAuth();
-    const meta = (data.metadata || {}) as Record<string, unknown>;
+    const [currentContent, setCurrentContent] = useState<DailyContent>(data);
+
+    const meta = (currentContent.metadata || {}) as Record<string, unknown>;
     const { participant1, participant2 } = getConversationParticipants(meta);
     const dialogue = normalizeDialogue(meta.dialogue, participant1, participant2);
-    const scenarioTitle = String(meta.scenarioTitle || data.title || '');
+    const scenarioTitle = String(meta.scenarioTitle || currentContent.title || '');
     const scenarioTitleHi = String(meta.scenarioTitle_hi || '');
-    const isToday = isContentScheduledToday(data.date);
+    const isToday = isContentScheduledToday(currentContent.date);
 
     const [exchanges, setExchanges] = useState<ConversationExchange[]>([
         emptyExchange(),
@@ -122,24 +142,52 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
     const [submissionLoading, setSubmissionLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [hasPrevious, setHasPrevious] = useState(false);
+    const [hasNext, setHasNext] = useState(false);
+    const [isLoadingNav, setIsLoadingNav] = useState(false);
+
+    const checkAdjacent = useCallback(async (contentId: string) => {
+        const flags = await refreshAdjacentFlags(contentId);
+        setHasPrevious(flags.hasPrevious);
+        setHasNext(flags.hasNext);
+    }, []);
 
     const loadSubmission = useCallback(async () => {
-        if (!user || !data._id) {
+        if (!user || !currentContent._id) {
             setExistingSubmission(null);
             return;
         }
         setSubmissionLoading(true);
         try {
-            const sub = await getUserConversationSubmission(data._id);
+            const sub = await getUserConversationSubmission(currentContent._id);
             setExistingSubmission(sub);
         } finally {
             setSubmissionLoading(false);
         }
-    }, [user, data._id]);
+    }, [user, currentContent._id]);
+
+    useEffect(() => {
+        setCurrentContent(data);
+        void checkAdjacent(data._id);
+    }, [data, checkAdjacent]);
 
     useEffect(() => {
         loadSubmission();
     }, [loadSubmission]);
+
+    const handleNavigation = async (direction: 'prev' | 'next') => {
+        setIsLoadingNav(true);
+        try {
+            const adjacent = await getAdjacentContent(currentContent._id, direction);
+            if (adjacent) {
+                setCurrentContent(adjacent);
+                onContentChange?.(adjacent);
+                await checkAdjacent(adjacent._id);
+            }
+        } finally {
+            setIsLoadingNav(false);
+        }
+    };
 
     const updateExchange = (index: number, field: keyof ConversationExchange, value: string) => {
         setExchanges((prev) => {
@@ -162,7 +210,7 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !data._id || !isToday) return;
+        if (!user || !currentContent._id || !isToday) return;
 
         const normalized = exchanges.map((row) => ({
             participant1Line: row.participant1Line.trim(),
@@ -190,7 +238,7 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
         setIsSubmitting(true);
         setSubmitStatus(null);
         try {
-            const { progress } = await submitConversationPractice(data._id, normalized);
+            const { progress } = await submitConversationPractice(currentContent._id, normalized);
             setSubmitStatus({ type: 'success', message: 'Practice saved! You earned participation points.' });
             await loadSubmission();
             onSubmissionSuccess?.(progress);
@@ -214,7 +262,7 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: { xs: 2, md: 2.5 },
+                gap: { xs: 2.5, sm: 3 },
                 width: theme.frameWidth,
                 maxWidth: theme.frameMaxWidth,
                 minWidth: { xs: 0, sm: 360 },
@@ -227,7 +275,7 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                 participant2={participant2}
                 scenarioTitle={scenarioTitle}
                 scenarioTitleHi={scenarioTitleHi}
-                displayNumber={getContentDisplayNumber(data.sequenceNumber)}
+                displayNumber={getContentDisplayNumber(currentContent.sequenceNumber)}
             />
 
             <Paper
@@ -368,8 +416,16 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                                         </IconButton>
                                     )}
                                 </Box>
-                                <Grid container columnSpacing={1.5} rowSpacing={1}>
-                                    <Grid size={{ xs: 12, md: 6 }}>
+                                <Box
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                                        columnGap: 1.5,
+                                        rowGap: 1,
+                                        width: '100%',
+                                    }}
+                                >
+                                    <Box sx={{ width: '100%', minWidth: 0 }}>
                                         <Typography
                                             variant="caption"
                                             sx={{
@@ -402,8 +458,8 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                                                 '& .MuiInputBase-input': { py: 0.75 },
                                             }}
                                         />
-                                    </Grid>
-                                    <Grid size={{ xs: 12, md: 6 }}>
+                                    </Box>
+                                    <Box sx={{ width: '100%', minWidth: 0 }}>
                                         <Typography
                                             variant="caption"
                                             sx={{
@@ -437,8 +493,8 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                                                 '& .MuiInputBase-input': { py: 0.75 },
                                             }}
                                         />
-                                    </Grid>
-                                </Grid>
+                                    </Box>
+                                </Box>
                                 <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                                     <ExchangePreview
                                         participant1={participant1}
@@ -483,6 +539,32 @@ const PracticalConversationActivity: React.FC<PracticalConversationActivityProps
                         </Button>
                     </Box>
                 )}
+
+                {peerContents && onOpenPeer && accentColor && (() => {
+                    const canGoNext = canShowNextNavigation(currentContent.date, hasNext);
+                    const slots = buildTierNavSlots({
+                        kind: 'conversation',
+                        contents: peerContents,
+                        openLinked: onOpenPeer,
+                        sequential: {
+                            kind: 'conversation',
+                            hasPrevious,
+                            hasNext: canGoNext,
+                            onPrev: () => void handleNavigation('prev'),
+                            onNext: () => void handleNavigation('next'),
+                            loading: isLoadingNav,
+                        },
+                    });
+                    return (
+                        <ActivityTierNavFooter
+                            variant="dark"
+                            accentColor={accentColor}
+                            left={slots.left}
+                            center={slots.center}
+                            right={slots.right}
+                        />
+                    );
+                })()}
             </Paper>
         </Box>
     );

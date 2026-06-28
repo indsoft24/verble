@@ -18,6 +18,7 @@ import {
 } from '../services/moduleQuizAccessService.js';
 import { assertModuleUnlockedForUser } from '../services/moduleUnlockService.js';
 import { isFilledOption, isValidFilledSelection } from '../utils/quizOptionUtils.js';
+import { applyQuizEvaluationOnSubmit } from '../services/evaluationScoreService.js';
 
 /**
  * @desc    Get quiz for a module (without answers for students)
@@ -174,6 +175,14 @@ export const submitModuleQuiz = asyncHandler(async (req, res) => {
         retakeMessage = failResult.retakeMessage;
     }
 
+    const moduleDoc = await Module.findById(moduleId).select('title').lean();
+    const evalResult = await applyQuizEvaluationOnSubmit(
+        userId.toString(),
+        submission,
+        quiz.title,
+        moduleDoc?.title
+    );
+
     res.status(200).json({
         status: 'success',
         data: {
@@ -191,6 +200,7 @@ export const submitModuleQuiz = asyncHandler(async (req, res) => {
                     pointsEarned: a.pointsEarned,
                 })),
             },
+            evaluationScore: evalResult.evaluationScore ?? undefined,
         },
     });
 });

@@ -23,6 +23,7 @@
     "pinCopied": "कॉपी हो गया!",
     "pinAlsoEmailed": "Verble टीम ने यह PIN आपके ईमेल पर भी भेज दिया है।",
     "pinAlsoEmailedTo": "Verble टीम ने यह PIN {{email}} पर भी भेज दिया है।",
+    "pinSignInWithPhone": "{{phone}} और इस PIN से साइन इन करें।",
     "pinKeepSafeHint": "अपना PIN निजी रखें। साइन इन के बाद डैशबोर्ड से कभी भी बदल सकते हैं।",
     "createAccount": "अपना खाता बनाएँ",
     "registrationPinInfo": "ईमेल सत्यापन के बाद आपका 6-अंकीय लॉगिन PIN स्क्रीन पर दिखेगा—हम इसे ईमेल भी करेंगे। केवल फ़ोन + PIN से साइन इन होगा।",

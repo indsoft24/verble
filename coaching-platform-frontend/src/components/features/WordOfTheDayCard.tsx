@@ -24,15 +24,19 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import SendIcon from '@mui/icons-material/Send';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import apiClient from '../../services/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdjacentContent, getWordDisplayNumber } from '../../services/dailyContentService';
 import { getUserWordSubmissions, type UserWordSubmission } from '../../services/sentenceSubmissionService';
 import { applyPreferredFemaleEnVoice } from '../../utils/ttsVoice';
 import ActivityContentHeader from './ActivityContentHeader';
-import { activityCardProps, activityNavSideButtonSx, GOLD_ACCENT, GREEN_ACCENT } from '../../utils/dailyActivityUi';
+import {
+    activityCardProps,
+    activityCardStackSx,
+    GOLD_ACCENT,
+    GREEN_ACCENT,
+} from '../../utils/dailyActivityUi';
+import ActivityTierNavFooter from './ActivityTierNavFooter';
 
 interface DailyContent {
     _id: string;
@@ -342,7 +346,7 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
     );
 
     return (
-        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+        <Box sx={activityCardStackSx}>
             {showConfetti && <ConfettiEffect />}
 
             {/* Card 1 — Word & meanings */}
@@ -783,71 +787,27 @@ const WordOfTheDayCard: React.FC<WordOfTheDayCardProps> = ({
                         </Typography>
                     ) : null}
 
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: 1,
-                            mt: 3,
-                            pt: 2,
-                            borderTop: `1px solid ${alpha(GOLD_ACCENT, 0.25)}`,
+                    <ActivityTierNavFooter
+                        accentColor={GOLD_ACCENT}
+                        centerAccentColor={GREEN_ACCENT}
+                        left={{
+                            label: 'Previous Word',
+                            onClick: () => handleNavigation('prev'),
+                            disabled: !hasPrevious,
+                            loading: isLoadingNav,
                         }}
-                    >
-                        <Button
-                            variant="text"
-                            startIcon={<ArrowBackIcon />}
-                            onClick={() => hasPrevious && !isLoadingNav && handleNavigation('prev')}
-                            disabled={!hasPrevious || isLoadingNav}
-                            aria-disabled={!hasPrevious || isLoadingNav}
-                            sx={activityNavSideButtonSx({
-                                disabled: !hasPrevious || isLoadingNav,
-                                accentColor: GOLD_ACCENT,
-                                side: 'left',
-                            })}
-                        >
-                            {isLoadingNav ? 'Loading…' : 'Previous Word'}
-                        </Button>
-
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => onNavigateToPhrase?.()}
-                            disabled={!onNavigateToPhrase}
-                            sx={{
-                                borderColor: GOLD_ACCENT,
-                                color: GOLD_ACCENT,
-                                fontWeight: 700,
-                                px: 2,
-                                '&:hover': {
-                                    borderColor: GOLD_ACCENT,
-                                    bgcolor: alpha(GOLD_ACCENT, 0.12),
-                                },
-                                '&.Mui-disabled': {
-                                    borderColor: alpha('#e2e8f0', 0.2),
-                                    color: alpha('#e2e8f0', 0.35),
-                                },
-                            }}
-                        >
-                            → Phrase of the Day
-                        </Button>
-
-                        <Button
-                            variant="text"
-                            endIcon={<ArrowForwardIcon />}
-                            onClick={() => hasNext && !isLoadingNav && handleNavigation('next')}
-                            disabled={!hasNext || isLoadingNav}
-                            aria-disabled={!hasNext || isLoadingNav}
-                            sx={activityNavSideButtonSx({
-                                disabled: !hasNext || isLoadingNav,
-                                accentColor: GOLD_ACCENT,
-                                side: 'right',
-                            })}
-                        >
-                            {isLoadingNav ? 'Loading…' : 'Next Word'}
-                        </Button>
-                    </Box>
+                        center={{
+                            label: '→ Phrase of the Day',
+                            onClick: onNavigateToPhrase,
+                            disabled: !onNavigateToPhrase,
+                        }}
+                        right={{
+                            label: 'Next Word',
+                            onClick: () => handleNavigation('next'),
+                            disabled: !hasNext,
+                            loading: isLoadingNav,
+                        }}
+                    />
                 </CardContent>
             </Card>
         </Box>

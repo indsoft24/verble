@@ -13,7 +13,7 @@ import {
     Typography,
     useTheme,
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { useStartFreeNavigation } from '../../hooks/useStartFreeNavigation';
 
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
 import TranslateIcon from '@mui/icons-material/Translate';
@@ -84,6 +84,7 @@ const FeatureCard = ({
 
 const AboutUsPage: React.FC = () => {
     const theme = useTheme();
+    const handleStartFree = useStartFreeNavigation();
     const textMuted = theme.palette.mode === 'dark' ? 'rgba(226,232,240,0.82)' : '#4B5563';
     const headingColor = theme.palette.mode === 'dark' ? '#F9FAFB' : '#0F172A';
 
@@ -184,9 +185,26 @@ const AboutUsPage: React.FC = () => {
                                         }}
                                     />
                                 </Box>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: headingColor }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: headingColor, mb: SPACING.md }}>
                                     Just speak fluently in 30 days.
                                 </Typography>
+                                <Button
+                                    onClick={handleStartFree}
+                                    variant="contained"
+                                    size="large"
+                                    endIcon={<ArrowForwardIcon />}
+                                    sx={{
+                                        mt: 1,
+                                        px: 3,
+                                        py: 1.25,
+                                        fontWeight: 700,
+                                        borderRadius: 2,
+                                        bgcolor: '#4F46E5',
+                                        '&:hover': { bgcolor: '#4338CA' },
+                                    }}
+                                >
+                                    Start Your Free Module Today
+                                </Button>
                             </Grid>
                             <Grid size={{ xs: 12, md: 6 }} sx={{ order: { xs: 1, md: 2 } }}>
                                 <Box
@@ -473,8 +491,7 @@ const AboutUsPage: React.FC = () => {
                             Start free today and transform your English speaking confidence in just 30 days.
                         </Typography>
                         <Button
-                            component={RouterLink}
-                            to="/register"
+                            onClick={handleStartFree}
                             variant="contained"
                             size="large"
                             endIcon={<ArrowForwardIcon />}

@@ -18,6 +18,7 @@ import {
     resolveConversationParticipants,
     type DialogueLine,
 } from '../../utils/conversationDialogueUtils';
+import { speakPreferredEnglish } from '../../utils/ttsVoice';
 import { conversationGoldChatCardSx } from './conversationExperienceStyles';
 import ActivityContentHeader from './ActivityContentHeader';
 import { practicalConversationTheme as theme } from './practicalConversationTheme';
@@ -90,19 +91,10 @@ const ConversationChat: React.FC<ConversationChatProps> = ({
     };
 
     const playTTS = (index: number, text: string) => {
-        if (!synthRef.current) return;
-        synthRef.current.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
-        utterance.onend = () => {
+        speakPreferredEnglish(text, synthRef.current, () => {
             setPlayingAudio(null);
             setAudioLoading((prev) => ({ ...prev, [index]: false }));
-        };
-        utterance.onerror = () => {
-            setPlayingAudio(null);
-            setAudioLoading((prev) => ({ ...prev, [index]: false }));
-        };
-        synthRef.current.speak(utterance);
+        });
     };
 
     const handlePlayAudio = async (index: number, text: string, audioUrl?: string) => {

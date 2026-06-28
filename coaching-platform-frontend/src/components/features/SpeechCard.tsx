@@ -38,6 +38,7 @@ import ActivitySourceCredit from './ActivitySourceCredit';
 import {
     activityAlertOnDarkSx,
     activityCardProps,
+    activityCardStackSx,
     activityContainedButtonSx,
     activitySubmittedTextSx,
     activitySummaryTextFieldSx,
@@ -54,6 +55,8 @@ import {
     getSubmissionSummaries,
     isSummarySubmissionReady,
 } from '../../utils/goldSummaryActivityUtils';
+import { useActivitySpeaker } from '../../hooks/useActivitySpeaker';
+import ActivitySpeakerButton from './ActivitySpeakerButton';
 
 interface SpeechCardProps {
     data: DailyContent;
@@ -115,6 +118,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
     const [hasPrevious, setHasPrevious] = useState(false);
     const [hasNext, setHasNext] = useState(false);
     const [existingSubmission, setExistingSubmission] = useState<UserSpeechSubmission | null>(null);
+    const { playingKey, play: playSpeechText } = useActivitySpeaker();
 
     const loadSubmission = useCallback(async (speechId: string) => {
         if (!user) {
@@ -280,7 +284,7 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
     };
 
     return (
-        <Box sx={{ maxWidth: { xs: '100%', sm: 800 }, mx: 'auto' }}>
+        <Box sx={activityCardStackSx}>
             {showConfetti && <ConfettiEffect />}
 
             <Card {...activityCardProps(GOLD_ACCENT)}>
@@ -385,20 +389,41 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                                 <Typography sx={{ fontWeight: 700 }}>Keywords ({keywords.length})</Typography>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <List dense>
-                                    {keywords.map((keyword: Record<string, string>, index: number) => (
-                                        <ListItem
-                                            key={index}
-                                            sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1 }}
-                                        >
-                                            <Typography sx={{ fontWeight: 600, color: '#f8fafc' }}>
-                                                {keyword.word || keyword.phrase}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>
-                                                {keyword.meaning || keyword.meaning_en}
-                                            </Typography>
-                                        </ListItem>
-                                    ))}
+                                <List dense disablePadding>
+                                    {keywords.map((keyword: Record<string, string>, index: number) => {
+                                        const word = keyword.word || keyword.phrase || '';
+                                        return (
+                                            <ListItem
+                                                key={index}
+                                                disableGutters
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'flex-start',
+                                                    justifyContent: 'space-between',
+                                                    gap: 1,
+                                                    py: 1,
+                                                }}
+                                            >
+                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Typography sx={{ fontWeight: 600, color: '#f8fafc' }}>
+                                                        {word}
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.7) }}>
+                                                        {keyword.meaning || keyword.meaning_en}
+                                                    </Typography>
+                                                </Box>
+                                                <ActivitySpeakerButton
+                                                    text={word}
+                                                    playKey={`speech-kw-${index}`}
+                                                    accentColor={GOLD_ACCENT}
+                                                    playingKey={playingKey}
+                                                    onPlay={playSpeechText}
+                                                    audioUrl={keyword.audio}
+                                                    ariaLabel={`Play ${word}`}
+                                                />
+                                            </ListItem>
+                                        );
+                                    })}
                                 </List>
                             </AccordionDetails>
                         </Accordion>
@@ -435,7 +460,6 @@ const SpeechCard: React.FC<SpeechCardProps> = ({
                             </AccordionDetails>
                         </Accordion>
                     )}
-                    {tierNavFooter}
                 </CardContent>
             </Card>
 
