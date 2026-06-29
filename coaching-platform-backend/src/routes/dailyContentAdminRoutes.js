@@ -9,6 +9,7 @@ import {
     updateDailyContentAdmin,
     deleteDailyContentAdmin,
     bulkDeleteDailyContentAdmin,
+    cleanupMisdatedDailyContentAdmin,
     uploadDailyContentImageAdmin,
 } from '../controllers/dailyContentAdminController.js';
 import uploadBlogImage from '../middleware/uploadBlogImageMiddleware.js';
@@ -27,6 +28,9 @@ router.get('/sequence-preview', getSequencePreviewAdmin);
 
 // POST /api/admin/daily-content/bulk - Bulk create (must be before /:id if ever added under POST)
 router.post('/bulk', bulkCreateDailyContentAdmin);
+
+// POST /api/admin/daily-content/cleanup-misdated - Remove misdated schedule imports
+router.post('/cleanup-misdated', cleanupMisdatedDailyContentAdmin);
 
 router.post(
     '/upload-image',

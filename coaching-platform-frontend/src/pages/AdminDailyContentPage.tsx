@@ -204,8 +204,16 @@ const AdminDailyContentPage: React.FC = () => {
     );
 
     const handleApplyBrowseFilters = (patch?: Partial<BrowseFilters>) => {
-        const merged = patch ? { ...browseFilters, ...patch } : browseFilters;
-        if (patch) {
+        const isFilterPatch =
+            patch != null &&
+            typeof patch === 'object' &&
+            !('nativeEvent' in patch) &&
+            Object.keys(patch).every((k) =>
+                ['startDate', 'endDate', 'level', 'type', 'search', 'isActive', 'sortOrder'].includes(k)
+            );
+        const safePatch = isFilterPatch ? patch : undefined;
+        const merged = safePatch ? { ...browseFilters, ...safePatch } : browseFilters;
+        if (safePatch) {
             setBrowseFilters(merged);
         }
         setBrowsePage(0);
@@ -1205,9 +1213,21 @@ const AdminDailyContentPage: React.FC = () => {
                 <AdminDailyContentBulkDialog
                     open={bulkDialogOpen}
                     onClose={() => setBulkDialogOpen(false)}
-                    onImported={() => {
+                    onImported={(info) => {
+                        if (info?.minDate && info?.maxDate) {
+                            const startDate = parseScheduleDateLocal(info.minDate);
+                            const endDate = parseScheduleDateLocal(info.maxDate);
+                            if (startDate && endDate) {
+                                const merged = { ...browseFilters, startDate, endDate };
+                                setBrowseFilters(merged);
+                                setBrowsePage(0);
+                                syncUrlState({ browseFilters: merged, browsePage: 0 });
+                                fetchBrowseContent(merged, 0);
+                            }
+                        } else {
+                            refreshCurrentView();
+                        }
                         setBulkDialogOpen(false);
-                        refreshCurrentView();
                     }}
                     calendarDate={selectedDate}
                 />

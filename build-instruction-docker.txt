@@ -1,11 +1,36 @@
 ================================================================================
 VERBLE — Docker build & deploy (VPS)
 ================================================================================
-Project root:  /var/www/verble
+Project root:  /var/www/verble.in  (or /var/www/verble)
 Compose file:  docker-compose.vps.yml
 
-You do NOT need to rebuild mongo, redis, or every service for a small UI/API fix.
-Only rebuild the image that actually changed, then recreate that container.
+USE THE SAFE DEPLOY SCRIPT — do NOT run raw `docker compose build` on this VPS.
+The server has limited RAM (~4GB, no swap). Unbounded builds can OOM-kill Apache
+and take down every site on the host.
+
+--------------------------------------------------------------------------------
+SAFE DEPLOY (recommended)
+--------------------------------------------------------------------------------
+
+  cd /var/www/verble.in
+
+  # Frontend only (most UI changes) — disconnect-safe:
+  nohup ./scripts/deploy-vps.sh web >> /var/log/verble-deploy.log 2>&1 &
+  tail -f /var/log/verble-deploy.log
+  # Log timestamps are Asia/Kolkata (IST), e.g. [2026-06-28 10:53:06 IST]
+
+  # Backend API only:
+  nohup ./scripts/deploy-vps.sh backend >> /var/log/verble-deploy.log 2>&1 &
+
+  # Both (backend first, then web):
+  nohup ./scripts/deploy-vps.sh all >> /var/log/verble-deploy.log 2>&1 &
+
+  # Foreground (stay connected):
+  ./scripts/deploy-vps.sh web
+
+The script: locks concurrent deploys, caps build RAM/CPU, builds one service at
+a time, swaps containers with --no-deps (zero downtime), health-checks, rolls back
+on failure, and prunes stale build cache.
 
 --------------------------------------------------------------------------------
 WHAT EACH SERVICE IS
@@ -16,67 +41,48 @@ WHAT EACH SERVICE IS
   redis     Cache (pre-built image). Rebuild: NEVER for app code. Only `up -d`.
 
 Apache/cPanel proxies verble.in → host port 3001 (web). No Docker rebuild for
-proxy-only fixes — edit /etc/apache2/conf.d/userdata/.../verble.in/proxy.conf
-and run: /usr/local/cpanel/scripts/rebuildhttpdconf && /scripts/restartsrv_httpd
+proxy-only fixes — edit Apache userdata proxy.conf and restart httpd.
 
 --------------------------------------------------------------------------------
-QUICK REFERENCE (run from /var/www/verble)
+FIRST-TIME SETUP (no build)
 --------------------------------------------------------------------------------
 
-  export COMPOSE="docker compose -f docker-compose.vps.yml"
-
-  # --- Frontend only (most UI/dashboard changes) ---
-  $COMPOSE build web && $COMPOSE up -d web
-
-  # --- Backend API only ---
-  $COMPOSE build backend && $COMPOSE up -d backend
-
-  # --- Frontend + backend (full-stack feature touching both) ---
-  $COMPOSE build web backend && $COMPOSE up -d web backend
-
-  # --- App stack: ensure web + backend + mongo + redis are running (no rebuild) ---
-  $COMPOSE up -d
-
-  # --- Rebuild ALL custom images (web + backend), then start everything ---
-  $COMPOSE build web backend && $COMPOSE up -d
+  ./scripts/ready-to-deploy.sh          # secrets + docker compose up -d
+  ./scripts/deploy-vps.sh all             # first image build (use nohup on VPS)
 
 --------------------------------------------------------------------------------
-COPY-PASTE COMMANDS
+RESTART ONLY (no code change)
 --------------------------------------------------------------------------------
 
-cd /var/www/verble
+  docker compose -f docker-compose.vps.yml up -d
+  docker compose -f docker-compose.vps.yml up -d backend   # .env change only
 
-# 1) WEB ONLY — frontend / dashboard / components / i18n
-docker compose -f docker-compose.vps.yml build web
-docker compose -f docker-compose.vps.yml up -d web
+--------------------------------------------------------------------------------
+STATUS & LOGS
+--------------------------------------------------------------------------------
 
-# 2) BACKEND ONLY — API, controllers, models, middleware
-docker compose -f docker-compose.vps.yml build backend
-docker compose -f docker-compose.vps.yml up -d backend
-
-# 3) WEB + BACKEND — same release, both codebases changed
-docker compose -f docker-compose.vps.yml build web backend
-docker compose -f docker-compose.vps.yml up -d web backend
-
-# 4) START / RESTART ONLY — no code change (reboot, .env already in image mount)
-docker compose -f docker-compose.vps.yml up -d
-
-# 5) STATUS & LOGS
-docker compose -f docker-compose.vps.yml ps
-docker logs -f verble-web --tail 100
-docker logs -f verble-backend --tail 100
+  docker compose -f docker-compose.vps.yml ps
+  docker logs -f verble-web --tail 100
+  docker logs -f verble-backend --tail 100
+  tail -f /var/log/verble-deploy.log
+  # Log timestamps are Asia/Kolkata (IST), e.g. [2026-06-28 10:53:06 IST]
 
 --------------------------------------------------------------------------------
 WHEN TO USE WHICH
 --------------------------------------------------------------------------------
-  Change in coaching-platform-frontend/     →  WEB ONLY (1)
-  Change in coaching-platform-backend/      →  BACKEND ONLY (2)
-  Change in both                            →  WEB + BACKEND (3)
-  Server reboot / containers stopped        →  up -d (4)
-  Only backend .env change (no code)        →  up -d backend (4) — .env is mounted
-                                               at runtime via env_file; restart enough
-  Dockerfile / package.json / nginx.conf    →  rebuild affected service (1 or 2 or 3)
-  mongo / redis                             →  do NOT build; `up -d` only if stopped
+  Change in coaching-platform-frontend/     →  deploy-vps.sh web
+  Change in coaching-platform-backend/      →  deploy-vps.sh backend
+  Change in both                            →  deploy-vps.sh all
+  Server reboot / containers stopped        →  compose up -d
+  Only backend .env change (no code)        →  compose up -d backend
+  mongo / redis                             →  do NOT build; up -d only if stopped
+
+--------------------------------------------------------------------------------
+DO NOT ON PRODUCTION
+--------------------------------------------------------------------------------
+  docker compose build ...                  →  use deploy-vps.sh instead
+  docker compose down -v                      →  deletes database volumes
+  docker compose up -d --force-recreate       →  unnecessary downtime / risk
 
 --------------------------------------------------------------------------------
 LOCAL DEV (no Docker) — fastest for tiny frontend edits
@@ -88,15 +94,16 @@ LOCAL DEV (no Docker) — fastest for tiny frontend edits
 AFTER DEPLOY
 --------------------------------------------------------------------------------
   • Hard refresh browser: Ctrl+Shift+R (Cmd+Shift+R on Mac)
-  • Check: curl -sI https://verble.in/ | head -5   (expect Server: nginx, 200)
-  • Check API: curl -s http://127.0.0.1:5001/api/health  (if health route exists)
+  • Check: curl -sI https://verble.in/ | head -5   (expect 200)
+  • Check web:  curl -sf http://127.0.0.1:3001/health
+  • Check API:  curl -sf http://127.0.0.1:5001/
 
 --------------------------------------------------------------------------------
-ONE-LINERS (aliases you can add to ~/.bashrc)
+SHELL ALIASES (~/.bashrc)
 --------------------------------------------------------------------------------
-  alias verble-web='cd /var/www/verble && docker compose -f docker-compose.vps.yml build web && docker compose -f docker-compose.vps.yml up -d web'
-  alias verble-api='cd /var/www/verble && docker compose -f docker-compose.vps.yml build backend && docker compose -f docker-compose.vps.yml up -d backend'
-  alias verble-app='cd /var/www/verble && docker compose -f docker-compose.vps.yml build web backend && docker compose -f docker-compose.vps.yml up -d web backend'
-  alias verble-ps='cd /var/www/verble && docker compose -f docker-compose.vps.yml ps'
+  alias verble-deploy='cd /var/www/verble.in && nohup ./scripts/deploy-vps.sh'
+  alias verble-web='cd /var/www/verble.in && nohup ./scripts/deploy-vps.sh web >> /var/log/verble-deploy.log 2>&1 &'
+  alias verble-api='cd /var/www/verble.in && nohup ./scripts/deploy-vps.sh backend >> /var/log/verble-deploy.log 2>&1 &'
+  alias verble-ps='cd /var/www/verble.in && docker compose -f docker-compose.vps.yml ps'
 
 ================================================================================

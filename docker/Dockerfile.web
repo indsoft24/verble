@@ -12,6 +12,8 @@ COPY coaching-platform-frontend/ ./
 
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=/api
+# Cap Node heap during tsc/vite build on memory-tight VPS hosts
+ENV NODE_OPTIONS=--max-old-space-size=1024
 
 RUN npm run build
 

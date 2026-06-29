@@ -647,6 +647,8 @@ const SubscriptionPlanDetailPage: React.FC = () => {
                                 <LazyImage
                                     src={getImageForPlan(plan)}
                                     alt={plan.name}
+                                    loading="eager"
+                                    fetchPriority="high"
                                     onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                                         (e.target as HTMLImageElement).src = getSplashImageUrl();
                                     }}

@@ -276,6 +276,38 @@ export const bulkDeleteDailyContentAdmin = async (
     return response.data.data;
 };
 
+export interface MisdatedCleanupItem {
+    id: string;
+    title: string;
+    type: string;
+    dateKey: string;
+}
+
+export interface MisdatedCleanupResult {
+    count?: number;
+    preview?: MisdatedCleanupItem[];
+    deletedCount?: number;
+    dryRun: boolean;
+}
+
+/** Preview daily content with schedule years outside 2000–2100 (e.g. year 0026 mis-imports). */
+export const previewMisdatedDailyContentAdmin = async (): Promise<MisdatedCleanupResult> => {
+    const response = await apiClient.post<{ status: string; data: MisdatedCleanupResult }>(
+        '/admin/daily-content/cleanup-misdated',
+        { dryRun: true }
+    );
+    return response.data.data;
+};
+
+/** Delete misdated daily content records. */
+export const deleteMisdatedDailyContentAdmin = async (): Promise<MisdatedCleanupResult> => {
+    const response = await apiClient.post<{ status: string; data: MisdatedCleanupResult }>(
+        '/admin/daily-content/cleanup-misdated',
+        { dryRun: false }
+    );
+    return response.data.data;
+};
+
 /** Upload image for daily content (feed posts, scenes, etc.) */
 export const uploadDailyContentImage = async (imageFile: File): Promise<{ imageUrl: string }> => {
     const formData = new FormData();

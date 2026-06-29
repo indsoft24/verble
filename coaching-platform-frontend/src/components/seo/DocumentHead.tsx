@@ -1,15 +1,11 @@
 import React from 'react';
-import useDocumentHead from '../../hooks/useDocumentHead'; 
+import useDocumentHead, { type HeadTags } from '../../hooks/useDocumentHead';
 
-interface DocumentHeadProps {
-  title: string;
-  description: string;
-  canonicalUrl: string;
-}
+type DocumentHeadProps = HeadTags;
 
-const DocumentHead: React.FC<DocumentHeadProps> = ({ title, description, canonicalUrl }) => {
-  useDocumentHead({ title, description, canonicalUrl });
-    return null; 
+const DocumentHead: React.FC<DocumentHeadProps> = (props) => {
+    useDocumentHead(props);
+    return null;
 };
 
 export default DocumentHead;

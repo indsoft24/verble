@@ -23,6 +23,7 @@ import {
     Stepper,
     Step,
     StepLabel,
+    Stack,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import GetAppIcon from '@mui/icons-material/GetApp';
@@ -39,14 +40,17 @@ import { DAILY_CONTENT_CATALOG, levelForAdminKey } from '../../utils/dailyConten
 import {
     bulkCreateDailyContentAdminChunked,
     BULK_IMPORT_BATCH_SIZE,
+    deleteMisdatedDailyContentAdmin,
+    previewMisdatedDailyContentAdmin,
     type BulkImportProgress,
     type CreateDailyContentPayload,
+    type MisdatedCleanupResult,
 } from '../../services/dailyContentAdminService';
 
 export interface AdminDailyContentBulkDialogProps {
     open: boolean;
     onClose: () => void;
-    onImported: () => void;
+    onImported: (info?: { minDate?: string; maxDate?: string }) => void;
     calendarDate: Date | null;
 }
 
@@ -71,6 +75,9 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
     const [importSummary, setImportSummary] = useState<string | null>(null);
     const [importProgress, setImportProgress] = useState<BulkImportProgress | null>(null);
     const [busy, setBusy] = useState(false);
+    const [misdatedPreview, setMisdatedPreview] = useState<MisdatedCleanupResult | null>(null);
+    const [misdatedBusy, setMisdatedBusy] = useState(false);
+    const [misdatedMessage, setMisdatedMessage] = useState<string | null>(null);
 
     const schema = bulkType && bulkLevel ? getBulkSchema(bulkType) : null;
 
@@ -185,20 +192,43 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                 batchSize: BULK_IMPORT_BATCH_SIZE,
                 onProgress: setImportProgress,
             });
+            const dates = validatedPayloads.map((p) => p.date).filter(Boolean).sort();
+            const dateRange =
+                dates.length > 0
+                    ? { minDate: dates[0], maxDate: dates[dates.length - 1] }
+                    : undefined;
+
+            if (out.createdCount === 0) {
+                const detail = out.failures
+                    .slice(0, 8)
+                    .map((f) => `Row ${f.index + 1}: ${f.message}`)
+                    .join('; ');
+                setImportError(
+                    `No records were imported. ${out.failedCount} failed.${detail ? ` ${detail}` : ''}${
+                        out.failures.length > 8 ? '…' : ''
+                    }`
+                );
+                return;
+            }
+
             if (out.failedCount > 0) {
                 const detail = out.failures
                     .slice(0, 5)
-                    .map((f) => `#${f.index + 1}: ${f.message}`)
+                    .map((f) => `Row ${f.index + 1}: ${f.message}`)
                     .join('; ');
                 setImportSummary(
                     `Imported ${out.createdCount} item(s). ${out.failedCount} failed. ${detail}${
                         out.failures.length > 5 ? '…' : ''
-                    }`
+                    }${dateRange ? ` Scheduled ${dateRange.minDate} – ${dateRange.maxDate}.` : ''}`
                 );
             } else {
-                setImportSummary(`Successfully imported ${out.createdCount} item(s).`);
+                setImportSummary(
+                    `Successfully imported ${out.createdCount} item(s).${
+                        dateRange ? ` Scheduled ${dateRange.minDate} – ${dateRange.maxDate}.` : ''
+                    }`
+                );
             }
-            onImported();
+            onImported(dateRange);
             resetUpload();
             setActiveStep(0);
         } catch (err: unknown) {
@@ -210,6 +240,36 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
         } finally {
             setBusy(false);
             setImportProgress(null);
+        }
+    };
+
+    const handlePreviewMisdated = async () => {
+        setMisdatedBusy(true);
+        setMisdatedMessage(null);
+        try {
+            const result = await previewMisdatedDailyContentAdmin();
+            setMisdatedPreview(result);
+            if ((result.count ?? 0) === 0) {
+                setMisdatedMessage('No misdated records found.');
+            }
+        } catch (err: unknown) {
+            setMisdatedMessage(err instanceof Error ? err.message : 'Could not preview misdated records.');
+        } finally {
+            setMisdatedBusy(false);
+        }
+    };
+
+    const handleDeleteMisdated = async () => {
+        setMisdatedBusy(true);
+        setMisdatedMessage(null);
+        try {
+            const result = await deleteMisdatedDailyContentAdmin();
+            setMisdatedPreview(null);
+            setMisdatedMessage(`Deleted ${result.deletedCount ?? 0} misdated record(s). You can re-import your CSV now.`);
+        } catch (err: unknown) {
+            setMisdatedMessage(err instanceof Error ? err.message : 'Could not delete misdated records.');
+        } finally {
+            setMisdatedBusy(false);
         }
     };
 
@@ -259,8 +319,8 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                                 <li>Choose the content type (membership level is set automatically).</li>
                                 <li>Download the template — it lists every column; leave cells empty if you do not need them.</li>
                                 <li>
-                                    Fill your CSV. For grouped types (vocab, conversations, puzzles, feed), repeat{' '}
-                                    <code>date</code> and <code>title</code> on each line in the group.
+                                    Fill your CSV — <strong>one row per scheduled day</strong>. The next day goes on the
+                                    next row.
                                 </li>
                                 <li>
                                     Upload, validate, fix any errors, then import. Column headers are flexible:{' '}
@@ -272,11 +332,85 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                                     <code>example_1_en</code>, <code>example_1_hi</code>, <code>example_2_en</code>,{' '}
                                     <code>example_2_hi</code>, and so on — no JSON required.
                                 </li>
+                                <li>
+                                    <strong>Vocab set:</strong> one row per day — use <code>word_1</code>,{' '}
+                                    <code>pronunciation_hi_1</code>, <code>meaning_hi_1</code> through{' '}
+                                    <code>word_10</code> (up to 10 words per set).
+                                </li>
+                                <li>
+                                    <strong>Conversations:</strong> one row per day — set <code>scenario_title</code> /{' '}
+                                    <code>topic_name</code> and <code>participant_1</code>, <code>participant_2</code> once;
+                                    use <code>line_1_speaker</code>, <code>line_1_text_en</code>, <code>line_1_text_hi</code>{' '}
+                                    through <code>line_12</code> for dialogue.
+                                </li>
+                                <li>
+                                    <strong>Puzzles:</strong> one row per day with exactly 5 questions —{' '}
+                                    <code>question_1</code>, <code>option_1_1</code>…<code>correct_option_1</code> through
+                                    question 5.
+                                </li>
+                                <li>
+                                    <strong>Instagram feed:</strong> one row per day — <code>post_1_image_url</code>,{' '}
+                                    <code>post_1_credit</code>, … through <code>post_6</code> (up to 6 posts).
+                                </li>
+                                <li>
+                                    Use <code>yyyy-MM-dd</code> dates when possible; <code>06/01/26</code> also works
+                                    (parsed as 1 June 2026).
+                                </li>
+                                <li>
+                                    If a past bulk import used short dates like <code>06/01/26</code> before the fix,
+                                    use <strong>Fix misdated imports</strong> below before re-uploading.
+                                </li>
+                                <li>
+                                    <strong>Multi-value fields</strong> (story important words, scene keywords, speech /
+                                    lyrics words &amp; phrases): use <code>word:en:hi|word2:en2:hi2</code> or{' '}
+                                    <code>phrase:en:hi|phrase2:en2:hi2</code>.
+                                </li>
                             </Box>
                             {calendarDate && (
                                 <Typography variant="caption" display="block" sx={{ mt: 1 }}>
                                     Calendar filter is on {format(calendarDate, 'MMM d, yyyy')} for reference only — schedule
                                     dates come from the <code>date</code> column in your file.
+                                </Typography>
+                            )}
+                        </Alert>
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                                Fix misdated imports
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                                Removes content scheduled outside 2000–2100 (e.g. year 0026 from old CSV date parsing).
+                                Preview first, then delete, then re-import your file.
+                            </Typography>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    disabled={misdatedBusy}
+                                    onClick={handlePreviewMisdated}
+                                >
+                                    Preview misdated
+                                </Button>
+                                <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="warning"
+                                    disabled={misdatedBusy || (misdatedPreview?.count ?? 0) === 0}
+                                    onClick={handleDeleteMisdated}
+                                >
+                                    Delete misdated records
+                                </Button>
+                            </Stack>
+                            {misdatedPreview && (misdatedPreview.count ?? 0) > 0 && (
+                                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                                    Found {misdatedPreview.count} record(s)
+                                    {misdatedPreview.preview?.[0]
+                                        ? ` (e.g. ${misdatedPreview.preview[0].title} on ${misdatedPreview.preview[0].dateKey})`
+                                        : ''}
+                                </Typography>
+                            )}
+                            {misdatedMessage && (
+                                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                                    {misdatedMessage}
                                 </Typography>
                             )}
                         </Alert>
@@ -315,9 +449,15 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                                     columns empty. Only use <code>examples_json</code> if you prefer raw JSON.
                                 </Typography>
                             )}
-                            {schema.groupHint && (
-                                <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
-                                    Grouped import: {schema.groupHint}
+                            {(bulkType === 'VOCAB_SET' ||
+                                bulkType === 'CONVERSATION' ||
+                                bulkType === 'PROFESSIONAL_CONVERSATION' ||
+                                bulkType === 'PUZZLE_SPOT' ||
+                                bulkType === 'PUZZLE_GRAMMAR' ||
+                                bulkType === 'FEED') && (
+                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                    One CSV row = one scheduled day. Multiple items (words, dialogue lines, questions, or
+                                    posts) use numbered columns on the same row — leave unused slots empty.
                                 </Typography>
                             )}
                         </Alert>
@@ -351,7 +491,7 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                         </TableContainer>
 
                         <Typography variant="subtitle2" gutterBottom>
-                            Example CSV (single-row template)
+                            Example CSV (10-row round-trip template)
                         </Typography>
                         <Paper
                             variant="outlined"
@@ -367,28 +507,6 @@ const AdminDailyContentBulkDialog: React.FC<AdminDailyContentBulkDialogProps> = 
                         >
                             {buildExampleCsvFromSchema(schema)}
                         </Paper>
-
-                        {schema.rowMode === 'grouped' && schema.exampleRows.length > 0 && (
-                            <>
-                                <Typography variant="subtitle2" gutterBottom>
-                                    Grouped example (additional rows)
-                                </Typography>
-                                <Paper
-                                    variant="outlined"
-                                    sx={{
-                                        p: 1.5,
-                                        mb: 2,
-                                        bgcolor: 'grey.50',
-                                        fontFamily: 'ui-monospace, monospace',
-                                        fontSize: 11,
-                                        overflowX: 'auto',
-                                        whiteSpace: 'pre',
-                                    }}
-                                >
-                                    {schemaToExampleCsv(schema)}
-                                </Paper>
-                            </>
-                        )}
 
                         <Button
                             variant="outlined"

@@ -267,7 +267,7 @@ const AdminDailyContentBrowsePanel: React.FC<Props> = ({
                             <Button size="small" onClick={onResetFilters}>
                                 Reset
                             </Button>
-                            <Button size="small" variant="contained" onClick={onApplyFilters}>
+                            <Button size="small" variant="contained" onClick={() => onApplyFilters()}>
                                 Apply filters
                             </Button>
                         </Stack>

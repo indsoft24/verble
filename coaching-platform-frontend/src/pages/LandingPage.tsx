@@ -44,6 +44,8 @@ import { brandAssets } from '../assets/brandAssets';
 import FullCourseSyllabusSection from '../components/marketing/FullCourseSyllabusSection';
 import LandingPricingSection from '../components/marketing/LandingPricingSection';
 import PlanPriceOffer from '../components/marketing/PlanPriceOffer';
+import DocumentHead from '../components/seo/DocumentHead';
+import { canonicalForPath, HOME_PAGE_SEO } from '../config/siteSeo';
 import { getActiveSubscriptionPlans } from '../services/subscriptionPlanService';
 import { findPlanByNameMatch, getPlanOfferLabels } from '../utils/planPriceFormat';
 
@@ -389,6 +391,13 @@ const LandingPage: React.FC = () => {
 
     return (
         <Box sx={{ bgcolor: 'background.default', overflow: 'hidden' }}>
+            <DocumentHead
+                title={HOME_PAGE_SEO.title}
+                description={HOME_PAGE_SEO.description}
+                canonicalUrl={canonicalForPath(HOME_PAGE_SEO.path)}
+                ogImage={HOME_PAGE_SEO.ogImage}
+                ogType={HOME_PAGE_SEO.ogType}
+            />
             {/* Hero Banner */}
             <Box
                 sx={{

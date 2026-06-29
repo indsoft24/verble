@@ -471,8 +471,11 @@ Deploy backend + frontend + MongoDB + Redis as one Docker stack on a single port
 **Quick Deploy:**
 
 ```bash
-# 0. One-command deploy (after first-time setup)
+# 0. First-time setup (secrets + start stack; no image build)
 ./scripts/ready-to-deploy.sh
+
+# 0b. First image build (safe, resource-capped)
+./scripts/deploy-vps.sh all
 
 # 1. Clone and prepare
 cd /path/to/Verble
@@ -485,9 +488,10 @@ node coaching-platform-backend/scripts/generate-secrets.js
 nano coaching-platform-backend/.env
 # Set BASE_URL, email, Razorpay, etc.
 
-# 4. Build and start
-docker compose -f docker-compose.vps.yml build
-docker compose -f docker-compose.vps.yml up -d
+# 4. Build and start (use safe deploy script on VPS)
+cd /path/to/verble.in
+./scripts/deploy-vps.sh all
+# Disconnect-safe: nohup ./scripts/deploy-vps.sh all >> /var/log/verble-deploy.log 2>&1 &
 
 # 5. Check status
 docker compose -f docker-compose.vps.yml ps
@@ -788,15 +792,17 @@ PORT=5001
 docker ps
 
 # View logs
-docker compose logs
+docker compose -f docker-compose.vps.yml logs
 
-# Rebuild
-docker compose up -d --build --force-recreate
+# Safe rebuild on VPS (resource-capped, rollback on failure)
+cd /var/www/verble.in
+./scripts/deploy-vps.sh backend
 
-# Clean slate
-docker compose down -v
-docker compose up -d --build
+# Restart without rebuild (.env change)
+docker compose -f docker-compose.vps.yml up -d backend
 ```
+
+**Avoid on production:** `docker compose down -v` (deletes DB volumes) and `--force-recreate` (unnecessary risk on shared VPS).
 
 ### Payment Issues
 

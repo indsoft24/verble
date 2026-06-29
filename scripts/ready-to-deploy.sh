@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-# Run from repo root: ./scripts/ready-to-deploy.sh
-# Generates JWT secret (if placeholder), builds and starts the VPS Docker stack.
+# First-time VPS setup only — generates secrets and starts the stack (no image build).
+# For code updates use: ./scripts/deploy-vps.sh [web|backend|all]
 
 set -e
 cd "$(dirname "$0")/.."
@@ -12,11 +12,10 @@ else
   sh coaching-platform-backend/scripts/generate-secrets.sh
 fi
 
-echo ">>> Building Docker images..."
-docker compose -f docker-compose.vps.yml build
-
-echo ">>> Starting stack (web, backend, mongo, redis)..."
+echo ">>> Starting stack (mongo, redis, backend, web)..."
 docker compose -f docker-compose.vps.yml up -d
 
-echo ">>> Verble is running. Frontend: http://localhost:3001 (proxy this in Apache)"
+echo ">>> Verble stack started."
+echo "    First deploy / code updates: ./scripts/deploy-vps.sh web"
+echo "    Disconnect-safe: nohup ./scripts/deploy-vps.sh web >> /var/log/verble-deploy.log 2>&1 &"
 echo "    Logs: docker compose -f docker-compose.vps.yml logs -f"

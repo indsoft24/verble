@@ -3,10 +3,20 @@ import {
     defaultBrowseFilters,
     type BrowseFilters,
 } from '../components/admin/AdminDailyContentBrowsePanel';
+import { DAILY_CONTENT_CATALOG } from './dailyContentTypeCatalog';
 
 export type DailyContentViewMode = 'daily' | 'browse';
 
 const ROW_OPTIONS = [10, 25, 50, 100];
+const VALID_BROWSE_API_TYPES = new Set<string>(DAILY_CONTENT_CATALOG.map((s) => s.apiType));
+const VALID_BROWSE_LEVELS = new Set<string>([
+    'FREE',
+    'BRONZE',
+    'SILVER',
+    'GOLD',
+    'FULL_COURSE',
+    'BONUS',
+]);
 
 const parseDateParam = (value: string | null): Date | null => {
     if (!value) return null;
@@ -23,10 +33,19 @@ export function parseDailyContentUrlState(params: URLSearchParams) {
             ? {
                   startDate: parseDateParam(params.get('from')) ?? defaults.startDate,
                   endDate: parseDateParam(params.get('to')) ?? defaults.endDate,
-                  level: params.get('level') || '',
-                  type: params.get('type') || '',
+                  level: (() => {
+                      const level = params.get('level') || '';
+                      return level && VALID_BROWSE_LEVELS.has(level) ? level : '';
+                  })(),
+                  type: (() => {
+                      const type = params.get('type') || '';
+                      return type && VALID_BROWSE_API_TYPES.has(type) ? type : '';
+                  })(),
                   search: params.get('search') || '',
-                  isActive: (params.get('status') as BrowseFilters['isActive']) || '',
+                  isActive: (() => {
+                      const status = params.get('status');
+                      return status === 'true' || status === 'false' ? status : '';
+                  })(),
                   sortOrder: params.get('sort') === 'asc' ? 'asc' : 'desc',
               }
             : defaults;

@@ -15,7 +15,22 @@ import {
     buildScheduledDateRangeQuery,
     parseScheduleDateInput,
     endOfScheduleDayExclusive,
+    toScheduleDateKeyFromStored,
 } from '../utils/dailyContentLocalDay.js';
+
+const MIN_SCHEDULE_YEAR = 2000;
+const MAX_SCHEDULE_YEAR = 2100;
+
+const assertReasonableScheduleYear = (dateInstant) => {
+    if (!dateInstant) return;
+    const key = toScheduleDateKeyFromStored(dateInstant);
+    const year = Number(key.slice(0, 4));
+    if (year < MIN_SCHEDULE_YEAR || year > MAX_SCHEDULE_YEAR) {
+        throw new Error(
+            `Schedule date must be between ${MIN_SCHEDULE_YEAR} and ${MAX_SCHEDULE_YEAR} (got ${key}). Use yyyy-MM-dd or M/d/yy in CSV.`
+        );
+    }
+};
 
 const PUZZLE_TYPES = ['SPOT_CORRECT_SENTENCE', 'GRAMMAR_FILL_BLANK'];
 
@@ -98,6 +113,7 @@ const prepareBody = async (body, isUpdate = false) => {
 
     if (payload.date != null) {
         payload.date = parseScheduleDateInput(payload.date);
+        assertReasonableScheduleYear(payload.date);
     }
 
     return payload;
@@ -354,6 +370,38 @@ export const bulkDeleteDailyContentAdmin = asyncHandler(async (req, res) => {
     res.status(200).json({
         status: 'success',
         data: { deletedCount: result.deletedCount },
+    });
+});
+
+/** POST /api/admin/daily-content/cleanup-misdated — remove schedule dates outside 2000–2100 */
+export const cleanupMisdatedDailyContentAdmin = asyncHandler(async (req, res) => {
+    const dryRun = req.body?.dryRun !== false;
+    const minBound = parseScheduleDateInput('2000-01-01');
+    const maxBound = parseScheduleDateInput('2101-01-01');
+
+    const misdated = await DailyContent.find({
+        $or: [{ date: { $lt: minBound } }, { date: { $gte: maxBound } }],
+    }).sort({ date: 1 });
+
+    const preview = misdated.map((doc) => ({
+        id: doc._id.toString(),
+        title: doc.title,
+        type: doc.type,
+        dateKey: toScheduleDateKeyFromStored(doc.date),
+    }));
+
+    if (dryRun) {
+        return res.status(200).json({
+            status: 'success',
+            data: { count: preview.length, preview, dryRun: true },
+        });
+    }
+
+    const ids = misdated.map((doc) => doc._id);
+    const result = await DailyContent.deleteMany({ _id: { $in: ids } });
+    res.status(200).json({
+        status: 'success',
+        data: { deletedCount: result.deletedCount, dryRun: false },
     });
 });
 

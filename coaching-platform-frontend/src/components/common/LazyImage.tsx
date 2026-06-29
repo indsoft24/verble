@@ -13,6 +13,7 @@ interface LazyImageProps {
     placeholder?: string;
     onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
     loading?: 'lazy' | 'eager';
+    fetchPriority?: 'high' | 'low' | 'auto';
     sizes?: string;
     srcSet?: string;
 }
@@ -27,6 +28,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
     placeholder,
     onError,
     loading = 'lazy',
+    fetchPriority,
     sizes,
     srcSet,
 }) => {
@@ -154,6 +156,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
                     width={width}
                     height={height}
                     loading={loading}
+                    fetchPriority={fetchPriority}
                     sizes={sizes}
                     srcSet={srcSet}
                     onLoad={handleLoad}

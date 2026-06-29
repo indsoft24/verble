@@ -12,12 +12,19 @@ services:
     container_name: verble-web
     ports:
       - "3001:80"   # Use 3001 if 3000 is taken; update Apache proxy_pass to match
+    mem_limit: 128m
     depends_on:
       backend:
         condition: service_started
     networks:
       - verble-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # --- Backend API (internal only) ---
   backend:
@@ -51,6 +58,13 @@ services:
       - verble-network
     restart: unless-stopped
     command: npm start
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # --- MongoDB (internal only - no host port to avoid conflict with existing DBs) ---
   mongo:
