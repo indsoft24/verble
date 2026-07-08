@@ -27,7 +27,7 @@ import { isUserAppRoute } from './constants/userAppRoutes';
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegistrationPage = lazy(() => import('./pages/RegistrationPage'));
-const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
+const VerifyWhatsAppPage = lazy(() => import('./pages/VerifyWhatsAppPage'));
 const GoogleCallbackPage = lazy(() => import('./pages/GoogleCallbackPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 
@@ -112,6 +112,11 @@ const PageLoader = () => (
 const NotFoundPage = () => <Typography variant="h4" align="center" sx={{ mt: 5 }}>404 - Page Not Found</Typography>;
 const UnauthorizedPage = () => <Typography variant="h4" align="center" sx={{ mt: 5 }}>403 - Unauthorized Access</Typography>;
 
+function VerifyEmailLegacyRedirect() {
+    const location = useLocation();
+    return <Navigate to={`/verify-whatsapp${location.search}`} replace />;
+}
+
 function AppContent() {
     const { isAuthenticated, isLoading, user } = useAuth();
     const location = useLocation();
@@ -138,7 +143,8 @@ function AppContent() {
                         {/* Public Routes */}
                         <Route path="/" element={<LandingPage />} />
                         <Route path="/register" element={<RegistrationPage />} />
-                        <Route path="/verify-email" element={<VerifyEmailPage />} />
+                        <Route path="/verify-whatsapp" element={<VerifyWhatsAppPage />} />
+                        <Route path="/verify-email" element={<VerifyEmailLegacyRedirect />} />
                         <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to={dashboardPath} replace />} />
                         <Route path="/mobile-login" element={<Navigate to="/login" replace />} />
                         <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />

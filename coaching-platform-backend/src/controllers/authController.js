@@ -6,6 +6,7 @@ import User from '../models/User.js';
 import redisClient from '../config/redisClient.js';
 import sendEmail from '../utils/email.js';
 import { formatMobileNumber, validateMobileNumber } from '../utils/smsService.js';
+import { sendWhatsAppOtp } from '../utils/whatsappService.js';
 import { assignFreeFoundationToUser } from '../services/defaultSubscriptionService.js';
 import { checkAndHandleSubscriptionExpiration } from '../services/subscriptionAccessService.js';
 import { issueLoginPinForUser } from './phonePinAuthController.js';
@@ -14,6 +15,23 @@ const SESSION_PREFIX = 'session:user:';
 const SESSION_EXPIRY_SECONDS = process.env.JWT_EXPIRES_IN_SECONDS
     ? parseInt(process.env.JWT_EXPIRES_IN_SECONDS, 10)
     : 60 * 60 * 24 * 7;
+const OTP_COOLDOWN_MS = 30 * 1000;
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+const hashOtp = (otp) => crypto.createHash('sha256').update(String(otp).trim()).digest('hex');
+
+const sendVerificationOtpWhatsApp = async (user, otp) => {
+    const phone = user.phoneNumber || user.mobile;
+    await sendWhatsAppOtp(phone, otp, { name: user.name });
+};
+
+const checkOtpCooldown = (user) => {
+    const now = Date.now();
+    const lastSent = user.lastMobileOtpSentAt ? new Date(user.lastMobileOtpSentAt).getTime() : 0;
+    const cooldownRemaining = Math.ceil((OTP_COOLDOWN_MS - (now - lastSent)) / 1000);
+    return cooldownRemaining > 0 ? cooldownRemaining : 0;
+};
 
 export const sendTokenResponseWithSession = async (user, statusCode, res, message = 'Operation successful.') => {
     const sessionId = randomUUID();
@@ -74,7 +92,7 @@ const sendVerificationOtpEmail = async (user, otp) => {
 };
 
 /**
- * @desc Register — name, email, phone (no password). Sends email OTP.
+ * @desc Register — name, email, WhatsApp number (no password). Sends WhatsApp OTP.
  */
 export const register = asyncHandler(async (req, res) => {
     const { name, email, phoneNumber, mobile, agreedToTerms } = req.body;
@@ -83,7 +101,7 @@ export const register = asyncHandler(async (req, res) => {
     if (!name?.trim() || !email?.trim() || !phoneRaw?.trim()) {
         return res.status(400).json({
             status: 'fail',
-            message: 'Name, email, and phone number are required.',
+            message: 'Name, email, and WhatsApp number are required.',
         });
     }
 
@@ -98,22 +116,22 @@ export const register = asyncHandler(async (req, res) => {
     if (!formattedPhone || !validateMobileNumber(formattedPhone)) {
         return res.status(400).json({
             status: 'fail',
-            message: 'Invalid phone number. Include country code (e.g. +919876543210).',
+            message: 'Invalid WhatsApp number. Include country code (e.g. +919876543210).',
         });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
     const existing = await User.findOne({
         $or: [{ email: normalizedEmail }, { phoneNumber: formattedPhone }, { mobile: formattedPhone }],
-    });
+    }).select('+mobileOtpToken +mobileOtpExpires');
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    const otp = generateOtp();
+    const hashedOTP = hashOtp(otp);
+    const otpExpires = new Date(Date.now() + OTP_EXPIRY_MS);
     const successPayload = {
         status: 'success',
-        message: 'Registration started. Please check your email for the verification code.',
-        data: { email: normalizedEmail },
+        message: 'Registration started. Please check WhatsApp for your verification code.',
+        data: { email: normalizedEmail, phoneNumber: formattedPhone },
     };
 
     if (existing) {
@@ -121,30 +139,40 @@ export const register = asyncHandler(async (req, res) => {
             existing.phoneNumber === formattedPhone || existing.mobile === formattedPhone;
 
         if (!existing.isEmailVerified && existing.email === normalizedEmail) {
+            const cooldown = checkOtpCooldown(existing);
+            if (cooldown > 0) {
+                return res.status(429).json({
+                    status: 'fail',
+                    message: `Please wait ${cooldown} seconds before requesting a new code.`,
+                    cooldownRemaining: cooldown,
+                });
+            }
+
             existing.name = name.trim();
             existing.phoneNumber = formattedPhone;
             existing.mobile = formattedPhone;
             existing.authProvider = 'phone_pin';
-            existing.emailVerificationToken = hashedOTP;
-            existing.emailVerificationExpires = otpExpires;
+            existing.mobileOtpToken = hashedOTP;
+            existing.mobileOtpExpires = otpExpires;
+            existing.lastMobileOtpSentAt = new Date();
             if (!existing.termsAcceptedAt) {
                 existing.termsAcceptedAt = new Date();
             }
             await existing.save();
-            await sendVerificationOtpEmail(existing, otp);
+            await sendVerificationOtpWhatsApp(existing, otp);
             return res.status(201).json(successPayload);
         }
 
         if (phoneTaken && existing.email !== normalizedEmail) {
             return res.status(400).json({
                 status: 'fail',
-                message: 'This phone number is already registered with another account.',
+                message: 'This WhatsApp number is already registered with another account.',
             });
         }
 
         return res.status(400).json({
             status: 'fail',
-            message: 'An account with this email or phone number already exists.',
+            message: 'An account with this email or WhatsApp number already exists.',
         });
     }
 
@@ -155,19 +183,133 @@ export const register = asyncHandler(async (req, res) => {
         mobile: formattedPhone,
         authProvider: 'phone_pin',
         isEmailVerified: false,
-        emailVerificationToken: hashedOTP,
-        emailVerificationExpires: otpExpires,
+        isMobileVerified: false,
+        mobileOtpToken: hashedOTP,
+        mobileOtpExpires: otpExpires,
+        lastMobileOtpSentAt: new Date(),
         termsAcceptedAt: new Date(),
         role: 'user',
     });
 
-    await sendVerificationOtpEmail(user, otp);
+    await sendVerificationOtpWhatsApp(user, otp);
 
     res.status(201).json(successPayload);
 });
 
 /**
- * @desc Verify email OTP — issues login PIN by email; does NOT auto-login.
+ * @desc Verify WhatsApp OTP — issues login PIN by email; does NOT auto-login.
+ */
+export const verifyWhatsAppOtp = asyncHandler(async (req, res) => {
+    const { phoneNumber, mobile, otp } = req.body;
+    const phoneRaw = phoneNumber || mobile;
+
+    if (!phoneRaw || !otp) {
+        return res.status(400).json({ status: 'fail', message: 'WhatsApp number and OTP are required.' });
+    }
+
+    const formattedPhone = formatMobileNumber(phoneRaw, process.env.DEFAULT_COUNTRY_CODE || '+91');
+    if (!formattedPhone || !validateMobileNumber(formattedPhone)) {
+        return res.status(400).json({ status: 'fail', message: 'Invalid WhatsApp number format.' });
+    }
+
+    const hashedOTP = hashOtp(otp);
+    const user = await User.findOne({
+        $or: [{ phoneNumber: formattedPhone }, { mobile: formattedPhone }],
+        mobileOtpToken: hashedOTP,
+        mobileOtpExpires: { $gt: Date.now() },
+    }).select('+mobileOtpToken +mobileOtpExpires');
+
+    if (!user) {
+        const alreadyVerified = await User.findOne({
+            $or: [{ phoneNumber: formattedPhone }, { mobile: formattedPhone }],
+            isEmailVerified: true,
+        });
+        if (alreadyVerified) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'This WhatsApp number is already verified. Please sign in with your phone and PIN.',
+                code: 'ALREADY_VERIFIED',
+            });
+        }
+        return res.status(400).json({ status: 'fail', message: 'Invalid or expired verification code.' });
+    }
+
+    user.isEmailVerified = true;
+    user.isMobileVerified = true;
+    user.mobileOtpToken = undefined;
+    user.mobileOtpExpires = undefined;
+    await user.save();
+
+    await assignFreeFoundationToUser(user._id);
+
+    let plainPin;
+    try {
+        plainPin = await issueLoginPinForUser(user);
+    } catch (err) {
+        console.error('[verifyWhatsAppOtp] PIN email failed:', err);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Account verified but we could not send your login PIN. Use Forgot PIN on the login page.',
+        });
+    }
+
+    res.status(200).json({
+        status: 'success',
+        message:
+            'WhatsApp verified! Save your login PIN below—we also emailed it to you. Sign in with your phone number and PIN.',
+        data: { email: user.email, phoneNumber: formattedPhone, loginPin: plainPin },
+    });
+});
+
+export const resendWhatsAppOtp = asyncHandler(async (req, res) => {
+    const { phoneNumber, mobile } = req.body;
+    const phoneRaw = phoneNumber || mobile;
+
+    if (!phoneRaw) {
+        return res.status(400).json({ status: 'fail', message: 'WhatsApp number is required.' });
+    }
+
+    const formattedPhone = formatMobileNumber(phoneRaw, process.env.DEFAULT_COUNTRY_CODE || '+91');
+    if (!formattedPhone || !validateMobileNumber(formattedPhone)) {
+        return res.status(400).json({ status: 'fail', message: 'Invalid WhatsApp number format.' });
+    }
+
+    const user = await User.findOne({
+        $or: [{ phoneNumber: formattedPhone }, { mobile: formattedPhone }],
+    }).select('+mobileOtpToken +mobileOtpExpires');
+
+    if (!user) {
+        return res.status(200).json({ message: 'If an account exists, a new code has been sent to WhatsApp.' });
+    }
+    if (user.isEmailVerified) {
+        return res.status(400).json({
+            status: 'fail',
+            message: 'This account is already verified. Use login instead.',
+            code: 'ALREADY_VERIFIED',
+        });
+    }
+
+    const cooldown = checkOtpCooldown(user);
+    if (cooldown > 0) {
+        return res.status(429).json({
+            status: 'fail',
+            message: `Please wait ${cooldown} seconds before requesting a new code.`,
+            cooldownRemaining: cooldown,
+        });
+    }
+
+    const otp = generateOtp();
+    user.mobileOtpToken = hashOtp(otp);
+    user.mobileOtpExpires = new Date(Date.now() + OTP_EXPIRY_MS);
+    user.lastMobileOtpSentAt = new Date();
+    await user.save({ validateBeforeSave: false });
+    await sendVerificationOtpWhatsApp(user, otp);
+
+    res.status(200).json({ message: 'A new verification code has been sent to your WhatsApp.' });
+});
+
+/**
+ * @desc Verify email OTP (legacy) — issues login PIN by email; does NOT auto-login.
  */
 export const verifyEmail = asyncHandler(async (req, res) => {
     const { email, otp } = req.body;
@@ -176,7 +318,7 @@ export const verifyEmail = asyncHandler(async (req, res) => {
         return res.status(400).json({ status: 'fail', message: 'Email and OTP are required.' });
     }
 
-    const hashedOTP = crypto.createHash('sha256').update(String(otp).trim()).digest('hex');
+    const hashedOTP = hashOtp(otp);
     const user = await User.findOne({
         email: email.toLowerCase().trim(),
         emailVerificationToken: hashedOTP,
@@ -227,9 +369,9 @@ export const resendVerificationEmail = asyncHandler(async (req, res) => {
         return res.status(400).json({ status: 'fail', message: 'This email is already verified. Use login instead.' });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.emailVerificationToken = crypto.createHash('sha256').update(otp).digest('hex');
-    user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
+    const otp = generateOtp();
+    user.emailVerificationToken = hashOtp(otp);
+    user.emailVerificationExpires = new Date(Date.now() + OTP_EXPIRY_MS);
     await user.save({ validateBeforeSave: false });
     await sendVerificationOtpEmail(user, otp);
 

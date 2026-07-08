@@ -93,9 +93,12 @@ export const loginWithPhonePin = asyncHandler(async (req, res) => {
     if (!user.isEmailVerified) {
         return res.status(403).json({
             status: 'fail',
-            message: 'Please verify your email before logging in.',
+            message: 'Please verify your WhatsApp number before logging in.',
             code: 'EMAIL_NOT_VERIFIED',
-            data: { email: user.email },
+            data: {
+                email: user.email,
+                phoneNumber: user.phoneNumber || user.mobile,
+            },
         });
     }
 

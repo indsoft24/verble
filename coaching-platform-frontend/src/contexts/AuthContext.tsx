@@ -13,9 +13,9 @@ interface AuthContextType {
     isLoading: boolean;
     login: (credentials: authService.LoginCredentials) => Promise<void>;
     loginWithPhonePin: (payload: authService.PhonePinLoginPayload) => Promise<void>;
-    register: (userData: authService.RegisterData) => Promise<{ email: string }>;
-    verifyAndLogin: (payload: authService.VerificationPayload) => Promise<authService.VerifyEmailResult>;
-    resendOtp: (email: string) => Promise<string>;
+    register: (userData: authService.RegisterData) => Promise<{ email: string; phoneNumber: string }>;
+    verifyAndLogin: (payload: authService.VerificationPayload) => Promise<authService.VerifyWhatsAppResult>;
+    resendOtp: (phoneNumber: string) => Promise<string>;
     logout: () => Promise<void>;
     setUserContext: (userData: User | null, token?: string | null) => void;
     patchUserProgress: (progress: UserProgressSnapshot) => void;
@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(true);
         try {
             const response = await authService.register(userData);
-            if (response.status === 'success' && response.data.email) {
+            if (response.status === 'success' && response.data.email && response.data.phoneNumber) {
                 return response.data;
             } else {
                 throw new Error(response.message || 'Registration failed');
@@ -166,8 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const verifyAndLogin = async (payload: authService.VerificationPayload) => {
         setIsLoading(true);
         try {
-            const response = await authService.verifyEmail(payload);
-            return response;
+            return await authService.verifyWhatsAppOtp(payload);
         } catch (error) {
             throw error;
         } finally {
@@ -175,12 +174,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const resendOtp = async (email: string) => {
+    const resendOtp = async (phoneNumber: string) => {
         try {
-            const response = await authService.resendVerificationEmail(email);
-            return response.message || 'A new OTP has been sent.';
+            const response = await authService.resendWhatsAppOtp(phoneNumber);
+            return response.message || 'A new OTP has been sent to WhatsApp.';
         } catch (error: any) {
-            throw new Error(error.message || 'Failed to resend OTP.');
+            throw error;
         }
     };
 

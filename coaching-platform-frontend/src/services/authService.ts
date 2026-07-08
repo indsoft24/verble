@@ -73,13 +73,15 @@ export interface RegistrationInitResponse {
     message: string;
     data: {
         email: string;
+        phoneNumber: string;
     };
 }
 
 // Payload for the verification step
 export interface VerificationPayload {
-    email: string;
+    phoneNumber: string;
     otp: string;
+    email?: string;
 }
 
 export interface LoginCredentials { email?: string; password?: string; mobile?: string; }
@@ -104,7 +106,7 @@ export interface MobileOTPVerify { mobile: string; otp: string; name?: string; }
 const API_URL_AUTH = `/auth`;
 
 /**
- * Initiates user registration. Sends user data and triggers OTP email.
+ * Initiates user registration. Sends user data and triggers WhatsApp OTP.
  */
 export const register = async (userData: RegisterData): Promise<RegistrationInitResponse> => {
     try {
@@ -116,8 +118,39 @@ export const register = async (userData: RegisterData): Promise<RegistrationInit
 };
 
 /**
- * Verifies the user's email with an OTP and logs them in.
+ * Verifies the user's WhatsApp number with an OTP and returns login PIN.
  */
+export interface VerifyWhatsAppResponse {
+    status: string;
+    message: string;
+    data?: { email: string; phoneNumber: string; loginPin?: string };
+}
+
+export interface VerifyWhatsAppResult {
+    message: string;
+    email?: string;
+    phoneNumber?: string;
+    loginPin?: string;
+}
+
+export const verifyWhatsAppOtp = async (payload: VerificationPayload): Promise<VerifyWhatsAppResult> => {
+    try {
+        const response = await apiClient.post<VerifyWhatsAppResponse>(`${API_URL_AUTH}/verify-whatsapp`, {
+            phoneNumber: payload.phoneNumber,
+            otp: payload.otp,
+        });
+        return {
+            message: response.data.message,
+            email: response.data.data?.email,
+            phoneNumber: response.data.data?.phoneNumber,
+            loginPin: response.data.data?.loginPin,
+        };
+    } catch (error: any) {
+        throw error.response?.data || { status: 'error', message: 'An unknown verification error occurred' };
+    }
+};
+
+/** @deprecated Use verifyWhatsAppOtp */
 export interface VerifyEmailResponse {
     status: string;
     message: string;
@@ -130,7 +163,7 @@ export interface VerifyEmailResult {
     loginPin?: string;
 }
 
-export const verifyEmail = async (payload: VerificationPayload): Promise<VerifyEmailResult> => {
+export const verifyEmail = async (payload: { email: string; otp: string }): Promise<VerifyEmailResult> => {
     try {
         const response = await apiClient.post<VerifyEmailResponse>(`${API_URL_AUTH}/verify-email`, payload);
         return {
@@ -144,14 +177,28 @@ export const verifyEmail = async (payload: VerificationPayload): Promise<VerifyE
 };
 
 /**
- * Requests a new OTP to be sent to the user's email.
+ * Requests a new OTP to be sent to the user's WhatsApp number.
+ */
+export const resendWhatsAppOtp = async (phoneNumber: string): Promise<{ message: string }> => {
+    try {
+        const response = await apiClient.post<{ message: string }>(`${API_URL_AUTH}/resend-whatsapp-otp`, {
+            phoneNumber,
+        });
+        return response.data;
+    } catch (error: any) {
+        const errorData = error.response?.data || { status: 'error', message: 'Failed to resend OTP' };
+        throw errorData;
+    }
+};
+
+/**
+ * Requests a new OTP to be sent to the user's email (legacy).
  */
 export const resendVerificationEmail = async (email: string): Promise<{ message: string }> => {
     try {
         const response = await apiClient.post<{ message: string }>(`${API_URL_AUTH}/resend-verification-email`, { email });
         return response.data;
     } catch (error: any) {
-        // Preserve cooldown information from backend
         const errorData = error.response?.data || { status: 'error', message: 'Failed to resend OTP' };
         throw errorData;
     }

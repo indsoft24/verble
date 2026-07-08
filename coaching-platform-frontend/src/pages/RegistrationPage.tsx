@@ -1,4 +1,4 @@
-import React, { useState, type FormEvent } from 'react';
+import React, { useState, useEffect, type FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
@@ -30,8 +30,14 @@ const RegistrationPage: React.FC = () => {
     const [formError, setFormError] = useState<string | null>(null);
 
     const { addNotification } = useNotification();
-    const { register } = useAuth();
+    const { register, isAuthenticated, user } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            navigate(user.role === 'admin' ? '/admin/dashboard' : '/dashboard', { replace: true });
+        }
+    }, [isAuthenticated, user, navigate]);
 
     const handleRegistrationSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -61,9 +67,13 @@ const RegistrationPage: React.FC = () => {
                 agreedToTerms: true,
             });
             addNotification(t('auth.registrationOtpSent'), 'success');
-            navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+            const params = new URLSearchParams({
+                email: email.trim(),
+                phone: formatted,
+            });
+            navigate(`/verify-whatsapp?${params.toString()}`);
         } catch (err: unknown) {
-            const error = err as { message?: string };
+            const error = err as { message?: string; cooldownRemaining?: number };
             const msg = error.message || t('auth.registrationFailed');
             setFormError(msg);
             addNotification(msg, 'error');
@@ -132,7 +142,7 @@ const RegistrationPage: React.FC = () => {
                         required
                         fullWidth
                         id="phoneNumber"
-                        label={t('auth.phoneNumber')}
+                        label={t('auth.whatsappNumber')}
                         name="phoneNumber"
                         placeholder="+919876543210"
                         autoComplete="tel"
@@ -142,7 +152,7 @@ const RegistrationPage: React.FC = () => {
                             if (formError) setFormError(null);
                         }}
                         disabled={isLoading}
-                        helperText={t('auth.phoneHint')}
+                        helperText={t('auth.whatsappHint')}
                         error={Boolean(formError && formError === t('auth.invalidPhoneFormat'))}
                     />
                     <FormControlLabel
@@ -181,7 +191,7 @@ const RegistrationPage: React.FC = () => {
                         disabled={isLoading || !agreedToTerms}
                         sx={{ mt: 3, mb: 2, py: 1.25 }}
                     >
-                        {isLoading ? <CircularProgress size={24} /> : t('auth.sendEmailVerificationCode')}
+                        {isLoading ? <CircularProgress size={24} /> : t('auth.sendWhatsAppVerificationCode')}
                     </Button>
 
                     <Box sx={{ textAlign: 'center' }}>

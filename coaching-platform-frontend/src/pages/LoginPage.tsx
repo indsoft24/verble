@@ -24,10 +24,17 @@ const LoginPage: React.FC = () => {
             await loginWithPhonePin({ phoneNumber, pin });
             navigate(from, { replace: true });
         } catch (err: unknown) {
-            const error = err as { code?: string; message?: string; data?: { email?: string } };
-            if (error.code === 'EMAIL_NOT_VERIFIED' && error.data?.email) {
-                addNotification(t('auth.pleaseVerifyEmail'), 'info');
-                navigate(`/verify-email?email=${encodeURIComponent(error.data.email)}`);
+            const error = err as {
+                code?: string;
+                message?: string;
+                data?: { email?: string; phoneNumber?: string };
+            };
+            if (error.code === 'EMAIL_NOT_VERIFIED' && error.data) {
+                addNotification(t('auth.pleaseVerifyWhatsApp'), 'info');
+                const params = new URLSearchParams();
+                if (error.data.email) params.set('email', error.data.email);
+                if (error.data.phoneNumber) params.set('phone', error.data.phoneNumber);
+                navigate(`/verify-whatsapp?${params.toString()}`);
             } else {
                 addNotification(error.message || t('auth.failedLogin'), 'error');
             }

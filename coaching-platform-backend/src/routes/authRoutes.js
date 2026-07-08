@@ -2,7 +2,9 @@ import express from 'express';
 import {
     register,
     verifyEmail,
+    verifyWhatsAppOtp,
     resendVerificationEmail,
+    resendWhatsAppOtp,
     login,
     getMe,
     logout,
@@ -33,6 +35,8 @@ router.post('/phone-pin/regenerate-after-verify', protect, regenerateLoginPinAft
 
 // Registration & verification
 router.post('/register', register);
+router.post('/verify-whatsapp', verifyWhatsAppOtp);
+router.post('/resend-whatsapp-otp', resendWhatsAppOtp);
 router.post('/verify-email', verifyEmail);
 router.post('/resend-verification-email', resendVerificationEmail);
 
