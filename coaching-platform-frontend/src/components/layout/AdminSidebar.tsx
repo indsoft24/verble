@@ -426,6 +426,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
                         px: 1.5,
                         borderRadius: 1,
                         mb: 1,
+                        color: 'rgba(255,255,255,0.7)',
+                        '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            color: '#fff',
+                            '& .MuiListItemIcon-root': { color: '#fff' },
+                        },
                     }}
                 >
                     <ListItemIcon
@@ -433,11 +439,17 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
                             minWidth: 0,
                             mr: open ? 2 : 'auto',
                             justifyContent: 'center',
+                            color: 'inherit',
                         }}
                     >
                         <HomeIcon fontSize="small" />
                     </ListItemIcon>
-                    {open && <ListItemText primary="Back to Site" primaryTypographyProps={{ fontSize: '0.8rem' }} />}
+                    {open && (
+                        <ListItemText
+                            primary="Back to Site"
+                            primaryTypographyProps={{ fontSize: '0.8rem', color: 'inherit' }}
+                        />
+                    )}
                 </ListItemButton>
                 <ListItemButton
                     onClick={handleLogout}

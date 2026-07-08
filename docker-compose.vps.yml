@@ -8,6 +8,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.web
+      args:
+        VITE_RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
     image: verble-web
     container_name: verble-web
     ports:

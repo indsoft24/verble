@@ -27,3 +27,23 @@ export function findPlanByNameMatch(
 ): SubscriptionPlanPublic | undefined {
     return plans.find((p) => pattern.test(p.name.trim()));
 }
+
+export function findPlanByNameMatches(
+    plans: SubscriptionPlanPublic[],
+    patterns: RegExp[]
+): SubscriptionPlanPublic | undefined {
+    return plans.find((plan) => {
+        const name = plan.name.trim();
+        return patterns.some((pattern) => pattern.test(name));
+    });
+}
+
+export const PLAN_NAME_MATCHERS = {
+    freeFoundation: [/free foundation/i, /^free$/i],
+    bronze: [/bronze/i],
+    silver: [/silver/i],
+    gold: [/gold professional/i, /gold membership/i, /\bgold\b/i],
+    fullCourse: [/^full course$/i, /\bfull course\b/i],
+    aiLearning: [/ai learning/i, /learning companion/i],
+    bonus: [/bonus/i],
+} as const;

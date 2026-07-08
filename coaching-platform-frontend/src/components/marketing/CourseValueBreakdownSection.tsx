@@ -181,6 +181,9 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, isAuthenticated, isOwned, onE
                 </Typography>
 
                 <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: '#475569', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                        Our limited time price:
+                    </Typography>
                     <PlanPriceOffer offerLabel={offer} originalLabel={original} size="lg" />
                     {original && (
                         <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>

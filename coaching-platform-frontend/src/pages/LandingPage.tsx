@@ -47,7 +47,7 @@ import PlanPriceOffer from '../components/marketing/PlanPriceOffer';
 import DocumentHead from '../components/seo/DocumentHead';
 import { canonicalForPath, HOME_PAGE_SEO } from '../config/siteSeo';
 import { getActiveSubscriptionPlans } from '../services/subscriptionPlanService';
-import { findPlanByNameMatch, getPlanOfferLabels } from '../utils/planPriceFormat';
+import { findPlanByNameMatches, getPlanOfferLabels, PLAN_NAME_MATCHERS } from '../utils/planPriceFormat';
 
 const heroPatternIcons = [
     MenuBookOutlinedIcon,
@@ -340,8 +340,14 @@ const LandingPage: React.FC = () => {
             .catch(() => setCatalogPlans([]));
     }, []);
 
-    const goldPlan = useMemo(() => findPlanByNameMatch(catalogPlans, /gold professional/i), [catalogPlans]);
-    const fullCoursePlan = useMemo(() => findPlanByNameMatch(catalogPlans, /^full course$/i), [catalogPlans]);
+    const goldPlan = useMemo(
+        () => findPlanByNameMatches(catalogPlans, [...PLAN_NAME_MATCHERS.gold]),
+        [catalogPlans]
+    );
+    const fullCoursePlan = useMemo(
+        () => findPlanByNameMatches(catalogPlans, [...PLAN_NAME_MATCHERS.fullCourse]),
+        [catalogPlans]
+    );
     const goldPriceLabels = useMemo(() => (goldPlan ? getPlanOfferLabels(goldPlan) : null), [goldPlan]);
     const fullCoursePriceLabels = useMemo(
         () => (fullCoursePlan ? getPlanOfferLabels(fullCoursePlan) : null),
@@ -543,7 +549,7 @@ const LandingPage: React.FC = () => {
                                 >
                                     <Box>
                                         <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff' }}>
-                                            10k+
+                                            3k+
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: '#94a3b8' }}>
                                             Learners
@@ -1034,7 +1040,7 @@ const LandingPage: React.FC = () => {
                                 stats={[
                                     { value: '50+', label: 'Scenarios' },
                                     { value: '100+', label: 'AI Prompts' },
-                                    { value: '24/7', label: 'Practice' },
+                                    { value: '24/7', label: 'Learning' },
                                 ]}
                                 features={[
                                     {
@@ -1046,7 +1052,7 @@ const LandingPage: React.FC = () => {
                                         detail: 'Airport, interviews, meetings, and client calls.',
                                     },
                                     {
-                                        title: 'AI prompts & speaking buddy',
+                                        title: 'AI prompts for super fast learning',
                                         detail: 'Practice daily with ready prompts and feedback.',
                                     },
                                     {
@@ -1226,8 +1232,8 @@ const LandingPage: React.FC = () => {
                         <Grid container spacing={{ xs: 2, md: 6 }} alignItems="center">
                             <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: 'center', px: { xs: 1, md: 0 } }}>
                                 <Avatar
-                                    src={brandAssets.indianCoach}
-                                    alt="Narendra Singh — Lead English Coach"
+                                    src="/indian-coach.jpg"
+                                    alt="Manik Bhardwaj — Lead English Coach"
                                     sx={{
                                         width: { xs: 160, sm: 200, md: 240 },
                                         height: { xs: 160, sm: 200, md: 240 },
@@ -1246,7 +1252,7 @@ const LandingPage: React.FC = () => {
                                         fontSize: { xs: '1.25rem', md: '2.125rem' },
                                     }}
                                 >
-                                    Narendra Singh
+                                    Manik Bhardwaj
                                 </Typography>
                                 <Typography
                                     variant="h6"
@@ -1286,14 +1292,18 @@ const LandingPage: React.FC = () => {
                                 >
                                     With over 15 years of experience in language coaching, I've developed a methodology that focuses on natural acquisition rather than rote memorization. My goal is to help you break the barrier of hesitation and speak with authority.
                                 </Typography>
-                                <Stack direction="row" spacing={{ xs: 2, md: 3 }}>
+                                <Stack direction="row" spacing={{ xs: 2, md: 3 }} sx={{ flexWrap: 'wrap', rowGap: 1.5 }}>
                                     <Box>
                                         <Typography variant="h4" sx={{ fontWeight: 800, color: 'white', fontSize: { xs: '1.35rem', md: '2.125rem' } }}>15+</Typography>
                                         <Typography variant="body2" sx={{ color: '#64748b', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Years Experience</Typography>
                                     </Box>
                                     <Box>
-                                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white', fontSize: { xs: '1.35rem', md: '2.125rem' } }}>50k+</Typography>
-                                        <Typography variant="body2" sx={{ color: '#64748b', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Students Mentored</Typography>
+                                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white', fontSize: { xs: '1.35rem', md: '2.125rem' } }}>3K+</Typography>
+                                        <Typography variant="body2" sx={{ color: '#64748b', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Students Trained</Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white', fontSize: { xs: '1.35rem', md: '2.125rem' } }}>1500+</Typography>
+                                        <Typography variant="body2" sx={{ color: '#64748b', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Candidates Interviewed</Typography>
                                     </Box>
                                 </Stack>
                             </Grid>

@@ -18,8 +18,6 @@ import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined';
-import LockRoundedIcon from '@mui/icons-material/LockRounded';
-import RichTextContent from '../components/common/RichTextContent';
 import {
     createRazorpayOrder,
     verifyRazorpayPayment,
@@ -40,6 +38,13 @@ import {
     userOwnsPlan,
     formatSubscriptionEndDate,
 } from '../utils/subscriptionOwnershipUtils';
+
+const cleanPlanDescription = (description: string): string =>
+    description
+        .replace(/&lt;\/?[^&]*&gt;/g, ' ')
+        .replace(/<\/?[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
 const SubscriptionPlansPage: React.FC = () => {
     useUserLayoutPage({ title: 'Plans' });
@@ -339,16 +344,17 @@ const SubscriptionPlansPage: React.FC = () => {
                                         </Typography>
 
                                         {plan.description && (
-                                            <RichTextContent
-                                                html={plan.description}
-                                                variant="light"
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
                                                 sx={{
                                                     mb: 2,
                                                     minHeight: 40,
-                                                    '& p': { typography: 'body2', lineHeight: 1.6, mb: 0.75, color: 'text.secondary' },
-                                                    '& p:last-child': { mb: 0 },
+                                                    lineHeight: 1.6,
                                                 }}
-                                            />
+                                            >
+                                                {cleanPlanDescription(plan.description)}
+                                            </Typography>
                                         )}
 
                                         <Typography
@@ -452,14 +458,6 @@ const SubscriptionPlansPage: React.FC = () => {
                 </Grid>
             )}
 
-            <Alert
-                severity="info"
-                icon={<LockRoundedIcon />}
-                sx={{ mt: 4, borderRadius: 2 }}
-            >
-                Payments are processed securely via Razorpay. If checkout fails, your admin may need to
-                update live API keys in server settings.
-            </Alert>
         </>
     );
 };

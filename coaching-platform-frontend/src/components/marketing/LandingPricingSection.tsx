@@ -18,9 +18,10 @@ import {
 } from '../../services/subscriptionPlanService';
 import PlanPriceOffer from './PlanPriceOffer';
 import {
-    findPlanByNameMatch,
+    findPlanByNameMatches,
     formatPlanPrice,
     getPlanOfferLabels,
+    PLAN_NAME_MATCHERS,
 } from '../../utils/planPriceFormat';
 
 type PricingRow = {
@@ -34,51 +35,51 @@ type PricingRow = {
 const LANDING_PRICING_META: Array<{
     module: string;
     features: string;
-    nameMatch: RegExp;
+    nameMatches: RegExp[];
     freeText?: string;
 }> = [
     {
         module: 'FREE',
         features: '1000+ Daily Word and 500+ Phrase of Day',
-        nameMatch: /free foundation/i,
+        nameMatches: [...PLAN_NAME_MATCHERS.freeFoundation],
         freeText: 'FREE',
     },
     {
         module: 'Bronze',
         features: 'Daily One Minute read with key words and Essential Vocabulary',
-        nameMatch: /bronze/i,
+        nameMatches: [...PLAN_NAME_MATCHERS.bronze],
     },
     {
         module: 'SILVER',
         features: 'Practical life Conversations, Daily Grammar Puzzles',
-        nameMatch: /silver/i,
+        nameMatches: [...PLAN_NAME_MATCHERS.silver],
     },
     {
         module: 'GOLD',
         features: 'Scene Explanations, Professional Dialogues, AI Prompts',
-        nameMatch: /gold professional/i,
+        nameMatches: [...PLAN_NAME_MATCHERS.gold],
     },
     {
         module: 'FULL COURSE',
         features: 'Zero to Hero, 100 Videos, 08 Modules, 80 Quiz, 200 hours of video',
-        nameMatch: /^full course$/i,
+        nameMatches: [...PLAN_NAME_MATCHERS.fullCourse],
     },
     {
         module: 'AI Learning',
         features: 'Learn in English, Hindi, Hinglish. Speak or Type to learn.',
-        nameMatch: /ai learning/i,
+        nameMatches: [...PLAN_NAME_MATCHERS.aiLearning],
     },
     {
         module: 'BONUS',
         features: 'Famous Speeches, Song Lyrics, IG Learning Feeds',
-        nameMatch: /bonus/i,
+        nameMatches: [...PLAN_NAME_MATCHERS.bonus],
         freeText: 'FREE with bundle',
     },
 ];
 
 function buildPricingRows(plans: SubscriptionPlanPublic[]): PricingRow[] {
     return LANDING_PRICING_META.map((meta) => {
-        const plan = findPlanByNameMatch(plans, meta.nameMatch);
+        const plan = findPlanByNameMatches(plans, meta.nameMatches);
         if (meta.freeText) {
             const { original } = plan ? getPlanOfferLabels(plan) : { original: null };
             return {
@@ -144,11 +145,14 @@ const LandingPricingSection: React.FC = () => {
 
     const rows = useMemo(() => buildPricingRows(plans), [plans]);
 
-    const fullCoursePlan = useMemo(() => findPlanByNameMatch(plans, /^full course$/i), [plans]);
+    const fullCoursePlan = useMemo(
+        () => findPlanByNameMatches(plans, [...PLAN_NAME_MATCHERS.fullCourse]),
+        [plans]
+    );
 
     const summary = useMemo(() => {
         const totalOriginal = LANDING_PRICING_META.reduce((sum, meta) => {
-            const plan = findPlanByNameMatch(plans, meta.nameMatch);
+            const plan = findPlanByNameMatches(plans, meta.nameMatches);
             if (!plan || meta.freeText) return sum;
             const value = plan.marketValue != null && plan.marketValue > 0 ? plan.marketValue : plan.price;
             return sum + value;
@@ -390,5 +394,5 @@ const LandingPricingSection: React.FC = () => {
 
 export default LandingPricingSection;
 
-export { findPlanByNameMatch, getPlanOfferLabels };
+export { findPlanByNameMatches, getPlanOfferLabels };
 export type { SubscriptionPlanPublic };

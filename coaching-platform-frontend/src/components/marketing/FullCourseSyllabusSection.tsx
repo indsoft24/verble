@@ -1,6 +1,7 @@
 import React from 'react';
 import {
     Box,
+    Button,
     Chip,
     Container,
     Paper,
@@ -10,6 +11,7 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import { FULL_COURSE_SYLLABUS } from '../../data/fullCourseSyllabus';
+import { useStartFreeNavigation } from '../../hooks/useStartFreeNavigation';
 
 const sectionTitleSx = {
     fontWeight: 800,
@@ -26,7 +28,11 @@ const cardPadding = {
     md: '28px 24px',
 } as const;
 
-const FullCourseSyllabusSection: React.FC = () => (
+const FullCourseSyllabusSection: React.FC = () => {
+    const handleStartFreeModule = useStartFreeNavigation();
+    const visibleSyllabusModules = FULL_COURSE_SYLLABUS.filter((module) => module.id !== 'bonus');
+
+    return (
     <Box sx={{ py: { xs: 3, sm: 5, md: 10 }, bgcolor: '#f8fafc' }}>
         <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
             <Box sx={{ textAlign: 'center', mb: { xs: 2.5, sm: 3, md: 6 } }}>
@@ -69,7 +75,7 @@ const FullCourseSyllabusSection: React.FC = () => (
                     width: '100%',
                 }}
             >
-                {FULL_COURSE_SYLLABUS.map((module) => (
+                {visibleSyllabusModules.map((module) => (
                     <Paper
                         key={module.id}
                         elevation={0}
@@ -212,8 +218,53 @@ const FullCourseSyllabusSection: React.FC = () => (
                     </Paper>
                 ))}
             </Box>
+
+            <Box
+                sx={{
+                    mt: { xs: 3, md: 5 },
+                    mx: 'auto',
+                    textAlign: 'center',
+                    p: { xs: 2, sm: 2.5, md: 3 },
+                    borderRadius: { xs: '14px', md: '18px' },
+                    border: '1px solid #dbeafe',
+                    bgcolor: '#eff6ff',
+                    maxWidth: 860,
+                }}
+            >
+                <Typography
+                    variant="body1"
+                    sx={{
+                        color: '#1e3a8a',
+                        fontWeight: 600,
+                        lineHeight: 1.6,
+                        fontSize: { xs: '0.9rem', sm: '1rem', md: '1.05rem' },
+                        mb: 2,
+                    }}
+                >
+                    Start learning today for FREE and go for full course at price whenever you plan to boost your learning.
+                </Typography>
+                <Button
+                    onClick={handleStartFreeModule}
+                    variant="contained"
+                    size="large"
+                    sx={{
+                        px: { xs: 3, sm: 4 },
+                        py: 1.35,
+                        borderRadius: '999px',
+                        fontWeight: 800,
+                        letterSpacing: '0.02em',
+                        textTransform: 'uppercase',
+                        bgcolor: '#4f46e5',
+                        boxShadow: '0 12px 30px -10px rgba(79,70,229,0.6)',
+                        '&:hover': { bgcolor: '#4338ca' },
+                    }}
+                >
+                    Start learning
+                </Button>
+            </Box>
         </Container>
     </Box>
-);
+    );
+};
 
 export default FullCourseSyllabusSection;

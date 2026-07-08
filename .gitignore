@@ -20,3 +20,7 @@ logs/
 
 # VPS migration backups (contain DB dumps, media, secrets)
 backups/
+
+# Payment gateway key exports (never commit)
+rzp-key.csv
+rzp-*.csv
