@@ -39,6 +39,16 @@ describe('parseFlexibleDate', () => {
     });
 });
 
+describe('parseCsvToObjects', () => {
+    it('handles UTF-8 BOM in first header cell', () => {
+        const csv = '\uFEFFdate,title,meaning_hi\n2026-07-01,Sample,नमस्ते';
+        const parsed = parseCsvToObjects(csv);
+        expect(parsed.headers[0]).toBe('date');
+        expect(parsed.rows[0].date).toBe('2026-07-01');
+        expect(parsed.rows[0].meaning_hi).toBe('नमस्ते');
+    });
+});
+
 describe('parseExamplesFromRow', () => {
     it('parses two numbered example columns', () => {
         const errors: string[] = [];

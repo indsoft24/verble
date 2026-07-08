@@ -11,6 +11,8 @@ export const USER_APP_ROUTE_PREFIXES = [
     '/professional-conversations',
     '/subscription-plans',
     '/modules',
+    '/webinars',
+    '/webinar',
 ] as const;
 
 /** Authenticated course detail — hide marketing shell, not the /courses catalog */

@@ -42,6 +42,7 @@ import {
     Tune as TuneIcon,
     EmojiEvents as EmojiEventsIcon,
     AutoAwesome as AutoAwesomeIcon,
+    EventAvailable as EventAvailableIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -73,7 +74,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
     useEffect(() => {
         const path = location.pathname;
         const sections: { name: string; paths: string[] }[] = [
-            { name: 'Content Management', paths: ['/admin/daily-content', '/admin/promo-banner', '/admin/blog', '/admin/ai-prompts', '/admin/videos', '/admin/courses', '/admin/modules', '/admin/module-quizzes', '/admin/learning-settings', '/admin/exam-categories'] },
+            { name: 'Content Management', paths: ['/admin/daily-content', '/admin/promo-banner', '/admin/webinars', '/admin/blog', '/admin/ai-prompts', '/admin/videos', '/admin/courses', '/admin/modules', '/admin/module-quizzes', '/admin/learning-settings', '/admin/exam-categories'] },
             { name: 'User Management', paths: ['/admin/users', '/admin/rewards-scoring'] },
             { name: 'Subscriptions', paths: ['/admin/subscription-plans'] },
             { name: 'Validation', paths: ['/admin/sentence-validation', '/admin/quiz-validation'] },
@@ -126,6 +127,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onToggle }) => {
                     title: 'Promo Banner',
                     path: '/admin/promo-banner',
                     icon: <CampaignIcon />,
+                },
+                {
+                    title: 'Webinars',
+                    path: '/admin/webinars',
+                    icon: <EventAvailableIcon />,
                 },
                 {
                     title: 'Blog Posts',

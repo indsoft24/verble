@@ -29,6 +29,7 @@ import {
     HelpOutline as HelpOutlineIcon,
     EmojiEvents as EmojiEventsIcon,
     AutoAwesome as AutoAwesomeIcon,
+    EventAvailable as EventAvailableIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { learnerBrandTheme } from './learnerBrandTheme';
@@ -76,6 +77,11 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
             title: 'Subscription Plans',
             path: '/subscription-plans',
             icon: <PlaylistPlayIcon />,
+        },
+        {
+            title: 'Webinars',
+            path: '/webinars',
+            icon: <EventAvailableIcon />,
         },
         {
             title: 'Rewards & Scoring',

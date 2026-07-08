@@ -463,6 +463,7 @@ const HEADER_ALIASES: Record<string, string> = {
 
 function normalizeHeader(raw: string): string {
     const base = raw
+        .replace(/^\uFEFF/, '')
         .trim()
         .toLowerCase()
         .replace(/\s+/g, '_')
