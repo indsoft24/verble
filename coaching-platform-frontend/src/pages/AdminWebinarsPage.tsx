@@ -22,15 +22,24 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
+import PeopleIcon from '@mui/icons-material/People';
+import { Link as RouterLink } from 'react-router-dom';
 import TiptapEditor from '../components/features/blog/LazyTiptapEditor';
 import AdminImageUploadField from '../components/admin/AdminImageUploadField';
 import type { Webinar, WebinarDraft } from '../services/webinarService';
 import {
     createWebinarAdmin,
+    formatWebinarPrice,
     getWebinarAdminById,
     listWebinarsAdmin,
     updateWebinarAdmin,
 } from '../services/webinarService';
+import {
+    datetimeLocalToIso,
+    formatWebinarScheduleRange,
+    getApiErrorMessage,
+    isoToDatetimeLocal,
+} from '../utils/webinarDateTime';
 
 type WebinarForm = WebinarDraft;
 
@@ -72,7 +81,7 @@ const AdminWebinarsPage: React.FC = () => {
             const data = await listWebinarsAdmin();
             setWebinars(data);
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Could not load webinars');
+            setError(getApiErrorMessage(e, 'Could not load webinars'));
         } finally {
             setLoading(false);
         }
@@ -113,11 +122,11 @@ const AdminWebinarsPage: React.FC = () => {
                 imageUrl: webinar.imageUrl || '',
                 meetingLink: '',
                 mode: webinar.mode,
-                price: Number(webinar.price || 0),
+                price: webinar.mode === 'PAID' ? Number(webinar.price || 0) / 100 : 0,
                 audience: webinar.audience,
                 topics: webinar.topics || [],
-                startsAt: webinar.startsAt ? new Date(webinar.startsAt).toISOString().slice(0, 16) : '',
-                endsAt: webinar.endsAt ? new Date(webinar.endsAt).toISOString().slice(0, 16) : '',
+                startsAt: isoToDatetimeLocal(webinar.startsAt),
+                endsAt: isoToDatetimeLocal(webinar.endsAt),
                 joinWindowBeforeMinutes: webinar.joinWindowBeforeMinutes || 15,
                 joinWindowAfterMinutes: webinar.joinWindowAfterMinutes || 30,
                 isPublished: Boolean(webinar.isPublished),
@@ -126,7 +135,7 @@ const AdminWebinarsPage: React.FC = () => {
             });
             setOpen(true);
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Could not load webinar details.');
+            setError(getApiErrorMessage(e, 'Could not load webinar details.'));
         } finally {
             setSaving(false);
         }
@@ -136,9 +145,34 @@ const AdminWebinarsPage: React.FC = () => {
         if (!form.title.trim()) return false;
         if (!form.startsAt || !form.endsAt) return false;
         if (new Date(form.endsAt) <= new Date(form.startsAt)) return false;
-        if (form.mode === 'PAID' && Number(form.price || 0) <= 0) return false;
+        if (form.mode === 'PAID' && Number(form.price || 0) < 1) return false;
         return true;
     }, [form]);
+
+    const buildPayload = (): WebinarDraft => {
+        let startsAtIso: string;
+        let endsAtIso: string;
+        try {
+            startsAtIso = datetimeLocalToIso(form.startsAt);
+            endsAtIso = datetimeLocalToIso(form.endsAt);
+        } catch (e: unknown) {
+            throw new Error(e instanceof Error ? e.message : 'Invalid schedule.');
+        }
+        if (new Date(endsAtIso) <= new Date(startsAtIso)) {
+            throw new Error('End time must be after start time.');
+        }
+
+        return {
+            ...form,
+            topics: topicsText
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean),
+            startsAt: startsAtIso,
+            endsAt: endsAtIso,
+            price: form.mode === 'PAID' ? Math.round(Number(form.price || 0) * 100) : 0,
+        };
+    };
 
     const submit = async () => {
         if (!formValid) {
@@ -148,27 +182,27 @@ const AdminWebinarsPage: React.FC = () => {
         setSaving(true);
         setError(null);
         setSuccess(null);
-        const payload: WebinarDraft = {
-            ...form,
-            topics: topicsText
-                .split(',')
-                .map((t) => t.trim())
-                .filter(Boolean),
-            startsAt: new Date(form.startsAt).toISOString(),
-            endsAt: new Date(form.endsAt).toISOString(),
-        };
         try {
+            const payload = buildPayload();
             if (editingId) {
-                await updateWebinarAdmin(editingId, payload);
+                const updatePayload: Partial<WebinarDraft> = { ...payload };
+                if (!updatePayload.meetingLink?.trim()) {
+                    delete updatePayload.meetingLink;
+                }
+                await updateWebinarAdmin(editingId, updatePayload);
                 setSuccess('Webinar updated successfully.');
             } else {
+                if (!payload.meetingLink?.trim()) {
+                    setError('Meeting link is required for new webinars.');
+                    return;
+                }
                 await createWebinarAdmin(payload);
                 setSuccess('Webinar created successfully.');
             }
             await load();
             resetForm();
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Could not save webinar.');
+            setError(getApiErrorMessage(e, 'Could not save webinar.'));
         } finally {
             setSaving(false);
         }
@@ -185,9 +219,19 @@ const AdminWebinarsPage: React.FC = () => {
                         Create and manage multiple live webinars with controlled registration and join access.
                     </Typography>
                 </Box>
-                <Button startIcon={<AddIcon />} variant="contained" onClick={openCreate}>
-                    New webinar
-                </Button>
+                <Stack direction="row" spacing={1}>
+                    <Button
+                        component={RouterLink}
+                        to="/admin/webinar-registrations"
+                        startIcon={<PeopleIcon />}
+                        variant="outlined"
+                    >
+                        Registrations
+                    </Button>
+                    <Button startIcon={<AddIcon />} variant="contained" onClick={openCreate}>
+                        New webinar
+                    </Button>
+                </Stack>
             </Stack>
 
             {error && (
@@ -207,6 +251,7 @@ const AdminWebinarsPage: React.FC = () => {
                         <TableRow>
                             <TableCell>Title</TableCell>
                             <TableCell>Schedule</TableCell>
+                            <TableCell>Registrations</TableCell>
                             <TableCell>Mode</TableCell>
                             <TableCell>Audience</TableCell>
                             <TableCell>Status</TableCell>
@@ -216,26 +261,38 @@ const AdminWebinarsPage: React.FC = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={6}>Loading webinars...</TableCell>
+                                <TableCell colSpan={7}>Loading webinars...</TableCell>
                             </TableRow>
                         ) : webinars.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6}>No webinars yet.</TableCell>
+                                <TableCell colSpan={7}>No webinars yet.</TableCell>
                             </TableRow>
                         ) : (
-                            webinars.map((w) => (
+                            webinars.map((w) => {
+                                const schedule = formatWebinarScheduleRange(w.startsAt, w.endsAt);
+                                return (
                                 <TableRow key={w._id}>
                                     <TableCell>{w.title}</TableCell>
                                     <TableCell>
-                                        <Typography variant="body2">{new Date(w.startsAt).toLocaleString('en-IN')}</Typography>
+                                        <Typography variant="body2">{schedule.dateLine}</Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            to {new Date(w.endsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                            {schedule.timeLine}
                                         </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" fontWeight={700}>
+                                            {w.registrationCount ?? 0}
+                                        </Typography>
+                                        {(w.paymentPendingCount || 0) > 0 ? (
+                                            <Typography variant="caption" color="warning.main">
+                                                {w.paymentPendingCount} pending
+                                            </Typography>
+                                        ) : null}
                                     </TableCell>
                                     <TableCell>
                                         <Chip
                                             size="small"
-                                            label={w.mode === 'PAID' ? `Paid ₹${w.price}` : 'Free'}
+                                            label={w.mode === 'PAID' ? formatWebinarPrice(w.price) : 'Free'}
                                             color={w.mode === 'PAID' ? 'secondary' : 'success'}
                                             variant="outlined"
                                         />
@@ -250,12 +307,22 @@ const AdminWebinarsPage: React.FC = () => {
                                         </Stack>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <Button size="small" startIcon={<EditIcon />} onClick={() => void openEdit(w._id)} disabled={saving}>
-                                            Edit
-                                        </Button>
+                                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                                            <Button
+                                                size="small"
+                                                component={RouterLink}
+                                                to={`/admin/webinar-registrations?webinarId=${w._id}`}
+                                            >
+                                                Users
+                                            </Button>
+                                            <Button size="small" startIcon={<EditIcon />} onClick={() => void openEdit(w._id)} disabled={saving}>
+                                                Edit
+                                            </Button>
+                                        </Stack>
                                     </TableCell>
                                 </TableRow>
-                            ))
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
@@ -329,11 +396,13 @@ const AdminWebinarsPage: React.FC = () => {
                         <Grid size={{ xs: 12, md: 3 }}>
                             <TextField
                                 fullWidth
-                                label="Price (INR)"
+                                label="Price (₹ rupees)"
                                 type="number"
                                 disabled={form.mode === 'FREE'}
+                                inputProps={{ min: 1, step: 1 }}
                                 value={form.price}
                                 onChange={(e) => setForm((p) => ({ ...p, price: Number(e.target.value || 0) }))}
+                                helperText={form.mode === 'PAID' ? 'Minimum ₹1. Stored for Razorpay checkout.' : undefined}
                             />
                         </Grid>
                         <Grid size={{ xs: 12, md: 3 }}>
@@ -345,8 +414,8 @@ const AdminWebinarsPage: React.FC = () => {
                                 onChange={(e) => setForm((p) => ({ ...p, audience: e.target.value as WebinarForm['audience'] }))}
                             >
                                 <MenuItem value="ALL">All users</MenuItem>
-                                <MenuItem value="FREE_ONLY">Free users only</MenuItem>
-                                <MenuItem value="PAID_SUBSCRIBERS">Paid subscribers (Gold/Full course)</MenuItem>
+                                <MenuItem value="FREE_ONLY">Non-subscribers (no active Gold / Full Course plan)</MenuItem>
+                                <MenuItem value="PAID_SUBSCRIBERS">Gold / Full Course subscribers only</MenuItem>
                             </TextField>
                         </Grid>
                         <Grid size={{ xs: 12, md: 3 }}>
@@ -375,6 +444,7 @@ const AdminWebinarsPage: React.FC = () => {
                                 InputLabelProps={{ shrink: true }}
                                 value={form.startsAt}
                                 onChange={(e) => setForm((p) => ({ ...p, startsAt: e.target.value }))}
+                                helperText="Your local time (IST on this server)"
                             />
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
@@ -385,7 +455,9 @@ const AdminWebinarsPage: React.FC = () => {
                                 label="Ends at"
                                 InputLabelProps={{ shrink: true }}
                                 value={form.endsAt}
+                                inputProps={{ min: form.startsAt || undefined }}
                                 onChange={(e) => setForm((p) => ({ ...p, endsAt: e.target.value }))}
+                                helperText="Must be after start time"
                             />
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>

@@ -1,5 +1,4 @@
 import multer from 'multer';
-import path from 'path';
 import fs from 'fs';
 import { BRANDING_DIR } from '../services/certificateBrandingService.js';
 
@@ -8,7 +7,7 @@ if (!fs.existsSync(BRANDING_DIR)) {
 }
 
 const imageFilter = (_req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    if (['image/png', 'image/jpeg', 'image/webp'].includes(file.mimetype)) {
         cb(null, true);
     } else {
         cb(new Error('Only image files are allowed.'), false);
@@ -18,7 +17,7 @@ const imageFilter = (_req, file, cb) => {
 const signatureStorage = multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, BRANDING_DIR),
     filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase() || '.png';
+        const ext = file.mimetype === 'image/jpeg' ? '.jpg' : file.mimetype === 'image/webp' ? '.webp' : '.png';
         cb(null, `signatory-signature${ext}`);
     },
 });
@@ -26,7 +25,7 @@ const signatureStorage = multer.diskStorage({
 const logoStorage = multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, BRANDING_DIR),
     filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase() || '.png';
+        const ext = file.mimetype === 'image/jpeg' ? '.jpg' : file.mimetype === 'image/webp' ? '.webp' : '.png';
         cb(null, `verble-logo${ext}`);
     },
 });

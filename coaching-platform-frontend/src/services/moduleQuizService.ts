@@ -102,6 +102,14 @@ export const submitModuleQuiz = async (
                 totalQuestions: number;
                 moduleCompleted: boolean;
                 retakeMessage?: string;
+                moduleCertificate?: {
+                    _id: string;
+                    certificateNumber: string;
+                    verificationCode: string;
+                    pdfUrl?: string;
+                    status: 'active' | 'revoked';
+                    issuedAt: string;
+                } | null;
                 answers: { questionId: string; isCorrect: boolean; pointsEarned: number }[];
             };
         }>

@@ -70,6 +70,11 @@ const ModuleQuizPage: React.FC = () => {
         passed: boolean;
         moduleCompleted: boolean;
         retakeMessage?: string;
+        moduleCertificate?: {
+            certificateNumber: string;
+            verificationCode: string;
+            pdfUrl?: string;
+        } | null;
     } | null>(null);
     const [meta, setMeta] = useState<{ bestScore: number | null; previousAttempts: number } | null>(null);
 
@@ -138,6 +143,7 @@ const ModuleQuizPage: React.FC = () => {
                 passed: submission.passed,
                 moduleCompleted: submission.moduleCompleted,
                 retakeMessage: submission.retakeMessage,
+                moduleCertificate: submission.moduleCertificate,
             });
         } catch (err: unknown) {
             const axiosErr = err as { response?: { data?: { message?: string } } };
@@ -208,9 +214,28 @@ const ModuleQuizPage: React.FC = () => {
                         Score: {result.score}% (need {quiz?.passingScore ?? 70}% to pass)
                     </Typography>
                     {result.passed && result.moduleCompleted && (
-                        <Typography sx={{ color: courseLearningTheme.accent, fontWeight: 600 }}>
-                            Module marked complete.
-                        </Typography>
+                        <Stack spacing={1} alignItems="center">
+                            <Typography sx={{ color: courseLearningTheme.accent, fontWeight: 600 }}>
+                                Module marked complete.
+                            </Typography>
+                            {result.moduleCertificate && (
+                                <>
+                                    <Typography variant="body2">
+                                        Module certificate issued: {result.moduleCertificate.certificateNumber}
+                                    </Typography>
+                                    <Stack direction="row" spacing={1}>
+                                        {result.moduleCertificate.pdfUrl && (
+                                            <Button href={result.moduleCertificate.pdfUrl} target="_blank" size="small">
+                                                View certificate
+                                            </Button>
+                                        )}
+                                        <Button component={RouterLink} to={`/verify-certificate/${result.moduleCertificate.verificationCode}`} size="small">
+                                            Verify
+                                        </Button>
+                                    </Stack>
+                                </>
+                            )}
+                        </Stack>
                     )}
                     {result.retakeMessage && !result.passed && (
                         <Typography variant="body2" sx={{ color: courseLearningTheme.textMuted, maxWidth: 420 }}>

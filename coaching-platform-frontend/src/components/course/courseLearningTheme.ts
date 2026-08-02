@@ -33,9 +33,9 @@ export const courseLearningTheme = {
     tileBg: '#1f2e34',
     surfaceRaised: '#263a42',
     textPrimary: '#f4f7f6',
-    textSecondary: '#c5ddd8',
-    textMuted: '#8fa8a3',
-    textBody: '#d4e4e1',
+    textSecondary: '#d0e8e4',
+    textMuted: '#a8c4bf',
+    textBody: '#e2efec',
     iconOnDark: '#ffffff',
     iconMuted: '#a8c4bf',
     borderRadius: 10,
@@ -154,20 +154,44 @@ export const courseLearningSubsectionTitleSx = {
 
 export const courseBottomNavZIndex = 1200;
 
+/** Overrides TipTap inline colors (often black) on dark learning surfaces */
 export const courseTiptapSx = {
-    color: courseLearningTheme.textBody,
+    color: `${courseLearningTheme.textBody} !important`,
+    typography: 'body2',
+    lineHeight: 1.65,
     '& p': {
         typography: 'body2',
-        lineHeight: 1.6,
-        mb: 1,
-        color: courseLearningTheme.textBody,
+        lineHeight: 1.65,
+        mb: 1.25,
+        color: `${courseLearningTheme.textBody} !important`,
     },
-    '& ul, & ol': { pl: 2.5, mb: 1, color: courseLearningTheme.textBody },
-    '& li': { mb: 0.35, color: courseLearningTheme.textBody },
-    '& strong': { fontWeight: 700, color: courseLearningTheme.textPrimary },
-    '& em': { fontStyle: 'italic', color: courseLearningTheme.textSecondary },
+    '& ul, & ol': {
+        pl: 2.5,
+        mb: 1.25,
+        color: `${courseLearningTheme.textBody} !important`,
+    },
+    '& li': {
+        mb: 0.5,
+        lineHeight: 1.6,
+        color: `${courseLearningTheme.textBody} !important`,
+    },
+    '& li::marker': {
+        color: `${courseLearningTheme.textSecondary} !important`,
+    },
+    '& strong, & b': {
+        fontWeight: 700,
+        color: `${courseLearningTheme.textPrimary} !important`,
+    },
+    '& em, & i': {
+        fontStyle: 'italic',
+        color: `${courseLearningTheme.textSecondary} !important`,
+    },
+    '& u': {
+        textDecoration: 'underline',
+        color: `${courseLearningTheme.textBody} !important`,
+    },
     '& a': {
-        color: courseLearningTheme.accent,
+        color: `${courseLearningTheme.accent} !important`,
         textDecoration: 'none',
         '&:hover': { textDecoration: 'underline' },
     },
@@ -175,9 +199,12 @@ export const courseTiptapSx = {
         mt: 1.5,
         mb: 0.75,
         fontWeight: 700,
-        color: courseLearningTheme.textPrimary,
+        lineHeight: 1.35,
+        color: `${courseLearningTheme.textPrimary} !important`,
     },
-    '& span, & div': { color: 'inherit' },
+    '& span, & div, & blockquote, & td, & th': {
+        color: `${courseLearningTheme.textBody} !important`,
+    },
 } as const;
 
 export const courseChipOutlinedSx = {

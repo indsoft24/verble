@@ -12,6 +12,7 @@ import Certificate from '../models/Certificate.js';
 import CertificateAssessmentSubmission from '../models/CertificateAssessmentSubmission.js';
 import User from '../models/User.js';
 import { v4 as uuidv4 } from 'uuid';
+import { mirrorLegacyCertificate } from './learningCertificateService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -175,6 +176,7 @@ export const generateCertificate = async (userId, submissionId) => {
     submission.certificateGenerated = true;
     submission.certificateGeneratedAt = new Date();
     await submission.save();
+    await mirrorLegacyCertificate(certificate);
 
     return {
         pdfPath,

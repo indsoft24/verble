@@ -2,7 +2,7 @@ import Module from '../models/Module.js';
 import ModuleCompletion from '../models/ModuleCompletion.js';
 import ModuleQuiz from '../models/ModuleQuiz.js';
 import ModuleQuizSubmission from '../models/ModuleQuizSubmission.js';
-import CertificateAssessmentSubmission from '../models/CertificateAssessmentSubmission.js';
+import FinalAssessmentAttempt from '../models/FinalAssessmentAttempt.js';
 import UserSentenceSubmission from '../models/UserSentenceSubmission.js';
 import UserStorySubmission from '../models/UserStorySubmission.js';
 import UserVocabSubmission from '../models/UserVocabSubmission.js';
@@ -157,10 +157,12 @@ export const evaluateCourseCertification = async (userId, courseId) => {
     const completionPercent = totalModules === 0 ? 0 : Math.round((completedModules / totalModules) * 100);
     const meetsCompletion = completionPercent >= rule.minimumCompletionPercent;
 
-    const passedSubmission = await CertificateAssessmentSubmission.findOne({
+    const passedSubmission = await FinalAssessmentAttempt.findOne({
         user: userId,
+        course: courseId,
+        status: 'SUBMITTED',
         passed: true,
-    }).sort({ submittedAt: -1 });
+    }).sort({ score: -1, submittedAt: -1 });
 
     const meetsAssessment =
         !rule.requireAssessment || (passedSubmission && passedSubmission.score >= rule.passingScore);
@@ -272,5 +274,6 @@ export const evaluateCourseCertification = async (userId, courseId) => {
         completedModules,
         completionPercent,
         assessmentScore: passedSubmission?.score ?? null,
+        assessmentAttempt: passedSubmission,
     };
 };

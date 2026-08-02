@@ -82,10 +82,10 @@ const CourseLearningBand: React.FC<CourseLearningBandProps> = ({
                     variant="body2"
                     sx={{
                         m: 0,
-                        color: courseLearningTheme.textMuted,
+                        color: courseLearningTheme.textSecondary,
                         maxWidth: 640,
-                        lineHeight: 1.5,
-                        fontSize: '0.8125rem',
+                        lineHeight: 1.55,
+                        fontSize: '0.875rem',
                     }}
                 >
                     {subtitle}

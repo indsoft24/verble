@@ -57,6 +57,10 @@ import courseCertificateAdminRoutes from './courseCertificateAdminRoutes.js';
 import moduleQuizAdminRoutes from './moduleQuizAdminRoutes.js';
 import webinarRoutes from './webinarRoutes.js';
 import webinarAdminRoutes from './webinarAdminRoutes.js';
+import finalAssessmentRoutes from './finalAssessmentRoutes.js';
+import finalAssessmentAdminRoutes from './finalAssessmentAdminRoutes.js';
+import learningCertificateRoutes from './learningCertificateRoutes.js';
+import learningCertificateAdminRoutes from './learningCertificateAdminRoutes.js';
 import { serveCourseImage, serveModuleImage, serveSubscriptionImage, serveGeneralImage, getSupportedImageTypes } from '../controllers/imageServingController.js';
 
 
@@ -124,6 +128,10 @@ router.use('/admin/certificates', courseCertificateAdminRoutes); // Handles /api
 router.use('/admin/module-quizzes', moduleQuizAdminRoutes);
 router.use('/webinars', webinarRoutes);
 router.use('/admin/webinars', webinarAdminRoutes);
+router.use('/final-assessments', finalAssessmentRoutes);
+router.use('/admin/final-assessments', finalAssessmentAdminRoutes);
+router.use('/learning-certificates', learningCertificateRoutes);
+router.use('/admin/certificates', learningCertificateAdminRoutes);
 
 // Image serving routes - General endpoint for Android app
 router.get('/images/types', getSupportedImageTypes);

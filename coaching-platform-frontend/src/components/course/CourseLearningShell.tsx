@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Container } from '@mui/material';
-import { courseLearningTheme } from './courseLearningTheme';
+import { courseLearningTheme, courseTiptapSx } from './courseLearningTheme';
 
 export interface CourseLearningShellProps {
     children: React.ReactNode;
@@ -17,10 +17,12 @@ const CourseLearningShell: React.FC<CourseLearningShellProps> = ({
         sx={{
             minHeight: '100%',
             bgcolor: courseLearningTheme.pageBg,
+            color: courseLearningTheme.textBody,
             pb: `${courseLearningTheme.contentPaddingBottom}px`,
             overflowX: 'hidden',
             width: '100%',
             maxWidth: '100%',
+            '& .tiptap-rendered-content': courseTiptapSx,
         }}
     >
         <Container

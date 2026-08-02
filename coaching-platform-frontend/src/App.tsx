@@ -41,6 +41,9 @@ const MySubscriptionPage = lazy(() => import('./pages/MySubscriptionPage'));
 const MyCoursesPage = lazy(() => import('./pages/MyCoursesPage'));
 const ModuleQuizPage = lazy(() => import('./pages/ModuleQuizPage'));
 const CourseReportCardPage = lazy(() => import('./pages/CourseReportCardPage'));
+const FinalAssessmentPage = lazy(() => import('./pages/FinalAssessmentPage'));
+const MyCertificatesPage = lazy(() => import('./pages/MyCertificatesPage'));
+const VerifyCertificatePage = lazy(() => import('./pages/VerifyCertificatePage'));
 const CoursesListPage = lazy(() => import('./pages/CoursesListPage'));
 const CourseDetailPage = lazy(() => import('./pages/CourseDetailPage'));
 const ModuleVideosPage = lazy(() => import('./pages/ModuleVideosPage'));
@@ -74,6 +77,7 @@ const AdminDatabaseManagerPage = lazy(() => import('./pages/AdminDatabaseManager
 const AdminWebinarLeadsPage = lazy(() => import('./pages/AdminWebinarLeadsPage'));
 const AdminPromoBannerPage = lazy(() => import('./pages/AdminPromoBannerPage'));
 const AdminWebinarsPage = lazy(() => import('./pages/AdminWebinarsPage'));
+const AdminWebinarRegistrationsPage = lazy(() => import('./pages/AdminWebinarRegistrationsPage'));
 const WebinarsPage = lazy(() => import('./pages/WebinarsPage'));
 const AdminCertificationManagementPage = lazy(() => import('./pages/AdminCertificationManagementPage'));
 const AdminModuleQuizzesPage = lazy(() => import('./pages/AdminModuleQuizzesPage'));
@@ -160,6 +164,7 @@ function AppContent() {
                         {/* Public Course Routes */}
                         <Route path="/courses" element={<CoursesListPage />} />
                         <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+                        <Route path="/verify-certificate/:verificationCode" element={<VerifyCertificatePage />} />
 
                         {/* Public Exam Category Routes */}
                         <Route path="/exams/:slug" element={<ExamCategoryCoursesPage />} />
@@ -179,6 +184,8 @@ function AppContent() {
                         <Route path='/testimonials' element={<TestimonialsPage />} />
                         <Route path="/faqs" element={<FaqsPage />} />
                         <Route path="/help" element={<HelpPage />} />
+                        <Route path="/webinars" element={<WebinarsPage />} />
+                        <Route path="/webinar/:slug" element={<WebinarPage />} />
 
                         {/* Protected User Routes (persistent sidebar via UserAppShell) */}
                         <Route element={<ProtectedRoute allowedRoles={['user', 'admin']} />}>
@@ -187,6 +194,8 @@ function AppContent() {
                                 <Route path="/profile" element={<ProfilePage />} />
                                 <Route path="/my-courses" element={<MyCoursesPage />} />
                                 <Route path="/my-courses/:courseId/report-card" element={<CourseReportCardPage />} />
+                                <Route path="/final-assessment/:courseId" element={<FinalAssessmentPage />} />
+                                <Route path="/my-certificates" element={<MyCertificatesPage />} />
                                 <Route path="/videos" element={<Navigate to="/my-courses" replace />} />
                                 <Route path="/videos/:videoId" element={<VideoWatchPage />} />
                                 <Route path="/subscription-plans" element={<SubscriptionPlansPage />} />
@@ -196,8 +205,6 @@ function AppContent() {
                                 <Route path="/my-rewards" element={<MyRewardsPage />} />
                                 <Route path="/professional-conversations" element={<ProfessionalConversationsPage />} />
                                 <Route path="/ai-prompts" element={<AIPromptsPage />} />
-                                <Route path="/webinars" element={<WebinarsPage />} />
-                                <Route path="/webinar/:slug" element={<WebinarPage />} />
                                 <Route path="/modules/:moduleId/videos" element={<ModuleVideosPage />} />
                                 <Route path="/modules/:moduleId/quiz" element={<ModuleQuizPage />} />
                             </Route>
@@ -229,6 +236,7 @@ function AppContent() {
                                 <Route path="/admin/leads" element={<AdminWebinarLeadsPage />} />
                                 <Route path="/admin/promo-banner" element={<AdminPromoBannerPage />} />
                                 <Route path="/admin/webinars" element={<AdminWebinarsPage />} />
+                                <Route path="/admin/webinar-registrations" element={<AdminWebinarRegistrationsPage />} />
                                 <Route path="/admin/certification-management" element={<AdminCertificationManagementPage />} />
                                 <Route path="/admin/module-quizzes" element={<AdminModuleQuizzesPage />} />
                                 <Route path="/admin/ai-prompts" element={<AdminAIPromptsPage />} />

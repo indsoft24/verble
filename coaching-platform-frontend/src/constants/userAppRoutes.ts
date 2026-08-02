@@ -3,6 +3,8 @@ export const USER_APP_ROUTE_PREFIXES = [
     '/dashboard',
     '/profile',
     '/my-courses',
+    '/my-certificates',
+    '/final-assessment',
     '/videos',
     '/my-rewards',
     '/ai-prompts',
@@ -11,8 +13,6 @@ export const USER_APP_ROUTE_PREFIXES = [
     '/professional-conversations',
     '/subscription-plans',
     '/modules',
-    '/webinars',
-    '/webinar',
 ] as const;
 
 /** Authenticated course detail — hide marketing shell, not the /courses catalog */

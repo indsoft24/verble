@@ -30,6 +30,7 @@ import {
     EmojiEvents as EmojiEventsIcon,
     AutoAwesome as AutoAwesomeIcon,
     EventAvailable as EventAvailableIcon,
+    WorkspacePremium as WorkspacePremiumIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { learnerBrandTheme } from './learnerBrandTheme';
@@ -67,6 +68,11 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ open, onToggle }) => {
             title: 'My Courses',
             path: '/my-courses',
             icon: <SchoolIcon />,
+        },
+        {
+            title: 'My Certificates',
+            path: '/my-certificates',
+            icon: <WorkspacePremiumIcon />,
         },
         {
             title: 'My Subscription',

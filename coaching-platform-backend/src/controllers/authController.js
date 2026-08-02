@@ -242,21 +242,24 @@ export const verifyWhatsAppOtp = asyncHandler(async (req, res) => {
 
     await assignFreeFoundationToUser(user._id);
 
-    let plainPin;
+    let plainPin = null;
     try {
         plainPin = await issueLoginPinForUser(user);
     } catch (err) {
         console.error('[verifyWhatsAppOtp] PIN email failed:', err);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Account verified but we could not send your login PIN. Use Forgot PIN on the login page.',
+        // Account is verified — still return success so the client can send the user to login.
+        return res.status(200).json({
+            status: 'success',
+            message:
+                'WhatsApp verified. We could not send your login PIN right now—use Forgot PIN on the login page.',
+            data: { email: user.email, phoneNumber: formattedPhone, loginPin: null },
         });
     }
 
     res.status(200).json({
         status: 'success',
         message:
-            'WhatsApp verified! Save your login PIN below—we also emailed it to you. Sign in with your phone number and PIN.',
+            'WhatsApp verified! Your login PIN has been sent to your email and WhatsApp. Sign in with your phone number and PIN.',
         data: { email: user.email, phoneNumber: formattedPhone, loginPin: plainPin },
     });
 });

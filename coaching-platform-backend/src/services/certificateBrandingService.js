@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 import CertificateBranding from '../models/CertificateBranding.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -17,6 +18,20 @@ const DEFAULT_LOGO_CANDIDATES = [
 ];
 
 export const getBrandingDir = () => BRANDING_DIR;
+
+const validateBrandingAsset = async (absolutePath) => {
+    const resolved = path.resolve(absolutePath);
+    const brandingRoot = `${path.resolve(BRANDING_DIR)}${path.sep}`;
+    if (!resolved.startsWith(brandingRoot)) throw new Error('Invalid branding asset path.');
+    const metadata = await sharp(resolved, { failOn: 'error' }).metadata();
+    if (!['png', 'jpeg', 'webp'].includes(metadata.format)) {
+        throw new Error('Branding asset must be PNG, JPEG, or WebP.');
+    }
+    if (!metadata.width || !metadata.height || metadata.width > 5000 || metadata.height > 5000) {
+        throw new Error('Branding image dimensions are invalid or too large.');
+    }
+    return resolved;
+};
 
 export const getDefaultLogoPath = async () => {
     const branding = await getCertificateBranding();
@@ -58,6 +73,7 @@ export const updateCertificateBranding = async (payload, userId) => {
 };
 
 export const setSignatureImagePath = async (absolutePath, userId) => {
+    absolutePath = await validateBrandingAsset(absolutePath);
     const doc = await getCertificateBranding();
     doc.signatureImagePath = absolutePath;
     if (userId) doc.updatedBy = userId;
@@ -66,6 +82,7 @@ export const setSignatureImagePath = async (absolutePath, userId) => {
 };
 
 export const setLogoImagePath = async (absolutePath, userId) => {
+    absolutePath = await validateBrandingAsset(absolutePath);
     const doc = await getCertificateBranding();
     doc.logoImagePath = absolutePath;
     if (userId) doc.updatedBy = userId;

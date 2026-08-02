@@ -11,7 +11,9 @@
     "import-verble-pdfs": "node scripts/importVerblePdfs.js",
     "backfill-stale-quiz-passed": "node scripts/backfillStaleQuizPassed.mjs",
     "backfill-video-order": "node scripts/backfillVideoOrder.mjs",
-    "migrate-cumulative-unlock": "node scripts/migrateToCumulativeUnlock.mjs"
+    "migrate-cumulative-unlock": "node scripts/migrateToCumulativeUnlock.mjs",
+    "migrate-unified-certificates": "node scripts/migrateUnifiedCertificates.mjs",
+    "test": "node --test test/*.test.js"
   },
   "keywords": [],
   "author": "",
@@ -38,6 +40,7 @@
     "passport-google-oauth20": "^2.0.0",
     "pdf-parse": "^1.1.1",
     "pdfkit": "^0.17.2",
+    "qrcode": "^1.5.4",
     "razorpay": "^2.9.6",
     "redis": "^5.1.0",
     "sharp": "^0.34.2",

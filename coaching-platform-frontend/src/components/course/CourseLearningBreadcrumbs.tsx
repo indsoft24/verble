@@ -30,7 +30,7 @@ const CourseLearningBreadcrumbs: React.FC<CourseLearningBreadcrumbsProps> = ({ i
                             fontSize: 13,
                             fontWeight: isLast ? 600 : 400,
                             maxWidth: { xs: 140, sm: 220 },
-                            color: isLast ? courseLearningTheme.textPrimary : courseLearningTheme.textMuted,
+                            color: isLast ? courseLearningTheme.textPrimary : courseLearningTheme.textSecondary,
                         }}
                         noWrap
                     >
@@ -44,7 +44,7 @@ const CourseLearningBreadcrumbs: React.FC<CourseLearningBreadcrumbsProps> = ({ i
                     component={RouterLink}
                     to={item.to}
                     underline="hover"
-                    sx={{ fontSize: 14, color: courseLearningTheme.textMuted, maxWidth: { xs: 100, sm: 180 } }}
+                    sx={{ fontSize: 14, color: courseLearningTheme.textSecondary, maxWidth: { xs: 100, sm: 180 } }}
                     noWrap
                 >
                     {item.label}

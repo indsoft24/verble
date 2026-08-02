@@ -1,8 +1,10 @@
 import asyncHandler from 'express-async-handler';
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import Razorpay from 'razorpay';
 import Webinar from '../models/Webinar.js';
 import WebinarRegistration from '../models/WebinarRegistration.js';
+import User from '../models/User.js';
 import { getRazorpayConfig } from '../config/razorpayConfig.js';
 
 const isObjectId = (value) => /^[a-fA-F0-9]{24}$/.test(String(value || ''));
@@ -36,16 +38,111 @@ const hasActivePaidSubscription = (user) => {
     return ['GOLD', 'FULL_COURSE'].includes(String(user.membershipLevel || '').toUpperCase());
 };
 
-const isFreeTierUser = (user) => {
+/** True when user has no active Gold / Full-course subscription (gamification tier alone does not count). */
+const isNonSubscriberUser = (user) => {
     if (!user) return false;
-    return String(user.membershipLevel || 'FREE').toUpperCase() === 'FREE';
+    return !hasActivePaidSubscription(user);
 };
 
-const canAudienceRegister = (webinar, user) => {
-    if (webinar.audience === 'ALL') return true;
-    if (webinar.audience === 'FREE_ONLY') return isFreeTierUser(user);
-    if (webinar.audience === 'PAID_SUBSCRIBERS') return hasActivePaidSubscription(user);
-    return false;
+const getRegistrationEligibility = (webinar, user) => {
+    if (!user) {
+        return { canRegister: false, reason: 'LOGIN_REQUIRED' };
+    }
+    if (user.role === 'admin') {
+        return { canRegister: true, reason: null };
+    }
+    if (webinar.audience === 'ALL') {
+        return { canRegister: true, reason: null };
+    }
+    if (webinar.audience === 'FREE_ONLY') {
+        if (isNonSubscriberUser(user)) {
+            return { canRegister: true, reason: null };
+        }
+        return {
+            canRegister: false,
+            reason: 'SUBSCRIBERS_EXCLUDED',
+            message: 'This webinar is for learners without an active Gold or Full Course subscription.',
+        };
+    }
+    if (webinar.audience === 'PAID_SUBSCRIBERS') {
+        if (hasActivePaidSubscription(user)) {
+            return { canRegister: true, reason: null };
+        }
+        return {
+            canRegister: false,
+            reason: 'SUBSCRIPTION_REQUIRED',
+            message: 'This webinar is available only to active Gold or Full Course subscribers.',
+        };
+    }
+    return { canRegister: false, reason: 'UNKNOWN', message: 'You are not eligible to register for this webinar.' };
+};
+
+const canAudienceRegister = (webinar, user) => getRegistrationEligibility(webinar, user).canRegister;
+
+/** If admin switched webinar to FREE, clear stale payment-pending registrations. */
+const reconcileRegistrationForWebinar = async (webinar, registration) => {
+    if (!registration || webinar.mode !== 'FREE' || registration.status !== 'PAYMENT_PENDING') {
+        return registration;
+    }
+    await WebinarRegistration.updateOne(
+        { _id: registration._id },
+        {
+            $set: {
+                status: 'REGISTERED',
+                accessGrantedBySubscription: false,
+                'payment.amount': 0,
+                'payment.currency': 'INR',
+            },
+        }
+    );
+    return WebinarRegistration.findById(registration._id).lean();
+};
+
+const loadWebinarJoinContext = async (webinarId, userId) => {
+    if (!isObjectId(webinarId)) {
+        const err = new Error('Invalid webinar id.');
+        err.statusCode = 400;
+        throw err;
+    }
+    const webinar = await Webinar.findById(webinarId).select('+meetingLink');
+    if (!webinar || !webinar.isPublished || webinar.isArchived) {
+        const err = new Error('Webinar not found.');
+        err.statusCode = 404;
+        throw err;
+    }
+    let registration = await WebinarRegistration.findOne({
+        webinarId: webinar._id,
+        userId,
+    });
+    if (registration) {
+        registration = await reconcileRegistrationForWebinar(webinar, registration);
+    }
+    if (!registration) {
+        const err = new Error('Please register before joining this webinar.');
+        err.statusCode = 403;
+        throw err;
+    }
+    const paidOk =
+        webinar.mode === 'FREE' ||
+        registration.status === 'PAYMENT_DONE' ||
+        registration.accessGrantedBySubscription ||
+        registration.status === 'REGISTERED';
+    if (!paidOk) {
+        const err = new Error('Payment is pending for this webinar.');
+        err.statusCode = 403;
+        throw err;
+    }
+    if (!canJoinNow(webinar)) {
+        const err = new Error('Join is available only in the live access window.');
+        err.statusCode = 403;
+        throw err;
+    }
+    if (!webinar.meetingLink) {
+        const err = new Error('Meeting link is not configured for this webinar.');
+        err.statusCode = 404;
+        throw err;
+    }
+    return { webinar, registration };
 };
 
 const computeJoinWindow = (webinar) => {
@@ -61,14 +158,18 @@ const canJoinNow = (webinar) => {
     return now >= openAt && now <= closeAt;
 };
 
-const sanitizeWebinar = (webinarDoc, registration = null) => {
+const sanitizeWebinar = (webinarDoc, registration = null, user = null) => {
     const webinar = webinarDoc.toObject ? webinarDoc.toObject() : webinarDoc;
     const joinWindow = computeJoinWindow(webinar);
+    const eligibility = getRegistrationEligibility(webinar, user);
     return {
         ...webinar,
         canJoinNow: joinWindow.now >= joinWindow.openAt && joinWindow.now <= joinWindow.closeAt,
         joinWindowOpenAt: joinWindow.openAt,
         joinWindowCloseAt: joinWindow.closeAt,
+        canRegister: eligibility.canRegister,
+        registrationBlockedReason: eligibility.reason,
+        registrationBlockedMessage: eligibility.message || null,
         registration: registration
             ? {
                   status: registration.status,
@@ -114,11 +215,12 @@ export const getWebinarBySlugForUsers = asyncHandler(async (req, res) => {
             webinarId: webinar._id,
             userId: req.user._id,
         }).lean();
+        registration = await reconcileRegistrationForWebinar(webinar, registration);
     }
 
     res.status(200).json({
         status: 'success',
-        data: { webinar: sanitizeWebinar(webinar, registration) },
+        data: { webinar: sanitizeWebinar(webinar, registration, req.user) },
     });
 });
 
@@ -126,7 +228,175 @@ export const listWebinarsForAdmin = asyncHandler(async (req, res) => {
     const webinars = await Webinar.find({})
         .sort({ startsAt: -1, createdAt: -1 })
         .lean();
-    res.status(200).json({ status: 'success', data: { webinars } });
+
+    const counts = await WebinarRegistration.aggregate([
+        {
+            $group: {
+                _id: '$webinarId',
+                total: { $sum: 1 },
+                registered: {
+                    $sum: {
+                        $cond: [{ $in: ['$status', ['REGISTERED', 'PAYMENT_DONE']] }, 1, 0],
+                    },
+                },
+                paymentPending: {
+                    $sum: { $cond: [{ $eq: ['$status', 'PAYMENT_PENDING'] }, 1, 0] },
+                },
+            },
+        },
+    ]);
+    const countMap = new Map(counts.map((row) => [String(row._id), row]));
+    const webinarsWithCounts = webinars.map((w) => {
+        const c = countMap.get(String(w._id));
+        return {
+            ...w,
+            registrationCount: c?.total || 0,
+            registeredCount: c?.registered || 0,
+            paymentPendingCount: c?.paymentPending || 0,
+        };
+    });
+
+    res.status(200).json({ status: 'success', data: { webinars: webinarsWithCounts } });
+});
+
+export const listWebinarRegistrationsForAdmin = asyncHandler(async (req, res) => {
+    const {
+        webinarId,
+        status,
+        search,
+        page = '1',
+        limit = '50',
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(String(limit), 10) || 50));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = {};
+    const summaryFilter = {};
+    if (webinarId && isObjectId(webinarId)) {
+        const webinarObjectId = new mongoose.Types.ObjectId(String(webinarId));
+        filter.webinarId = webinarObjectId;
+        summaryFilter.webinarId = webinarObjectId;
+    }
+    if (status && ['REGISTERED', 'PAYMENT_PENDING', 'PAYMENT_DONE', 'CANCELLED'].includes(String(status))) {
+        filter.status = String(status);
+    }
+
+    let userIds = null;
+    const searchText = String(search || '').trim();
+    if (searchText) {
+        const escaped = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const users = await User.find({
+            $or: [
+                { name: { $regex: escaped, $options: 'i' } },
+                { email: { $regex: escaped, $options: 'i' } },
+                { phoneNumber: { $regex: escaped, $options: 'i' } },
+                { mobile: { $regex: escaped, $options: 'i' } },
+            ],
+        })
+            .select('_id')
+            .lean();
+        userIds = users.map((u) => u._id);
+        if (userIds.length === 0) {
+            return res.status(200).json({
+                status: 'success',
+                data: {
+                    registrations: [],
+                    pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 },
+                    summary: { total: 0, registered: 0, paymentPending: 0, paymentDone: 0, cancelled: 0 },
+                },
+            });
+        }
+        filter.userId = { $in: userIds };
+        summaryFilter.userId = { $in: userIds };
+    }
+
+    const [total, registrations, statusSummary] = await Promise.all([
+        WebinarRegistration.countDocuments(filter),
+        WebinarRegistration.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .populate('userId', 'name email phoneNumber mobile membershipLevel role createdAt')
+            .populate('webinarId', 'title slug mode price startsAt endsAt isPublished')
+            .lean(),
+        WebinarRegistration.aggregate([
+            ...(Object.keys(summaryFilter).length ? [{ $match: summaryFilter }] : []),
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 },
+                },
+            },
+        ]),
+    ]);
+
+    const summary = {
+        total: 0,
+        registered: 0,
+        paymentPending: 0,
+        paymentDone: 0,
+        cancelled: 0,
+    };
+    for (const row of statusSummary) {
+        summary.total += row.count;
+        if (row._id === 'REGISTERED') summary.registered = row.count;
+        if (row._id === 'PAYMENT_PENDING') summary.paymentPending = row.count;
+        if (row._id === 'PAYMENT_DONE') summary.paymentDone = row.count;
+        if (row._id === 'CANCELLED') summary.cancelled = row.count;
+    }
+
+    const rows = registrations.map((reg) => {
+        const user = reg.userId && typeof reg.userId === 'object' ? reg.userId : null;
+        const webinar = reg.webinarId && typeof reg.webinarId === 'object' ? reg.webinarId : null;
+        return {
+            _id: reg._id,
+            status: reg.status,
+            accessGrantedBySubscription: Boolean(reg.accessGrantedBySubscription),
+            payment: reg.payment || null,
+            notes: reg.notes || '',
+            createdAt: reg.createdAt,
+            updatedAt: reg.updatedAt,
+            user: user
+                ? {
+                      _id: user._id,
+                      name: user.name || '',
+                      email: user.email || '',
+                      phone: user.phoneNumber || user.mobile || '',
+                      membershipLevel: user.membershipLevel || 'FREE',
+                      role: user.role || 'user',
+                      joinedAt: user.createdAt || null,
+                  }
+                : null,
+            webinar: webinar
+                ? {
+                      _id: webinar._id,
+                      title: webinar.title,
+                      slug: webinar.slug,
+                      mode: webinar.mode,
+                      price: webinar.price,
+                      startsAt: webinar.startsAt,
+                      endsAt: webinar.endsAt,
+                      isPublished: webinar.isPublished,
+                  }
+                : null,
+        };
+    });
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            registrations: rows,
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total,
+                totalPages: Math.ceil(total / limitNum) || 0,
+            },
+            summary,
+        },
+    });
 });
 
 export const createWebinar = asyncHandler(async (req, res) => {
@@ -249,11 +519,30 @@ export const updateWebinar = asyncHandler(async (req, res) => {
     }
     if (descriptionHtml !== undefined) webinar.descriptionHtml = String(descriptionHtml || '');
     if (imageUrl !== undefined) webinar.imageUrl = String(imageUrl || '');
-    if (meetingLink !== undefined) webinar.meetingLink = String(meetingLink || '').trim();
+    if (meetingLink !== undefined) {
+        const trimmedLink = String(meetingLink || '').trim();
+        if (trimmedLink) {
+            webinar.meetingLink = trimmedLink;
+        }
+    }
     if (audience !== undefined) webinar.audience = String(audience || '').toUpperCase();
     if (topics !== undefined) webinar.topics = parseTopics(topics);
-    if (startsAt !== undefined) webinar.startsAt = new Date(startsAt);
-    if (endsAt !== undefined) webinar.endsAt = new Date(endsAt);
+    if (startsAt !== undefined) {
+        const start = new Date(startsAt);
+        if (Number.isNaN(start.getTime())) {
+            res.status(400);
+            throw new Error('Invalid start date/time.');
+        }
+        webinar.startsAt = start;
+    }
+    if (endsAt !== undefined) {
+        const end = new Date(endsAt);
+        if (Number.isNaN(end.getTime())) {
+            res.status(400);
+            throw new Error('Invalid end date/time.');
+        }
+        webinar.endsAt = end;
+    }
     if (joinWindowBeforeMinutes !== undefined) webinar.joinWindowBeforeMinutes = Number(joinWindowBeforeMinutes);
     if (joinWindowAfterMinutes !== undefined) webinar.joinWindowAfterMinutes = Number(joinWindowAfterMinutes);
     if (isPublished !== undefined) webinar.isPublished = Boolean(isPublished);
@@ -266,7 +555,20 @@ export const updateWebinar = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('Price is required for paid webinars.');
     }
-    if (webinar.mode === 'FREE') webinar.price = 0;
+    if (webinar.mode === 'FREE') {
+        webinar.price = 0;
+        await WebinarRegistration.updateMany(
+            { webinarId: webinar._id, status: 'PAYMENT_PENDING' },
+            {
+                $set: {
+                    status: 'REGISTERED',
+                    accessGrantedBySubscription: false,
+                    'payment.amount': 0,
+                    'payment.currency': 'INR',
+                },
+            }
+        );
+    }
     if (new Date(webinar.endsAt) <= new Date(webinar.startsAt)) {
         res.status(400);
         throw new Error('Invalid schedule. endsAt must be after startsAt.');
@@ -303,8 +605,9 @@ export const registerForWebinar = asyncHandler(async (req, res) => {
         throw new Error('Webinar not found.');
     }
     if (!canAudienceRegister(webinar, req.user)) {
+        const eligibility = getRegistrationEligibility(webinar, req.user);
         res.status(403);
-        throw new Error('You are not eligible to register for this webinar.');
+        throw new Error(eligibility.message || 'You are not eligible to register for this webinar.');
     }
 
     const isPaidSub = hasActivePaidSubscription(req.user);
@@ -315,6 +618,9 @@ export const registerForWebinar = asyncHandler(async (req, res) => {
         webinarId: webinar._id,
         userId: req.user._id,
     });
+    if (registration) {
+        registration = await reconcileRegistrationForWebinar(webinar, registration);
+    }
     if (!registration) {
         registration = await WebinarRegistration.create({
             webinarId: webinar._id,
@@ -326,14 +632,22 @@ export const registerForWebinar = asyncHandler(async (req, res) => {
                 currency: 'INR',
             },
         });
-    } else if (!requiresPayment && registration.status !== 'REGISTERED') {
-        registration.status = 'REGISTERED';
-        registration.accessGrantedBySubscription = bypassPayment;
-        registration.payment = {
-            ...(registration.payment || {}),
-            amount: bypassPayment ? 0 : Number(webinar.price || 0),
-        };
-        await registration.save();
+    } else if (!requiresPayment && registration.status !== 'REGISTERED' && registration.status !== 'PAYMENT_DONE') {
+        await WebinarRegistration.updateOne(
+            { _id: registration._id },
+            {
+                $set: {
+                    status: 'REGISTERED',
+                    accessGrantedBySubscription: bypassPayment,
+                    payment: {
+                        ...(registration.payment || {}),
+                        amount: 0,
+                        currency: 'INR',
+                    },
+                },
+            }
+        );
+        registration = await WebinarRegistration.findById(registration._id);
     }
 
     res.status(200).json({
@@ -358,12 +672,28 @@ export const createWebinarPaymentOrder = asyncHandler(async (req, res) => {
         throw new Error('Webinar not found.');
     }
     if (webinar.mode !== 'PAID') {
-        res.status(400);
-        throw new Error('This webinar does not require payment.');
+        if (!registration) {
+            registration = await WebinarRegistration.create({
+                webinarId: webinar._id,
+                userId: req.user._id,
+                status: 'REGISTERED',
+                payment: { amount: 0, currency: 'INR' },
+            });
+        } else if (registration.status !== 'REGISTERED' && registration.status !== 'PAYMENT_DONE') {
+            registration.status = 'REGISTERED';
+            registration.payment = { ...(registration.payment || {}), amount: 0, currency: 'INR' };
+            await registration.save();
+        }
+        res.status(200).json({
+            status: 'success',
+            data: { registered: true, order: null },
+        });
+        return;
     }
     if (!canAudienceRegister(webinar, req.user)) {
+        const eligibility = getRegistrationEligibility(webinar, req.user);
         res.status(403);
-        throw new Error('You are not eligible for this webinar.');
+        throw new Error(eligibility.message || 'You are not eligible for this webinar.');
     }
     if (hasActivePaidSubscription(req.user) && webinar.audience !== 'FREE_ONLY') {
         res.status(200).json({
@@ -484,16 +814,19 @@ export const getWebinarJoinAccess = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('Invalid webinar id.');
     }
-    const webinar = await Webinar.findById(webinarId).select('+meetingLink');
+    const webinar = await Webinar.findById(webinarId);
     if (!webinar || !webinar.isPublished || webinar.isArchived) {
         res.status(404);
         throw new Error('Webinar not found.');
     }
 
-    const registration = await WebinarRegistration.findOne({
+    let registration = await WebinarRegistration.findOne({
         webinarId: webinar._id,
         userId: req.user._id,
     });
+    if (registration) {
+        registration = await reconcileRegistrationForWebinar(webinar, registration);
+    }
     if (!registration) {
         res.status(403);
         throw new Error('Please register before joining this webinar.');
@@ -509,43 +842,32 @@ export const getWebinarJoinAccess = asyncHandler(async (req, res) => {
         throw new Error('Payment is pending for this webinar.');
     }
 
+    const joinWindow = computeJoinWindow(webinar);
     const allowedByWindow = canJoinNow(webinar);
     res.status(200).json({
         status: 'success',
         data: {
             canJoin: allowedByWindow,
-            joinAvailableAt: computeJoinWindow(webinar).openAt,
-            joinClosesAt: computeJoinWindow(webinar).closeAt,
-            joinRedirectUrl: allowedByWindow ? `/api/webinars/${webinar._id}/join-redirect` : null,
+            joinAvailableAt: joinWindow.openAt,
+            joinClosesAt: joinWindow.closeAt,
+        },
+    });
+});
+
+export const getWebinarJoinMeetingUrl = asyncHandler(async (req, res) => {
+    const { webinar, registration } = await loadWebinarJoinContext(req.params.webinarId, req.user._id);
+    res.status(200).json({
+        status: 'success',
+        data: {
+            meetingUrl: webinar.meetingLink,
+            joinedAt: new Date().toISOString(),
+            registrationStatus: registration.status,
         },
     });
 });
 
 export const webinarJoinRedirect = asyncHandler(async (req, res) => {
-    const { webinarId } = req.params;
-    if (!isObjectId(webinarId)) {
-        res.status(400);
-        throw new Error('Invalid webinar id.');
-    }
-    const webinar = await Webinar.findById(webinarId).select('+meetingLink');
-    if (!webinar || !webinar.isPublished || webinar.isArchived) {
-        res.status(404);
-        throw new Error('Webinar not found.');
-    }
-    const registration = await WebinarRegistration.findOne({
-        webinarId: webinar._id,
-        userId: req.user._id,
-    });
-    if (!registration) {
-        res.status(403);
-        throw new Error('Please register before joining this webinar.');
-    }
-    const allowedByWindow = canJoinNow(webinar);
-    if (!allowedByWindow) {
-        res.status(403);
-        throw new Error('Join is available only in the live access window.');
-    }
-
+    const { webinar } = await loadWebinarJoinContext(req.params.webinarId, req.user._id);
     return res.redirect(webinar.meetingLink);
 });
 

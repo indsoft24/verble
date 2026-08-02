@@ -6,6 +6,7 @@ import Video from '../models/Video.js';
 import VideoWatchProgress from '../models/VideoWatchProgress.js';
 import { getLearningConfig } from './courseLearningConfigService.js';
 import { getModuleVideos, PRIMARY_MODULE_CYCLE } from '../utils/videoAccessHelper.js';
+import { onModuleCompletionTransition } from './learningCertificateService.js';
 
 export const getActiveQuizForModule = async (moduleId) =>
     ModuleQuiz.findOne({ module: moduleId, isActive: true });
@@ -337,6 +338,7 @@ export const syncModuleProgressFromVideos = async (userId, moduleId) => {
         });
     }
 
+    const wasCompleted = Boolean(completion.isCompleted);
     completion.videosCompleted = videosCompleted;
     completion.totalVideos = totalVideos;
 
@@ -359,6 +361,7 @@ export const syncModuleProgressFromVideos = async (userId, moduleId) => {
     }
 
     await completion.save();
+    await onModuleCompletionTransition(completion, wasCompleted);
     return completion;
 };
 
@@ -382,6 +385,7 @@ export const finalizeModuleCompletion = async (userId, moduleId, quizScore = 0) 
         });
     }
 
+    const wasCompleted = Boolean(completion.isCompleted);
     completion.videosCompleted = videosCompleted;
     completion.totalVideos = totalVideos;
     completion.quizPassed = true;
@@ -392,6 +396,7 @@ export const finalizeModuleCompletion = async (userId, moduleId, quizScore = 0) 
     await completion.save();
 
     await ensureNextModuleCompletionStub(userId, module.course, module.order);
+    await onModuleCompletionTransition(completion, wasCompleted);
     return completion;
 };
 

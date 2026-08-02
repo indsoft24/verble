@@ -10,6 +10,7 @@ import {
     Slide,
     TextField,
     Typography,
+    Alert,
 } from '@mui/material';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import { brandAssets } from '../../assets/brandAssets';
@@ -21,24 +22,42 @@ interface PhonePinLoginFormProps {
     onSubmit: (phoneNumber: string, pin: string) => Promise<void>;
     onForgotPin: (phoneNumber: string) => Promise<void>;
     isLoading?: boolean;
+    initialPhoneNumber?: string;
+    justVerified?: boolean;
 }
 
 const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
     onSubmit,
     onForgotPin,
     isLoading = false,
+    initialPhoneNumber = '',
+    justVerified = false,
 }) => {
     const { t } = useTranslation();
-    const [phoneNumber, setPhoneNumber] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState(initialPhoneNumber);
     const [pinDigits, setPinDigits] = useState<string[]>(Array(PIN_LENGTH).fill(''));
     const [showForm, setShowForm] = useState(false);
     const [forgotLoading, setForgotLoading] = useState(false);
     const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
 
     useEffect(() => {
+        if (initialPhoneNumber) {
+            setPhoneNumber(initialPhoneNumber);
+        }
+    }, [initialPhoneNumber]);
+
+    useEffect(() => {
         const tId = window.setTimeout(() => setShowForm(true), 80);
         return () => window.clearTimeout(tId);
     }, []);
+
+    useEffect(() => {
+        if (justVerified && initialPhoneNumber) {
+            // Focus first PIN digit after WhatsApp verification.
+            const tId = window.setTimeout(() => pinRefs.current[0]?.focus(), 300);
+            return () => window.clearTimeout(tId);
+        }
+    }, [justVerified, initialPhoneNumber]);
 
     const pin = pinDigits.join('');
     const phoneCheck = normalizeAndValidatePhone(phoneNumber);
@@ -130,8 +149,14 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
                 </Box>
 
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
-                    {t('auth.phonePinSubtitle')}
+                    {justVerified ? t('auth.phonePinSubtitleAfterVerify') : t('auth.phonePinSubtitle')}
                 </Typography>
+
+                {justVerified && (
+                    <Alert severity="success" sx={{ mb: 2, width: '100%' }}>
+                        {t('auth.enterPinFromEmail')}
+                    </Alert>
+                )}
 
                 <TextField
                     margin="normal"
@@ -142,7 +167,7 @@ const PhonePinLoginForm: React.FC<PhonePinLoginFormProps> = ({
                     name="phoneNumber"
                     placeholder="+919876543210"
                     autoComplete="tel"
-                    autoFocus
+                    autoFocus={!justVerified}
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     disabled={isLoading}

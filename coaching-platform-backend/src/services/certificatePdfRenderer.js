@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
+import QRCode from 'qrcode';
 import { getBrandingForPdf } from './certificateBrandingService.js';
 
 const PAGE_W = 842;
@@ -92,6 +93,9 @@ export const renderCourseCertificatePdf = async ({
     completionPercent,
     assessmentScore,
     issuedAt = new Date(),
+    certificateType = 'COURSE',
+    moduleTitle,
+    verificationUrl,
 }) => {
     const branding = await getBrandingForPdf();
     const hasLogo = await fileExists(branding.logoPath);
@@ -130,7 +134,7 @@ export const renderCourseCertificatePdf = async ({
     );
 
     doc.font('Helvetica-Bold').fontSize(30).fillColor(COLORS.navy).text(
-        'Certificate of Completion',
+        certificateType === 'MODULE' ? 'Module Certificate' : 'Certificate of Completion',
         0,
         centerY(142),
         { align: 'center' }
@@ -153,10 +157,17 @@ export const renderCourseCertificatePdf = async ({
         align: 'center',
     });
 
-    doc.font('Helvetica-Bold').fontSize(20).fillColor(COLORS.navy).text(courseTitle, 72, centerY(286), {
+    const subjectTitle = certificateType === 'MODULE' ? moduleTitle : courseTitle;
+    doc.font('Helvetica-Bold').fontSize(20).fillColor(COLORS.navy).text(subjectTitle, 72, centerY(286), {
         align: 'center',
         width: PAGE_W - 144,
     });
+    if (certificateType === 'MODULE' && courseTitle) {
+        doc.font('Helvetica').fontSize(11).fillColor(COLORS.muted).text(courseTitle, 72, centerY(314), {
+            align: 'center',
+            width: PAGE_W - 144,
+        });
+    }
 
     const statsY = centerY(340);
     doc.font('Helvetica').fontSize(12).fillColor(COLORS.slate);
@@ -196,6 +207,18 @@ export const renderCourseCertificatePdf = async ({
     doc.font('Helvetica').fontSize(9).fillColor(COLORS.muted);
     doc.text(`Certificate No. ${certificateNumber}`, 0, centerY(468), { align: 'center' });
     doc.text(`Verify: ${verificationCode}`, 0, centerY(484), { align: 'center' });
+    if (verificationUrl) {
+        try {
+            const qrData = await QRCode.toDataURL(verificationUrl, {
+                errorCorrectionLevel: 'M',
+                margin: 1,
+                width: 180,
+            });
+            doc.image(qrData, PAGE_W - 142, centerY(404), { width: 72, height: 72 });
+        } catch {
+            /* verification code remains available as text */
+        }
+    }
 
     doc.end();
 

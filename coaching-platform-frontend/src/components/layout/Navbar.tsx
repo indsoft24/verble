@@ -31,8 +31,8 @@ const Navbar: React.FC = () => {
     const publicPages = [
         { nameKey: 'nav.home', path: '/' },
         { nameKey: 'nav.courses', path: '/courses' },
+        { nameKey: 'nav.webinars', path: '/webinars' },
         { nameKey: 'nav.blog', path: '/blog' },
-        { nameKey: 'nav.help', path: '/help' },
         { nameKey: 'nav.about', path: '/about-us' },
         { nameKey: 'nav.contact', path: '/contact-us' },
     ];

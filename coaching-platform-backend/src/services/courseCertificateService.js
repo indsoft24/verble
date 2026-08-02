@@ -5,14 +5,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { renderCourseCertificatePdf } from './certificatePdfRenderer.js';
 import CourseCertificateRule from '../models/CourseCertificateRule.js';
 import CourseCertificate from '../models/CourseCertificate.js';
-import User from '../models/User.js';
 import { evaluateCourseCertification } from './courseCertificationEvaluator.js';
+import { issueCourseCertificate } from './learningCertificateService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const generateCertificateNumber = () => `CCERT-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`;
-const generateVerificationCode = () => uuidv4().replace(/-/g, '').slice(0, 18).toUpperCase();
 
 export const getOrCreateCourseRule = async (courseId) => {
     let rule = await CourseCertificateRule.findOne({ course: courseId });
@@ -76,54 +73,8 @@ const generateCoursePdf = async ({
 };
 
 export const generateCourseCertificate = async (userId, courseId) => {
-    const eligibility = await getCourseEligibility(userId, courseId);
-    if (!eligibility.isEligible) {
-        throw new Error(eligibility.reasons[0] || 'You are not eligible for certificate generation.');
-    }
-
-    const user = await User.findById(userId).select('name email');
-    if (!user) throw new Error('User not found.');
-
-    let certificate = await CourseCertificate.findOne({ user: userId, course: courseId });
-    if (certificate?.pdfPath) {
-        return certificate;
-    }
-
-    const certificateNumber = generateCertificateNumber();
-    const verificationCode = generateVerificationCode();
-    const { pdfPath } = await generateCoursePdf({
-        userName: user.name,
-        courseTitle: eligibility.course.title,
-        certificateNumber,
-        verificationCode,
-        completionPercent: eligibility.completionPercent,
-        assessmentScore: eligibility.assessmentScore,
-        issuedAt: new Date(),
-    });
-
-    certificate = await CourseCertificate.findOneAndUpdate(
-        { user: userId, course: courseId },
-        {
-            $set: {
-                certificateNumber,
-                verificationCode,
-                userName: user.name,
-                userEmail: user.email,
-                courseTitle: eligibility.course.title,
-                completionPercent: eligibility.completionPercent,
-                assessmentScore: eligibility.assessmentScore,
-                pdfPath,
-                pdfUrl: '',
-                issuedAt: new Date(),
-            },
-        },
-        { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
-
-    certificate.pdfUrl = `/api/course-certificates/public-download/${certificate.verificationCode}`;
-    await certificate.save();
-
-    return certificate;
+    await issueCourseCertificate({ userId, courseId, source: 'AUTOMATIC' });
+    return CourseCertificate.findOne({ user: userId, course: courseId });
 };
 
 export const DEMO_CERTIFICATE_FILENAME = 'DEMO-course-certificate-preview.pdf';

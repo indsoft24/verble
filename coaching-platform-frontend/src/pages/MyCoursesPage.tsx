@@ -87,8 +87,9 @@ const MyCoursesPage: React.FC = () => {
                 setEligibilityByCourse({});
                 setCertificateByCourse({});
             }
-        } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to load courses.');
+        } catch (err: unknown) {
+            const responseError = err as { response?: { data?: { message?: string } }; message?: string };
+            setError(responseError.response?.data?.message || responseError.message || 'Failed to load courses.');
         } finally {
             setIsLoading(false);
         }
@@ -106,8 +107,9 @@ const MyCoursesPage: React.FC = () => {
             setCertificateByCourse((prev) => ({ ...prev, [courseId]: certificate }));
             const eligibility = await getCourseCertificateEligibility(courseId);
             setEligibilityByCourse((prev) => ({ ...prev, [courseId]: eligibility }));
-        } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to generate certificate.');
+        } catch (err: unknown) {
+            const responseError = err as { response?: { data?: { message?: string } }; message?: string };
+            setError(responseError.response?.data?.message || responseError.message || 'Failed to generate certificate.');
         } finally {
             setGeneratingForCourse((prev) => ({ ...prev, [courseId]: false }));
         }
@@ -273,6 +275,29 @@ const MyCoursesPage: React.FC = () => {
                                             View report card
                                         </Button>
                                     )}
+                                    {eligibility?.finalAssessment?.enabled && (
+                                        <Button
+                                            size="small"
+                                            variant={eligibility.finalAssessment.ready ? 'contained' : 'outlined'}
+                                            fullWidth
+                                            component={RouterLink}
+                                            to={`/final-assessment/${courseId}`}
+                                            disabled={!eligibility.finalAssessment.ready && !eligibility.finalAssessment.status}
+                                            sx={{
+                                                width: { md: 'auto' },
+                                                textTransform: 'none',
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            {eligibility.finalAssessment.passed
+                                                ? 'Final exam passed'
+                                                : eligibility.finalAssessment.status === 'in_progress'
+                                                    ? 'Resume final exam'
+                                                    : eligibility.finalAssessment.ready
+                                                        ? 'Take final exam'
+                                                        : 'Final exam locked'}
+                                        </Button>
+                                    )}
                                     {certificate && (
                                         <Button
                                             size="small"
@@ -315,6 +340,7 @@ const MyCoursesPage: React.FC = () => {
 
                             const hasFooterActions =
                                 eligibility?.reportCardAvailable ||
+                                eligibility?.finalAssessment?.enabled ||
                                 certificate ||
                                 canGenerate;
 
@@ -351,7 +377,24 @@ const MyCoursesPage: React.FC = () => {
                                                 }}
                                                 variant="outlined"
                                             />
+                                            {eligibility.finalAssessment?.enabled && (
+                                                <Chip
+                                                    size="small"
+                                                    label={eligibility.finalAssessment.passed
+                                                        ? 'Final exam passed'
+                                                        : eligibility.finalAssessment.ready
+                                                            ? 'Exam ready'
+                                                            : 'Exam requirements pending'}
+                                                    color={eligibility.finalAssessment.passed ? 'success' : 'default'}
+                                                    variant="outlined"
+                                                />
+                                            )}
                                         </Stack>
+                                        {!eligibility.isEligible && eligibility.reasons?.length > 0 && (
+                                            <Typography variant="caption" sx={{ color: courseLearningTheme.textMuted }}>
+                                                Next: {eligibility.reasons[0]}
+                                            </Typography>
+                                        )}
                                     </Stack>
                                 ) : undefined;
 

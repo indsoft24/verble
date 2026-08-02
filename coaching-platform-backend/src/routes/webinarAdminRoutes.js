@@ -2,6 +2,7 @@ import express from 'express';
 import {
     createWebinar,
     getWebinarAdminById,
+    listWebinarRegistrationsForAdmin,
     listWebinarsForAdmin,
     updateWebinar,
 } from '../controllers/webinarController.js';
@@ -12,6 +13,7 @@ const router = express.Router();
 router.use(protect, restrictTo('admin'));
 router.get('/', listWebinarsForAdmin);
 router.post('/', createWebinar);
+router.get('/registrations', listWebinarRegistrationsForAdmin);
 router.get('/:webinarId', getWebinarAdminById);
 router.put('/:webinarId', updateWebinar);
 

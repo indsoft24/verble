@@ -4,6 +4,7 @@ import redisClient from '../config/redisClient.js';
 import { formatMobileNumber, validateMobileNumber } from '../utils/smsService.js';
 import { generateLoginPin, isValidLoginPinFormat } from '../utils/loginPin.js';
 import { sendLoginPinEmail } from '../utils/loginPinEmail.js';
+import { sendWhatsAppLoginPin } from '../utils/whatsappService.js';
 import { sendTokenResponseWithSession } from './authController.js';
 
 const LOGIN_ATTEMPT_PREFIX = 'loginpin:attempts:';
@@ -16,6 +17,27 @@ const REGENERATE_PIN_COOLDOWN_SECONDS = 30;
 
 const normalizePhone = (phoneNumber) =>
     formatMobileNumber(phoneNumber, process.env.DEFAULT_COUNTRY_CODE || '+91');
+
+/**
+ * Deliver login PIN via email (required) and WhatsApp (best-effort).
+ * @returns {Promise<{ emailSent: boolean, whatsappSent: boolean }>}
+ */
+const deliverLoginPin = async (user, plainPin) => {
+    await sendLoginPinEmail(user, plainPin);
+
+    let whatsappSent = false;
+    const phone = user.phoneNumber || user.mobile;
+    if (phone) {
+        try {
+            await sendWhatsAppLoginPin(phone, plainPin, { name: user.name });
+            whatsappSent = true;
+        } catch (err) {
+            console.error('[LoginPin] WhatsApp delivery failed (email was sent):', err.message || err);
+        }
+    }
+
+    return { emailSent: true, whatsappSent };
+};
 
 const findUserByPhone = async (formattedPhone) => {
     return User.findOne({
@@ -193,7 +215,7 @@ export const forgotLoginPin = asyncHandler(async (req, res) => {
     }
 
     const genericMessage =
-        'If an account exists with this phone number and verified email, a new PIN has been sent to your email.';
+        'If an account exists with this phone number and verified email, a new PIN has been sent to your email and WhatsApp.';
 
     if (redisClient.isOpen) {
         const cooldownKey = `${FORGOT_PIN_PREFIX}${formattedPhone}`;
@@ -221,17 +243,17 @@ export const forgotLoginPin = asyncHandler(async (req, res) => {
     await user.save();
 
     try {
-        await sendLoginPinEmail(user, plainPin);
+        await deliverLoginPin(user, plainPin);
         if (redisClient.isOpen) {
             await redisClient.set(`${FORGOT_PIN_PREFIX}${formattedPhone}`, '1', {
                 EX: FORGOT_PIN_COOLDOWN_SECONDS,
             });
         }
     } catch (err) {
-        console.error('[ForgotPin] Email failed:', err);
+        console.error('[ForgotPin] Delivery failed:', err);
         return res.status(500).json({
             status: 'error',
-            message: 'Could not send PIN email. Please try again later.',
+            message: 'Could not send PIN. Please try again later.',
         });
     }
 
@@ -281,14 +303,14 @@ export const regenerateLoginPinAfterVerification = asyncHandler(async (req, res)
     await user.save();
 
     try {
-        await sendLoginPinEmail(user, newPin);
+        await deliverLoginPin(user, newPin);
         if (redisClient.isOpen) {
             await redisClient.set(`${REGENERATE_PIN_PREFIX}${user._id.toString()}`, '1', {
                 EX: REGENERATE_PIN_COOLDOWN_SECONDS,
             });
         }
     } catch (err) {
-        console.error('[RegeneratePin] Email failed:', err);
+        console.error('[RegeneratePin] Delivery failed:', err);
     }
 
     res.status(200).json({
@@ -298,12 +320,12 @@ export const regenerateLoginPinAfterVerification = asyncHandler(async (req, res)
     });
 });
 
-/** Issue a new PIN and email it (used after email verification). */
+/** Issue a new PIN and deliver it by email + WhatsApp (used after WhatsApp verification). */
 export const issueLoginPinForUser = async (user) => {
     const plainPin = generateLoginPin();
     user.loginPin = plainPin;
     user.authProvider = 'phone_pin';
     await user.save();
-    await sendLoginPinEmail(user, plainPin);
+    await deliverLoginPin(user, plainPin);
     return plainPin;
 };

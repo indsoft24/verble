@@ -20,13 +20,73 @@ export interface Webinar {
     isPublished: boolean;
     isArchived: boolean;
     sortPriority: number;
+    registrationCount?: number;
+    registeredCount?: number;
+    paymentPendingCount?: number;
     canJoinNow?: boolean;
     joinWindowOpenAt?: string;
     joinWindowCloseAt?: string;
+    canRegister?: boolean;
+    registrationBlockedReason?: string | null;
+    registrationBlockedMessage?: string | null;
     registration?: {
         status: 'REGISTERED' | 'PAYMENT_PENDING' | 'PAYMENT_DONE' | 'CANCELLED';
         accessGrantedBySubscription: boolean;
     } | null;
+}
+
+export type WebinarRegistrationStatus = 'REGISTERED' | 'PAYMENT_PENDING' | 'PAYMENT_DONE' | 'CANCELLED';
+
+export interface WebinarRegistrationAdminRow {
+    _id: string;
+    status: WebinarRegistrationStatus;
+    accessGrantedBySubscription: boolean;
+    payment: {
+        amount?: number;
+        currency?: string;
+        orderId?: string;
+        paymentId?: string;
+        paidAt?: string;
+    } | null;
+    notes: string;
+    createdAt: string;
+    updatedAt: string;
+    user: {
+        _id: string;
+        name: string;
+        email: string;
+        phone: string;
+        membershipLevel: string;
+        role: string;
+        joinedAt: string | null;
+    } | null;
+    webinar: {
+        _id: string;
+        title: string;
+        slug: string;
+        mode: WebinarMode;
+        price: number;
+        startsAt: string;
+        endsAt: string;
+        isPublished: boolean;
+    } | null;
+}
+
+export interface WebinarRegistrationsAdminResult {
+    registrations: WebinarRegistrationAdminRow[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+    summary: {
+        total: number;
+        registered: number;
+        paymentPending: number;
+        paymentDone: number;
+        cancelled: number;
+    };
 }
 
 export interface WebinarDraft {
@@ -61,6 +121,15 @@ interface WebinarResponse {
         webinar: Webinar;
     };
 }
+
+/** Price is stored in paise (Razorpay). */
+export const formatWebinarPrice = (priceInPaise: number): string =>
+    (Number(priceInPaise || 0) / 100).toLocaleString('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    });
 
 export const listWebinars = async (): Promise<Webinar[]> => {
     const response = await apiClient.get<ListResponse>('/webinars');
@@ -97,7 +166,15 @@ export const getWebinarJoinAccess = async (webinarId: string) => {
         canJoin: boolean;
         joinAvailableAt: string;
         joinClosesAt: string;
-        joinRedirectUrl: string | null;
+    };
+};
+
+export const getWebinarJoinMeetingUrl = async (webinarId: string) => {
+    const response = await apiClient.get(`/webinars/${webinarId}/join-meeting`);
+    return response.data.data as {
+        meetingUrl: string;
+        joinedAt: string;
+        registrationStatus: string;
     };
 };
 
@@ -119,5 +196,27 @@ export const createWebinarAdmin = async (payload: WebinarDraft): Promise<Webinar
 export const updateWebinarAdmin = async (webinarId: string, payload: Partial<WebinarDraft>): Promise<Webinar> => {
     const response = await apiClient.put<WebinarResponse>(`/admin/webinars/${webinarId}`, payload);
     return response.data.data.webinar;
+};
+
+export const listWebinarRegistrationsAdmin = async (params: {
+    webinarId?: string;
+    status?: WebinarRegistrationStatus | '';
+    search?: string;
+    page?: number;
+    limit?: number;
+}): Promise<WebinarRegistrationsAdminResult> => {
+    const response = await apiClient.get<{ status: string; data: WebinarRegistrationsAdminResult }>(
+        '/admin/webinars/registrations',
+        {
+            params: {
+                webinarId: params.webinarId || undefined,
+                status: params.status || undefined,
+                search: params.search || undefined,
+                page: params.page || 1,
+                limit: params.limit || 50,
+            },
+        }
+    );
+    return response.data.data;
 };
 

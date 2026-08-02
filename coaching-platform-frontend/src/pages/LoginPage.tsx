@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
 import { Box, Container, CssBaseline } from '@mui/material';
 import PhonePinLoginForm from '../components/auth/PhonePinLoginForm';
 import * as authService from '../services/authService';
+
+type LoginLocationState = {
+    from?: { pathname?: string };
+    phoneNumber?: string;
+    email?: string;
+    justVerified?: boolean;
+} | null;
 
 const LoginPage: React.FC = () => {
     const { t } = useTranslation();
@@ -14,9 +21,17 @@ const LoginPage: React.FC = () => {
     const { addNotification } = useNotification();
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
 
-    const locationState = location.state as { from?: { pathname?: string } } | null;
-    const from = locationState?.from?.pathname || '/dashboard';
+    const locationState = location.state as LoginLocationState;
+    const redirectParam = searchParams.get('redirect');
+    const safeRedirect =
+        redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')
+            ? redirectParam
+            : null;
+    const from = safeRedirect || locationState?.from?.pathname || '/dashboard';
+    const prefillPhone = locationState?.phoneNumber || '';
+    const justVerified = Boolean(locationState?.justVerified);
 
     const handleSubmit = async (phoneNumber: string, pin: string) => {
         setIsLoading(true);
@@ -70,11 +85,12 @@ const LoginPage: React.FC = () => {
                     background: 'linear-gradient(160deg, #f0f4ff 0%, #ffffff 45%, #e8f5e9 100%)',
                 }}
             >
-
                 <PhonePinLoginForm
                     onSubmit={handleSubmit}
                     onForgotPin={handleForgotPin}
                     isLoading={isLoading}
+                    initialPhoneNumber={prefillPhone}
+                    justVerified={justVerified}
                 />
             </Box>
         </Container>

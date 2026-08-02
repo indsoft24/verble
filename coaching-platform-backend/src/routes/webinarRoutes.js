@@ -3,6 +3,7 @@ import {
     createWebinarPaymentOrder,
     getWebinarBySlugForUsers,
     getWebinarJoinAccess,
+    getWebinarJoinMeetingUrl,
     listWebinarsForUsers,
     registerForWebinar,
     verifyWebinarPayment,
@@ -18,6 +19,7 @@ router.post('/:webinarId/register', protect, registerForWebinar);
 router.post('/:webinarId/payment-order', protect, createWebinarPaymentOrder);
 router.post('/:webinarId/verify-payment', protect, verifyWebinarPayment);
 router.get('/:webinarId/join-access', protect, getWebinarJoinAccess);
+router.get('/:webinarId/join-meeting', protect, getWebinarJoinMeetingUrl);
 router.get('/:webinarId/join-redirect', protect, webinarJoinRedirect);
 
 export default router;

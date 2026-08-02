@@ -1,15 +1,16 @@
 /**
- * WhatsApp Business Cloud API service for OTP delivery.
+ * WhatsApp Business Cloud API service for OTP and login PIN delivery.
  *
  * Supports:
- *  - mock — logs OTP to console (development)
- *  - meta — Meta WhatsApp Cloud API with approved authentication template
+ *  - mock — logs to console (development)
+ *  - meta — Meta WhatsApp Cloud API with approved templates
  *
- * Required env vars when WHATSAPP_API_PROVIDER=meta:
+ * Required env when WHATSAPP_API_PROVIDER=meta:
  *   WHATSAPP_ACCESS_TOKEN
  *   WHATSAPP_PHONE_NUMBER_ID
- *   WHATSAPP_OTP_TEMPLATE_NAME
+ *   WHATSAPP_OTP_TEMPLATE_NAME          — registration OTP template
  * Optional:
+ *   WHATSAPP_LOGIN_PIN_TEMPLATE_NAME    — login PIN template (falls back to OTP template)
  *   WHATSAPP_API_VERSION (default v21.0)
  *   WHATSAPP_OTP_TEMPLATE_LANGUAGE (default en_US)
  *   WHATSAPP_OTP_TEMPLATE_HAS_BUTTON (default true)
@@ -31,26 +32,40 @@ export const isWhatsAppConfigured = () => {
     );
 };
 
+const getTemplateConfig = (purpose) => {
+    const otpName = process.env.WHATSAPP_OTP_TEMPLATE_NAME;
+    const pinName = process.env.WHATSAPP_LOGIN_PIN_TEMPLATE_NAME || otpName;
+    const language = process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE || 'en_US';
+    const hasButton = process.env.WHATSAPP_OTP_TEMPLATE_HAS_BUTTON !== 'false';
+
+    if (purpose === 'login_pin') {
+        return { name: pinName, language, hasButton };
+    }
+    // otp + otp_fallback both use the approved OTP template
+    return { name: otpName, language, hasButton };
+};
+
 /**
  * @param {string} phoneNumber - E.164 e.g. +919876543210
- * @param {string} otp - 6-digit code
- * @param {{ name?: string }} [options]
+ * @param {string} code - 6-digit code
+ * @param {{ name?: string, purpose?: 'otp' | 'login_pin' }} [options]
  */
-export const sendWhatsAppOtp = async (phoneNumber, otp, options = {}) => {
+export const sendWhatsAppCode = async (phoneNumber, code, options = {}) => {
     if (!phoneNumber || !phoneNumber.startsWith('+')) {
         throw new Error('Phone number must include country code (e.g. +919876543210).');
     }
-    if (!otp || !/^\d{6}$/.test(otp)) {
-        throw new Error('OTP must be a 6-digit number.');
+    if (!code || !/^\d{6}$/.test(code)) {
+        throw new Error('Code must be a 6-digit number.');
     }
 
+    const purpose = options.purpose || 'otp';
     const provider = (process.env.WHATSAPP_API_PROVIDER || 'mock').toLowerCase();
 
     switch (provider) {
         case 'mock':
-            return sendViaMock(phoneNumber, otp, options);
+            return sendViaMock(phoneNumber, code, { ...options, purpose });
         case 'meta':
-            return sendViaMetaCloudApi(phoneNumber, otp, options);
+            return sendViaMetaCloudApi(phoneNumber, code, purpose);
         default:
             throw new Error(
                 `Unsupported WhatsApp provider: ${provider}. Set WHATSAPP_API_PROVIDER to "mock" or "meta".`
@@ -58,20 +73,29 @@ export const sendWhatsAppOtp = async (phoneNumber, otp, options = {}) => {
     }
 };
 
-const sendViaMock = async (phoneNumber, otp, options) => {
+/** Registration / verification OTP */
+export const sendWhatsAppOtp = async (phoneNumber, otp, options = {}) =>
+    sendWhatsAppCode(phoneNumber, otp, { ...options, purpose: 'otp' });
+
+/** Login PIN after verification / forgot PIN */
+export const sendWhatsAppLoginPin = async (phoneNumber, pin, options = {}) =>
+    sendWhatsAppCode(phoneNumber, pin, { ...options, purpose: 'login_pin' });
+
+const sendViaMock = async (phoneNumber, code, options) => {
     const masked = phoneNumber.replace(/(\+\d{1,3})(\d{4})(\d+)/, '$1****$3');
+    const label = options.purpose === 'login_pin' ? 'LOGIN PIN' : 'OTP';
     console.log(
-        `[WhatsApp:mock] OTP for ${masked}${options.name ? ` (${options.name})` : ''}: ${otp} — valid ${OTP_VALIDITY_MINUTES} min`
+        `[WhatsApp:mock] ${label} for ${masked}${options.name ? ` (${options.name})` : ''}: ${code}` +
+            (options.purpose === 'otp' ? ` — valid ${OTP_VALIDITY_MINUTES} min` : '')
     );
-    return { success: true, messageId: `mock-${Date.now()}`, provider: 'mock' };
+    return { success: true, messageId: `mock-${Date.now()}`, provider: 'mock', purpose: options.purpose };
 };
 
-const sendViaMetaCloudApi = async (phoneNumber, otp) => {
+const sendViaMetaCloudApi = async (phoneNumber, code, purpose) => {
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-    const templateName = process.env.WHATSAPP_OTP_TEMPLATE_NAME;
+    const { name: templateName, language: templateLanguage, hasButton } = getTemplateConfig(purpose);
     const apiVersion = process.env.WHATSAPP_API_VERSION || 'v21.0';
-    const templateLanguage = process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE || 'en_US';
 
     if (!accessToken || !phoneNumberId || !templateName) {
         throw new Error(
@@ -85,16 +109,16 @@ const sendViaMetaCloudApi = async (phoneNumber, otp) => {
     const templateComponents = [
         {
             type: 'body',
-            parameters: [{ type: 'text', text: otp }],
+            parameters: [{ type: 'text', text: code }],
         },
     ];
 
-    if (process.env.WHATSAPP_OTP_TEMPLATE_HAS_BUTTON !== 'false') {
+    if (hasButton) {
         templateComponents.push({
             type: 'button',
             sub_type: 'url',
             index: '0',
-            parameters: [{ type: 'text', text: otp }],
+            parameters: [{ type: 'text', text: code }],
         });
     }
 
@@ -120,14 +144,37 @@ const sendViaMetaCloudApi = async (phoneNumber, otp) => {
         });
 
         const messageId = response.data?.messages?.[0]?.id;
-        console.log(`[WhatsApp:meta] OTP sent to ${recipient.slice(0, 4)}**** — messageId: ${messageId}`);
-        return { success: true, messageId, provider: 'meta' };
+        const label = purpose === 'login_pin' ? 'PIN' : 'OTP';
+        console.log(
+            `[WhatsApp:meta] ${label} sent via template "${templateName}" to ${recipient.slice(0, 4)}**** — messageId: ${messageId}`
+        );
+        return { success: true, messageId, provider: 'meta', purpose, templateName };
     } catch (error) {
         const apiError = error.response?.data?.error;
         const detail = apiError?.message || error.message;
+
+        // If dedicated login-pin template is not approved yet, fall back to OTP template.
+        const otpTemplate = process.env.WHATSAPP_OTP_TEMPLATE_NAME;
+        if (
+            purpose === 'login_pin' &&
+            otpTemplate &&
+            templateName !== otpTemplate &&
+            (apiError?.code === 132001 || /template name .* does not exist/i.test(detail))
+        ) {
+            console.warn(
+                `[WhatsApp:meta] Template "${templateName}" unavailable; falling back to OTP template "${otpTemplate}"`
+            );
+            return sendViaMetaCloudApi(phoneNumber, code, 'otp_fallback');
+        }
+
         console.error('[WhatsApp:meta] Send failed:', apiError || error.message);
-        throw new Error(`Failed to send WhatsApp OTP: ${detail}`);
+        throw new Error(`Failed to send WhatsApp ${purpose === 'login_pin' ? 'login PIN' : 'OTP'}: ${detail}`);
     }
 };
 
-export default { sendWhatsAppOtp, isWhatsAppConfigured };
+export default {
+    sendWhatsAppOtp,
+    sendWhatsAppLoginPin,
+    sendWhatsAppCode,
+    isWhatsAppConfigured,
+};

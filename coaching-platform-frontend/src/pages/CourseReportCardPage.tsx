@@ -81,6 +81,22 @@ const CourseReportCardPage: React.FC = () => {
             </Typography>
 
             <Grid container spacing={2}>
+                {data.finalAssessment?.enabled && (
+                    <Grid size={12}>
+                        <Alert severity={data.finalAssessment.passed ? 'success' : data.finalAssessment.ready ? 'info' : 'warning'}>
+                            {data.finalAssessment.passed
+                                ? 'Final assessment passed.'
+                                : data.finalAssessment.ready
+                                    ? 'Your final assessment is ready.'
+                                    : `Final assessment requirements remain. ${data.reasons?.[0] || ''}`}
+                            {data.finalAssessment.ready && !data.finalAssessment.passed && (
+                                <Button component={RouterLink} to={`/final-assessment/${courseId}`} size="small" sx={{ ml: 1 }}>
+                                    Open assessment
+                                </Button>
+                            )}
+                        </Alert>
+                    </Grid>
+                )}
                 <Grid size={{ xs: 12, md: 6 }}>
                     <Card>
                         <CardContent>

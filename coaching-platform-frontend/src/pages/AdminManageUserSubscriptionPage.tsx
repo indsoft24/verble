@@ -20,6 +20,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { 
     getUserByIdAdmin, 
@@ -33,8 +34,11 @@ import {
     type UpdateUserInfoPayload
 } from '../services/adminService'; 
 import { getAllSubscriptionPlansAdmin, type SubscriptionPlan } from '../services/subscriptionPlanAdminService';
+import { getAllCoursesAdmin, type Course } from '../services/courseAdminService';
 import { formatPlanDurationLabel } from '../utils/adminUserDisplay';
 import { useAdminLayoutPage } from '../contexts/AdminLayoutConfigContext';
+import { getModulesForCourseAdmin, type Module } from '../services/moduleAdminService';
+import { postUserLearningReset } from '../services/adminLearningSettingsService';
 
 const subscriptionStatuses: AdminAddUserSubscriptionPayload['status'][] = ['active', 'pending_cancellation', 'cancelled', 'expired', 'trial', 'future_active', 'none'];
 const isStandaloneBonusPlanName = (name: string): boolean => name.trim().toLowerCase() === 'bonus';
@@ -71,6 +75,18 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
 
     const [subInstanceToDelete, setSubInstanceToDelete] = useState<UserSubscriptionInstance | null>(null);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState<boolean>(false);
+
+    // Learning reset UI state (quiz attempts + video/module progress)
+    const [resetScope, setResetScope] = useState<'module' | 'course'>('module');
+    const [resetCourses, setResetCourses] = useState<Course[]>([]);
+    const [resetModules, setResetModules] = useState<Module[]>([]);
+    const [resetCourseId, setResetCourseId] = useState<string>('');
+    const [resetModuleId, setResetModuleId] = useState<string>('');
+    const [isLoadingResetOptions, setIsLoadingResetOptions] = useState(false);
+    const [isResettingLearning, setIsResettingLearning] = useState(false);
+    const [resetError, setResetError] = useState<string | null>(null);
+    const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+    const [openLearningResetConfirm, setOpenLearningResetConfirm] = useState(false);
 
     // User info edit state
     const [isEditingUserInfo, setIsEditingUserInfo] = useState<boolean>(false);
@@ -125,6 +141,93 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
     }, [userId]);
 
     useEffect(() => { fetchInitialData(); }, [fetchInitialData]);
+
+    useEffect(() => {
+        const loadResetOptions = async () => {
+            setIsLoadingResetOptions(true);
+            setResetError(null);
+            try {
+                const courses = await getAllCoursesAdmin();
+                // Only show published courses for a cleaner admin UX.
+                const publishedCourses = courses.filter((c) => c.isPublished);
+                setResetCourses(publishedCourses);
+                if (!resetCourseId && publishedCourses.length > 0) {
+                    setResetCourseId(publishedCourses[0]._id);
+                }
+            } catch (e: any) {
+                setResetError(e?.response?.data?.message || e.message || 'Failed to load reset options.');
+            } finally {
+                setIsLoadingResetOptions(false);
+            }
+        };
+        void loadResetOptions();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const loadModules = async () => {
+            if (resetScope !== 'module') {
+                setResetModules([]);
+                setResetModuleId('');
+                return;
+            }
+            if (!resetCourseId) {
+                setResetModules([]);
+                setResetModuleId('');
+                return;
+            }
+
+            try {
+                const mods = await getModulesForCourseAdmin(resetCourseId);
+                // Keep selection stable if possible.
+                setResetModules(mods);
+                if (!resetModuleId && mods.length > 0) setResetModuleId(mods[0]._id);
+            } catch (e: any) {
+                setResetError(e?.response?.data?.message || e.message || 'Failed to load modules.');
+            }
+        };
+
+        void loadModules();
+    }, [resetScope, resetCourseId]); // resetModuleId intentionally omitted to avoid refetch loop
+
+    const selectedCourseForReset = resetCourses.find((c) => c._id === resetCourseId) || null;
+    const selectedModuleForReset = resetModules.find((m) => m._id === resetModuleId) || null;
+
+    const handleConfirmLearningReset = async () => {
+        if (!userId) {
+            setResetError('User ID is missing.');
+            return;
+        }
+        if (resetScope === 'course' && !resetCourseId) {
+            setResetError('Please select a course.');
+            return;
+        }
+        if (resetScope === 'module' && !resetModuleId) {
+            setResetError('Please select a module.');
+            return;
+        }
+
+        setIsResettingLearning(true);
+        setResetError(null);
+        setResetSuccess(null);
+        try {
+            await postUserLearningReset(userId, {
+                scope: resetScope,
+                moduleId: resetScope === 'module' ? resetModuleId : undefined,
+                courseId: resetScope === 'course' ? resetCourseId : resetCourseId,
+            });
+            setResetSuccess(
+                resetScope === 'module'
+                    ? 'Module progress + quiz attempts reset successfully.'
+                    : 'Course progress + quiz attempts reset successfully.'
+            );
+            setOpenLearningResetConfirm(false);
+        } catch (e: any) {
+            setResetError(e?.response?.data?.message || e.message || 'Failed to reset learning progress.');
+        } finally {
+            setIsResettingLearning(false);
+        }
+    };
 
     const handleAddSubscription = async () => { 
         if (!userId || !newSubPlanId) { setError("User ID and Plan selection are required."); return; }
@@ -533,6 +636,122 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                     )}
                 </Paper>
 
+                <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Quiz attempts & progress reset
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        When attempts are exhausted, admin can reset quiz attempts (and the user must rewatch module video progress).
+                    </Typography>
+
+                    {resetError && <Alert severity="error" sx={{ mb: 2 }}>{resetError}</Alert>}
+                    {resetSuccess && <Alert severity="success" sx={{ mb: 2 }}>{resetSuccess}</Alert>}
+
+                    <Grid container spacing={2} alignItems="flex-start">
+                        <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
+                            <FormControl fullWidth>
+                                <InputLabel id="learning-reset-scope-label">Reset scope</InputLabel>
+                                <Select
+                                    labelId="learning-reset-scope-label"
+                                    value={resetScope}
+                                    label="Reset scope"
+                                    onChange={(e) => {
+                                        const v = e.target.value as 'module' | 'course';
+                                        setResetScope(v);
+                                        setResetModuleId('');
+                                        setResetSuccess(null);
+                                        setResetError(null);
+                                    }}
+                                    disabled={isLoadingResetOptions || isResettingLearning}
+                                >
+                                    <MenuItem value="module">Module</MenuItem>
+                                    <MenuItem value="course">Course</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+
+                        <Grid sx={{ width: { xs: '100%', sm: '50%' } }}>
+                            <FormControl fullWidth>
+                                <InputLabel id="learning-reset-course-label">Course</InputLabel>
+                                <Select
+                                    labelId="learning-reset-course-label"
+                                    value={resetCourseId}
+                                    label="Course"
+                                    onChange={(e) => {
+                                        setResetCourseId(e.target.value);
+                                        setResetModuleId('');
+                                        setResetSuccess(null);
+                                        setResetError(null);
+                                    }}
+                                    disabled={isLoadingResetOptions || isResettingLearning}
+                                >
+                                    {resetCourses.map((c) => (
+                                        <MenuItem key={c._id} value={c._id}>
+                                            {c.title}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+
+                        {resetScope === 'module' && (
+                            <Grid sx={{ width: '100%' }}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="learning-reset-module-label">Module</InputLabel>
+                                    <Select
+                                        labelId="learning-reset-module-label"
+                                        value={resetModuleId}
+                                        label="Module"
+                                        onChange={(e) => {
+                                            setResetModuleId(e.target.value);
+                                            setResetSuccess(null);
+                                            setResetError(null);
+                                        }}
+                                        disabled={isLoadingResetOptions || isResettingLearning || resetModules.length === 0}
+                                    >
+                                        {resetModules.map((m) => (
+                                            <MenuItem key={m._id} value={m._id}>
+                                                {m.title}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                    {resetModules.length === 0 && (
+                                        <FormHelperText>Modules will appear after selecting a course.</FormHelperText>
+                                    )}
+                                </FormControl>
+                            </Grid>
+                        )}
+
+                        <Grid sx={{ width: '100%' }}>
+                            <Button
+                                variant="contained"
+                                color="warning"
+                                disabled={
+                                    isLoadingResetOptions ||
+                                    isResettingLearning ||
+                                    (resetScope === 'module' ? !resetModuleId : !resetCourseId)
+                                }
+                                startIcon={<RefreshIcon />}
+                                onClick={() => setOpenLearningResetConfirm(true)}
+                            >
+                                {isResettingLearning ? 'Resetting…' : 'Reset quiz attempts now'}
+                            </Button>
+                        </Grid>
+                    </Grid>
+
+                    <Box sx={{ mt: 2, color: 'text.secondary', fontSize: '0.8rem' }}>
+                        {resetScope === 'module' && selectedModuleForReset ? (
+                            <>
+                                Target: <strong>{selectedCourseForReset?.title}</strong> / <strong>{selectedModuleForReset.title}</strong>
+                            </>
+                        ) : resetScope === 'course' && selectedCourseForReset ? (
+                            <>
+                                Target course: <strong>{selectedCourseForReset.title}</strong>
+                            </>
+                        ) : null}
+                    </Box>
+                </Paper>
+
                 <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2 }}>
                     <Typography variant="h6" component="h2" gutterBottom>Add New Subscription to User</Typography>
                     {/* Form-specific error for adding a subscription */}
@@ -632,6 +851,38 @@ const AdminManageUserSubscriptionPage: React.FC = () => {
                         <Button onClick={() => setOpenDeleteConfirm(false)} disabled={isSubmitting}>Cancel</Button>
                         <Button onClick={handleConfirmDeleteSubscription} color="error" variant="contained" disabled={isSubmitting}>
                             {isSubmitting ? <CircularProgress size={24}/> : "Remove Instance"}
+                        </Button>
+                    </MuiDialogActions>
+                </Dialog>
+
+                <Dialog open={openLearningResetConfirm} onClose={() => setOpenLearningResetConfirm(false)}>
+                    <MuiDialogTitle>Confirm learning reset</MuiDialogTitle>
+                    <MuiDialogContent>
+                        <MuiDialogContentText>
+                            This will reset the user’s quiz attempts and progress:
+                            {resetScope === 'module' ? (
+                                <>
+                                    <br />
+                                    Module: <strong>{selectedModuleForReset?.title || 'Selected module'}</strong>
+                                    <br />
+                                    Course: <strong>{selectedCourseForReset?.title || 'Selected course'}</strong>
+                                </>
+                            ) : (
+                                <>
+                                    <br />
+                                    Course: <strong>{selectedCourseForReset?.title || 'Selected course'}</strong>
+                                </>
+                            )}
+                            <br />
+                            User will need to rewatch/reset module videos to unlock again.
+                        </MuiDialogContentText>
+                    </MuiDialogContent>
+                    <MuiDialogActions>
+                        <Button onClick={() => setOpenLearningResetConfirm(false)} disabled={isResettingLearning}>
+                            Cancel
+                        </Button>
+                        <Button onClick={() => void handleConfirmLearningReset()} color="warning" variant="contained" disabled={isResettingLearning}>
+                            {isResettingLearning ? <CircularProgress size={20} color="inherit" /> : 'Confirm reset'}
                         </Button>
                     </MuiDialogActions>
                 </Dialog>
